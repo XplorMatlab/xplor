@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s>
+   <bank>
+      <nheadermax>100</nheadermax>
+   </bank>
+   <display>
+      <NImageMax>600</NImageMax>
+      <NLineMax>2000</NLineMax>
+   </display>
+   <NLineMax>4000</NLineMax>
+</s>
