@@ -41,10 +41,6 @@ classdef viewdisplay < hgsetget
         zoomfilters
     end
     
-    events
-        Delete
-    end
-    
     % Constructor, destructor
     methods
         function D = viewdisplay(V)
@@ -92,7 +88,6 @@ classdef viewdisplay < hgsetget
         function delete(D)
             if ~isvalid(D) || ~isprop(D,'listeners'), return, end
             deleteValid(D.listeners,D.hp)
-            notify(D,'Delete')
         end
     end
     
@@ -284,8 +279,12 @@ classdef viewdisplay < hgsetget
         end
         function autoClip(D,doupdatedisplay)
             if nargin<2, doupdatedisplay = true; end
-            val = fn_clip(D.zslice.data(:),D.clipping.autoclipmode,'getrange');
-            setClip(D,val,doupdatedisplay)
+            try
+                val = fn_clip(D.zslice.data(:),D.clipping.autoclipmode,'getrange');
+                setClip(D,val,doupdatedisplay)
+            catch ME
+                disp(ME)
+            end
         end
         function clipchange(D,e)
             switch e.flag
@@ -344,11 +343,11 @@ classdef viewdisplay < hgsetget
             if fn_ismemberstr(flag,{'global' 'insertdim' 'rmdim' 'permdim'})
                 D.checkActiveDim(false)
                 D.navigation.connectFilter()
-            elseif fn_ismemberstr(flag,{'chgdata'})
-                % filter did not change
+            elseif fn_ismemberstr(flag,{'chgdata' 'chg'})
+                % slice size did not change
             else
-                anychg = D.checkActiveDim(false);
-                if anychg, D.navigation.connectFilter(), end
+                D.checkActiveDim(false)
+                D.navigation.connectFilter()
             end
             
             % Update color dim

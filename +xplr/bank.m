@@ -96,7 +96,7 @@ classdef bank < hgsetget
         function registerView(V)
             % register view
             B = xplr.bank.getbank();
-            hl = addlistener(V,'Delete',@(u,e)xplr.bank.unregisterView(V));
+            hl = addlistener(V,'ObjectBeingDestroyed',@(u,e)xplr.bank.unregisterView(V));
             B.currentviews(end+1) = struct('obj',V,'hl',hl);
             % update list of recent headers
             B.registerheadersPrivate(V.data.header)

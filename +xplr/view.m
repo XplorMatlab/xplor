@@ -13,10 +13,6 @@ classdef view < hgsetget
         controlvisible = false;  % logical - are the controls visible
     end
     
-    events
-        Delete
-    end
-    
     % Dependent properties
     properties (Dependent)
         data

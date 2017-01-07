@@ -549,13 +549,13 @@ classdef displaygraph < handle
                 elseif any(d==orgin.x)
                     ix = find(d==orgin.x,1);
                     pos(i) = st.xyoffsets(1,1) + sum(st.xoffset(ix+1:end) + st.xstep(ix+1:end));
-                    if pos(i)<-.5, pos(i) = pos(i) + st.xstep(ix+1:end); end % first grid element is more than half-outside
+                    if pos(i)<-.5, pos(i) = pos(i) + sum(st.xstep(ix+1:end)); end % first grid element is more than half-outside
                 elseif ~isempty(orgin.y) && d==orgin.y(end)
                     pos(i) = st.xyoffsets(2,1);
                 elseif any(d==orgin.y)
                     iy = find(d==orgin.y,1);
                     pos(i) = st.xyoffsets(2,1) + sum(st.yoffset(iy+1:end) + st.ystep(iy+1:end));
-                    if pos(i)>.5, pos(i) = pos(i) + st.ystep(iy+1:end); end % first grid element is more than half-outside
+                    if pos(i)>.5, pos(i) = pos(i) + sum(st.ystep(iy+1:end)); end % first grid element is more than half-outside
                 elseif d==st.xydim
                     pos(i) = 0;
                 else

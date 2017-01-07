@@ -63,6 +63,7 @@ classdef xdata < hgsetget
             chgsz = (datasz~=x.sz);
             if any([x.header(chgsz).categorical]), error 'Cannot change data size in categorical dimensions. Use updateData to change both data and headers', end
             % set data
+            if ~isreal(data), error 'data cannot be complex', end
             x.data = data;
             if ~any(chgsz)
                 notify(x,'ChangedData',xplr.eventinfo('data','chgdata'))
@@ -84,6 +85,9 @@ classdef xdata < hgsetget
             % - newhead is only the header in dimension dim
             % however giving the full updated data for value, or the full
             % header for newhead, is tolerated
+            
+            % check that value is real
+            if nargin>=5 && ~isreal(value), error 'data cannot be complex', end
             
             % update header
             if nargin>=6
@@ -169,6 +173,7 @@ classdef xdata < hgsetget
                     error('invalid flag ''%s'' for xdata updateDataDim method')
             end
             % update data
+            if ~isreal(newdata), error 'data cannot be complex', end
             switch flag
                 case 'permdim'
                     x.data = permute(x.data,perm);

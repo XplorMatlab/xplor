@@ -39,7 +39,7 @@ classdef listcombo < hgsetget
             if ~isa(container,'panelorganizer')
                 container = panelorganizer(container,'H');
             end
-            addlistener(container,'Delete',@(u,e)delete(C));
+            addlistener(container,'ObjectBeingDestroyed',@(u,e)delete(C));
             C.container = container;
             
             % display lists

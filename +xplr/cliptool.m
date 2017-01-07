@@ -18,7 +18,6 @@ classdef cliptool < hgsetget
     
     events
         ChangedClip
-        Delete
     end
    
     methods
