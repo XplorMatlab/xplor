@@ -104,7 +104,7 @@ classdef bank < hgsetget
         function unregisterView(V)
             B = xplr.bank.getbank();
             idx = ([B.currentviews.obj]==V);
-            delete([B.currentview(idx).hl])
+            delete([B.currentviews(idx).hl])
             B.currentviews(idx) = [];
         end
     end
