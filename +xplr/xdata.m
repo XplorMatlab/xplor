@@ -61,7 +61,7 @@ classdef xdata < hgsetget
             datasz = xplr.strictsize(data,x.nd);
             if length(datasz)>x.nd, error 'Cannot increase number of dimensions. Use updateData to change both data and headers.', end
             chgsz = (datasz~=x.sz);
-            if any([x.header(chgsz).categorical]), error 'Cannot change data size in categorical dimensions. Use updateData to change both data and headers', end
+            if any([x.header(chgsz).iscategoricalwithvalues]), error 'Cannot change data size in categorical dimensions. Use updateData to change both data and headers', end
             % set data
             if ~isreal(data), error 'data cannot be complex', end
             x.data = data;
@@ -106,7 +106,7 @@ classdef xdata < hgsetget
             end
             tmp = newhead; newhead = x.header; newhead(dim) = tmp; clear tmp
             % update data
-            if ~fn_ismemberstr(flag,{'chgdata' 'all'})
+            if ~fn_ismemberstr(flag,{'chgdata' 'all' 'chgdim'})
                 s = substruct('()',repmat({':'},1,x.nd));
                 s.subs{dim} = ind;
             end

@@ -254,7 +254,7 @@ classdef headerEdit < hgsetget
                 if length(head.allguess)>1
                     tdata{i,iA} = 'Choose...';
                 elseif head.markguess 
-                    tdata{i,iA} = 'Confirm';
+                    tdata{i,iA} = 'Reset';
                 else
                     tdata{i,iA} = '';
                 end            
@@ -393,13 +393,16 @@ classdef headerEdit < hgsetget
             E.curhead(i).isvalid = okv;
         end
         function cellselect(E,e)
+            % Special actions can occur when selecting a cell inside a row
+            % where there is somme guess
             tdata = get(E.table,'Data');
             [iL iU iV iA iC] = columnIndices;
             if size(e.Indices,1)~=1, return, end
             i = e.Indices(1);
             headi = E.curhead(i);
+            if ~headi.markguess, return, end % No guess for this line -> nothing to do
             if ~isscalar(headi.allguess) && e.Indices(2)==iA
-                % select among the list of all guesses: build and show a
+                % Select among the list of all guesses: build and show a
                 % menu with all possibilities
                 deleteValid(E.contextmenu)
                 m = uicontextmenu(E.hf);
@@ -410,18 +413,19 @@ classdef headerEdit < hgsetget
                     lab = fn_strcat({label unit scale_value color},'; ');
                     uimenu(m,'label',lab,'callback',@(u,e)useguess(E,i,j))
                 end
+                uimenu(m,'label','Reset','callback',@(u,e)useguess(E,i,'reset'))
                 set(m,'pos',get(E.hf,'CurrentPoint'),'visible','on')
             elseif headi.markguess
                 if e.Indices(2)==iA
-                    % confirm
-                    tdata{i,iA} = '';
-                    set(E.table,'Data',tdata)
-                    color_table(E)
-                elseif any(e.Indices(2)==[iL iU iV iC])
-                    % reset
+                    % Selected 'Reset' -> Remove guess
                     [tdata{i,[iL iU iV iC iA]}] = deal('');
                     [headi.label headi.unit headi.start headi.scale headi.values ...
                         headi.colors] = deal('','',[],[],{},[]);
+                elseif any(e.Indices(2)==[iL iU iV iC])
+                    % Selected another column -> Confirm guess
+                    tdata{i,iA} = '';
+                    set(E.table,'Data',tdata)
+                    color_table(E)
                 end
                 set(E.table,'Data',tdata)
                 headi.markguess = false;
@@ -431,9 +435,16 @@ classdef headerEdit < hgsetget
             end
         end
         function useguess(E,i,j)
-            % update header
-            allguess = E.curhead(i).allguess;
-            E.curhead(i) = allguess(j);
+            % update ore reset header
+            if strcmp(j,'reset')
+                headi = E.curhead(i);
+                [headi.label headi.unit headi.start headi.scale headi.values ...
+                    headi.colors] = deal('','',[],[],{},[]);
+                E.curhead(i) = headi;
+            else
+                allguess = E.curhead(i).allguess;
+                E.curhead(i) = allguess(j);
+            end
             E.curhead(i).markguess = false; % do not mark as guess, since the user specifically selected it
             E.curhead(i).allguess = []; % it would also make sense not to remove 'allguess' and thus leave the possibility to the user to change again to another guess
             % update display
@@ -481,13 +492,14 @@ classdef headerEdit < hgsetget
                     end
                 else
                     % measure
-                    [unit, ~, measure] = read_unit(head.unit);
+                    [unit, ~, measure, conversion] = read_unit(head.unit);
                     if isempty(measure)
                         dimlabel = xplr.dimensionlabel(head.label,'numeric',unit);
+                        conversion = 1;
                     else
                         dimlabel = xplr.dimensionlabel(head.label,'numeric',measure.units);
                     end
-                    E.header(i) = xplr.header(dimlabel,E.sz(i),head.start,head.scale);
+                    E.header(i) = xplr.header(dimlabel,E.sz(i),head.start*conversion,head.scale*conversion);
                 end
             end
             
@@ -503,7 +515,7 @@ classdef headerEdit < hgsetget
 end
 
 %---
-function donothing(u,e)
+function donothing(~,~)
 % this function is set to the WindowButtonMotionFcn property of the figure
 % to force update of CurrentPoint when moving the cursor
 end
@@ -516,14 +528,14 @@ function [iL iU iV iA iC] = columnIndices
 end
 
 %---
-function [unit str measure] = read_unit(unit)
+function [unit str measure conversion] = read_unit(unit)
 % if unit is recognized as a unit for a known measure, return an enhanced
 % string display and the list of all units for this measure
 
 tokens = regexp(unit,'^(.*) \[(.*)\]$','tokens');
 if ~isempty(tokens), unit = tokens{1}{1}; end
 
-[measurelabel, ~, measure] = xplr.bank.getunitinfo(unit);
+[measurelabel, conversion, measure] = xplr.bank.getunitinfo(unit);
 isknown = ~isempty(measurelabel);
 if isknown
     comment = [' [' measurelabel ']'];
@@ -557,22 +569,26 @@ if ~isempty(tokens)
     end
 end
 
-% try evaluating in base workspace
-try x = evalin('base',scale_value); catch, x = []; end % can also be a string that evaluates to a number
+% try evaluating in base workspace as a string that evaluates to a number
+try 
+    x = evalin('base',scale_value);
+catch
+    x = []; 
+end
 
 % number?
-if isscalar(x)
+if isscalar(x) && isnumeric(x) && n~=1
     type = 'measure';
     value = [x 0];
     return
 elseif isvector(x) && isnumeric(x) && length(x)==n && max(abs(diff(x,2)))<diff(x(1:2))/1e6
-    % vector of values
+    % vector of equally spaced values
     if max(abs(diff(x,2)))==0
         scale = diff(x(1:2));
     else
         scale = (x(n)-x(1))/(n-1);
     end
-    start = x(1) - scale;
+    start = x(1);
     type = 'measure';
     value = [scale start];
     return
@@ -580,7 +596,9 @@ end
 
 % list of items?
 if isvector(x) && n>1, x = column(x); end
-if iscell(x) && size(x,1)==n
+if isnumeric(x) && size(x,1)==n
+    list = num2cell(x);
+elseif iscell(x) && size(x,1)==n
     list = x;
 else
     sep = fn_switch(any(scale_value==','),',',' ');
@@ -591,12 +609,12 @@ if length(list)==n
     type = 'categorical';
     value = list;
     return
+else
+    % failed interpreting scale_value
+    type = 'invalid';
+    value = [];
+    return
 end
-
-% failed to read string
-type = 'invalid';
-value = [];
-return
 
 end
 

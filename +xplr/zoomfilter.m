@@ -108,8 +108,8 @@ classdef zoomfilter < xplr.dataoperand
                 % straightforward to compute
                 Z.headerout = xplr.header(headin.sublabels,nout,headin.start+(Z.indicesout(1)-1)*headin.scale,headin.scale*Z.bin);
             elseif headin.ncolumn==0
-                % no values
-                Z.headerout = xplr.header(headin.label,nout);
+                % no values, keep track of index
+                Z.headerout = xplr.header(headin.label,xplr.dimensionlabel('Index','numeric'),num2cell(Z.indicesout(:)));
             elseif Z.bin==1
                 % no binning: getting values is straightforward
                 Z.headerout = xplr.header(headin.label,headin.sublabels,headin.values(Z.indicesin,:));

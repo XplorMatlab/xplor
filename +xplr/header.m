@@ -46,6 +46,8 @@ classdef header < hgsetget
         allunits
         type
         ismeasure
+        isenum
+        iscategoricalwithvalues
         ncolumn
     end
     properties (Access='private')
@@ -272,6 +274,12 @@ classdef header < hgsetget
         end
         function b = get.ismeasure(H)
             b = ~H.categorical;
+        end
+        function b = get.isenum(H)
+            b = H.categorical && (H.ncolumn==0);
+        end
+        function b = get.iscategoricalwithvalues(H)
+            b = H.categorical && (H.ncolumn>0);
         end
         function n = get.ncolumn(H)
             n = size(H.values,2);

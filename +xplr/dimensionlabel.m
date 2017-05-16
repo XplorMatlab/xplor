@@ -1,5 +1,5 @@
 classdef dimensionlabel
-    % function L = dimensionlabel(label,type[,unit||allunits])
+    % function L = dimensionlabel(label,type[,unit|allunits])
     %---
     % Define a dimension.
     % 

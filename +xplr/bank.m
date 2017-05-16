@@ -183,14 +183,18 @@ classdef bank < hgsetget
         function registerheadersPrivate(B,newheader)
             newheader(fn_isemptyc({newheader.label})) = [];
             n = length(newheader);
-            ok = false(1,n);
-            for i=1:n, ok(i) = ~fn_find(newheader(i),B.recentheaders,'any'); end
-            if any(ok)
-                B.recentheaders = [newheader(ok) B.recentheaders];
-                nheadermax = xplr.parameters.get('bank.nheadermax');
-                B.recentheaders(nheadermax+1:end) = [];
-                saveprop(B,'recentheaders')
+            idx = cell(1,n);
+            for i=1:n
+                idx{i} = fn_find(newheader(i),B.recentheaders,'first'); 
             end
+            idx = [idx{:}];
+            if isequal(idx,1:n), return, end % new headers are already at the beginning of the list
+            % place all new headers first in the list
+            B.recentheaders(idx(idx~=0)) = [];
+            B.recentheaders = [newheader B.recentheaders];
+            nheadermax = xplr.parameters.get('bank.nheadermax');
+            B.recentheaders(nheadermax+1:end) = [];
+            saveprop(B,'recentheaders')
         end
     end
     methods (Static)
