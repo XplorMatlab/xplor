@@ -5,7 +5,7 @@ classdef dimensionlabel
     % 
     % Input:
     % - label   a string (e.g. 'time')
-    % - type    'numeric', 'logical', 'char' or 'object'
+    % - type    'numeric', 'logical', 'char' or 'mixed'
     % - unit    string, cell array with 2 columns, or struct with fields
     %           unit and value
     %
@@ -27,7 +27,7 @@ classdef dimensionlabel
         function L = dimensionlabel(label,type,unit)
             if ~ischar(label), error 'label must be a character array', end
             L.label = label;
-            if ~ismember(type,{'numeric' 'logical' 'char' 'object'}), error 'type must be either ''numeric'', ''logical'' or ''char''', end
+            if ~ismember(type,{'numeric' 'logical' 'char' 'mixed'}), error 'type must be either ''numeric'', ''logical'' or ''char''', end
             L.type = type;
             if nargin<3
                 return
@@ -64,7 +64,7 @@ classdef dimensionlabel
             elseif ischar(x)
                 type = 'char';
             else
-                error('header values cannot be of class ''%s''',class(x))
+                type = 'mixed';
             end
             if nargout>=2, defaultval = getDefaultValue(type); end
         end
@@ -75,10 +75,10 @@ end
 
 %---
 function defaultval = getDefaultValue(type)
-    if strcmp(type,'object'), error 'no default value for ''object'' type', end
     defaultval = fn_switch(type, ...
         'numeric',  0, ...
         'logical',  false, ...
-        'char',     '');
+        'char',     '', ...
+        'mixed',    []);
 end
 

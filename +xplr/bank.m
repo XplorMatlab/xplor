@@ -122,7 +122,11 @@ classdef bank < hgsetget
         function saveprop(B,prop)
             fsave = fn_userconfig('configfolder','xplr.bank');
             s = struct(prop,B.(prop)); %#ok<NASGU>
-            save(fsave,'-STRUCT','s','-APPEND');
+            if exist(fsave,'file')
+                save(fsave,'-STRUCT','s','-APPEND');
+            else
+                save(fsave,'-STRUCT','s');
+            end
         end
     end
     
