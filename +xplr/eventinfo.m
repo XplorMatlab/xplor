@@ -3,7 +3,8 @@ classdef eventinfo < event.EventData & dynamicprops
     %---
     % type: 'filter'
     % arguments:    'all'
-    %               'new|chg',ind
+    %               'new',ind
+    %               'chg',ind
     %               'remove',ind
     %               'chg&new',ind
     %               'chg&rm',ind
@@ -18,8 +19,10 @@ classdef eventinfo < event.EventData & dynamicprops
     %               'chgdata'
     %               'insertdim',dim
     %               'rmdim',dim
+    %               'chgdim',dim
     %               'all',dim
-    %               'new|chg',dim,ind
+    %               'new',dim,ind
+    %               'chg',dim,ind
     %               'remove',dim,ind
     %               'chg&new',{indchg indnew}
     %               'chg&rm',{indchg indrm}
