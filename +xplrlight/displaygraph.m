@@ -1,7 +1,7 @@
 classdef displaygraph < handle
     
     properties (SetAccess='private')
-        % parent xplr.viewdisplay object
+        % parent xplrlight.viewdisplay object
         D
         % graphic objects
         xyticks
@@ -28,7 +28,7 @@ classdef displaygraph < handle
     % Constructor, Get dependent
     methods
         function G = displaygraph(D)
-            % parent xplr.viewdisplay object
+            % parent xplrlight.viewdisplay object
             G.D = D;
         end
         function ha = get.ha(G)
@@ -112,11 +112,10 @@ classdef displaygraph < handle
                     st.xydim = orgin.yx;
                     xymode = 'yx';
                 end
-                
                 % TODO: the lines below are not correct, remove?
                 % % span
                 % [st.xspan(st.xydim) st.yspan(st.xydim)] = deal(xavail,yavail);
-                                
+                
                 % determine number of column: what aspect ratio is desired
                 % for the grid elements?
                 nelem = header(st.xydim).n;
@@ -164,10 +163,11 @@ classdef displaygraph < handle
             fill([xorg yorg]) = 1;
             ix = nx; iy = ny;
             while ix>0 || iy>0
-                % go down to the next pair
-                ixnext = find(xpair(1:ix),1,'last');
-                iynext = find(ypair(1:iy),1,'last');
-                if isempty(ixnext), [ixnext iynext] = deal(1); end
+                %L6 % go down to the next pair
+                %L6 ixnext = find(xpair(1:ix),1,'last');
+                %L6 iynext = find(ypair(1:iy),1,'last');
+                %L6 if isempty(ixnext), [ixnext iynext] = deal(1); end
+                [ixnext iynext] = deal(1); %L6 
                 % (x)
                 for ix=ix:-1:ixnext
                     d = xorg(ix);
@@ -185,31 +185,31 @@ classdef displaygraph < handle
                     if szorig(d)>1, yavail = abs(st.ystep(iy)) / (1+G.ysep); end % available y-span for (iy-1)th dimension
                 end
                 
-                % arrange values to maintain aspect ratio for the pair if
-                % there is a pair
+                %L6 % arrange values to maintain aspect ratio for the pair if
+                %L6 % there is a pair
                 if isempty(ix) || (ix==1 && ~xpair(ix)), break, end
-                curratio = abs(st.ystep(iy))/st.xstep(ix) * axisratio;
-                targetratio = yhead(iy).scale/xhead(ix).scale;
-                correction = targetratio/curratio;
-                if correction>1
-                    % need to reduce x-span
-                    d = xorg(ix);
-                    st.xspan(ix) = st.xspan(ix)/correction;
-                    st.xoffset(ix) = st.xoffset(ix) + zm(d)*st.xstep(ix)*(1-1/correction);
-                    st.xstep(ix) = st.xstep(ix)/correction;
-                    fill(d) = 1/correction;
-                    xavail = xavail/correction;
-                elseif correction<1
-                    % need to reduce y-span
-                    d = yorg(iy);
-                    st.yspan(iy) = st.yspan(iy)*correction;
-                    st.yoffset(iy) = st.yoffset(iy) + zm(d)*st.ystep(iy)*(1-1*correction);
-                    st.ystep(iy) = st.ystep(iy)*correction;
-                    fill(d) = correction;
-                    yavail = yavail*correction;
-                end
-                ix = ix-1;
-                iy = iy-1;
+                %L6 curratio = abs(st.ystep(iy))/st.xstep(ix) * axisratio;
+                %L6 targetratio = yhead(iy).scale/xhead(ix).scale;
+                %L6 correction = targetratio/curratio;
+                %L6 if correction>1
+                %L6     % need to reduce x-span
+                %L6     d = xorg(ix);
+                %L6     st.xspan(ix) = st.xspan(ix)/correction;
+                %L6     st.xoffset(ix) = st.xoffset(ix) + zm(d)*st.xstep(ix)*(1-1/correction);
+                %L6     st.xstep(ix) = st.xstep(ix)/correction;
+                %L6     fill(d) = 1/correction;
+                %L6     xavail = xavail/correction;
+                %L6 elseif correction<1
+                %L6     % need to reduce y-span
+                %L6     d = yorg(iy);
+                %L6     st.yspan(iy) = st.yspan(iy)*correction;
+                %L6     st.yoffset(iy) = st.yoffset(iy) + zm(d)*st.ystep(iy)*(1-1*correction);
+                %L6     st.ystep(iy) = st.ystep(iy)*correction;
+                %L6     fill(d) = correction;
+                %L6     yavail = yavail*correction;
+                %L6 end
+                %L6 ix = ix-1;
+                %L6 iy = iy-1;
             end
             
             % case empty
@@ -375,21 +375,31 @@ classdef displaygraph < handle
             end
             
             % output
-            zfilters = G.D.zoomfilters(dim);
+            %L zfilters = G.D.zoomfilters(dim);
             switch mode
                 case {'value' 'effective'}
-                    zoom = cat(1,zfilters.zoomvalue)';
-                    if strcmp(mode,'effective')
-                        zoom = fn_add(mean(zoom), fn_mult([-.5; .5],diff(zoom)./G.filling(dim)));
-                    end
-                case 'indices'
-                    zoom = zeros(2,length(dim));
-                    for i=1:length(dim), zoom(:,i) = zfilters(i).indicesout([1 end]); end
+                    %L zoom = cat(1,zfilters.zoomvalue)';
+                    zoom = zeros(2,length(dim));                         %L
+                    for i=1:length(dim)                                  %L
+                        zoom(:,i) = [.5; G.D.slice.header(dim(i)).n+.5]; %L
+                    end                                                  %L
+                    %L if strcmp(mode,'effective')
+                    %L     zoom = fn_add(mean(zoom), fn_mult([-.5; .5],diff(zoom)./G.filling(dim)));
+                    %L end
+                %L case 'indices'
+                %L     zoom = zeros(2,length(dim));
+                %L     for i=1:length(dim)
+                %L         zoom(:,i) = zfilters(i).indicesout([1 end]); 
+                %L     end
                 case 'off&bin'
-                    offset = zeros(1,length(dim));
-                    for i=1:length(dim), offset(i) = zfilters(i).indicesin(1)-1; end
-                    zoom = offset;
-                    bin = [zfilters.bin];
+                    %L offset = zeros(1,length(dim));
+                    %L for i=1:length(dim)
+                    %L     offset(i) = zfilters(i).indicesin(1)-1; 
+                    %L end
+                    %L zoom = offset;
+                    %L bin = [zfilters.bin];
+                    zoom = zeros(1,length(dim)); %L
+                    bin = ones(1,length(dim));   %L
             end
         end
         function xy = zslice2graph(G,ijk)
@@ -494,7 +504,7 @@ classdef displaygraph < handle
             % (y)
             switch G.D.displaymode
                 case 'image'
-                    yscale = st.ystep(1);
+                    %L4 yscale = st.ystep(1);
                 case 'time courses'
                     if nargin==3
                         ylim = ylim_or_ybase;
@@ -520,7 +530,7 @@ classdef displaygraph < handle
             % (y)
             switch G.D.displaymode
                 case 'image'
-                    M(2,4,:) = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.org.y(2:end),:)),1) );
+                    %L4 M(2,4,:) = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.org.y(2:end),:)),1) );
                 case 'time courses'
                     M(2,4,:) = fn_add( sum(st.yoffset)-ybase*yscale, sum(fn_mult(st.ystep(:),ijk(G.org.y,:)),1) );
             end
@@ -576,31 +586,31 @@ function [xpair ypair] = checkpairs(xhead,yhead,dosignal)
 nx = length(xhead);  ny = length(yhead);
 xpair = zeros(1,nx); ypair = zeros(1,ny);
 
-% restrict to dimensions which are measures
-xok = false(1,nx);   yok = false(1,ny);
-for i=1:nx, xok(i) = xhead(i).ismeasure; end
-for i=1:ny, yok(i) = yhead(i).ismeasure; end
-if ~any(xok) || ~any(yok), return, end
-
-% look for dimensions being in the same space!
-xunits = {xhead.unit};
-yunits = {yhead.unit};
-if xok(1) && yok(1) && isequal(xunits(1),yunits(1))
-    [xpair(1) ypair(1)] = deal(1,1);
-    [xok(1) yok(1)] = deal(false);
-end
-if nx>=2 && ny>=2 && xok(nx) && yok(ny) && isequal(xunits(nx),yunits(ny))
-    [xpair(nx) ypair(ny)] = deal(ny,nx);
-    [xok(nx) yok(ny)] = deal(false);
-end
-if dosignal && nx>=2 && xok(2) && yok(1) && isequal(xunits(2),yunits(1))
-    % (x1 cannot be paired with y2 for images)
-    [xpair(2) ypair(1)] = deal(1,2);
-    [xok(1) yok(1)] = deal(false);
-end
-if nx>=2 && xok(2) && ny>=2 && yok(2) && isequal(xunits(2),yunits(2))
-    [xpair(2) ypair(2)] = deal(2,2);
-    [xok(2) yok(2)] = deal(false); %#ok<NASGU>
-end
-
+%L6 % restrict to dimensions which are measures
+%L6 xok = false(1,nx);   yok = false(1,ny);
+%L6 for i=1:nx, xok(i) = xhead(i).ismeasure; end
+%L6 for i=1:ny, yok(i) = yhead(i).ismeasure; end
+%L6 if ~any(xok) || ~any(yok), return, end
+%L6 
+%L6 % look for dimensions being in the same space!
+%L6 xunits = {xhead.unit};
+%L6 yunits = {yhead.unit};
+%L6 if xok(1) && yok(1) && isequal(xunits(1),yunits(1))
+%L6     [xpair(1) ypair(1)] = deal(1,1);
+%L6     [xok(1) yok(1)] = deal(false);
+%L6 end
+%L6 if nx>=2 && ny>=2 && xok(nx) && yok(ny) && isequal(xunits(nx),yunits(ny))
+%L6     [xpair(nx) ypair(ny)] = deal(ny,nx);
+%L6     [xok(nx) yok(ny)] = deal(false);
+%L6 end
+%L6 if dosignal && nx>=2 && xok(2) && yok(1) && isequal(xunits(2),yunits(1))
+%L6     % (x1 cannot be paired with y2 for images)
+%L6     [xpair(2) ypair(1)] = deal(1,2);
+%L6     [xok(1) yok(1)] = deal(false);
+%L6 end
+%L6 if nx>=2 && xok(2) && ny>=2 && yok(2) && isequal(xunits(2),yunits(2))
+%L6     [xpair(2) ypair(2)] = deal(2,2);
+%L6     [xok(2) yok(2)] = deal(false); %#ok<NASGU>
+%L6 end
+%L6 
 end
