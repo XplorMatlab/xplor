@@ -295,7 +295,7 @@ classdef displaygraph < handle
                         % target space between ticks
                         targetspacing = targetspacinginch / axsizinch(k);   % target spacing in axes coordinates
                         fspan = fn_switch(f,'x',st.xspan,'y',st.yspan);
-                        targetspacing = targetspacing/min(1/fspan(d),maxnarrow); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
+                        targetspacing = targetspacing/min(1/fspan(jf),maxnarrow); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
                         % target space in data coordinates
                         [start scale] = deal(head.start,head.scale);
                         target = targetspacing / abs(f_step) * scale;
