@@ -99,7 +99,7 @@ classdef displaygraph < handle
 
             % G.filling will get values assigned both for 'grid' and
             % 'linear' arrangements
-            [fill st.xspan st.yspan] = deal(zeros(1,nd));
+            [fill st.xspan st.yspan] = deal(zeros(1,nd),zeros(1,nx),zeros(1,ny));
             
             % does one dimension have 2D grid organization
             xavail = 1; yavail = 1; % total available x- and y-span
@@ -113,9 +113,10 @@ classdef displaygraph < handle
                     xymode = 'yx';
                 end
                 
-                % span
-                [st.xspan(st.xydim) st.yspan(st.xydim)] = deal(xavail,yavail);
-                
+                % TODO: the lines below are not correct, remove?
+                % % span
+                % [st.xspan(st.xydim) st.yspan(st.xydim)] = deal(xavail,yavail);
+                                
                 % determine number of column: what aspect ratio is desired
                 % for the grid elements?
                 nelem = header(st.xydim).n;
@@ -186,7 +187,7 @@ classdef displaygraph < handle
                 
                 % arrange values to maintain aspect ratio for the pair if
                 % there is a pair
-                if isempty(ix) || ix==1 && ~xpair(ix), break, end
+                if isempty(ix) || (ix==1 && ~xpair(ix)), break, end
                 curratio = abs(st.ystep(iy))/st.xstep(ix) * axisratio;
                 targetratio = yhead(iy).scale/xhead(ix).scale;
                 correction = targetratio/curratio;
@@ -294,7 +295,7 @@ classdef displaygraph < handle
                         % target space between ticks
                         targetspacing = targetspacinginch / axsizinch(k);   % target spacing in axes coordinates
                         fspan = fn_switch(f,'x',st.xspan,'y',st.yspan);
-                        targetspacing = targetspacing/min(1/fspan(d),maxnarrow); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
+                        targetspacing = targetspacing/min(1/fspan(jf),maxnarrow); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
                         % target space in data coordinates
                         [start scale] = deal(head.start,head.scale);
                         target = targetspacing / abs(f_step) * scale;
