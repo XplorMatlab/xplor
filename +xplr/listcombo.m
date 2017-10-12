@@ -7,6 +7,7 @@ classdef listcombo < hgsetget
     properties
         container
         linkkey
+        lists = xplr.list.empty(1,0);
         filters = xplr.filterAndPoint.empty(1,0);
     end
     
@@ -26,9 +27,11 @@ classdef listcombo < hgsetget
                 
             % create new containing figure? (in this case, set auto-delete)
             if isempty(container)
+                screensize = get(0,'ScreenSize');
                 container = figure('integerhandle','off','handlevisibility','off', ...
                     'numbertitle','off','menubar','none', ...
-                    'name',sprintf('Shared Filters [key=%i]',linkkey));
+                    'name',sprintf('Shared Filters [key=%i]',linkkey), ...
+                    'pos',[min(80,screensize(3)/20) max(screensize(4)*.6-275,45) 150 550]);
                 %                 if linkkey>0
                 %                     col = xplr.colors('linkkey',linkkey)*.5 + get(container,'color')*.5;
                 %                     set(container,'color',col)
@@ -38,6 +41,7 @@ classdef listcombo < hgsetget
             end
             if ~isa(container,'panelorganizer')
                 container = panelorganizer(container,'H');
+                container.bordermode = 'push';
             end
             addlistener(container,'ObjectBeingDestroyed',@(u,e)delete(C));
             C.container = container;
@@ -76,16 +80,33 @@ classdef listcombo < hgsetget
             fn_controlpositions(hclose,hp,[1 1],[-8-18 -3-18 18 18])
 
             % create list
-            xplr.list(filter,'in',[hlist hlabel]);
+            C.lists(idx) = xplr.list(filter,'in',[hlist hlabel]);
             
             % memorize which filter is at this position
             C.filters(idx) = filter;
         end
-        function removeList(C,hp_or_idx)
-            % function removeList(C,hp|idx)
+        function showList(C,filter)
+            % add filter list, only if not already present
+            hID = getID(filter.headerin);
+            for idx = 1:length(C.filters)
+                if isequal(hID,getID(C.filters(idx).headerin)), return, end
+            end
+            addList(C,filter)
+        end
+        function removeList(C,x)
+            % function removeList(C,hp|idx|filter)
+            
+            if isa(x,'matlab.ui.container.Panel') || isa(x,'uipanel') || isnumeric(x)
+                hp_or_idx = x;
+            elseif isa(x,'xplr.dataoperand')
+                hp_or_idx = fn_find(x,C.filters);
+            else
+                error argument
+            end
             
             % remove panel
             idx = C.container.removeSubPanel(hp_or_idx);
+            C.lists(idx) = [];
             C.filters(idx) = [];
             % signal whether there are no more list being displayed
             if C.container.nchildren==0
@@ -98,12 +119,12 @@ classdef listcombo < hgsetget
         function C = test
             head = xplr.header({'x' 10},{'y' 12},{'cond' {'a' 'b' 'c' 'd'}});
             for i=1:length(head)
-                filters(i) = xplr.filterAndPoint(head(i),'indices'); %#ok<AGROW>
+                Filters(i) = xplr.filterAndPoint(head(i),'indices'); %#ok<AGROW>
             end
             key = 2;
-            C = xplr.listcombo([],key,filters);
+            C = xplr.listcombo([],key,Filters);
             % repeat the 2d list
-            C.addList(filters(2))
+            C.addList(Filters(2))
         end
     end
     

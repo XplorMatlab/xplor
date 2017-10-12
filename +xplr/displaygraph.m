@@ -270,6 +270,7 @@ classdef displaygraph < handle
                     head = G.D.zslice.header(d);
                     n = head.n;
                     % conversion between data coordinates and graph
+                    domeasure = head.ismeasure;
                     if d==G.org.(ff)
                         % step for ncol (or nrow) data points
                         ncol = find(diff(st.xyoffsets(k,:)),1);
@@ -278,6 +279,7 @@ classdef displaygraph < handle
                         % step for one data point
                         f_step = f_step / ncol;
                         f_off = st.xyoffsets(k,1) - (ncol+1)/2*f_step;
+                        domeasure = false;
                     else
                         jf = find(d==G.org.(f),1);
                         if isempty(jf), error('%s activedim must have either ''%s'' or ''%s'' organization!',f,f,ff), end
@@ -291,7 +293,7 @@ classdef displaygraph < handle
                         end
                     end
                     % measure or labels?
-                    if head.ismeasure
+                    if domeasure
                         % target space between ticks
                         targetspacing = targetspacinginch / axsizinch(k);   % target spacing in axes coordinates
                         fspan = fn_switch(f,'x',st.xspan,'y',st.yspan);

@@ -12,10 +12,12 @@ classdef viewdisplay < hgsetget
         nodisplay = false   % data is too large, cancel display
         htransform  % containers for line/images that will be translated/scaled
         hdisplay    % handles of line/images
+        hlegend     % handle of legend axes
         labels      % xplr.displaylabel object
         graph       % xplr.displaygraph object
         navigation  % xplr.displaynavigation object
         clipping    % xplr.cliptool object
+        colormap    % xplr.colormap object
         % listeners that need being deleted upon object deletion
         listeners %= struct('slice',[],'zslice',[],'zoom',[],'axsiz',[],'clip',[]);
     end
@@ -26,6 +28,7 @@ classdef viewdisplay < hgsetget
     % Display properties
     properties (SetObservable=true, AbortSet=true)
         displaymode = 'image';  % 'time courses' or 'image'
+        showcolorlegend = false; % false by default because of bug in Matlab's legend function, which inactivates several listeners
     end
     properties (SetAccess='private')
         org                                 % set with function setOrg
@@ -47,7 +50,7 @@ classdef viewdisplay < hgsetget
             % parent 'view' object and panel
             D.V = V;
             D.hp = V.panels.display;
-            set(D.hp,'deletefcn',@(u,e)delete(D))
+            set(D.hp,'deletefcn',@(u,e)delete(V))
             
             % zoom slicer zooms into "slice" to yield "zslice"
             D.zoomslicer = xplr.zoomslicer(V.slicer.slice);
@@ -56,9 +59,10 @@ classdef viewdisplay < hgsetget
             D.ha = axes('parent',D.hp);
             axis(D.ha,[-.5 .5 -.5 .5]) % center 0, available space 1
             set(D.ha,'box','on','clim',[0 1])
+            set(D.ha,'TickLabelInterpreter','none')
             D.listeners.axsiz = fn_pixelsizelistener(D.ha,@(u,e)axisresize(D));
-            c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position during all the following initializations
-            
+            c = disableListener(D.listeners.axsiz); % prevent display update following automatic change of axis position during all the following initializations
+
             % 'time courses'/'image' switch
             p = fn_propcontrol(D,'displaymode',{'popupmenu' 'time courses' 'image'},'parent',D.hp);
             fn_controlpositions(p.hu,D.hp,[1 1],[-90 -25 90 25])
@@ -73,8 +77,12 @@ classdef viewdisplay < hgsetget
             D.navigation = xplr.displaynavigation(D);
             
             % clipping tool
-            D.clipping = xplr.cliptool(V.hf);
+            D.clipping = xplr.cliptool(V.hf); % creates a menu
             D.listeners.clip = addlistener(D.clipping,'ChangedClip',@(u,e)clipchange(D,e));
+            
+            % colormap tool
+            D.colormap = xplr.colormaptool(D); % creates a menu
+            D.listeners.colormap = addlistener(D.colormap,'ChangedColorMap',@(u,e)colormap(V.hf,D.colormap.cmap)); %#ok<CPROP>
             
             % set organization, connect sliders, display data and labels
             D.sliceChangeEvent = struct('flag','global');
@@ -84,9 +92,15 @@ classdef viewdisplay < hgsetget
             D.listeners.slice = addlistener(D.slice,'ChangedData',@(u,e)set(D,'sliceChangeEvent',e)); % mark that slice has changed, but treat it only later
             D.listeners.zoom = addlistener(D.zoomslicer,'ChangedZoom',@(u,e)zoomchange(D,e));
             D.listeners.zslice = addlistener(D.zslice,'ChangedData',@(u,e)zslicechange(D,e));
+            
+            % problem: c won't be deleted automatically (and axsiz listener
+            % might not be re-enabled) because the workspace continue to
+            % exist, because of all the anonymous functions that were
+            % defined
+            delete(c)
         end
         function delete(D)
-            if ~isvalid(D) || ~isprop(D,'listeners'), return, end
+            if ~isprop(D,'listeners'), return, end
             deleteValid(D.listeners,D.hp)
         end
     end
@@ -248,6 +262,10 @@ classdef viewdisplay < hgsetget
             if nargin<3, doImmediateDisplay = true; end
             % set property
             D.colordim = d;
+            % update color legend?
+            if D.showcolorlegend
+                displayColorLegend(D)
+            end
             % update display
             if doImmediateDisplay && strcmp(D.displaymode,'time courses')
                 D.updateDisplay('color')
@@ -260,6 +278,25 @@ classdef viewdisplay < hgsetget
                 if nargin<2, doImmediateDisplay = false; end
                 D.setColorDim([],doImmediateDisplay)
             end
+        end
+        function set.showcolorlegend(D,val)
+            D.showcolorlegend = val;
+            displayColorLegend(D)
+        end
+        function displayColorLegend(D)
+            % delete current legend
+            delete(D.hlegend)
+            D.hlegend = [];
+            % do really display a legend
+            d = D.colordim;
+            if isempty(d) || ~D.showcolorlegend || strcmp(D.displaymode,'image'), return, end
+            % get line handles
+            s = substruct('()',num2cell(ones(1,D.nd)));
+            s.subs{d} = ':';
+            hl = subsref(D.hdisplay,s);
+            % display legend
+            names = D.slice.header(d).getItemNames;
+            D.hlegend = fn_colorlegend(row(hl),names,'SouthWest');
         end
     end
     
@@ -691,6 +728,13 @@ classdef viewdisplay < hgsetget
                     end
                 end
             end
+            
+            % Update legend
+            if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
+                D.colordim = [];
+            elseif ~strcmp(flag,'chgdata') && isequal(e.dim,D.colordim)
+                displayColorLegend(D)
+            end
         end
         function zoomchange(D,e)
             % update graph positions: if data has changed in size,
@@ -712,7 +756,7 @@ classdef viewdisplay < hgsetget
             updateDisplay(D,'pos')
         end
         function set.displaymode(D,mode)
-            c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
+            c = disableListener(D.listeners.axsiz); %#ok<MCSUP,NASGU> % prevent display update following automatic change of axis position
             % set property
             D.displaymode = mode;
             % for 'image' mode, check that org is valid, and modify it if
@@ -725,11 +769,13 @@ classdef viewdisplay < hgsetget
                 D.setOrg(neworg) % this automatically updates display among other things
             else
                 % update display
-                D.graph.computeSteps()
-                D.graph.setTicks()
-                D.labels.updateLabels()
+                D.graph.computeSteps() %#ok<MCSUP>
+                D.graph.setTicks() %#ok<MCSUP>
+                D.labels.updateLabels() %#ok<MCSUP>
                 updateDisplay(D)
             end
+            % show/hide color legend
+            displayColorLegend(D)
         end
         function resetDisplay(D)
             % reset axis

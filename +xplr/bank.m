@@ -1,4 +1,3 @@
-
 classdef bank < hgsetget
     
     % Content
@@ -9,58 +8,8 @@ classdef bank < hgsetget
         measures = struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}));
         % headers
         recentheaders = xplr.header.empty(1,0); % headers will be ordered according to their appearance date
-        %         filters = struct('hID',cell(1,0),'key',[],'obj',[],'indicesonly',[]);
-        %         points = struct('hID',cell(1,0),'key',[],'obj',[]);
-    end
-    
-    % (old)
-    methods (Access='private')
-        %         function [keyavail idxavail keyforbid] = checkkeys(B,type,hID,indicesonly)
-        %             switch type
-        %                 case 'point'
-        %                     % no restriction exist
-        %                     idxavail = find([B.points.hID]==sum(hID));
-        %                     keyavail = [B.points(idxavail).key];
-        %                     keyforbid = [];
-        %                 case 'filter'
-        %                     % restriction: there must be no overlap in header IDs
-        %                     % with other existing filters
-        %                     idxavail = find(fn_map(@sum,{B.filters.hID})+[B.filters.indicesonly]==sum(hID)+indicesonly);
-        %                     keyavail = [B.filters(idxavail).key];
-        %                     idxintersect = fn_find({B.filters.hID},@(id)any(ismember(id,hID)),'all');
-        %                     idxforbid = setdiff(idxintersect,idxavail);
-        %                     keyforbid = unique([B.filters(idxforbid).key]);
-        %             end
-        %         end
-        %         function [obj key] = getobject(B,type,headerin,key,indicesonly)
-        %             if nargin<5, indicesonly = false; end
-        %             hID = [headerin.ID];
-        %             [keyavail idxavail keyforbid] = checkkeys(B,type,hID,indicesonly);
-        %             if ~isempty(key) && ismember(key,keyforbid)
-        %                 error('no filter is available for these headers and with key %i',key)
-        %             end
-        %             if isempty(keyavail)
-        %                 key = 0;
-        %                 while ismember(key,keyforbid), key = key+1; end
-        %                 switch type
-        %                     case 'point'
-        %                         obj = xplr.xpoint(headerin);
-        %                         B.points(end+1) = struct('hID',hID,'key',key,'obj',obj);
-        %                     case 'filter'
-        %                         obj = xplr.xfilter(headerin,indicesonly);
-        %                         B.filters(end+1) = struct('hID',hID,'key',key,'obj',obj,'indicesonly',indicesonly);
-        %                 end
-        %             else
-        %                 [~, j] = min(keyavail);
-        %                 idx = idxavail(j);
-        %                 switch type
-        %                     case 'point'
-        %                         obj = B.points(idx).obj;
-        %                     case 'filter'
-        %                         obj = B.filters(idx).obj;
-        %                 end
-        %             end
-        %         end
+        % filter sets
+        filtersets = xplr.filterSet.empty(1,0);
     end
     
     % Bank
@@ -99,7 +48,7 @@ classdef bank < hgsetget
             hl = addlistener(V,'ObjectBeingDestroyed',@(u,e)xplr.bank.unregisterView(V));
             B.currentviews(end+1) = struct('obj',V,'hl',hl);
             % update list of recent headers
-            B.registerheadersPrivate(V.data.header)
+            xplr.bank.registerheaders(V.data.header)
         end
         function unregisterView(V)
             B = xplr.bank.getbank();
@@ -183,8 +132,9 @@ classdef bank < hgsetget
     end
     
     % Headers
-    methods (Access='private')
-        function registerheadersPrivate(B,newheader)
+    methods (Static)
+        function registerheaders(newheader)
+            B = xplr.bank.getbank();
             newheader(fn_isemptyc({newheader.label})) = [];
             n = length(newheader);
             idx = cell(1,n);
@@ -200,11 +150,6 @@ classdef bank < hgsetget
             B.recentheaders(nheadermax+1:end) = [];
             saveprop(B,'recentheaders')
         end
-    end
-    methods (Static)
-        function registerheaders(newheader)
-            xplr.bank.getbank.registerheadersPrivate(newheader)
-        end
         function head = getrecentheaders(n)
             B = xplr.bank.getbank();
             % get a list of recent headers for data length n
@@ -217,29 +162,22 @@ classdef bank < hgsetget
         end
     end
     
-    % Filters (old)
+    % Filter sets
     methods (Static)
-        %         function [F key] = getfilter(headerin,key,indicesonly)
-        %             if ~isscalar(headerin), error 'header input must be scalar', end
-        %             if nargin<2, key = []; end
-        %             if nargin<3, indicesonly = false; end
-        %             B = xplr.bank.getbank();
-        %             [F key] = B.getobject('filter',headerin,key,indicesonly);
-        %         end
-        %         function [P key] = getpoint(headerin,key)
-        %             if nargin<2, key = []; end
-        %             B = xplr.bank.getbank();
-        %             for i=1:length(headerin)
-        %                 P(i) = B.getobject('point',headerin,key); %#ok<AGROW>
-        %             end
-        %         end
-        %         function [F P key] = getFilterAndPoint(headerin,key,indicesonly)
-        %             if ~isscalar(headerin), error 'header input must be scalar', end
-        %             if nargin<2, key = []; end
-        %             if nargin<3, indicesonly = false; end
-        %             [F key] = xplr.bank.getfilter(headerin,key,indicesonly);
-        %             P = xplr.bank.getpoint(headerin,key);
-        %         end
+        function n = nfilterset()
+            B = xplr.bank.getbank();
+            n = length(B.filtersets);
+        end
+        function S = getFilterSet(linkkey)
+            B = xplr.bank.getbank();
+            if linkkey<=length(B.filtersets)
+                S = B.filtersets(linkkey);
+            elseif linkkey==length(B.filtersets)+1
+                S = xplr.filterSet(linkkey);
+                B.filtersets(end+1) = S;
+            else
+                error('New filter set key should be %i, encountered %i instead.',length(B.filtersets)+1,idx)
+            end
+        end
     end
-    
 end

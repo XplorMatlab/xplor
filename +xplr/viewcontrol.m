@@ -5,8 +5,8 @@ classdef viewcontrol < hgsetget
         hp  % display panel
         items
         %         dimcontrols % uicontrols
-        dimlist     % list of dimensions
-        lists       % listcombo object
+        dimlist         % list of dimensions
+        privatelists    % listcombo object
     end
     
     % Constructor
@@ -92,10 +92,16 @@ classdef viewcontrol < hgsetget
     
     % Dimensions menu
     methods
-        function dimaction(C,flag,dim)
-            % init lists if needed
-            if isempty(C.lists) && fn_ismemberstr(flag,'filter')
-                init_lists(C)
+        function dimaction(C,flag,key,dim)
+            % get list combo for the specified key
+            isprivate = (key==0);
+            if isprivate
+                % private filter: list combo display should be handled here
+                combo = C.getPrivateLists();
+            else
+                % public filter: list combo will be handled directly by the
+                % associated filter set
+                S = xplr.bank.getFilterSet(key);
             end
             
             % loop on selected dimensions
@@ -109,49 +115,59 @@ classdef viewcontrol < hgsetget
                 filteridx = find([slicefilters.dim]==d);
                 if isempty(filteridx), filteridx = 0; end
                 
-                % list already shown?
-                listidx = 0;
-                if ~isempty(C.lists)
-                    shownfilters = C.lists.filters;
-                    for i=1:length(shownfilters)
-                        if shownfilters(i).shared.privatedim==d, listidx=i; break, end
-                    end
-                end
+%                 % list already shown?
+%                 listidx = 0;
+%                 if ~isempty(combo)
+%                     shownfilters = combo.filters;
+%                     for i=1:length(shownfilters)
+%                         if isequal(getID(shownfilters(i).headerin),ID), listidx=i; break, end
+%                     end
+%                 end
                 
                 % add/show/remove filter
                 switch flag
                     case 'filter'
                         % create/get filter
-                        if ~filteridx
-                            if listidx
-                                if fn_dodebug, warning 'list should not be present if the data is not filtered in this dimension', end
-                                F = shownfilters(listidx);
-                            else                            % create new filter and a list acting on it
+                        if filteridx
+                            % filter already present in slicer
+                            F = slicefilters(filteridx).obj;
+                        else
+                            % create filter or get existing one from the
+                            % related public filters set
+                            if isprivate
                                 F = xplr.filterAndPoint(head,'indices');
-                                % add information about which dim is being filtered
-                                F.shared.isprivate = true;
-                                F.shared.privatedim = d;
+                            else
+                                F = S.getFilter(head,C); % viewcontrol object C will be registered as a new user of filter F
+                                if isempty(F)
+                                    F = xplr.filterAndPoint(head,'indices');
+                                    S.addFilter(F,C) % viewcontrol object C will be registered as a user of filter F
+                                end
                             end
                             % add to the list of new filters
                             newfilters(end+1) = struct('d',d,'F',F); %#ok<AGROW>
                             % add the filter to the items
                             str = ['filter ' head.label ' (' char(F.F.slicefun) ')'];
                             C.addFilterItem(d,str,F)
+                        end
+                        % show list in combo
+                        if isprivate
+                            combo.showList(F)
                         else
-                            F = slicefilters(filteridx).obj;
+                            S.showList(F)
                         end
-                        % add the filter to the lists
-                        if ~listidx
-                            C.lists.addList(F)
-                        end
-                        figure(C.lists.container.hobj) % show the figure with filters
                     case 'rmfilter'
+                        if ~filteridx, continue, end
                         % add the dimension to the filter removal list
-                        if filteridx, rmfilters = [rmfilters filteridx]; end %#ok<AGROW>
+                        rmfilters = [rmfilters filteridx]; %#ok<AGROW>
                         % remove filter from the items
                         C.rmItem(['filter ' num2str(d)])
-                        % remove filter from the lists
-                        if listidx, C.lists.removeList(listidx), end
+                        % remove filter from the lists display
+                        F = slicefilters(filteridx).obj;
+                        if isprivate
+                            combo.removeFilter(F)
+                        else
+                            S.removeFilter(F,C) % viewcontrol object C will be unregistered for the users list of filter F; if this list will become empty, F will be unregistered from the filters set
+                        end
                     case 'toggleactive'
                         itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));
                         hlab = C.items(itemidx).label;
@@ -195,7 +211,7 @@ classdef viewcontrol < hgsetget
             x = min(1,abs(abs(ii)-abs(jj))*.5);
             x(x==1) = NaN; x = repmat(x,[1 1 3]);
             uclose = uicontrol('parent',panel,'cdata',x, ...
-                'callback',@(u,e)C.dimaction('rmfilter',d));
+                'callback',@(u,e)C.dimaction('rmfilter',1,d));
             fn_controlpositions(uclose,panel,[1 .5 0 .5],[-11 0 11 0])
         end
         function clickFilterItem(C,d,id)
@@ -244,19 +260,22 @@ classdef viewcontrol < hgsetget
             end
             
             % toggle active if there was no move
-            if ~moved, dimaction(C,'toggleactive',d), end
+            if ~moved, dimaction(C,'toggleactive',1,d), end
         end
     end
     
-    % Lists
+    % Private lists display
     methods (Access='private')
-        function init_lists(C)
-            C.lists = xplr.listcombo();
-            addlistener(C.lists,'Empty',@(u,e)set(C,'lists',[]));
-            %             % local lists
-            %             C.lists = xplr.listcombo(C.V.panels.listcombo,0);
-            %             controlorg = C.V.panels.allcontrols;
-            %             addlistener(C.lists,'Empty',@(u,e)set(controlorg,'extents',[1 0]));
+        function combo = getPrivateLists(C)
+            combo = C.privatelists;
+            % Create?
+            if isempty(combo)
+                disp 'warning: usage of private lists display has not been tested yet'
+                combo = xplr.listcombo(C.V.panels.listcombo,0);
+                C.privatelists = combo;
+                controlorg = C.V.panels.allcontrols;
+                connectlistener(combo,controlorg,'Empty',@(u,e)set(controlorg,'extents',[1 0]));
+            end
         end
     end
     

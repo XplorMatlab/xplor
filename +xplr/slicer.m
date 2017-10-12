@@ -39,11 +39,8 @@ classdef slicer < hgsetget
             end
         end
         function delete(S)
-            if isvalid(S)
-                hl = S.listeners;
-                delete(hl.data(ishandle(hl.data)))
-                delete(hl.filters(ishandle(hl.filters)))
-            end
+            if ~isprop(S,'listeners'), return, end
+            deleteValid(S.listeners)
         end
         function n = get.nddata(S)
             n = S.data.nd;
@@ -112,7 +109,7 @@ classdef slicer < hgsetget
             filtrm = [S.filters(idx).obj];
             dimrm = [S.filters(idx).dim];
             S.filters(idx) = [];
-            hl = S.listeners.filters(idx); delete(hl(ishandle(hl)))
+            hl = S.listeners.filters(idx); deleteValid(hl)
             S.listeners.filters(idx) = [];
             % remove invalid part of slicing chain
             if any(idx), S.slicingchain(find(idx,1,'first'):end) = []; end
@@ -147,7 +144,7 @@ classdef slicer < hgsetget
             if isempty(idx), error 'there is no filter in the specified dimension', end
             prevndout = S.filters(idx).obj.ndout;
             S.filters(idx).obj = newfilt;
-            hl = S.listeners.filters(idx); delete(hl(ishandle(hl)))
+            hl = S.listeners.filters(idx); deleteValid(hl)
             S.listeners.filters(idx) = addlistener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
             % no need for update if the filter is not active
             if ~S.filters(idx).active

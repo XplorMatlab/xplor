@@ -10,13 +10,15 @@ if nargin==0
 end
 
 % create headers
+if ischar(data)
+    name = data;
+    data = evalin('base',name);
+elseif nargin==0
+    name = 'demo data';
+else
+    name = inputname(1);
+end
 if ~isa(data,'xplr.xdata')
-    if ischar(data)
-        name = data;
-        data = evalin('base',name);
-    else
-        name = inputname(1);
-    end
     data = squeeze(data); % remove singleton dimensions
     head = xplr.editHeader(data);
     if isempty(head)

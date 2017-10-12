@@ -40,11 +40,17 @@ classdef contextmenu < hgsetget
                 case 'label'
                     % Line properties
                     % (color)
-                    uimenu(m,'label',['Color according to ' head.label],'checked',fn_switch(isequal(D.colordim,dim)), ...
-                        'callback',@(u,e)D.setColorDim(dim))
+                    docolor = strcmp(D.displaymode,'time courses');
+                    if docolor
+                        uimenu(m,'label',['Color according to ' head.label],'checked',fn_switch(isequal(D.colordim,dim)), ...
+                            'callback',@(u,e)D.setColorDim(fn_switch(isequal(D.colordim,dim),[],dim)))
+                        uimenu(m,'label','Display color legend', ...
+                            'enable',fn_switch(isequal(D.colordim,dim)),'checked',fn_switch(D.showcolorlegend), ...
+                            'callback',@(u,e)set(D,'showcolorlegend',~D.showcolorlegend))
+                    end
                     
                     % Binning
-                    m1 = uimenu(m,'label','Binning','Separator','on');
+                    m1 = uimenu(m,'label','Binning','Separator',fn_switch(docolor));
                     binvalues = {1 2 3 4 'set'};
                     bindisplays = {'none' '2' '3' '4' 'other...'};
                     curbin = D.zoomfilters(dim).bin;
@@ -55,8 +61,8 @@ classdef contextmenu < hgsetget
                     end
                 case 'datadim'
                     % Change filters
-                    uimenu(m,'label','Add/Show Filters','callback',@(u,e)dimaction(C,'filter',dim))
-                    uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',dim))
+                    uimenu(m,'label','Add/Show Filters','callback',@(u,e)dimaction(C,'filter',1,dim))
+                    uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',1,dim))
                 otherwise
                     error('unknown flag ''%s''',flag)
             end
