@@ -156,6 +156,9 @@ classdef bankRegistry < handle
                 end
             end
         end
+        function clear(R)
+            R.content(:) = [];
+        end
     end
     
 end

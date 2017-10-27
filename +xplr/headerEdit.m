@@ -73,7 +73,7 @@ classdef headerEdit < hgsetget
                         'unit',headj.unit,'start',headj.start,'scale',headj.scale, ...
                         'values',{values},'colors',colors, ...
                         'isvalid',true, ...
-                        'confirmed',[],'guessaction','','allguess',[]); %#ok<AGROW>
+                        'confirmed',[],'guessaction','reset','allguess',[]); %#ok<AGROW>
                 end
                 % current head value
                 occurence = sum(E.sz(1:i)==E.sz(i));
@@ -261,7 +261,7 @@ classdef headerEdit < hgsetget
                 % is guess?
                 switch head.guessaction
                     case ''
-                        tdata{i,iA} = '';
+                        error 'programming: guess action should be ''choose'' or ''reset'''
                     case 'choose'
                         tdata{i,iA} = 'Choose...';
                     case 'reset'
@@ -408,13 +408,11 @@ classdef headerEdit < hgsetget
             if size(e.Indices,1)~=1, return, end
             i = e.Indices(1);
             headi = E.curhead(i);
-            if isempty(headi.guessaction)
-                % No guess action for this line -> nothing to do
-                return
-            elseif e.Indices(2)==iA
+            if e.Indices(2)==iA
                 % Perform 'guess action'
                 switch headi.guessaction
                     case ''
+                        error 'programming: guess action should be ''choose'' or ''reset'''
                     case 'choose'
                         % Select among the list of all guesses: build and show a
                         % menu with all possibilities
@@ -430,14 +428,7 @@ classdef headerEdit < hgsetget
                         uimenu(m,'label','Reset','callback',@(u,e)useguess(E,i,'reset'))
                         set(m,'pos',get(E.hf,'CurrentPoint'),'visible','on')
                     case 'reset'
-                        % Reset data
-                        [headi.label headi.unit headi.start headi.scale headi.values ...
-                            headi.colors] = deal('','',[],[],{},[]);
-                        headi.confirmed = true;
-                        headi.guessaction = 'choose'; % allow user to go back to the guess
-                        E.curhead(i) = headi;
-                        % update display
-                        E.display_header(i)
+                        E.useguess(i,'reset')
                 end
             elseif any(e.Indices(2)==[iL iU iV iC]) && ~headi.confirmed
                 % Confirm guess
@@ -454,13 +445,17 @@ classdef headerEdit < hgsetget
             if strcmp(j,'reset')
                 headi = E.curhead(i);
                 [headi.label headi.unit headi.start headi.scale headi.values ...
-                    headi.colors] = deal('','',[],[],{},[]);
+                    headi.colors] = deal('','',[],[],cell(E.sz(i),0),[]);
             else
                 headi = allguess(j);
             end
             % set guess data
             headi.confirmed = true; % guess selected by user is automatically confirmed
-            headi.guessaction = fn_switch(isscalar(allguess) && ~strcmp(j,'reset'),'reset','choose');
+            if isempty(allguess) || (isscalar(allguess) && ~strcmp(j,'reset'))
+                headi.guessaction = 'reset';
+            else
+                headi.guessaction = 'choose';
+            end
             headi.allguess = allguess;
             E.curhead(i) = headi;
             % update display
@@ -471,19 +466,19 @@ classdef headerEdit < hgsetget
             E.display_header()
         end
         function resetall(E)
-            [E.curhead.confirmed] = deal(true);
-            [E.curhead.label] = deal('');
-            [E.curhead.unit] = deal('');
-            [E.curhead.start] = deal([]);
-            [E.curhead.scale] = deal([]);
-            for i=1:E.nd, E.curhead(i).values = cell(E.sz(i),0); end
-            E.display_header()
+            for i=1:E.nd
+                E.useguess(i,'reset')
+            end
         end
         function done(E)
             % build headers
             E.header = xplr.header.empty(1,0);
             for i=1:E.nd
                 head = E.curhead(i);
+                if isempty(head.label)
+                    % set a label if there isn't
+                    head.label = ['dim' num2str(i)];
+                end
                 if isempty(head.unit)
                     % categorical
                     if isempty(head.sublabels), head.sublabels={head.label}; end
