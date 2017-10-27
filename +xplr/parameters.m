@@ -12,9 +12,10 @@ classdef parameters < handle
     
     % Only static functions are public
     methods (Static)
-        function P = getAllPar()
+        function P = getAllPar(forcereload)
             persistent Pmem
-            if isempty(Pmem)
+            if nargin<1, forcereload = false; end
+            if isempty(Pmem) || forcereload
                 fname = fullfile(fileparts(which('xplor')),'xplor parameters.xml');
                 if exist(fname,'file')
                     s = fn_readxml(fname);
@@ -25,6 +26,9 @@ classdef parameters < handle
                 Pmem.params = s;
             end
             P = Pmem;
+        end
+        function reload()
+            xplr.parameters.getAllPar(true);
         end
         function value = get(str)
             value = xplr.parameters.getAllPar().params;

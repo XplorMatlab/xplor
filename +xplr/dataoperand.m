@@ -5,9 +5,6 @@ classdef dataoperand < hgsetget
         headerin
         headerout
     end
-    properties
-        shared = struct; % some additional data that all objects acting on the filter can share
-    end
     properties (Dependent, SetAccess='private')
         szin
         ndin
@@ -17,7 +14,13 @@ classdef dataoperand < hgsetget
     properties (Dependent, SetAccess='private')
         reductionfactor
     end
-    
+    % properties below are not handled by dataoperand class and
+    % sub-classes, but rather by the objects that use them
+    properties 
+        linkkey = 0
+        %shared = struct;
+    end
+   
     events
         ChangedOperation
     end

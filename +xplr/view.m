@@ -95,9 +95,16 @@ classdef view < hgsetget
             assignin('base','V',V)
         end
         function delete(V)
-            delete(V.hf(ishandle(V.hf)))
-            if ~isempty(V.C) && isvalid(V.C), delete(V.C), end
-            if ~isempty(V.D) && isvalid(V.D), delete(V.D), end
+            if ~isprop(V,'hf'), return, end
+            deleteValid(V.hf,V.C,V.D)
+        end
+    end
+    
+    % Reset display
+    methods
+        function reset_display(V)
+            delete(allchild(V.panels.display))
+            V.D = xplr.viewdisplay(V);
         end
     end
     
@@ -105,7 +112,6 @@ classdef view < hgsetget
     methods
         function init_panels(V)
             % figure
-            close(findall(0,'type','figure','tag','XPLOR'))
             V.hf = figure('integerhandle','off','handlevisibility','off','visible','off', ...
                 'numbertitle','off','name','XPLOR','tag','XPLOR', ...
                 'menubar','none', ...
@@ -126,7 +132,7 @@ classdef view < hgsetget
             set(V.panels.main,'bordermode','push')
             V.panels.display = V.panels.main.setSubPanel(2);
             V.panels.allcontrols = V.panels.main.setSubOrg(1,'V',2,[1 1],[1 0]);
-            addlistener(V.panels.allcontrols.hobj,'Visible','PostSet',@(u,e)set(V,'controlvisible',get(V.panels.allcontrols.hobj,'visible')));
+            connectlistener(V.panels.allcontrols.hobj,V,'Visible','PostSet',@(u,e)set(V,'controlvisible',get(V.panels.allcontrols.hobj,'visible')));
             V.panels.controlswidth = 120;
             V.panels.control = V.panels.allcontrols.setSubPanel(1);
             V.panels.listcombo = V.panels.allcontrols.setSubOrg(2,'H');

@@ -304,7 +304,11 @@ classdef header < hgsetget
                 && isequal({H1.categorical,H1.start,H1.scale},{H2.categorical,H2.start,H2.scale});
         end
         function ID = getID(H)
-            if eval('true'), error 'header ID are not supposed to be used for the moment', end
+            if ~isscalar(H)
+                ID = zeros(size(H));
+                for i=1:numel(H), ID(i) = getID(H(i)); end
+                return
+            end
             if isempty(H.ID)
                 H.ID = fn_hash({H.sublabels,H.label,H.categorical,H.start,H.scale,H.values},'num'); %#ok<MCHV2>
             end

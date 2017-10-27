@@ -11,7 +11,6 @@ classdef list < hgsetget
         menu
         menuitems
         valuestr    % precomputed list of values
-        listeners = struct('selection',[],'point',[]);
     end
     properties
         selmultin = true;
@@ -83,8 +82,8 @@ classdef list < hgsetget
             end
             
             % watch filter
-            L.listeners.selection = addlistener(F,'ChangedOperation',@(u,e)displayselection(L));
-            L.listeners.point     = addlistener(F,'ChangedPoint',@(u,e)displaycross(L));
+            connectlistener(F,L,'ChangedOperation',@(u,e)displayselection(L));
+            connectlistener(F,L,'ChangedPoint',@(u,e)displaycross(L));
             
             % auto-delete
             set(L.hu,'deletefcn',@(u,evnt)delete(L))
@@ -113,6 +112,8 @@ classdef list < hgsetget
             uimenu(m,'label','new group selection','callback',@(u,e)event(L,'newgroup'))
             uimenu(m,'label','add to selection','callback',@(u,e)event(L,'add'))
 
+            uimenu(m,'label','define new group...','callback',@(u,e)event(L,'definegroup'),'separator','on')
+
             uimenu(m,'label','sort selections according to list order','callback',@(u,e)event(L,'sort'),'separator','on')
             uimenu(m,'label','reorder selections...','callback',@(u,e)event(L,'reorder'))
             
@@ -135,9 +136,7 @@ classdef list < hgsetget
         end
         function delete(L)
             if ~isvalid(L) && ~isprop(L,'hu'), return, end
-            if ishandle(L.hu), delete(L.hu), end
-            if ishandle(L.hlabel), delete(L.hlabel), end
-            deleteValid(L.listeners)
+            deleteValid(L.hu,L.hlabel)
         end
     end
        
@@ -213,6 +212,7 @@ classdef list < hgsetget
             isoft = find(softsel);
             nsoft = length(isoft);
             isolid = find(~softsel);
+            nsolid = nsel-nsoft;
             
             % action (or only determine shich selections to remove and
             % which to add)
@@ -257,6 +257,21 @@ classdef list < hgsetget
                 case 'newgroup'
                     idxrm = isoft;
                     newsel = buildCurrentSelection(L,false);
+                case 'definegroup'
+                    str = inputdlg('Define selection','',1,{['1:' num2str(L.F.szin)]}); % TODO: continue!!!
+                    if isempty(str), disp 'interrupted', return, end
+                    try
+                        val = evalin('base',['[' str{1} ']']);
+                        if iscell(val), newsel = val; else newsel = {val}; end
+                        if L.doroi
+                            for i=1:length(newsel)
+                                newsel{i} = selectionND('point1D',newsel{i}); 
+                            end
+                        end
+                    catch
+                        errordlg('Command could not be evaluated correctly')
+                        return
+                    end
                 case 'add'
                     newsel = selectionND('point1D',val);
                     if nsoft, updateSelection(L.F,'remove',isoft), end % remove all soft selections
@@ -276,7 +291,26 @@ classdef list < hgsetget
                     updateSelection(L.F,'perm',ord)
                     return
                 case 'reorder'
-                    error 'not implemented yet'
+                    % first remove all soft selections
+                    if nsoft, updateSelection(L.F,'remove',isoft), end
+                    nsel = nsolid;
+                    % prompt for reordering
+                    ord = fn_input('new order',1:nsel);
+                    if length(unique(ord))<length(ord) || ~all(ismember(ord,1:nsel))
+                        waitfor(errordlg('Not a valid permutation or subset'))
+                        return
+                    end
+                    if length(ord)<nsel
+                        answer = questdlg('This is not a permutation: some selections will be removed','', ...
+                            'OK','Cancel','OK');
+                        if strcmp(answer,'Cancel'), return, end
+                        idxrm = setdiff(1:nsel,ord);
+                        updateSelection(L.F,'remove',idxrm)
+                        [~, ordsort] = sort(ord);
+                        ord(ordsort) = 1:length(ord);
+                    end
+                    updateSelection(L.F,'perm',ord)
+                    return
                 case 'rmall'
                     % set empty selections rather than remove all existing
                     % ones: this can performs some clean-up when errors

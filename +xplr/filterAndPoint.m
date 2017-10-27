@@ -7,7 +7,6 @@ classdef filterAndPoint < xplr.dataoperand
         P = xplr.point.empty(1,0);
     end
     properties (SetAccess='private')
-        listeners = struct('filter',[],'point',event.listener.empty(1,0),'pointselection',event.listener.empty(1,0));
         dolistenpoint
     end
     properties (Dependent, SetAccess='private')
@@ -31,25 +30,21 @@ classdef filterAndPoint < xplr.dataoperand
                 error 'filterAndPoint filter can be only of type ''selection'' or ''indices'''
             end
             F.headerin = F.F.headerin;
-            F.listeners.filter = addlistener(F.F,'ChangedOperation',@(u,e)transitNotification(F,'filter',e));
+            connectlistener(F.F,F,'ChangedOperation',@(u,e)transitNotification(F,'filter',e))
             
             % set P
             for i=1:F.ndin
                 F.P(i) = xplr.point(F.headerin(i));
             end
             for i=1:F.ndin
-                F.listeners.point(i) = addlistener(F.P(i),'ChangedPoint',@(u,e)transitNotification(F,'point',e));
-                F.listeners.pointselection(i) = addlistener(F.P(i),'ChangedOperation',@(u,e)transitNotification(F,'pointselection',e));
+                connectlistener(F.P(i),F,'ChangedPoint',@(u,e)transitNotification(F,'point',e))
+                connectlistener(F.P(i),F,'ChangedOperation',@(u,e)transitNotification(F,'pointselection',e))
             end
             F.dolistenpoint = true;
             
             % set output header (uses filters or P depending on whether
             % filters selection is non-empty)
             setHeaderout(F)
-        end
-        function delete(F)
-            if ~isvalid(F) && ~isprop(F,'listeners'), return, end
-            deleteValid(F.listeners)
         end
     end
     

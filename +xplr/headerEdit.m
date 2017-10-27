@@ -9,7 +9,8 @@ classdef headerEdit < hgsetget
         % header under construction
         curhead = struct('sublabels',cell(1,0),'label',[], ...
             'unit',[],'start',[],'scale',[],'values',[],'colors',[], ...
-            'isvalid',[],'markguess',[],'allguess',[]);
+            'isvalid',[], ...
+            'confirmed',[],'guessaction','','allguess',[]);
         header
         
         % graphics
@@ -71,14 +72,20 @@ classdef headerEdit < hgsetget
                     candidates2(j) = struct('sublabels',{sublabels},'label',headj.label, ...
                         'unit',headj.unit,'start',headj.start,'scale',headj.scale, ...
                         'values',{values},'colors',colors, ...
-                        'isvalid',true,'markguess',okguess,'allguess',[]); %#ok<AGROW>
+                        'isvalid',true, ...
+                        'confirmed',[],'guessaction','reset','allguess',[]); %#ok<AGROW>
                 end
                 % current head value
                 occurence = sum(E.sz(1:i)==E.sz(i));
                 if length(candidates2)>=occurence, j=occurence; else j=1; end
                 E.curhead(i) = candidates2(j);
+                % setting data for guesses
                 if okguess
+                    E.curhead(i).confirmed = false;
+                    E.curhead(i).guessaction = fn_switch(isscalar(candidates2),'reset','choose');
                     E.curhead(i).allguess = candidates2; % store all other alternatives as well
+                else
+                    E.curhead(i).confirmed = true;
                 end
             end
             
@@ -240,6 +247,7 @@ classdef headerEdit < hgsetget
             display_header(E,1:E.nd)
         end
         function display_header(E,idx)
+            if nargin<2, idx = 1:E.nd; end
             tdata = get(E.table,'Data');
             [iL iU iV iA iC] = columnIndices;
             for i = idx
@@ -251,12 +259,13 @@ classdef headerEdit < hgsetget
                 % header info
                 [tdata{i,[iL iU iV iC]}] = display_headerinfo(head);
                 % is guess?
-                if length(head.allguess)>1
-                    tdata{i,iA} = 'Choose...';
-                elseif head.markguess 
-                    tdata{i,iA} = 'Reset';
-                else
-                    tdata{i,iA} = '';
+                switch head.guessaction
+                    case ''
+                        error 'programming: guess action should be ''choose'' or ''reset'''
+                    case 'choose'
+                        tdata{i,iA} = 'Choose...';
+                    case 'reset'
+                        tdata{i,iA} = 'Reset';
                 end            
             end
             set(E.table,'Data',tdata)
@@ -267,10 +276,10 @@ classdef headerEdit < hgsetget
             % color rows with values that need being confirmed
             col = zeros(E.nd,3); allok = true;
             for i=1:E.nd
-                if E.curhead(i).markguess
-                    col(i,:) = [1 1 0]; allok = false;
-                elseif ~E.curhead(i).isvalid
+                if ~E.curhead(i).isvalid
                     col(i,:) = [1 .4 .4]; allok = false;
+                elseif ~E.curhead(i).confirmed
+                    col(i,:) = [1 1 0]; allok = false;
                 elseif mod(i,2)
                     col(i,:) = [1 1 1];
                 else
@@ -282,7 +291,7 @@ classdef headerEdit < hgsetget
             end
             
             % enabling of 'confirm all' and 'ok' buttons
-            if ishandle(E.uconfirm) && ~any(any([E.curhead.markguess]))
+            if ishandle(E.uconfirm) && all([E.curhead.confirmed])
                 delete(E.uconfirm)
             end
             set(E.ok,'enable',fn_switch(allok))
@@ -292,8 +301,8 @@ classdef headerEdit < hgsetget
             cnames = get(E.table,'ColumnName');
             ename = cnames{e.Indices(2)};
 
-            % can remove the 'Confirm' flag
-            E.curhead(i).markguess = false;
+            % this automatically confirms the guess if there was a guess
+            E.curhead(i).confirmed = true;
             
             % update header
             switch ename
@@ -394,90 +403,82 @@ classdef headerEdit < hgsetget
         end
         function cellselect(E,e)
             % Special actions can occur when selecting a cell inside a row
-            % where there is somme guess
-            tdata = get(E.table,'Data');
+            % where there is some guess
             [iL iU iV iA iC] = columnIndices;
             if size(e.Indices,1)~=1, return, end
             i = e.Indices(1);
             headi = E.curhead(i);
-            if ~headi.markguess, return, end % No guess for this line -> nothing to do
-            if ~isscalar(headi.allguess) && e.Indices(2)==iA
-                % Select among the list of all guesses: build and show a
-                % menu with all possibilities
-                deleteValid(E.contextmenu)
-                m = uicontextmenu(E.hf);
-                E.contextmenu = m;
-                nguess = length(headi.allguess);
-                for j=1:nguess
-                    [label unit scale_value color] = display_headerinfo(headi.allguess(j));
-                    lab = fn_strcat({label unit scale_value color},'; ');
-                    uimenu(m,'label',lab,'callback',@(u,e)useguess(E,i,j))
+            if e.Indices(2)==iA
+                % Perform 'guess action'
+                switch headi.guessaction
+                    case ''
+                        error 'programming: guess action should be ''choose'' or ''reset'''
+                    case 'choose'
+                        % Select among the list of all guesses: build and show a
+                        % menu with all possibilities
+                        deleteValid(E.contextmenu)
+                        m = uicontextmenu(E.hf);
+                        E.contextmenu = m;
+                        nguess = length(headi.allguess);
+                        for j=1:nguess
+                            [label unit scale_value color] = display_headerinfo(headi.allguess(j));
+                            lab = fn_strcat({label unit scale_value color},'; ');
+                            uimenu(m,'label',lab,'callback',@(u,e)useguess(E,i,j))
+                        end
+                        uimenu(m,'label','Reset','callback',@(u,e)useguess(E,i,'reset'))
+                        set(m,'pos',get(E.hf,'CurrentPoint'),'visible','on')
+                    case 'reset'
+                        E.useguess(i,'reset')
                 end
-                uimenu(m,'label','Reset','callback',@(u,e)useguess(E,i,'reset'))
-                set(m,'pos',get(E.hf,'CurrentPoint'),'visible','on')
-            elseif headi.markguess
-                if e.Indices(2)==iA
-                    % Selected 'Reset' -> Remove guess
-                    [tdata{i,[iL iU iV iC iA]}] = deal('');
-                    [headi.label headi.unit headi.start headi.scale headi.values ...
-                        headi.colors] = deal('','',[],[],{},[]);
-                elseif any(e.Indices(2)==[iL iU iV iC])
-                    % Selected another column -> Confirm guess
-                    tdata{i,iA} = '';
-                    set(E.table,'Data',tdata)
-                    color_table(E)
-                end
-                set(E.table,'Data',tdata)
-                headi.markguess = false;
-                headi.allguess = [];
+            elseif any(e.Indices(2)==[iL iU iV iC]) && ~headi.confirmed
+                % Confirm guess
+                headi.confirmed = true; % line is confirmed in any case
+                headi.guessaction = 'choose'; % allow user to go back to the guess
                 E.curhead(i) = headi;
-                color_table(E)
+                % update display
+                E.display_header(i)
             end
         end
         function useguess(E,i,j)
             % update ore reset header
+            allguess = E.curhead(i).allguess;
             if strcmp(j,'reset')
                 headi = E.curhead(i);
                 [headi.label headi.unit headi.start headi.scale headi.values ...
-                    headi.colors] = deal('','',[],[],{},[]);
-                E.curhead(i) = headi;
+                    headi.colors] = deal('','',[],[],cell(E.sz(i),0),[]);
             else
-                allguess = E.curhead(i).allguess;
-                E.curhead(i) = allguess(j);
+                headi = allguess(j);
             end
-            E.curhead(i).markguess = false; % do not mark as guess, since the user specifically selected it
-            E.curhead(i).allguess = []; % it would also make sense not to remove 'allguess' and thus leave the possibility to the user to change again to another guess
+            % set guess data
+            headi.confirmed = true; % guess selected by user is automatically confirmed
+            if isempty(allguess) || (isscalar(allguess) && ~strcmp(j,'reset'))
+                headi.guessaction = 'reset';
+            else
+                headi.guessaction = 'choose';
+            end
+            headi.allguess = allguess;
+            E.curhead(i) = headi;
             % update display
             display_header(E,i)
         end
         function confirmall(E)
-            tdata = get(E.table,'Data');
-            [~, ~, ~, iA] = columnIndices;
-            tdata(:,iA) = {''};
-            set(E.table,'Data',tdata)
-            [E.curhead.markguess] = deal(false);
-            color_table(E)
+            [E.curhead.confirmed] = deal(true);
+            E.display_header()
         end
         function resetall(E)
-            tdata = get(E.table,'Data');
-            [iL iU iV iA] = columnIndices;
-            tdata(:,[iL iU iV iA]) = {''};
-            set(E.table,'Data',tdata)
-            [E.curhead.markguess] = deal(false);
-            [E.curhead.label] = deal('');
-            [E.curhead.unit] = deal('');
-            [E.curhead.start] = deal([]);
-            [E.curhead.scale] = deal([]);
             for i=1:E.nd
-                E.curhead(i).values = cell(E.sz(i),0);
+                E.useguess(i,'reset')
             end
-            color_table(E)
         end
         function done(E)
             % build headers
             E.header = xplr.header.empty(1,0);
             for i=1:E.nd
                 head = E.curhead(i);
+                if isempty(head.label)
+                    % set a label if there isn't
+                    head.label = ['dim' num2str(i)];
+                end
                 if isempty(head.unit)
                     % categorical
                     if isempty(head.sublabels), head.sublabels={head.label}; end
