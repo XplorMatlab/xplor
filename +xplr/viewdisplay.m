@@ -296,7 +296,7 @@ classdef viewdisplay < hgsetget
             hl = subsref(D.hdisplay,s);
             % display legend
             names = D.slice.header(d).getItemNames;
-            D.hlegend = fn_colorlegend(row(hl),names,'SouthWest');
+            D.hlegend = fn_colorlegend(row(hl),names,'SouthWest','frame');
         end
     end
     
@@ -400,9 +400,11 @@ classdef viewdisplay < hgsetget
             if ~isempty(D.org.x), sztest(D.org.x(1)) = 1; end
             if strcmp(D.displaymode,'image') && ~isempty(D.org.y), sztest(D.org.y(1)) = 1; end
             if strcmp(D.displaymode,'time courses')
-                ok = prod(sztest) <= xplr.parameters.get('display.NLineMax');
+                ok = (prod(sztest) <= xplr.parameters.get('display.NLineMax')) && ...
+                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NLinePointMax'));
             else
-                ok = prod(sztest) <= xplr.parameters.get('display.NImageMax');
+                ok = (prod(sztest) <= xplr.parameters.get('display.NImageMax')) && ...
+                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NImagePixelMax'));
             end
             if ~ok
                 % too many grid elements: cancel display!

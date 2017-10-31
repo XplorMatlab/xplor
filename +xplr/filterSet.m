@@ -22,6 +22,11 @@ classdef filterSet < hgsetget
             % function F = getFilter(S,header[,user])
             hID = getID(header);
             F = S.registry.getValue(hID,varargin{:});
+            % Automatic unregister upon user's deletion
+            if nargin>=3
+                user = varargin{1};
+                fn_deletefcn(user,@(u,e)removeFilter(S,F,user))
+            end
         end
         function addFilter(S,F,varargin)
             % function addFilter(S,F[,user])
@@ -42,6 +47,9 @@ classdef filterSet < hgsetget
                 S.combo.removeList(F)
             end
         end
+        function clear(S)
+            S.registry.clear()
+        end
     end
     
     % List display
@@ -55,6 +63,7 @@ classdef filterSet < hgsetget
             
             % Display filter
             S.combo.showList(F)
+            figure(S.combo.container.hobj)
         end
     end
     

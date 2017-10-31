@@ -41,7 +41,7 @@ switch name
     case 'linkkey'
         satrange = .3;
         lumrange = 1;
-        cmap = hsl2rgb([4 6 2 1 3]/6,satrange,lumrange);
+        cmap = squeeze(hsv2rgb([4 6 2 1 3]/6,ones(1,5)*satrange,ones(1,5)*lumrange));
         infinitemap = true;
     otherwise
         error('unknown color set name ''%s''',name)
