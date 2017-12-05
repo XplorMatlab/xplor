@@ -417,7 +417,7 @@ classdef headerEdit < hgsetget
                         % Select among the list of all guesses: build and show a
                         % menu with all possibilities
                         deleteValid(E.contextmenu)
-                        m = uicontextmenu(E.hf);
+                        m = uicontextmenu('parent',E.hf);
                         E.contextmenu = m;
                         nguess = length(headi.allguess);
                         for j=1:nguess

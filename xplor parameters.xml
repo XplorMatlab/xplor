@@ -5,8 +5,8 @@
    </bank>
    <display>
       <NImageMax>1000</NImageMax>
-      <NImagePixelMax>1e6</NImagePixelMax>
+      <NImagePixelMax>5000000</NImagePixelMax>
       <NLineMax>2000</NLineMax>
-      <NLinePointMax>1e6</NLinePointMax>
+      <NLinePointMax>1000000</NLinePointMax>
    </display>
 </s>

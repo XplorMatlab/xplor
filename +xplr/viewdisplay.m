@@ -592,6 +592,8 @@ classdef viewdisplay < hgsetget
                         otherwise
                             error('unknown clipping adjustment flag ''%s''',clipadjust)
                     end
+                    xi = double(xi);
+                    clipi = double(clipi);
                     % display it
                     if dotimecourses
                         xi = (xi-clipi(1))/clipextent;
