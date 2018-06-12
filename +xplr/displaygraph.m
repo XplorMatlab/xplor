@@ -214,10 +214,12 @@ classdef displaygraph < handle
             
             % case empty
             if isempty(xorg)
+                % coordinate 1 should go to the center
                 st.xoffset = -xavail;
                 st.xstep = xavail;
             end
             if isempty(yorg)
+                % coordinate 1 should go to the center
                 st.yoffset = yavail;
                 st.ystep = -yavail; % ystep must be negative
             end
@@ -229,6 +231,12 @@ classdef displaygraph < handle
             %---
             % sets G properties xoffset xstep yoffset ystep and tells
             % whether they were changed
+            
+            % no need to compute steps if there will be no display
+            if G.D.nodisplay
+                if nargout>0, anychg = false; end
+                return
+            end
             
             % compute steps
             if nargout>0, prevsteps = G.steps; end
@@ -253,6 +261,9 @@ classdef displaygraph < handle
             % remove previous xy ticks
             deleteValid(G.xyticks)
             G.xyticks = [];
+            
+            % stop if data is too large for being displayed
+            if G.D.nodisplay, return, end
             
             % x and y
             for k = 1:2
@@ -489,6 +500,7 @@ classdef displaygraph < handle
 
             % Initialize matrix
             M = repmat(eye(4),[1 1 size(ijk,2)]);
+            
             % Scale: depends only on in-curve/in-image dimension(s)
             % (x)
             xscale = st.xstep(1);
@@ -496,7 +508,10 @@ classdef displaygraph < handle
             % (y)
             switch G.D.displaymode
                 case 'image'
-                    yscale = st.ystep(1);
+                    % not possible to have negative values -> orienting the
+                    % images downward will be achieved by inverting y
+                    % coordinates at the stage of patch creation
+                    yscale = abs(st.ystep(1));
                 case 'time courses'
                     if nargin==3
                         ylim = ylim_or_ybase;
@@ -505,16 +520,12 @@ classdef displaygraph < handle
                     else
                         ybase = ylim_or_ybase;
                     end
-                    if ~isempty(st.ystep)
-                        yscale = st.ystep(1) / yextent;
-                    else
-                        yscale = 1 / yextent;
-                    end
+                    yscale = abs(st.ystep(1) / yextent); % y-values of time courses should not be oriented downward
                 otherwise
                     error 'invalid display mode'
             end
-            yscale = abs(yscale); % not possible to have negative values (i.e. flip up-down the graph) -> the flip will occur at the stage of line/patch creation
-            M(2,2,:) = yscale;
+            M(2,2,:) = yscale; 
+            
             % Offset: handle separately offsets relative to
             % in-curve/in-image  dimension(s) and to other dimensions
             % (x)
@@ -524,7 +535,9 @@ classdef displaygraph < handle
                 case 'image'
                     M(2,4,:) = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.org.y(2:end),:)),1) );
                 case 'time courses'
-                    M(2,4,:) = fn_add( sum(st.yoffset)-ybase*yscale, sum(fn_mult(st.ystep(:),ijk(G.org.y,:)),1) );
+                    % we subtract yscale*ybase so that ybase goes to
+                    % the center
+                    M(2,4,:) = fn_add( sum(st.yoffset)-yscale*ybase, sum(fn_mult(st.ystep(:),ijk(G.org.y,:)),1) );
             end
             % (xy)
             if ~isempty(st.xydim)
@@ -540,6 +553,16 @@ classdef displaygraph < handle
             else
                 orgin = G.org;
                 st = G.steps;
+                if isempty(st)
+                    % code here added on 04/06/2018 to avoid error
+                    if G.D.nodisplay
+                        warning 'Please edit code to better handle this case'
+                        pos = zeros(1,length(dim));
+                        return
+                    else
+                        error 'programming'
+                    end
+                end
             end
             
             % label positions

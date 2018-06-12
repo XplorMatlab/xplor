@@ -206,6 +206,8 @@ classdef viewdisplay < hgsetget
                 doImmediateDisplay = true;
             end
             D.org = neworg;
+            % is zslice too large for being displayed
+            D.checkzslicesize()
             % first update graph (new positionning will be needed for both
             % labels and data display)
             D.graph.computeSteps()
@@ -395,20 +397,8 @@ classdef viewdisplay < hgsetget
             if nargin<3, dim = []; end
             
             % Is data too large for being displayed?
-            % TODO: this check should occur before setting the ticks
-            sztest = D.zslice.sz;
-            if ~isempty(D.org.x), sztest(D.org.x(1)) = 1; end
-            if strcmp(D.displaymode,'image') && ~isempty(D.org.y), sztest(D.org.y(1)) = 1; end
-            if strcmp(D.displaymode,'time courses')
-                ok = (prod(sztest) <= xplr.parameters.get('display.NLineMax')) && ...
-                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NLinePointMax'));
-            else
-                ok = (prod(sztest) <= xplr.parameters.get('display.NImageMax')) && ...
-                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NImagePixelMax'));
-            end
-            if ~ok
+            if D.nodisplay
                 % too many grid elements: cancel display!
-                D.nodisplay = true;
                 deleteValid(D.htransform) % this will also delete children D.hdisplay
                 delete(findall(D.ha,'type','text','tag','xytick'))
                 set(D.ha,'xtick',[],'ytick',[])
@@ -417,10 +407,11 @@ classdef viewdisplay < hgsetget
                         'parent',D.ha,'horizontalalignment','center','tag','nodisplay')
                 end
                 return
-            elseif D.nodisplay
+            end
+            hnodisplay = findall(D.ha,'type','text','tag','nodisplay');
+            if ~isempty(hnodisplay)
                 % display was canceled last time: we need a global update
-                D.nodisplay = false;
-                delete(findall(D.ha,'type','text','tag','nodisplay'))
+                delete(hnodisplay)
                 flag = 'global';
             end                
             
@@ -616,8 +607,11 @@ classdef viewdisplay < hgsetget
                             im = permute(xi,[4 2 1 3 5]);
                         end
                         if docreatecur
-                            % y coordinates are negative to implement an up-down flip (D.graph.ystep(1) is negative,
-                            % but the y-scale of the hgtransform cannot be set negative, so the absolute value is set and this hack on coordinates is used)
+                            % y coordinates are negative to orient the
+                            % image downward (see also comment inside of
+                            % displaygaph.gettransform method, where the
+                            % y-scale of the hgtransform cannot be set
+                            % negative)
                             D.hdisplay(idx) = surface([.5 size(im,2)+.5],[-.5 -.5-size(im,1)],zeros(2), ...
                                 'parent',D.htransform(idx), ...
                                 'EdgeColor','none','FaceColor','texturemap','CDataMapping','scaled','CData',im, ...
@@ -631,6 +625,19 @@ classdef viewdisplay < hgsetget
                 end
             end
         end
+        function checkzslicesize(D)
+            sztest = D.zslice.sz;
+            if ~isempty(D.org.x), sztest(D.org.x(1)) = 1; end
+            if strcmp(D.displaymode,'image') && ~isempty(D.org.y), sztest(D.org.y(1)) = 1; end
+            if strcmp(D.displaymode,'time courses')
+                ok = (prod(sztest) <= xplr.parameters.get('display.NLineMax')) && ...
+                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NLinePointMax'));
+            else
+                ok = (prod(sztest) <= xplr.parameters.get('display.NImageMax')) && ...
+                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NImagePixelMax'));
+            end
+            D.nodisplay = ~ok;
+        end
     end
     methods
         function zslicechange(D,e)
@@ -642,6 +649,9 @@ classdef viewdisplay < hgsetget
                 slicechange(D,D.sliceChangeEvent)
                 D.sliceChangeEvent = [];
             end
+            
+            % Is zslice too large for being displayed
+            D.checkzslicesize()
             
             % Update graph (will be needed by both labels and data display)
             prevsz = D.graph.zslicesz;
@@ -745,6 +755,7 @@ classdef viewdisplay < hgsetget
             % be updated here
             if ~e.chgnout
                 c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
+                D.checkzslicesize % is zslice too large for being displayed
                 D.graph.computeSteps()
                 D.graph.setTicks()
                 D.labels.updateLabels()
@@ -771,6 +782,7 @@ classdef viewdisplay < hgsetget
                 D.setOrg(neworg) % this automatically updates display among other things
             else
                 % update display
+                D.checkzslicesize() % is zslice too large for being displayed
                 D.graph.computeSteps() %#ok<MCSUP>
                 D.graph.setTicks() %#ok<MCSUP>
                 D.labels.updateLabels() %#ok<MCSUP>

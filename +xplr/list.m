@@ -191,7 +191,7 @@ classdef list < hgsetget
                     n = varargin{1};
                     newindex = fn_coerce(L.F.index+n,1,L.F.szin);
                     if newindex==L.F.index, return, end
-                    set(L.hu,'value',newindex);
+                    set(L.hu,'value',newindex,'listboxtop',newindex-2);
                     flag = 'select';
             end            
             
