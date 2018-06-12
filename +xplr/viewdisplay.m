@@ -59,7 +59,7 @@ classdef viewdisplay < hgsetget
             D.ha = axes('parent',D.hp);
             axis(D.ha,[-.5 .5 -.5 .5]) % center 0, available space 1
             set(D.ha,'box','on','clim',[0 1])
-            set(D.ha,'TickLabelInterpreter','none')
+            try, set(D.ha,'TickLabelInterpreter','none'), end % recent Matlab versions only
             D.listeners.axsiz = fn_pixelsizelistener(D.ha,@(u,e)axisresize(D));
             c = disableListener(D.listeners.axsiz); % prevent display update following automatic change of axis position during all the following initializations
 
@@ -583,6 +583,8 @@ classdef viewdisplay < hgsetget
                         otherwise
                             error('unknown clipping adjustment flag ''%s''',clipadjust)
                     end
+                    xi = double(xi);
+                    clipi = double(clipi);
                     % display it
                     if dotimecourses
                         xi = (xi-clipi(1))/clipextent;
