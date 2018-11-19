@@ -232,12 +232,6 @@ classdef displaygraph < handle
             % sets G properties xoffset xstep yoffset ystep and tells
             % whether they were changed
             
-            % no need to compute steps if there will be no display
-            if G.D.nodisplay
-                if nargout>0, anychg = false; end
-                return
-            end
-            
             % compute steps
             if nargout>0, prevsteps = G.steps; end
             [G.steps G.zslicesz G.filling xpair] = computeStepsPrivate(G,G.org); %#ok<ASGLU>

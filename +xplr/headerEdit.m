@@ -1,5 +1,9 @@
 classdef headerEdit < hgsetget
-    
+% function E = headerEdit(data [, callback])
+%---
+% callback is a function with prototype fun(header) to execute once the ok
+% button is pressed
+
     properties
         % data (will be read-only)
         dat
@@ -19,11 +23,14 @@ classdef headerEdit < hgsetget
         ok
         uconfirm
         contextmenu
+        
+        % callback
+        callback
     end
     
     % Constructor
     methods
-        function E = headerEdit(data)
+        function E = headerEdit(data, callback)
             % data
             if nargin<1, data = rand(50,40,100); end
             if isa(data,'xplr.xdata')
@@ -37,13 +44,18 @@ classdef headerEdit < hgsetget
             end
             E.nd = length(E.sz);
             
+            % callback
+            if nargin>=2
+                E.callback = callback;
+            end
+            
             % guess header and store in a structure that admits invalid
             % definitions (units defined without start and scale being
             % defined)
             for i=1:E.nd
                 % guesses or other start value
                 if isempty(inputhead)
-                    candidates = xplr.bank.getrecentheaders(E.sz(i));
+                    candidates = xplr.bank.getrecentheaders(E.sz(i), 20);
                     okguess = ~isempty(candidates);
                     if ~okguess
                         candidates = xplr.header('',E.sz(i));
@@ -118,6 +130,7 @@ classdef headerEdit < hgsetget
             uimenu(m,'label','Create a new set','separator',fn_switch(~isempty(labels)), ...
                 'callback',@(u,e)editMeasure(E,''))
         end
+        
         % this function is actually completely independent from E, except
         % it re-displays the menus at the end
         function editMeasure(E,oldlabel)
@@ -510,6 +523,16 @@ classdef headerEdit < hgsetget
             % close figure -> calling editHeader function can proceed
             delete(E.hf)
             drawnow
+            
+            % register headers to the bank
+            if ~isempty(E.header)
+                xplr.bank.registerheaders(E.header)
+            end
+            
+            % execute callback if any
+            if ~isempty(E.callback)
+                E.callback(E.header);
+            end
         end
     end
     
@@ -604,6 +627,7 @@ elseif iscell(x) && size(x,1)==n
 else
     sep = fn_switch(any(scale_value==','),',',' ');
     list = fn_strcut(scale_value,sep);
+    list = fn_regexptokens(list,'^ *(.*?) *$'); % remove blanks at the beginning and end
     if isvector(list) && n>1, list = column(list); end
 end
 if length(list)==n

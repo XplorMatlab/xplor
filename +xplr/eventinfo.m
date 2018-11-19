@@ -61,6 +61,7 @@ classdef eventinfo < event.EventData & dynamicprops
                 addprop(obj,F{i});
                 obj.(F{i})=varargin{i};
             end
+            disp(obj)
         end
     end
 end

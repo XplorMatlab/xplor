@@ -23,7 +23,7 @@ classdef filterSet < hgsetget
             hID = getID(header);
             F = S.registry.getValue(hID,varargin{:});
             % Automatic unregister upon user's deletion
-            if nargin>=3
+            if ~isempty(F) && nargin>=3
                 user = varargin{1};
                 fn_deletefcn(user,@(u,e)removeFilter(S,F,user))
             end
@@ -43,7 +43,7 @@ classdef filterSet < hgsetget
             % function removeFilter(S,F[,user])
             hID = getID(F.headerin);
             removed = S.registry.unregister(hID,varargin{:});
-            if removed
+            if removed && ~isempty(S.combo)
                 S.combo.removeList(F)
             end
         end

@@ -9,7 +9,7 @@ if nargin==0
     data = xplr.xdata(dat,head,'Flow Data');
 end
 
-% create headers
+% create headers and launch view
 if ischar(data)
     name = data;
     data = evalin('base',name);
@@ -20,15 +20,18 @@ else
 end
 if ~isa(data,'xplr.xdata')
     data = squeeze(data); % remove singleton dimensions
-    head = xplr.editHeader(data);
-    if isempty(head)
-        % header editing was canceled
-        if nargout, V = []; end
-        return
-    end
-    data = xplr.xdata(data,head,name);
+    xplr.headerEdit(data, @(header)launch_view({data, header, name}, varargin{:}));
+else
+    launch_view(data, varargin{:})
+end
+
+%---
+function launch_view(x, varargin)
+
+% combine data and header
+if iscell(x)
+    data = xplr.xdata(x{1}, x{2}, x{3});
 end
 
 % go!
-V = xplr.view(data,varargin{:});
-if nargout==0, clear V, end
+xplr.view(data,varargin{:});

@@ -150,10 +150,17 @@ classdef bank < hgsetget
             B.recentheaders(nheadermax+1:end) = [];
             saveprop(B,'recentheaders')
         end
-        function head = getrecentheaders(n)
+        function head = getrecentheaders(n, num_max)
             B = xplr.bank.getbank();
             % get a list of recent headers for data length n
-            head = B.recentheaders([B.recentheaders.n]==n);
+            same_length = [B.recentheaders.n]==n;
+            head = B.recentheaders(same_length);
+            % add also recent enumeration headers, even though they might
+            % be of different length
+            enum = B.recentheaders(~same_length & [B.recentheaders.isenum]);
+            [~, idx] = unique({enum.label},'stable');
+            head = [head enum(idx)];
+            if nargin>=2, head(num_max+1:end) = []; end
         end
         function clearrecentheaders()
             B = xplr.bank.getbank();

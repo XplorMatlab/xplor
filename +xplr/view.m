@@ -14,7 +14,7 @@ classdef view < hgsetget
     end
     
     % Dependent properties
-    properties (Dependent)
+    properties (Dependent, SetAccess = 'private')
         data
         slice
     end
@@ -172,14 +172,8 @@ classdef view < hgsetget
         function data = get.data(V)
             data = V.slicer.data;
         end
-        function set.data(V,data)
-            V.slicer.data = data;
-        end
         function slice = get.slice(V)
             slice = V.slicer.slice;
-        end
-        function set.slice(V,slice)
-            V.slicer.slice = slice;
         end
     end
     

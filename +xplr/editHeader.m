@@ -13,9 +13,5 @@ waitfor(E.hf)
 % get headers
 header = E.header;
 
-% register them to the bank
-if ~isempty(header)
-    xplr.bank.registerheaders(header)
-end
 
 

@@ -70,8 +70,8 @@ classdef list < hgsetget
             
             % list and event (bottom-up)
             set(L.hu,'style','listbox','min',0,'max',2, ...
-                'callback',@(hu,evnt)event(L,'select')) %, ...
-            %'keypressfcn',@(hu,evnt)keypress(L,evnt)) % NOT USED FOR NOW!
+                'callback',@(hu,evnt)event(L,'select'), ...
+            	'keypressfcn',@(hu,evnt)keypress(L,evnt))
             if fn_switch(L.scrollwheel)
                 L.scrollwheel = 'on'; % this will automaticall register scroll wheel
             end
@@ -109,7 +109,7 @@ classdef list < hgsetget
             set(L.hu,'UIContextMenu',m)
             
             uimenu(m,'label','new singleton selections','callback',@(u,e)event(L,'newuni'))
-            uimenu(m,'label','new group selection','callback',@(u,e)event(L,'newgroup'))
+            uimenu(m,'label','new group selection [A]','callback',@(u,e)event(L,'newgroup'))
             uimenu(m,'label','add to selection','callback',@(u,e)event(L,'add'))
 
             uimenu(m,'label','define new group...','callback',@(u,e)event(L,'definegroup'),'separator','on')
@@ -126,7 +126,7 @@ classdef list < hgsetget
 
             L.menuitems.selmultin = uimenu(m,'separator','on','checked',fn_switch(L.selmultin), ...
                 'label','temporary selection: individuals','callback',@(u,e)set(L,'selmultin',~L.selmultin));
-            uimenu(m,'label','select all','accelerator','A','callback',@(u,e)event(L,'selectall'))
+            uimenu(m,'label','select all','callback',@(u,e)event(L,'selectall'))
             
             m1 = uimenu(m,'label','scroll wheel','separator','on');
             L.menuitems.scrollwheel = uimenu(m1,'label','activated', ...
@@ -143,38 +143,9 @@ classdef list < hgsetget
     % Events
     methods
         function keypress(L,e)
-            persistent curnum ptype utype
-            if isempty(curnum)
-                % initiate a control for typing full number (which can be
-                % multi-digit!)
-                num = regexp(e.Key,'^(numpad){0,1}(\d)$','tokens');
-                if isempty(num), return, end
-                curnum = num{1}{2};
-                w = 120; h = 25;
-                pos = get(L.hf,'CurrentPoint');
-                pos = [pos w h];
-                ptype = uipanel('parent',L.hf,'units','pixel','pos',pos);
-                utype = uicontrol('parent',ptype,'style','text', ...
-                    ... 'pos',pos, ...
-                    'units','normalized','pos',[0 0 1 1], ...
-                    'string',['new position: ' curnum],'horizontalalignment','left','enable','inactive');
-                %ptype = utype;
-            else
-                if strcmp(e.Key,'return')
-                    disp(curnum)
-                    delete(ptype)
-                    [curnum ptype utype] = deal([]);
-                elseif strcmp(e.Key,'escape')
-                    delete(ptype)
-                    [curnum ptype utype] = deal([]);
-                else
-                    num = regexp(e.Key,'^(numpad){0,1}(\d)$','tokens');
-                    if ~isempty(num)
-                        num = num{1}{2};
-                        curnum = [curnum num];
-                        set(utype,'string',['new position: ' curnum])
-                    end
-                end
+            switch e.Key
+                case 'a'
+                    event(L,'newgroup')
             end
         end
         function event(L,flag,varargin)
