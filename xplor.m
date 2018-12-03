@@ -31,6 +31,8 @@ function launch_view(x, varargin)
 % combine data and header
 if iscell(x)
     data = xplr.xdata(x{1}, x{2}, x{3});
+else
+    data = x;
 end
 
 % go!
