@@ -12,7 +12,7 @@ classdef slicer < hgsetget
         slice
         filters = struct('active',[],'dim',cell(1,0),'obj',[]);
     end
-    properties (SetAccess='protected') % (Access='private')
+    properties (Access='protected')
         slicingchain = struct('res',cell(1,0),'dimdata2slice',[]); % remember the steps of slicing
         % beware that 'dim' are the dimensions of slicing IN THE ORIGINAL
         % DATA, but not any more in the slice (dimdata2slice specifies the

@@ -7,6 +7,6 @@
       <NImageMax>1000</NImageMax>
       <NImagePixelMax>5000000</NImagePixelMax>
       <NLineMax>2000</NLineMax>
-      <NLinePointMax>1000000</NLinePointMax>
+      <NLinePointMax>5000000</NLinePointMax>
    </display>
 </s>
