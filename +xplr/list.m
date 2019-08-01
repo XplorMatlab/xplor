@@ -146,25 +146,21 @@ classdef list < hgsetget
             switch e.Key
                 case 'a'
                     event(L,'newgroup')
+                case {'insert' 'delete'}
+                    event(L,'scroll',fn_switch(e.Key,'insert',-1,'delete',1))
             end
         end
         function event(L,flag,varargin)
-            % modify flag
-            switch flag
-                case 'select'
-                    if strcmp(get(L.hf,'selectiontype'),'open')
-                        flag = 'unisel';
-                    end
-                case 'selectall'
-                    set(L.hu,'value',1:L.F.szin)
-                    flag = 'select';
-                case 'scroll'
-                    n = varargin{1};
-                    newindex = fn_coerce(L.F.index+n,1,L.F.szin);
-                    if newindex==L.F.index, return, end
-                    set(L.hu,'value',newindex,'listboxtop',newindex-2);
-                    flag = 'select';
-            end            
+            % possible values for flag:
+            % - select          selection by user click in list display
+            % - unisel          selection by user double-click
+            % - ('scroll',n)    scrolling
+            % - newuni, newgroup
+            % - definegroup
+            % - add
+            % - sort
+            % - reorder...
+            % - rmall, rmgroup, rmgroupall, rmuni, rmuniall, rm         
             
             % selected list entries
             val = get(L.hu,'value');
@@ -184,6 +180,57 @@ classdef list < hgsetget
             nsoft = length(isoft);
             isolid = find(~softsel);
             nsolid = nsel-nsoft;
+            
+            % modify flag if needed
+            switch flag
+                case 'select'
+                    if strcmp(get(L.hf,'selectiontype'),'open')
+                        flag = 'unisel';
+                    end
+                case 'selectall'
+                    set(L.hu,'value',1:L.F.szin)
+                    flag = 'select';
+                case 'scroll'
+                    n = varargin{1};
+                    soft = selinds(softsel);
+                    if length(soft)>=2 && all(fn_map(@isscalar,soft)) ...
+                            && all(ismember(diff([soft{:}]),[0 1]))
+                        % current soft selection consists of a range of
+                        % consecutive values -> select the same number of
+                        % values before or after
+                        % Note that when hitting the lower or upper value,
+                        % this value can be repeated several times in the
+                        % selection in order to remember how many values
+                        % where selected in total.
+                        soft = [soft{:}];
+                        nval = length(soft);
+                        if n<0
+                            % decreasing values
+                            if any(diff(soft)==0)
+                                % if last value was selected several times
+                                % show the nval last values
+                                val = soft(end) + (-nval+1:0);
+                            else
+                                % otherwise show the nval values before
+                                % soft(1)
+                                val = soft(1) + n*nval + (0:nval-1);
+                            end
+                        else
+                            % increasing values, same idea
+                            if any(diff(soft)==0)
+                                val = soft(1) + (0:nval-1);
+                            else
+                                val = soft(end) + (n-1)*nval + (1:nval);
+                            end
+                        end
+                        val = fn_coerce(val,1,L.F.szin);
+                    else
+                        val = fn_coerce(L.F.index+n,1,L.F.szin);
+                        if val==L.F.index, return, end
+                    end
+                    set(L.hu,'value',val,'listboxtop',val(1)-2);
+                    flag = 'select';
+            end            
             
             % action (or only determine shich selections to remove and
             % which to add)
