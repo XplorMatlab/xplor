@@ -456,9 +456,13 @@ classdef header < hgsetget
             if strcmp(flag,'chgdim'), return, end
             
             % first check that sublabels and type are the same (newhead
-            % however might have additional labels)
-            if ~isequal(newhead.sublabels(1:length(H.sublabels)),H.sublabels) || xor(newhead.categorical,H.categorical)
-                error 'new header has different sublabel(s) or is of a different type'
+            % however might have more or less sublabels)
+            if xor(newhead.categorical,H.categorical)
+                error 'new header is not of the same type as current header'
+            end
+            nsub = min(length(H.sublabels), length(newhead.sublabels));
+            if ~isequal(newhead.sublabels(1:nsub),H.sublabels(1:nsub))
+                error 'new header has different sublabel(s) from current header'
             end
             
             % that's it for 'all' flag

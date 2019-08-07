@@ -90,9 +90,9 @@ classdef filterAndPoint < xplr.dataoperand
     methods
         function dataind = get.indices(F)
             if F.F.nsel==0
-                dataind = F.F.indices;
-            else
                 dataind = {fn_indices(F.szin,[F.P.index])};
+            else
+                dataind = F.F.indices;
             end
         end
         function x = get.index0(F)
