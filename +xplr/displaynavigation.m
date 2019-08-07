@@ -155,6 +155,7 @@ classdef displaynavigation < handle
             if isempty(dim), return, end
             switch get(N.hf,'SelectionType')
                 case 'normal'
+                    % zoom in
                     rect = fn_mouse(N.ha,'rectangle-');
                     if ~any(any(diff(rect,1,2))), return, end
                     ijk = N.graph.graph2slice(rect(:,[1 3]));
@@ -162,6 +163,7 @@ classdef displaynavigation < handle
                     for i=1:length(dim), zoom(:,i) = sort(zoom(:,i)); end
                     N.D.zoomslicer.setZoom(dim,zoom)
                 case 'open'
+                    % zoom reset
                     zoom = repmat(':',1,length(dim));
                     N.D.zoomslicer.setZoom(dim,zoom)
             end

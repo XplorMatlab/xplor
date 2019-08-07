@@ -32,8 +32,8 @@ classdef dataoperand < hgsetget
     
     % Get/Set Dependent
     methods
-        function x = get.reductionfactor(F)
-            x = prod([F.headerin.n])/prod([F.headerout.n]);
+        function x = get.reductionfactor(O)
+            x = prod([O.headerin.n])/prod([O.headerout.n]);
         end
     end
     

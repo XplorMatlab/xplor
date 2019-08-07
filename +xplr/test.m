@@ -46,16 +46,13 @@ F = xplr.filterAndPoint(header(1),'indices');
 F.updateSelection('all',{1:2 3},'origin',{'titi' 'tata'})
 slice = F.operation(data,1);
 
-
 %---
 function test_view
 
 header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
 x = reshape(1:120,[3 2 5 4]);
 data = xplr.xdata(x,header);
-Z = xplr.zoomfilter(header(3));
-S = xplr.slicer(data,3,Z);
-V = xplr.view(S.slice);
+V = xplr.view(data);
 
 % %% OLD CODE
 % 

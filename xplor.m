@@ -2,7 +2,7 @@ function V = xplor(data,varargin)
 
 % create a demo data
 if nargin==0
-    [~,~,~,dat] = flow;
+    [~,~,~,dat] = flow; 
     dat = permute(dat,[1 3 2]);
     s = size(dat);
     head = xplr.header({'x' 'px' s(1)},{'y' 'px' s(2)},{'axis' num2cell(['a':'y' 'A':'Y'])});

@@ -1,5 +1,5 @@
 classdef xdata < hgsetget
-    % function x = xdata(dat,head)
+    % function x = xdata(dat,head[,name])
     %---
     % A container for data associated with header information
     % A number of different events are thrown when the data or header
@@ -41,7 +41,7 @@ classdef xdata < hgsetget
                     end
                 end
             end
-            updateDataDim(x,'global',[],dat,head)
+            x.updateDataDim('global',[],dat,head)
             if nargin>=3
                 x.name = name;
             end
