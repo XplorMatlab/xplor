@@ -318,9 +318,28 @@ classdef displaygraph < handle
                         % tick labels
                         ticklabels = fn_num2str(ticksdata,'cell');
                     else
-                        % ticks for each data point
-                        ticksidx = 1:n;
+                        % ticks for each data point (display only some of
+                        % them if there is not enough space for all)
+                        axes_size = G.D.getSize('centimeters', f);
+                        ntickmax = axes_size * fn_switch(f, 'x', 1, 'y', 2);
                         ticklabels = row(head.getItemNames());
+                        if n <= ntickmax                           
+                            ticksidx = 1:n;
+                        else
+                            step = fn_smartstep(n / ntickmax);
+                            if strcmp(ticklabels{1}, '1')
+                                % it seems that we have a mere enumeration,
+                                % use a smart step
+                                ticksidx = step:step:n;
+                            else
+                                % make both the first and last appear
+                                ticksidx = 1:step:n;
+                                if ticksidx(end) ~= n
+                                    ticksidx(end) = n;
+                                end
+                            end
+                            ticklabels = ticklabels(ticksidx);
+                        end
                         % 2D grid: put text rather than using axes ticks
                         % system
                         if d==G.org.(ff)

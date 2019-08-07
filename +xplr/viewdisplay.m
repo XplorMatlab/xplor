@@ -59,7 +59,8 @@ classdef viewdisplay < hgsetget
             D.ha = axes('parent',D.hp);
             axis(D.ha,[-.5 .5 -.5 .5]) % center 0, available space 1
             set(D.ha,'box','on','clim',[0 1])
-            try, set(D.ha,'TickLabelInterpreter','none'), end % recent Matlab versions only
+            try set(D.ha, 'XTickLabelRotation',45), end % recent Matlab versions only
+            try set(D.ha,'TickLabelInterpreter','none'), end % recent Matlab versions only
             D.listeners.axsiz = fn_pixelsizelistener(D.ha,@(u,e)axisresize(D));
             c = disableListener(D.listeners.axsiz); % prevent display update following automatic change of axis position during all the following initializations
 
@@ -118,6 +119,25 @@ classdef viewdisplay < hgsetget
         end
         function zoomfilters = get.zoomfilters(D)
             zoomfilters = [D.zoomslicer.filters.obj];
+        end
+    end
+    
+    % Some usefull simple methods
+    methods
+        function s = getSize(D, unit, dim)
+            % function s = getSize(D, unit [, dim])
+            s = fn_objectsize(D.ha, unit);
+            if nargin >= 3
+                if isnumeric(dim)
+                    s = s(dim);
+                elseif strcmp(dim, 'x')
+                    s = s(1);
+                elseif strcmp(dim, 'y')
+                    s = s(2);
+                else
+                    error argument
+                end
+            end
         end
     end
     
