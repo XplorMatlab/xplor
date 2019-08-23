@@ -1,5 +1,15 @@
 function V = xplor(data,varargin)
-
+% function V = xplor(data,varargin)
+    % function V = xplor(data)
+    % function V = xplor()         [demo data]
+    %---
+    % Base xplor starter
+    %
+    % Input:
+    % - data        data to visualize 
+    % - varargin    number of arguments in input
+    %
+    % 
 % create a demo data
 if nargin==0
     [~,~,~,dat] = flow; 
