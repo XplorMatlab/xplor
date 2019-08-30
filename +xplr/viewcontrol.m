@@ -241,6 +241,7 @@ classdef viewcontrol < hgsetget
             % move
             p0 = get(hf,'currentpoint'); p0 = p0(1,2); % only vertical position matters
             moved = fn_buttonmotion(@move,hf,'moved?');
+            newidx = [];
             function move
                 p = get(hf,'currentpoint'); p = p(1,2);
                 newidx = fn_coerce( idx0 - round((p-p0)/ystep), 1, nfilter);
@@ -268,13 +269,18 @@ classdef viewcontrol < hgsetget
     methods (Access='private')
         function combo = getPrivateLists(C)
             combo = C.privatelists;
+            controlorg = C.V.panels.allcontrols;
             % Create?
             if isempty(combo)
                 disp 'warning: usage of private lists display has not been tested yet'
                 combo = xplr.listcombo(C.V.panels.listcombo,0);
                 C.privatelists = combo;
-                controlorg = C.V.panels.allcontrols;
                 connectlistener(combo,controlorg,'Empty',@(u,e)set(controlorg,'extents',[1 0]));
+            end
+            % Need to show it?
+            if controlorg.extents(2) == 0
+                % make combo visible
+                controlorg.extents = [2 1];
             end
         end
     end
