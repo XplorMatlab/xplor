@@ -4,8 +4,9 @@ classdef filterSet < hgsetget
         linkkey
 %     end
 %     properties (Access='private')
-        registry
-        combo
+        registry    % registered filters
+        combo       % list combo displaying the registered filters
+        zregistry   % registered zoomfilters
     end
     
     % Constructor should be called only by xplr.bank.getFilterSet
@@ -13,6 +14,7 @@ classdef filterSet < hgsetget
         function S = filterSet(key)
             S.linkkey = key;
             S.registry = xplr.bankRegistry;
+            S.zregistry = xplr.bankRegistry;
         end
     end
     
@@ -28,11 +30,22 @@ classdef filterSet < hgsetget
                 fn_deletefcn(user,@(u,e)removeFilter(S,F,user))
             end
         end
+        function F = getZoomFilter(S,header,varargin)
+            % function F = getZoomFilter(S,header[,user])
+            hID = getID(header);
+            F = S.zregistry.getValue(hID,varargin{:});
+            % Automatic unregister upon user's deletion
+            if ~isempty(F) && nargin>=3
+                user = varargin{1};
+                fn_deletefcn(user,@(u,e)removeZoomFilter(S,F,user))
+            end
+        end
         function addFilter(S,F,varargin)
             % function addFilter(S,F[,user])
             hID = getID(F.headerin);
             F.linkkey = S.linkkey;
             S.registry.register(hID,F,varargin{:})
+            S.showList(F)
             % Automatic unregister upon user's deletion
             if nargin>=3
                 user = varargin{1};

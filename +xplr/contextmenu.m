@@ -63,6 +63,13 @@ classdef contextmenu < hgsetget
                     % Change filters
                     uimenu(m,'label','Add/Show Filters','callback',@(u,e)dimaction(C,'filter',1,dim))
                     uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',1,dim))
+                    uimenu(m,'label','Add private filter','callback',@(u,e)dimaction(C,'filter',0,dim))
+                    % uimenu(m,'label','Synchronize Zoom','callback',)
+                    %m1 = uimenu(m,'label','scroll wheel','separator','on');
+                    %    L.menuitems.scrollwheel = uimenu(m1,'label','activated', ...
+                    %'checked',L.scrollwheel,'callback',@(u,e)set(L,'scrollwheel',fn_switch(L.scrollwheel,'toggle')));
+                    %    uimenu(m1,'label','make default in figure', ...
+                    %'callback',@(u,e)set(L,'scrollwheel','default'));
                 otherwise
                     error('unknown flag ''%s''',flag)
             end
