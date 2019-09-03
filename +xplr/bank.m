@@ -186,5 +186,25 @@ classdef bank < hgsetget
                 error('New filter set key should be %i, encountered %i instead.',length(B.filtersets)+1,idx)
             end
         end
+        function F = getFilter(linkkey, head, varargin)
+            % function F = getFilter(linkkey, header[,user])
+            S = xplr.bank.getFilterSet(linkkey);
+            F = S.getFilter(head, varargin{:});
+        end
+        function addFilter(linkkey, F, varargin)
+            % function addFilter(linkkey, F[,user])
+            S = xplr.bank.getFilterSet(linkkey);
+            S.addFilter(F, varargin{:})
+        end
+        function removeFilter(linkkey, F, user)
+            % function removeFilter(linkkey, F, user)
+            S = xplr.bank.getFilterSet(linkkey);
+            S.removeFilter(F, user)
+        end            
+        function showList(linkkey, F, user)
+            % function removeFilter(linkkey, F, user)
+            S = xplr.bank.getFilterSet(linkkey);
+            S.removeFilter(F, user)
+        end            
     end
 end

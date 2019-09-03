@@ -101,7 +101,6 @@ classdef viewcontrol < hgsetget
             else
                 % public filter: list combo will be handled directly by the
                 % associated filter set
-                S = xplr.bank.getFilterSet(key);
             end
             
             % loop on selected dimensions
@@ -137,10 +136,10 @@ classdef viewcontrol < hgsetget
                             if isprivate
                                 F = xplr.filterAndPoint(head,'indices');
                             else
-                                F = S.getFilter(head,C); % viewcontrol object C will be registered as a new user of filter F
+                                F = xplr.bank.getFilter(key,head,C);
                                 if isempty(F)
                                     F = xplr.filterAndPoint(head,'indices');
-                                    S.addFilter(F,C) % viewcontrol object C will be registered as a user of filter F
+                                    xplr.bank.addFilter(key,F,C) % viewcontrol object C will be registered as a user of filter F
                                 end
                             end
                             % add to the list of new filters
@@ -152,8 +151,6 @@ classdef viewcontrol < hgsetget
                         % show list in combo
                         if isprivate
                             combo.showList(F)
-                        else
-                            S.showList(F)
                         end
                     case 'rmfilter'
                         if ~filteridx, continue, end
@@ -166,7 +163,7 @@ classdef viewcontrol < hgsetget
                         if isprivate
                             combo.removeFilter(F)
                         else
-                            S.removeFilter(F,C) % viewcontrol object C will be unregistered for the users list of filter F; if this list will become empty, F will be unregistered from the filters set
+                            xplr.bank.removeFilter(key,F,C) % viewcontrol object C will be unregistered for the users list of filter F; if this list will become empty, F will be unregistered from the filters set
                         end
                     case 'toggleactive'
                         itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));
