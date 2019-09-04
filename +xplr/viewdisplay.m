@@ -53,7 +53,7 @@ classdef viewdisplay < hgsetget
             set(D.hp,'deletefcn',@(u,e)delete(V))
             
             % zoom slicer zooms into "slice" to yield "zslice"
-            D.zoomslicer = xplr.zoomslicer(V.slicer.slice);
+            D.zoomslicer = xplr.zoomslicer(V.slicer.slice,D);
 
             % axes
             D.ha = axes('parent',D.hp);

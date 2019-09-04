@@ -5,15 +5,20 @@ classdef zoomslicer < xplr.slicer
     % filters are not set by the user, but zoom filters are automatically
     % assigned to every dimension.
     
+    properties (SetAccess='private')
+        D           % parent 'display' object
+    end
+    
     events
         ChangedZoom % transit changes in the observed zoom filters
     end
     
     % Constructor
     methods 
-        function S = zoomslicer(data)
+        function S = zoomslicer(data,D)
             % Construct slicer object
             S = S@xplr.slicer(data);
+            S.D = D;
             
             % Automatically create zoom filters for all dimensions
             autoZoomFilter(S)
@@ -27,7 +32,8 @@ classdef zoomslicer < xplr.slicer
             % to do: check the bank for available filter instead of
             % creating systematically a new one
             if nargin<2, dim = 1:length(S.data.header); end
-            Z = xplr.zoomfilter(S.data.header(dim));
+            Z = xplr.zoomfilter(S,S.data.header(dim));
+            
             if ~isfield(S.listeners,'zoom'), S.listeners.zoom = event.listener.empty(1,0); end
             for i=1:length(dim)
                 d = dim(i);
@@ -36,9 +42,14 @@ classdef zoomslicer < xplr.slicer
             end
             if nargout==0
                 S.addFilter(dim,Z);
+                % register the zoom filter in bank.filterSet(key).zregistry
+                xplr.bank.addZoomFilter(1, Z, S.D.V.C)
                 clear Z
             end
+            
+            
         end
+        
     end
     
     % Action upon data change differ from the parent slicer class

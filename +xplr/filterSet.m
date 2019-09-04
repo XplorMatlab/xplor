@@ -52,10 +52,29 @@ classdef filterSet < hgsetget
                 fn_deletefcn(user,@(u,e)removeFilter(S,F,user))
             end
         end
+        function addZoomFilter(S,F,varargin)
+            % function addZoomFilter(S,F[,user])
+            hID = getID(F.headerin);
+            F.linkkey = S.linkkey;
+            S.zregistry.register(hID,F,varargin{:})
+            % Automatic unregister upon user's deletion
+            if nargin>=3
+                user = varargin{1};
+                fn_deletefcn(user,@(u,e)removeZoomFilter(S,F,user))
+            end
+        end
         function removeFilter(S,F,varargin)
             % function removeFilter(S,F[,user])
             hID = getID(F.headerin);
             removed = S.registry.unregister(hID,varargin{:});
+            if removed && ~isempty(S.combo)
+                S.combo.removeList(F)
+            end
+        end
+        function removeZoomFilter(S,F,varargin)
+            % function removeZoomFilter(S,F[,user])
+            hID = getID(F.headerin);
+            removed = S.zregistry.unregister(hID,varargin{:});
             if removed && ~isempty(S.combo)
                 S.combo.removeList(F)
             end

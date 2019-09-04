@@ -205,6 +205,23 @@ classdef bank < hgsetget
             % function removeFilter(linkkey, F, user)
             S = xplr.bank.getFilterSet(linkkey);
             S.removeFilter(F, user)
+        end
+        function F = getZoomFilter(linkkey, head, varargin)
+            % function F = getZoomFilter(linkkey, header[,user])
+            S = xplr.bank.getFilterSet(linkkey);
+            F = S.getZoomFilter(head, varargin{:});
+        end
+        function addZoomFilter(linkkey, F, varargin)
+            for i=F
+                % function addZoomFilter(linkkey, F[,user])
+                S = xplr.bank.getFilterSet(linkkey);
+                S.addZoomFilter(i, varargin{:})
+            end
+        end
+        function removeZoomFilter(linkkey, F, user)
+            % function removeZoomFilter(linkkey, F, user)
+            S = xplr.bank.getFilterSet(linkkey);
+            S.removeZoomFilter(F, user)
         end            
     end
 end
