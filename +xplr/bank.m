@@ -170,58 +170,60 @@ classdef bank < hgsetget
     end
     
     % Filter sets
+    methods (Static, Access=private)
+        function FS = getFilterSet(linkkey)
+            B = xplr.bank.getbank();
+            if linkkey<=length(B.filtersets)
+                FS = B.filtersets(linkkey);
+            elseif linkkey==length(B.filtersets)+1
+                FS = xplr.filterSet(linkkey);
+                B.filtersets(end+1) = FS;
+            else
+                error('New filter set key should be %i, encountered %i instead.',length(B.filtersets)+1,idx)
+            end
+        end
+    end
     methods (Static)
         function n = nfilterset()
             B = xplr.bank.getbank();
             n = length(B.filtersets);
         end
-        function S = getFilterSet(linkkey)
-            B = xplr.bank.getbank();
-            if linkkey<=length(B.filtersets)
-                S = B.filtersets(linkkey);
-            elseif linkkey==length(B.filtersets)+1
-                S = xplr.filterSet(linkkey);
-                B.filtersets(end+1) = S;
-            else
-                error('New filter set key should be %i, encountered %i instead.',length(B.filtersets)+1,idx)
-            end
-        end
         function F = getFilter(linkkey, head, varargin)
             % function F = getFilter(linkkey, header[,user])
-            S = xplr.bank.getFilterSet(linkkey);
-            F = S.getFilter(head, varargin{:});
+            FS = xplr.bank.getFilterSet(linkkey);
+            F = FS.getFilter(head, varargin{:});
         end
         function addFilter(linkkey, F, varargin)
             % function addFilter(linkkey, F[,user])
-            S = xplr.bank.getFilterSet(linkkey);
-            S.addFilter(F, varargin{:})
+            FS = xplr.bank.getFilterSet(linkkey);
+            FS.addFilter(F, varargin{:})
         end
         function removeFilter(linkkey, F, user)
             % function removeFilter(linkkey, F, user)
-            S = xplr.bank.getFilterSet(linkkey);
-            S.removeFilter(F, user)
+            FS = xplr.bank.getFilterSet(linkkey);
+            FS.removeFilter(F, user)
         end            
         function showList(linkkey, F, user)
             % function removeFilter(linkkey, F, user)
-            S = xplr.bank.getFilterSet(linkkey);
-            S.removeFilter(F, user)
+            FS = xplr.bank.getFilterSet(linkkey);
+            FS.removeFilter(F, user)
         end
         function F = getZoomFilter(linkkey, head, varargin)
             % function F = getZoomFilter(linkkey, header[,user])
-            S = xplr.bank.getFilterSet(linkkey);
-            F = S.getZoomFilter(head, varargin{:});
+            FS = xplr.bank.getFilterSet(linkkey);
+            F = FS.getZoomFilter(head, varargin{:});
         end
         function addZoomFilter(linkkey, F, varargin)
+            % function addZoomFilter(linkkey, F[,user])
             for i=F
-                % function addZoomFilter(linkkey, F[,user])
-                S = xplr.bank.getFilterSet(linkkey);
-                S.addZoomFilter(i, varargin{:})
+                FS = xplr.bank.getFilterSet(linkkey);
+                FS.addZoomFilter(i, varargin{:})
             end
         end
         function removeZoomFilter(linkkey, F, user)
             % function removeZoomFilter(linkkey, F, user)
-            S = xplr.bank.getFilterSet(linkkey);
-            S.removeZoomFilter(F, user)
+            FS = xplr.bank.getFilterSet(linkkey);
+            FS.removeZoomFilter(F, user)
         end            
     end
 end

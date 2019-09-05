@@ -11,91 +11,91 @@ classdef filterSet < hgsetget
     
     % Constructor should be called only by xplr.bank.getFilterSet
     methods
-        function S = filterSet(key)
-            S.linkkey = key;
-            S.registry = xplr.bankRegistry;
-            S.zregistry = xplr.bankRegistry;
+        function FS = filterSet(key)
+            FS.linkkey = key;
+            FS.registry = xplr.bankRegistry;
+            FS.zregistry = xplr.bankRegistry;
         end
     end
     
     % Filter registration
     methods
-        function F = getFilter(S,header,varargin)
-            % function F = getFilter(S,header[,user])
+        function F = getFilter(FS,header,varargin)
+            % function F = getFilter(FS,header[,user])
             hID = getID(header);
-            F = S.registry.getValue(hID,varargin{:});
+            F = FS.registry.getValue(hID,varargin{:});
             % Automatic unregister upon user's deletion
             if ~isempty(F) && nargin>=3
                 user = varargin{1};
-                fn_deletefcn(user,@(u,e)removeFilter(S,F,user))
+                fn_deletefcn(user,@(u,e)removeFilter(FS,F,user))
             end
         end
-        function F = getZoomFilter(S,header,varargin)
-            % function F = getZoomFilter(S,header[,user])
+        function F = getZoomFilter(FS,header,varargin)
+            % function F = getZoomFilter(FS,header[,user])
             hID = getID(header);
-            F = S.zregistry.getValue(hID,varargin{:});
+            F = FS.zregistry.getValue(hID,varargin{:});
             % Automatic unregister upon user's deletion
             if ~isempty(F) && nargin>=3
                 user = varargin{1};
-                fn_deletefcn(user,@(u,e)removeZoomFilter(S,F,user))
+                fn_deletefcn(user,@(u,e)removeZoomFilter(FS,F,user))
             end
         end
-        function addFilter(S,F,varargin)
-            % function addFilter(S,F[,user])
+        function addFilter(FS,F,varargin)
+            % function addFilter(FS,F[,user])
             hID = getID(F.headerin);
-            F.linkkey = S.linkkey;
-            S.registry.register(hID,F,varargin{:})
-            S.showList(F)
+            F.linkkey = FS.linkkey;
+            FS.registry.register(hID,F,varargin{:})
+            FS.showList(F)
             % Automatic unregister upon user's deletion
             if nargin>=3
                 user = varargin{1};
-                fn_deletefcn(user,@(u,e)removeFilter(S,F,user))
+                fn_deletefcn(user,@(u,e)removeFilter(FS,F,user))
             end
         end
-        function addZoomFilter(S,F,varargin)
-            % function addZoomFilter(S,F[,user])
+        function addZoomFilter(FS,F,varargin)
+            % function addZoomFilter(FS,F[,user])
             hID = getID(F.headerin);
-            F.linkkey = S.linkkey;
-            S.zregistry.register(hID,F,varargin{:})
+            F.linkkey = FS.linkkey;
+            FS.zregistry.register(hID,F,varargin{:})
             % Automatic unregister upon user's deletion
             if nargin>=3
                 user = varargin{1};
-                fn_deletefcn(user,@(u,e)removeZoomFilter(S,F,user))
+                fn_deletefcn(user,@(u,e)removeZoomFilter(FS,F,user))
             end
         end
-        function removeFilter(S,F,varargin)
-            % function removeFilter(S,F[,user])
+        function removeFilter(FS,F,varargin)
+            % function removeFilter(FS,F[,user])
             hID = getID(F.headerin);
-            removed = S.registry.unregister(hID,varargin{:});
-            if removed && ~isempty(S.combo)
-                S.combo.removeList(F)
+            removed = FS.registry.unregister(hID,varargin{:});
+            if removed && ~isempty(FS.combo)
+                FS.combo.removeList(F)
             end
         end
-        function removeZoomFilter(S,F,varargin)
-            % function removeZoomFilter(S,F[,user])
+        function removeZoomFilter(FS,F,varargin)
+            % function removeZoomFilter(FS,F[,user])
             hID = getID(F.headerin);
-            removed = S.zregistry.unregister(hID,varargin{:});
-            if removed && ~isempty(S.combo)
-                S.combo.removeList(F)
+            removed = FS.zregistry.unregister(hID,varargin{:});
+            if removed && ~isempty(FS.combo)
+                FS.combo.removeList(F)
             end
         end
-        function clear(S)
-            S.registry.clear()
+        function clear(FS)
+            FS.registry.clear()
         end
     end
     
     % List display
     methods
-        function showList(S,F)
+        function showList(FS,F)
             % Create list combo?
-            if isempty(S.combo)
-                S.combo = xplr.listcombo([],S.linkkey);
-                connectlistener(S.combo,S,'Empty',@(u,e)set(S,'combo',[])); % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
+            if isempty(FS.combo)
+                FS.combo = xplr.listcombo([],FS.linkkey);
+                connectlistener(FS.combo,FS,'Empty',@(u,e)set(FS,'combo',[])); % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
             end
             
             % Display filter
-            S.combo.showList(F)
-            figure(S.combo.container.hobj)
+            FS.combo.showList(F)
+            figure(FS.combo.container.hobj)
         end
     end
     
