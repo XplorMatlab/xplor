@@ -7,6 +7,7 @@ classdef zoomslicer < xplr.slicer
     
     properties (SetAccess='private')
         D           % parent 'display' object
+        defaullinkkey = 1;
     end
     
     events
@@ -21,10 +22,10 @@ classdef zoomslicer < xplr.slicer
             S.D = D;
             
             % Automatically create zoom filters for all dimensions
-            autoZoomFilter(S)
+            autoZoomFilter(S, S.defaultlinkkey)
         end
-        function Z = autoZoomFilter(S,dim)
-            % function Z = autoZoomFilter(S[,dim])
+        function Z = autoZoomFilter(S,linkkey,dim)
+            % function Z = autoZoomFilter(S,linkkey[,dim])
             %---
             % Create zoom filter for specified (or all) dimension(s). Add
             % the filter(s) only if there is no output requested.
@@ -58,7 +59,7 @@ classdef zoomslicer < xplr.slicer
             % Replace filter (as in slicer.replaceFilterDim)
             idx = find([S.filters.dim]==dim);
             oldfilt = S.filters(idx).obj;
-            newfilt = autoZoomFilter(S,dim); 
+            newfilt = autoZoomFilter(S,oldfilt.linkkey,dim); 
             % TODO: really create a new filter when flag is only 'chg'??
             % (to which slider needs to be reconnected, etc.)
             if strcmp(flag,'chg')
@@ -137,10 +138,10 @@ classdef zoomslicer < xplr.slicer
                 case 'global'
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
                     S.filters(:) = [];
-                    autoZoomFilter(S)
+                    autoZoomFilter(S,S.defaultlinkkey)
                 case 'chgdim'
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                    newfilt = autoZoomFilter(S,e.dim);
+                    newfilt = autoZoomFilter(S,S.defaultlinkkey,e.dim);
                     for i=1:length(e.dim)
                         replaceFilterDim(S,e.dim(i),newfilt(i),false)
                     end
@@ -159,15 +160,14 @@ classdef zoomslicer < xplr.slicer
                         %datachangeSmart(S,e.dim,e.flag,e.ind)
 
                         % replace filter (as in slicer.replaceFilterDim)
-                        oldfilt = S.filters(idx).obj;
-                        newfilt = autoZoomFilter(S,dim);
+                        newfilt = autoZoomFilter(S,curfilt.linkkey,dim);
                         % TODO: really create a new filter when flag is only 'chg'??
                         % (to which slider needs to be reconnected, etc.)
                         if strcmp(e.flag,'chg')
                             % keep current zoom
-                            setZoom(newfilt,oldfilt.zoom,oldfilt.bin)
+                            setZoom(newfilt,curfilt.zoom,curfilt.bin)
                         end
-                        deleteValid(oldfilt,S.listeners.filters(idx))
+                        deleteValid(curfilt,S.listeners.filters(idx))
                         S.filters(idx).obj = newfilt;
                         S.listeners.filters(idx) = addlistener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
 
@@ -177,7 +177,7 @@ classdef zoomslicer < xplr.slicer
                     else
                         % full update
                         S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                        newfilt = autoZoomFilter(S,e.dim);
+                        newfilt = autoZoomFilter(S,curfilt.linkkey,e.dim);
                         replaceFilterDim(S,e.dim,newfilt)
                     end
                 case 'chgdata'
