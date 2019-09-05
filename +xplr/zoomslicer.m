@@ -54,84 +54,6 @@ classdef zoomslicer < xplr.slicer
     end
     
     % Action upon data change differ from the parent slicer class
-    methods (Access='private')
-        function datachangeSmart(S,dim,flag,ind)
-            % Replace filter (as in slicer.replaceFilterDim)
-            idx = find([S.filters.dim]==dim);
-            oldfilt = S.filters(idx).obj;
-            newfilt = autoZoomFilter(S,oldfilt.linkkey,dim); 
-            % TODO: really create a new filter when flag is only 'chg'??
-            % (to which slider needs to be reconnected, etc.)
-            if strcmp(flag,'chg')
-                % keep current zoom
-                setZoom(newfilt,oldfilt.zoom,oldfilt.bin)
-            end
-            deleteValid(oldfilt,S.listeners.filters(idx))
-            S.filters(idx).obj = newfilt;
-            S.listeners.filters(idx) = addlistener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
-            
-            % Instead of reslicing everything, propagate changes in data in
-            % a smart fashion
-            switch flag
-                case 'all'
-                    % all data has changed, re-start slicing from zero
-                    S.slicingchain(:) = [];
-                    doslice(S,'data',flag,dim,ind)
-                case {'remove' 'perm'}
-                    % easy
-                    for k = 1:length(S.slicingchain)
-                        s = S.slicingchain(k);
-                        s.res.updateData(flag,dim,ind) % last element will be the slice
-                    end
-                case {'new' 'chg' 'chg&new' 'chg&rm'}
-                    % do a new slicing for a subset of the data
-
-                    % get relevant subset of data
-                    switch flag
-                        case {'new' 'chg'}
-                            ind1 = ind;
-                        case 'chg&new'
-                            ind1 = [ind{:}];
-                        case 'chg&rm'
-                            ind1 = ind{1};
-                    end
-                    headd = S.data.header(dim);
-                    subs = substruct('()',repmat({':'},1,S.data.nd));
-                    subs.subs{dim} = ind1;
-                    datasub = subsref(S.data.data,subs);
-                    
-                    % slice it and update the slicing chain
-                    prevres = S.data;
-                    for k = 1:length(S.slicingchain)
-                        s = S.slicingchain(k);
-                        dimk = S.filters(k).dim;
-                        filtk = S.filters(k).obj;
-                        if ~strcmp(filtk.zoom,':') || filtk.bin~=1
-                            % apply zoom in this dimension
-                            if dim==dimk
-                                if ~strcmp(flag,'chg'), error 'this is supposed to happen only with flag ''chg''!', end
-                                zoomed = filtk.operation(prevres,dimk);
-                                % indices of data change might not be the
-                                % same anymore!!
-                                ind = filtk.orig2zoomed(ind);
-                                if ~any(ind), break, end % parts of data that have changed are not visible, we can stop here!
-                                ind(~ind) = [];
-                                headd = filtk.headerout;
-                                s.res.updateData(flag,dim,ind,zoomed.data,headd) % last element is the slice
-                            else
-                                datasub = filtk.slicing(datasub,dimk);
-                                s.res.updateData(flag,dim,ind,datasub,headd) % last element is the slice
-                            end
-                        else
-                            s.res.updateData(flag,dim,ind,datasub,headd) % last element is the slice
-                        end
-                        prevres = s.res;
-                    end
-                otherwise
-                    error('datachangeSmart cannot be called with flag ''%s''',flag)
-            end
-        end
-    end
     methods
         function datachange(S,e)
             switch e.flag
@@ -154,11 +76,6 @@ classdef zoomslicer < xplr.slicer
                         % 'smart' filter replacement: partial update will
                         % be possible
                         
-                        % except for the case strcmp(e.flag,'chg'),
-                        % dataChangeSmart does nothing more than
-                        % slicer.doslice
-                        %datachangeSmart(S,e.dim,e.flag,e.ind)
-
                         % replace filter (as in slicer.replaceFilterDim)
                         newfilt = autoZoomFilter(S,curfilt.linkkey,dim);
                         % TODO: really create a new filter when flag is only 'chg'??
