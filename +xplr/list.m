@@ -1,4 +1,4 @@
-classdef list < hgsetget
+classdef list < xplr.graphnode
     % function L = list(filter[,'in',fig/axes/uicontrol/ctrl+label][,other options...])
         
     properties (SetAccess='private')
@@ -135,6 +135,7 @@ classdef list < hgsetget
                 'callback',@(u,e)set(L,'scrollwheel','default'));
         end
         function delete(L)
+            delete@xplr.graphnode(L)
             if ~isvalid(L) && ~isprop(L,'hu'), return, end
             deleteValid(L.hu,L.hlabel)
         end

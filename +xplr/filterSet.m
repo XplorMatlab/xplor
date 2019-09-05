@@ -73,11 +73,12 @@ classdef filterSet < hgsetget
         end
         function removeZoomFilter(FS,F,varargin)
             % function removeZoomFilter(FS,F[,user])
-            hID = getID(F.headerin);
-            removed = FS.zregistry.unregister(hID,varargin{:});
-            if removed && ~isempty(FS.combo)
-                FS.combo.removeList(F)
+            if ~isvalid(FS)
+                % can happen for example upon a 'clear all'
+                return
             end
+            hID = getID(F.headerin);
+            FS.zregistry.unregister(hID,varargin{:});
         end
         function clear(FS)
             FS.registry.clear()

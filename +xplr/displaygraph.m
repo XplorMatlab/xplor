@@ -1,4 +1,4 @@
-classdef displaygraph < handle
+classdef displaygraph < xplr.graphnode
     
     properties (SetAccess='private')
         % parent xplr.viewdisplay object

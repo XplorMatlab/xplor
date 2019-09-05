@@ -17,6 +17,7 @@ classdef zoomfilter < xplr.dataoperand
     end
     
     events
+        % new event dedicated to the connection with the slider
         ChangedZoom
     end
     

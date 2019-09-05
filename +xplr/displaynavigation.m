@@ -1,4 +1,4 @@
-classdef displaynavigation < handle
+classdef displaynavigation < xplr.graphnode
     
     properties (SetAccess='private')
         % parent xplr.viewdisplay and other external objects
@@ -8,8 +8,8 @@ classdef displaynavigation < handle
         graph
         % slider objects
         sliders = struct('x',[],'y',[]);
-        % listener to the corresponding zoom filters
-        listeners = struct('x',[],'y',[]);
+        % connected zoom filters
+        zoomfilters = struct('x',[],'y',[]);
     end
     
     % Constructor
@@ -72,10 +72,6 @@ classdef displaynavigation < handle
                 'backgroundcolor',pcol*.75,'slidercolor',pcol*.95)
             fn_controlpositions(N.sliders.x,N.ha,[0 1 1 0], [0 0 0 12]);
             fn_controlpositions(N.sliders.y,N.ha,[1 0 0 1], [0 0 12 -48]);
-        end
-        function delete(N)
-            if ~isvalid(N) && ~isprop(N,'zoomlistener'), return, end
-            deleteValid(N.listeners)
         end
     end
     
@@ -178,7 +174,7 @@ classdef displaynavigation < handle
             % linked object
             Z = N.D.zoomfilters(dim);
             % prevent unnecessary update of slider display
-            c = disableListener(N.listeners.(f)); %#ok<NASGU>
+            c = disableListener(N.sliders.(f));
             % set value
             if isequal(obj.value,obj.minmax)
                 setZoom(Z,':')
@@ -216,21 +212,21 @@ classdef displaynavigation < handle
             % slider object and corresponding data dimension
             obj = N.sliders.(f);
             d = N.D.activedim.(f);
-            % delete previous listener
-            hl = N.listeners.(f);
-            deleteValid(hl)
+            % disconnect from previous zoomfilters
+            Zold = N.zoomfilters.(f);
+            if ~isempty(Zold), N.disconnect(Zold), end
             % no active dim?
             if isempty(d)
                 set(obj,'visible','off')
-                N.listeners.(f) = [];
                 return
             end
             % update slider display to reflect zoom in the specified
             % dimension
             Z = N.D.zoomfilters(d);
+            N.zoomfilters.(f) = Z;
             set(obj,'visible','on','minmax',[.5 Z.headerin.n+.5],'value',Z.zoomvalue)
             % watch changes in zoom
-            N.listeners.(f) = addlistener(Z,'ChangedZoom',@(u,e)set(obj,'value',Z.zoomvalue));
+            N.addListener(Z,'ChangedZoom',@(u,e)set(obj,'value',Z.zoomvalue));
         end
     end
     

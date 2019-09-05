@@ -1,4 +1,4 @@
-classdef displaylabels < handle
+classdef displaylabels < xplr.graphnode
     
     properties (Access='private')
         % parent xplr.viewdisplay object and other external objects
@@ -37,10 +37,6 @@ classdef displaylabels < handle
             fn_pixelsizelistener(D.ha,@(u,e)updateLabels(L,'axsiz'))
             % note that changes in D lead to display updates through direct
             % method calls rather than notifications
-        end
-        function delete(L)
-            if ~isvalid(L) && ~isprop(L,'listeners'), return, end
-            deleteValid(L.listeners)
         end
         function ha = get.ha(L)
             ha = L.D.ha;

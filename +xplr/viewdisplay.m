@@ -1,4 +1,4 @@
-classdef viewdisplay < hgsetget
+classdef viewdisplay < xplr.graphnode
     
     % Content
     properties (SetAccess='private')
@@ -18,12 +18,11 @@ classdef viewdisplay < hgsetget
         navigation  % xplr.displaynavigation object
         clipping    % xplr.cliptool object
         colormap    % xplr.colormap object
-        % listeners that need being deleted upon object deletion
-        listeners %= struct('slice',[],'zslice',[],'zoom',[],'axsiz',[],'clip',[]);
     end
     % Some "working memory"
     properties (Access='private')
         sliceChangeEvent
+        listeners = struct;
     end
     % Display properties
     properties (SetObservable=true, AbortSet=true)
@@ -62,6 +61,7 @@ classdef viewdisplay < hgsetget
             try set(D.ha, 'XTickLabelRotation',45), end % recent Matlab versions only
             try set(D.ha,'TickLabelInterpreter','none'), end % recent Matlab versions only
             D.listeners.axsiz = fn_pixelsizelistener(D.ha,@(u,e)axisresize(D));
+            D.addListener(D.ha,D.listeners.axsiz);
             c = disableListener(D.listeners.axsiz); % prevent display update following automatic change of axis position during all the following initializations
 
             % 'time courses'/'image' switch
@@ -79,30 +79,26 @@ classdef viewdisplay < hgsetget
             
             % clipping tool
             D.clipping = xplr.cliptool(V.hf); % creates a menu
-            D.listeners.clip = addlistener(D.clipping,'ChangedClip',@(u,e)clipchange(D,e));
+            D.addListener(D.clipping,'ChangedClip',@(u,e)clipchange(D,e));
             
             % colormap tool
             D.colormap = xplr.colormaptool(D); % creates a menu
-            D.listeners.colormap = addlistener(D.colormap,'ChangedColorMap',@(u,e)colormap(V.hf,D.colormap.cmap)); %#ok<CPROP>
+            D.addListener(D.colormap,'ChangedColorMap',@(u,e)colormap(V.hf,D.colormap.cmap)); %#ok<CPROP>
             
             % set organization, connect sliders, display data and labels
             D.sliceChangeEvent = struct('flag','global');
             zslicechange(D)
             
             % listeners
-            D.listeners.slice = addlistener(D.slice,'ChangedData',@(u,e)set(D,'sliceChangeEvent',e)); % mark that slice has changed, but treat it only later
-            D.listeners.zoom = addlistener(D.zoomslicer,'ChangedZoom',@(u,e)zoomchange(D,e));
-            D.listeners.zslice = addlistener(D.zslice,'ChangedData',@(u,e)zslicechange(D,e));
+            D.addListener(D.slice,'ChangedData',@(u,e)set(D,'sliceChangeEvent',e)); % mark that slice has changed, but treat it only later
+            D.addListener(D.zoomslicer,'ChangedZoom',@(u,e)zoomchange(D,e));
+            D.addListener(D.zslice,'ChangedData',@(u,e)zslicechange(D,e));
             
             % problem: c won't be deleted automatically (and axsiz listener
             % might not be re-enabled) because the workspace continue to
             % exist, because of all the anonymous functions that were
             % defined
             delete(c)
-        end
-        function delete(D)
-            if ~isprop(D,'listeners'), return, end
-            deleteValid(D.listeners,D.hp)
         end
     end
     

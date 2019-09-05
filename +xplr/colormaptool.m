@@ -1,4 +1,4 @@
-classdef colormaptool < hgsetget
+classdef colormaptool < xplr.graphnode
     
     properties (SetObservable=true)
         cmapdef
@@ -22,6 +22,7 @@ classdef colormaptool < hgsetget
             C.cmap = 'jet';
         end
         function delete(C)
+            delete@xplr.graphnode(C)
             if ~isprop(C,'menu'), return, end
             deleteValid(C.menu)
         end

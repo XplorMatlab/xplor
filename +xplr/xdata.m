@@ -1,4 +1,4 @@
-classdef xdata < hgsetget
+classdef xdata < xplr.graphnode
     % function x = xdata(dat,head[,name])
     %---
     % A container for data associated with header information

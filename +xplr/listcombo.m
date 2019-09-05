@@ -100,6 +100,9 @@ classdef listcombo < hgsetget
                 hp_or_idx = x;
             elseif isa(x,'xplr.dataoperand')
                 hp_or_idx = fn_find(x,C.filters);
+                if isempty(hp_or_idx)
+                    return
+                end
             else
                 error argument
             end

@@ -1,4 +1,4 @@
-classdef dataoperand < hgsetget
+classdef dataoperand < xplr.graphnode
 % Abstract class defining an operation on an xdata object
     
     properties (SetAccess='protected')

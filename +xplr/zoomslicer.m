@@ -7,7 +7,7 @@ classdef zoomslicer < xplr.slicer
     
     properties (SetAccess='private')
         D           % parent 'display' object
-        defaullinkkey = 1;
+        defaultlinkkey = 1;
     end
     
     events
@@ -22,33 +22,36 @@ classdef zoomslicer < xplr.slicer
             S.D = D;
             
             % Automatically create zoom filters for all dimensions
-            autoZoomFilter(S, S.defaultlinkkey)
+            Z = autoZoomFilter(S, S.defaultlinkkey);
+            dim = 1:length(S.data.header);
+            S.addFilter(dim,Z)
         end
         function Z = autoZoomFilter(S,linkkey,dim)
             % function Z = autoZoomFilter(S,linkkey[,dim])
             %---
-            % Create zoom filter for specified (or all) dimension(s). Add
-            % the filter(s) only if there is no output requested.
+            % Create, connect and return zoom filter for specified (or all)
+            % dimension(s) and for specified link key (get from / add to
+            % the bank if appropriate).
             
             % to do: check the bank for available filter instead of
             % creating systematically a new one
-            if nargin<2, dim = 1:length(S.data.header); end
-            Z = xplr.zoomfilter(S,S.data.header(dim));
+            if nargin<3, dim = 1:length(S.data.header); end
             
-            if ~isfield(S.listeners,'zoom'), S.listeners.zoom = event.listener.empty(1,0); end
             for i=1:length(dim)
                 d = dim(i);
-                if length(S.listeners.zoom)>=d, deleteValid(S.listeners.zoom(d)), end
-                S.listeners.zoom(d) = addlistener(Z(i),'ChangedZoom',@(u,e)zoomchange(S,d,e));
+                head = S.data.header(d);
+                if linkkey ~= 0
+                    Zi = xplr.bank.getZoomFilter(linkkey,head);
+                    if isempty(Zi)
+                        Zi = xplr.zoomfilter(S,S.data.header(d));
+                        xplr.bank.registerZoomFilter(linkkey, Zi, S)
+                    end
+                else
+                    Zi = xplr.zoomfilter(S,S.data.header(dim));
+                end
+                Z(i) = Zi;
+                S.addListener(Z(i),'ChangedZoom',@(u,e)zoomchange(S,d,e));
             end
-            if nargout==0
-                S.addFilter(dim,Z);
-                % register the zoom filter in bank.filterSet(key).zregistry
-                xplr.bank.addZoomFilter(1, Z, S.D.V.C)
-                clear Z
-            end
-            
-            
         end
         
     end
@@ -58,9 +61,11 @@ classdef zoomslicer < xplr.slicer
         function datachange(S,e)
             switch e.flag
                 case 'global'
-                    S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                    S.filters(:) = [];
-                    autoZoomFilter(S,S.defaultlinkkey)
+                    % remove all existing filters and create new ones
+                    S.rmFilter(1:length(S.filters))
+                    Z = autoZoomFilter(S,S.defaultlinkkey);
+                    dim = 1:length(S.data.header);
+                    S.addFilter(dim,Z)
                 case 'chgdim'
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
                     newfilt = autoZoomFilter(S,S.defaultlinkkey,e.dim);
@@ -69,6 +74,9 @@ classdef zoomslicer < xplr.slicer
                     end
                     doslice(S,'data','chgdim',e.dim)
                 case {'all' 'new' 'remove' 'chg&new' 'chg&rm' 'perm' 'chg'}
+                    % In this case we do not use methods of the parent
+                    % 'slicer' class, but do all the update here in a
+                    % smarter way...
                     dim = e.dim;
                     idx = ([S.filters.dim]==dim);
                     curfilt = S.filters(idx).obj;
@@ -77,6 +85,7 @@ classdef zoomslicer < xplr.slicer
                         % be possible
                         
                         % replace filter (as in slicer.replaceFilterDim)
+                        S.disconnect(curfilt)
                         newfilt = autoZoomFilter(S,curfilt.linkkey,dim);
                         % TODO: really create a new filter when flag is only 'chg'??
                         % (to which slider needs to be reconnected, etc.)
@@ -84,9 +93,8 @@ classdef zoomslicer < xplr.slicer
                             % keep current zoom
                             setZoom(newfilt,curfilt.zoom,curfilt.bin)
                         end
-                        deleteValid(curfilt,S.listeners.filters(idx))
                         S.filters(idx).obj = newfilt;
-                        S.listeners.filters(idx) = addlistener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
+                        S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
 
                         % smart update
                         if strcmp(e.flag,'all'), ind = []; else ind = e.ind; end
@@ -110,7 +118,7 @@ classdef zoomslicer < xplr.slicer
     % Transit zoom changes
     methods
         function setZoom(S,dim,newzoom)
-            c = disableListener(S.listeners.zoom(dim)); %#ok<NASGU>
+            c = S.disableConnection(S.filters(dim));
             chgnout = false;
             for i=1:length(dim)
                 Z = S.filters(dim(i)).obj;
@@ -122,6 +130,16 @@ classdef zoomslicer < xplr.slicer
         end
         function zoomchange(S,dim,e)
             notify(S,'ChangedZoom',xplr.eventinfo('zoom',e.chgnout,dim))
+        end
+    end
+    
+    % Automatic unregistration from the bank upon disconnection
+    methods
+        function disconnect(S,F)
+            disconnect@xplr.graphnode(S,F)
+            if isa(F,'xplr.zoomfilter')
+                xplr.bank.unregisterZoomFilter(F.linkkey,F,S)
+            end
         end
     end
     

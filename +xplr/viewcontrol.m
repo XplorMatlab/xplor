@@ -139,7 +139,7 @@ classdef viewcontrol < hgsetget
                                 F = xplr.bank.getFilter(key,head,C);
                                 if isempty(F)
                                     F = xplr.filterAndPoint(head,'indices');
-                                    xplr.bank.addFilter(key,F,C) % viewcontrol object C will be registered as a user of filter F
+                                    xplr.bank.registerFilter(key,F,C) % viewcontrol object C will be registered as a user of filter F
                                 end
                             end
                             % add to the list of new filters
@@ -163,7 +163,7 @@ classdef viewcontrol < hgsetget
                         if isprivate
                             combo.removeFilter(F)
                         else
-                            xplr.bank.removeFilter(key,F,C) % viewcontrol object C will be unregistered for the users list of filter F; if this list will become empty, F will be unregistered from the filters set
+                            xplr.bank.unregisterFilter(key,F,C) % viewcontrol object C will be unregistered for the users list of filter F; if this list will become empty, F will be unregistered from the filters set
                         end
                     case 'toggleactive'
                         itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));

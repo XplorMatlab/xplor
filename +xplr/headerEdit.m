@@ -434,9 +434,14 @@ classdef headerEdit < hgsetget
                         E.contextmenu = m;
                         nguess = length(headi.allguess);
                         for j=1:nguess
-                            [label unit scale_value color] = display_headerinfo(headi.allguess(j));
-                            lab = fn_strcat({label unit scale_value color},'; ');
-                            uimenu(m,'label',lab,'callback',@(u,e)useguess(E,i,j))
+                            try
+                                [label unit scale_value color] = display_headerinfo(headi.allguess(j));
+                                lab = fn_strcat({label unit scale_value color},'; ');
+                                uimenu(m,'label',lab,'callback',@(u,e)useguess(E,i,j))
+                            catch
+                                % probably a header was not saved properly
+                                % in the bank, don't try to display it
+                            end
                         end
                         uimenu(m,'label','Reset','callback',@(u,e)useguess(E,i,'reset'))
                         set(m,'pos',get(E.hf,'CurrentPoint'),'visible','on')

@@ -1,4 +1,4 @@
-classdef colorcontrol < hgsetget
+classdef colorcontrol < xplr.graphnode
    
     properties
         hu

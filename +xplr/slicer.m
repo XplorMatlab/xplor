@@ -1,4 +1,4 @@
-classdef slicer < hgsetget
+classdef slicer < xplr.graphnode
     % function S = slicer(data[,dims,filters])
     %---
     % Compute and automatically update operations applied to an initial
@@ -17,7 +17,6 @@ classdef slicer < hgsetget
         % beware that 'dim' are the dimensions of slicing IN THE ORIGINAL
         % DATA, but not any more in the slice (dimdata2slice specifies the
         % conversion)
-        listeners = struct('data',[],'filters',[]);
     end
     properties (Dependent, SetAccess='private')
         nddata
@@ -30,17 +29,13 @@ classdef slicer < hgsetget
         function S = slicer(data,dim,filters)
             % set data
             S.data = data;
-            S.listeners.data = addlistener(data,'ChangedData',@(u,e)datachange(S,e));
+            S.addListener(data,'ChangedData',@(u,e)datachange(S,e));
             % without any filter, slice is identical data
             S.slice = data.copy();
             % set filters
             if nargin>=2 && ~isempty(filters)
                 addFilter(S,dim,filters)
             end
-        end
-        function delete(S)
-            if ~isprop(S,'listeners'), return, end
-            deleteValid(S.listeners)
         end
         function n = get.nddata(S)
             n = S.data.nd;
@@ -84,11 +79,9 @@ classdef slicer < hgsetget
             if isempty(idx), idx = length(S.filters)+1; end
             S.filters = [S.filters(1:idx-1) struct('active',true,'dim',dim,'obj',num2cell(newfilt)) S.filters(idx:end)];
             S.slicingchain(idx:end) = [];
-            hl = cell(1,nadd);
             for i=1:nadd
-                hl{i} = addlistener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,dim{i},e));
+                S.addListener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,dim{i},e));
             end
-            S.listeners.filters = [S.listeners.filters hl{:}];
             % update slice
             if doslicing
                 if all([newfilt.ndout]==[newfilt.ndin])
@@ -107,10 +100,9 @@ classdef slicer < hgsetget
             % function rmFilter(S,idx[,doslicing])
             if nargin<3, doslicing = true; end
             filtrm = [S.filters(idx).obj];
+            S.disconnect(filtrm)
             dimrm = [S.filters(idx).dim];
             S.filters(idx) = [];
-            hl = S.listeners.filters(idx); deleteValid(hl)
-            S.listeners.filters(idx) = [];
             % remove invalid part of slicing chain
             if any(idx), S.slicingchain(find(idx,1,'first'):end) = []; end
             % update slice
@@ -143,9 +135,9 @@ classdef slicer < hgsetget
             idx = fn_find(dim,{S.filters.dim});
             if isempty(idx), error 'there is no filter in the specified dimension', end
             prevndout = S.filters(idx).obj.ndout;
+            S.disconnect(S.filters(idx).obj)
             S.filters(idx).obj = newfilt;
-            hl = S.listeners.filters(idx); deleteValid(hl)
-            S.listeners.filters(idx) = addlistener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
+            S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
             % no need for update if the filter is not active
             if ~S.filters(idx).active
                 disp 'new filter replaces inactive one, so it will itself be inactive'
@@ -179,7 +171,6 @@ classdef slicer < hgsetget
             
             % permutation
             S.filters = S.filters(perm);
-            S.listeners.filters = S.listeners.filters(perm);
             
             % update slice: note that all output header will remain the
             % same, so best is to signal the change as a change in the data
@@ -188,9 +179,17 @@ classdef slicer < hgsetget
         end
         function chgFilterActive(S,idx,val)
             S.filters(idx).active = val;
-            enableListener(S.listeners.filters(idx),val)
+            S.activateConnection(S.filters(idx).obj,val)
             S.slicingchain(idx:end) = [];
             doslice(S,'filter','chgdim',S.filters(idx).dim)
+        end
+    end
+    
+    % Get filter
+    methods
+        function F = getFilter(S,dim)
+            idx = fn_find(dim,{S.filters.dim});
+            F = [S.filters(idx).obj];
         end
     end
     

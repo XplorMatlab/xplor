@@ -1,4 +1,4 @@
-classdef cliptool < hgsetget
+classdef cliptool < xplr.graphnode
     
     % properties controlled by (and as seen from) the menu
     properties (SetObservable=true, AbortSet, SetAccess='private')
@@ -30,6 +30,7 @@ classdef cliptool < hgsetget
             buildmenu(C,hf)
         end
         function delete(C)
+            delete@xplr.graphnode(C)
             if ~isprop(C,'menu'), return, end
             deleteValid(C.menu)
         end
