@@ -57,33 +57,40 @@ classdef displaygraph < xplr.graphnode
             % It shall be noted that while the zoom specification are
             % arbitrary real values, the data will be cut at integer
             % values, therefore there are two ways to display it:
-            % - either shifting it by the mismatch between these real /
+            % 1 - either shifting it by the mismatch between these real /
             %   integer values (in this case moving the zoom will result in
             %   smooth movements)
-            % - either occupying the whole dedicated space without caring
+            % 2 - either occupying the whole dedicated space without caring
             %   about this mismatch (in this case moving the zoom will
             %   result in step movements)
-            % The most pleasant navigation in the data seems to be obtained
-            % when the first choice is made for the "most outside"
-            % dimensions, and the second is made for the "inner"
-            % dimensions.
+           
+            % Zoom method 1 "continuous":
             % (convert real zoom values into zoomed data coordinates)
             % we have: xtrue   = .5 + offset + (xzoomed-.5)*bin
             % and:     xzoomed = .5 + (xtrue-.5-offset)/bin
-            zm = .5 + (mean(zoom)-.5-idxoffset)./bin;   % zoom centers in zoomed data coordinates
-            ze = diff(zoom)./bin;                       % zoom extents in zoomed data coordinates
-            % (these real zoom values will not be used for the "internal"
-            % coordinates; they will neither be used for the "2D grid"
-            % organization, but this does not appear in the lines below)
-            if any(orgin.xy) || any(orgin.yx)
-                din = [xorg yorg];
-            else
-                lastx = find(okdim(xorg),1,'last'); % index of "extern" x dimension
-                lasty = find(okdim(yorg),1,'last'); % index of "extern" y dimension
-                din = [xorg(1:lastx-1) yorg(1:lasty-1)]; % "internal" dimensions
-            end
-            zm(din) = (sz(din)+1)/2;
-            ze(din) = sz(din);
+            zm1 = .5 + (mean(zoom)-.5-idxoffset)./bin;   % zoom centers in zoomed data coordinates
+            ze1 = diff(zoom)./bin;                       % zoom extents in zoomed data coordinates
+            
+            % Zoom method 2 "steps":
+            zm2 = (sz+1)/2;
+            ze2 = sz;
+            
+            %             % Choose method 2 for internal coordinates anf for "2D grid"
+            %             % organization. Choose method 1 otherwise.
+            %             [zm ze] = deal(zm1, ze1);
+            %             if any(orgin.xy) || any(orgin.yx)
+            %                 din = [xorg yorg];
+            %             else
+            %                 lastx = find(okdim(xorg),1,'last'); % index of "extern" x dimension
+            %                 lasty = find(okdim(yorg),1,'last'); % index of "extern" y dimension
+            %                 din = [xorg(1:lastx-1) yorg(1:lasty-1)]; % "internal" dimensions
+            %             end
+            %             zm(din) = zm2(din);
+            %             ze(din) = ze2(din);
+            
+            % Always choose method 2
+            [zm ze] = deal(zm2, ze2);
+            
             % (in addition, a small correction is applied for signals,
             % whose edges will be at 1 and n instead of .5 and n+.5 for
             % images and grid cells)
