@@ -522,9 +522,6 @@ classdef headerEdit < hgsetget
                 end
             end
             
-            assignin('base','ans',E.header)
-            evalin('base','display(ans)')
-            
             % close figure -> calling editHeader function can proceed
             delete(E.hf)
             drawnow
