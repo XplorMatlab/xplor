@@ -7,7 +7,7 @@ classdef slicer < xplr.graphnode
     % data in some dimensions in the event where there is no filter in this
     % dimension, or the filter is empty.
     
-    properties (SetAccess='protected')
+    properties 
         data
         slice
         filters = struct('active',[],'dim',cell(1,0),'obj',[]);

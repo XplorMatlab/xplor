@@ -1,9 +1,11 @@
 classdef xdata < xplr.graphnode
-    % function x = xdata(dat,head[,name])
+    % function x = xdata(dat[,head[,name]])
     %---
     % A container for data associated with header information
     % A number of different events are thrown when the data or header
-    % information is being changed
+    % information is being changed    
+    % When headers are not provided, opens a graphic interface allowing
+    % user to set the headers.
     
     properties (SetAccess='private')
         data        % ND array
@@ -21,11 +23,10 @@ classdef xdata < xplr.graphnode
     
     methods
         function x = xdata(dat,head,name)
-            if nargin==0, return, end % default empty data
+            if nargin==0, return, end % default empty data            
             if nargin<2 || isempty(head)
-                % make default header with no label
-                s = xplr.strictsize(dat);
-                head = repmat({''},1,length(s));
+                % open user edition window to edit headers
+                head = xplr.editHeader(dat);
             elseif ischar(head)
                 head = {head};
             end
