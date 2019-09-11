@@ -224,6 +224,10 @@ classdef bank < hgsetget
             % function removeZoomFilter(linkkey, F, user)
             FS = xplr.bank.getFilterSet(linkkey);
             FS.removeZoomFilter(F, user)
-        end            
+        end       
+        function keys = availableZoomFilterKeys()
+            B = xplr.bank.getbank();
+            keys = [B.filtersets.linkkey];
+        end
     end
 end
