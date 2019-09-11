@@ -310,7 +310,7 @@ classdef header < hgsetget
                 return
             end
             if isempty(H.ID)
-                H.ID = fn_hash({H.sublabels,H.label,H.categorical,H.start,H.scale,H.values},'num'); %#ok<MCHV2>
+                H.ID = fn_hash({H.n,H.sublabels,H.label,H.categorical,H.start,H.scale,H.values},'num'); %#ok<MCHV2>
             end
             ID = H.ID;
         end
