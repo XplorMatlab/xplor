@@ -31,6 +31,7 @@ classdef contextmenu < hgsetget
             m = M.menu;
             C = M.V.C;
             D = M.V.D;
+            ZS = D.zoomslicer;
             
             % Dimension
             head = D.zslice.header(dim);
@@ -59,6 +60,26 @@ classdef contextmenu < hgsetget
                         uimenu(m1,'label',bindisplays{i},'checked',fn_switch(isequal(curbin,bin)), ...
                             'callback',@(u,e)setbin(D,dim,bin));
                     end
+                    
+                    % select ZoomFilter key (check the created menu item
+                    % that corresponds to the current key)
+                    m2 = uimenu(m,'label','zoom filter','Separator',fn_switch(docolor));
+                    availablekeys = xplr.bank.availableZoomFilterKeys();
+                    newkey = max(availablekeys)+1;
+                    keyvalues = [0 availablekeys newkey];
+                    fn_num2str(availablekeys, 'shared zoom %i', 'cell');
+                    keydisplays = [ ...
+                        'private zoom' ...
+                        fn_num2str(availablekeys, 'shared zoom %i', 'cell') ...
+                        num2str(newkey,'shared zoom %i (new key)')
+                        ];
+                    curkey = D.zoomfilters(dim).linkkey;
+                    for i=1:length(keyvalues)
+                        keyvalue = keyvalues(i);      
+                        uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
+                            'callback',@(u,e)ZS.changeKey(dim,keyvalue));
+                    end
+                        
                 case 'datadim'
                     % Change filters
                     uimenu(m,'label','Add/Show Filters','callback',@(u,e)dimaction(C,'filter',1,dim))
@@ -90,5 +111,3 @@ end
 D.zoomfilters(d).setBin(bin)
 
 end
-
-

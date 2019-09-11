@@ -32,6 +32,8 @@ classdef zoomslicer < xplr.slicer
             % Create, connect and return zoom filter for specified (or all)
             % dimension(s) and for specified link key (get from / add to
             % the bank if appropriate).
+            % But does not add / replace it in the zoomslicer: this needs
+            % to be done by the calling function.
             
             % to do: check the bank for available filter instead of
             % creating systematically a new one
@@ -41,7 +43,7 @@ classdef zoomslicer < xplr.slicer
                 d = dim(i);
                 head = S.data.header(d);
                 if linkkey ~= 0
-                    Zi = xplr.bank.getZoomFilter(linkkey,head);
+                    Zi = xplr.bank.getZoomFilter(linkkey,head,S);
                     if isempty(Zi)
                         Zi = xplr.zoomfilter(S,S.data.header(d));
                         xplr.bank.registerZoomFilter(linkkey, Zi, S)
@@ -52,8 +54,7 @@ classdef zoomslicer < xplr.slicer
                 Z(i) = Zi;
                 S.addListener(Z(i),'ChangedZoom',@(u,e)zoomchange(S,d,e));
             end
-        end
-        
+        end       
     end
     
     % Action upon data change differ from the parent slicer class
@@ -132,6 +133,9 @@ classdef zoomslicer < xplr.slicer
             notify(S,'ChangedZoom',xplr.eventinfo('zoom',e.chgnout,dim))
         end
     end
+    
+ 
+
     
     % Automatic unregistration from the bank upon disconnection
     methods

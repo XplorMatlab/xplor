@@ -183,7 +183,13 @@ classdef slicer < xplr.graphnode
             S.slicingchain(idx:end) = [];
             doslice(S,'filter','chgdim',S.filters(idx).dim)
         end
+        % Replace a filter by a new one with another linkkey
+        function changeKey(S,dim,key)
+            S.replaceFilterDim(dim,S.autoZoomFilter(key,dim),1);
+        end
+
     end
+
     
     % Get filter
     methods
