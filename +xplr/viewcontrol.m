@@ -237,11 +237,11 @@ classdef viewcontrol < hgsetget
             
             % move
             p0 = get(hf,'currentpoint'); p0 = p0(1,2); % only vertical position matters
-            moved = fn_buttonmotion(@move,hf,'moved?');
             newidx = [];
+            moved = fn_buttonmotion(@move,hf,'moved?');
             function move
                 p = get(hf,'currentpoint'); p = p(1,2);
-                newidx = fn_coerce( idx0 - round((p-p0)/ystep), 1, nfilter);
+                newidx = fn_coerce( idx0 - round((p-p0)/ystep), 1, nfilter)
                 % set all items position
                 C.items(idxfilter) = filteritems([idxother(1:newidx-1) idx0 idxother(newidx:end)]);
                 C.itemPositions
