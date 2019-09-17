@@ -283,7 +283,8 @@ classdef displaygraph < xplr.graphnode
                     n = head.n;
                     % conversion between data coordinates and graph
                     domeasure = head.ismeasure;
-                    if d==G.org.(ff)
+                    dogrid = (d==G.org.(ff));
+                    if dogrid
                         % step for ncol (or nrow) data points
                         ncol = find(diff(st.xyoffsets(k,:)),1);
                         if isempty(ncol), ncol = size(st.xyoffsets,2); end
@@ -327,8 +328,15 @@ classdef displaygraph < xplr.graphnode
                     else
                         % ticks for each data point (display only some of
                         % them if there is not enough space for all)
-                        axes_size = G.D.getSize('centimeters', f);
-                        ntickmax = axes_size * fn_switch(f, 'x', 1, 'y', 2);
+                        if dogrid
+                            % display all ticks anyway for grid mode
+                            ntickmax = Inf;
+                        else
+                            % check the available space in centimeters and
+                            % set a maximal number of ticks
+                            axes_size = G.D.getSize('centimeters', f);
+                            ntickmax = axes_size * fn_switch(f, 'x', 1, 'y', 2);
+                        end
                         ticklabels = row(head.getItemNames());
                         if n <= ntickmax                           
                             ticksidx = 1:n;
@@ -349,7 +357,7 @@ classdef displaygraph < xplr.graphnode
                         end
                         % 2D grid: put text rather than using axes ticks
                         % system
-                        if d==G.org.(ff)
+                        if dogrid
                             xy = fn_add([0; -st.xysteps(2)/2],st.xyoffsets);
                             G.xyticks = gobjects(1,n);
                             for i=1:n
