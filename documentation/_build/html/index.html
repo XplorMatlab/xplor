@@ -1,0 +1,1069 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Welcome to xplor-matlab’s documentation! &#8212; xplor-matlab  documentation</title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Install via Github:" href="usage/installation.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="welcome-to-xplor-matlab-s-documentation">
+<h1>Welcome to xplor-matlab’s documentation!<a class="headerlink" href="#welcome-to-xplor-matlab-s-documentation" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Install via Github:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Try with examples datasets:</a></li>
+</ul>
+</div>
+<div class="section" id="index">
+<h2>Index:<a class="headerlink" href="#index" title="Permalink to this headline">¶</a></h2>
+<div class="toctree-wrapper compound">
+</div>
+<span class="target" id="module-+xplr"></span><dl class="class">
+<dt id="+xplr.bank">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">bank</code><a class="headerlink" href="#+xplr.bank" title="Permalink to this definition">¶</a></dt>
+<dd><p>xplr.bank The bank is unique and store several elements :</p>
+<ul class="simple">
+<li>currentviews: not used yet but it will be used for multiview</li>
+<li>recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored</li>
+<li>measures: units for measures conversion</li>
+<li>filterssets: filters and zoomfilters stored by linkkey</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>linkey</li>
+<li>registry</li>
+<li>combo</li>
+<li>zregistry</li>
+</ul>
+</div></blockquote>
+<dl class="staticmethod">
+<dt id="+xplr.bank.getFilter">
+<em class="property">static </em><code class="descname">getFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>head</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = getFilter(linkkey, header[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.editMeasure">
+<em class="property">static </em><code class="descname">editMeasure</code><span class="sig-paren">(</span><em>oldlabel</em>, <em>label</em>, <em>units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.editMeasure" title="Permalink to this definition">¶</a></dt>
+<dd><p>check</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.getZoomFilter">
+<em class="property">static </em><code class="descname">getZoomFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>head</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = getZoomFilter(linkkey, header[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.unregisterView">
+<em class="property">static </em><code class="descname">unregisterView</code><span class="sig-paren">(</span><em>V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterView" title="Permalink to this definition">¶</a></dt>
+<dd><p>unregister view</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.getunitinfo">
+<em class="property">static </em><code class="descname">getunitinfo</code><span class="sig-paren">(</span><em>unit</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getunitinfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>function [measurelabel conversion measure] = getunitinfo(unit)
+—</p>
+<blockquote>
+<div>if ‘unit’ is a registered unit (e.g. ‘ms’), returns the label 
+of the corresponding measure (e.g. ‘time’) and the conversion
+to the reference unit (e.g. 1e-3, reference unit being ‘s’) 
+otherwise returns an empty label</div></blockquote>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.registerFilter">
+<em class="property">static </em><code class="descname">registerFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function addFilter(linkkey, F[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.unregisterZoomFilter">
+<em class="property">static </em><code class="descname">unregisterZoomFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function removeZoomFilter(linkkey, F, user)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.bank.bank">
+<code class="descname">bank</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.bank" title="Permalink to this definition">¶</a></dt>
+<dd><p>bank constructor</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.unregisterFilter">
+<em class="property">static </em><code class="descname">unregisterFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function removeFilter(linkkey, F, user)</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.getbank">
+<em class="property">static </em><code class="descname">getbank</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getbank" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unique filter bank is attached to the root graphic object.
+This is preferrable to using a global variable that might be
+deleted with the ‘clear’ command.</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>if isappdata(0,’xplr_filterbank’)</dt>
+<dd>B = getappdata(0,’xplr_filterbank’);</dd>
+<dt>else</dt>
+<dd>B = xplr.bank();
+setappdata(0,’xplr_filterbank’,B)</dd>
+</dl>
+<p>end</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.bank.currentviews">
+<code class="descname">currentviews</code><em class="property"> = u&quot;struct('obj',cell(1,0),'hl',cell(1,0))&quot;</em><a class="headerlink" href="#+xplr.bank.currentviews" title="Permalink to this definition">¶</a></dt>
+<dd><p>all current views are registered here</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.registerZoomFilter">
+<em class="property">static </em><code class="descname">registerZoomFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function addZoomFilter(linkkey, F[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.registerView">
+<em class="property">static </em><code class="descname">registerView</code><span class="sig-paren">(</span><em>V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerView" title="Permalink to this definition">¶</a></dt>
+<dd><p>register view</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.addMeasure">
+<em class="property">static </em><code class="descname">addMeasure</code><span class="sig-paren">(</span><em>label</em>, <em>units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.addMeasure" title="Permalink to this definition">¶</a></dt>
+<dd><p>check</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.showList">
+<em class="property">static </em><code class="descname">showList</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.showList" title="Permalink to this definition">¶</a></dt>
+<dd><p>function removeFilter(linkkey, F, user)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="+xplr.colors">
+<code class="descclassname">+xplr.</code><code class="descname">colors</code><span class="sig-paren">(</span><em>name</em>, <em>k</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.colors" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>function colors = colors(colorname)</dt>
+<dd>function colors = colors(setname,k)</dd>
+</dl>
+<dl class="docutils">
+<dt>—</dt>
+<dd>Returns specified color, or at indices k from specific map. 
+Available maps are ‘linkkey’. Some maps are infinite: they start with a
+set of specific pre-determined values, and continue with random values.</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.contextmenu">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">contextmenu</code><span class="sig-paren">(</span><em>V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.contextmenu" title="Permalink to this definition">¶</a></dt>
+<dd><p>A context menu that is created only when it is being raised</p>
+<dl class="method">
+<dt id="+xplr.contextmenu.raise">
+<code class="descname">raise</code><span class="sig-paren">(</span><em>M</em>, <em>flag</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.contextmenu.raise" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete previous entries</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.dataoperand">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">dataoperand</code><a class="headerlink" href="#+xplr.dataoperand" title="Permalink to this definition">¶</a></dt>
+<dd><p>Abstract class defining an operation on an xdata object</p>
+<dl class="method">
+<dt id="+xplr.dataoperand.followdims">
+<code class="descname">followdims</code><span class="sig-paren">(</span><em>O</em>, <em>ndbef</em>, <em>dims</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.dataoperand.followdims" title="Permalink to this definition">¶</a></dt>
+<dd><p>function dimbef2aft = followdims(O,nd,dims)
+—</p>
+<blockquote>
+<div>for each dimension of an original nd-dimensional data, at
+which new position is it going in the operated data</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.dataoperand.checkdata">
+<code class="descname">checkdata</code><span class="sig-paren">(</span><em>O</em>, <em>data</em>, <em>dims</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.dataoperand.checkdata" title="Permalink to this definition">¶</a></dt>
+<dd><p>input header must match O.headerin!</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="+xplr.demo">
+<code class="descclassname">+xplr.</code><code class="descname">demo</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.demo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Type xplr.demo to access a choice of demos of the XPLOR toolbox</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.dimensionlabel">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">dimensionlabel</code><span class="sig-paren">(</span><em>label</em>, <em>type</em>, <em>unit</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.dimensionlabel" title="Permalink to this definition">¶</a></dt>
+<dd><p>function L = dimensionlabel(label,type[,unit|allunits])
+—</p>
+<blockquote>
+<div><p>Define a dimension.</p>
+<p>Input:
+- label   a string (e.g. ‘time’)
+- type    ‘numeric’, ‘logical’, ‘char’ or ‘mixed’
+- unit    string, cell array with 2 columns, or struct with fields</p>
+<blockquote>
+<div>unit and value</div></blockquote>
+<p>Examples:
+tlabel = dimensionlabel(‘time’,’numeric’,{‘s’ 1; ‘ms’ 1e-3; ‘min’ 60; ‘hour’ 3600};
+clabel = dimensionlabel(‘condition’,’char’);</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="+xplr.editHeader">
+<code class="descclassname">+xplr.</code><code class="descname">editHeader</code><span class="sig-paren">(</span><em>dat</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.editHeader" title="Permalink to this definition">¶</a></dt>
+<dd><p>function header = editHeader(dat)
+—</p>
+<blockquote>
+<div>Open graphic interface (headerEdit object) to let user define header
+information for ND-array dat.</div></blockquote>
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.eventinfo">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">eventinfo</code><span class="sig-paren">(</span><em>type</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.eventinfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>function obj = eventinfo(type,arguments…)
+—</p>
+<blockquote>
+<div><p>type: ‘filter’
+arguments:    ‘all’</p>
+<blockquote>
+<div>‘new’,ind
+‘chg’,ind
+‘remove’,ind
+‘chg&amp;new’,ind
+‘chg&amp;rm’,ind
+‘perm’,ind
+‘point’</div></blockquote>
+<p>type: ‘point’
+arguments:    chgij [default false]</p>
+<p>type: ‘data’
+arguments:    ‘global’</p>
+<blockquote>
+<div>‘chgdata’
+‘insertdim’,dim
+‘rmdim’,dim
+‘chgdim’,dim
+‘all’,dim
+‘new’,dim,ind
+‘chg’,dim,ind
+‘remove’,dim,ind
+‘chg&amp;new’,{indchg indnew}
+‘chg&amp;rm’,{indchg indrm}
+‘perm’,dim,ind</div></blockquote>
+<p>type: ‘zoom’
+arguments:    chgnout,dim</p>
+<p>type: ‘clip’
+arguments:    ‘clip’,value</p>
+<blockquote>
+<div>‘automode’
+‘adjust’
+‘span’</div></blockquote>
+</div></blockquote>
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.filter">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">filter</code><span class="sig-paren">(</span><em>headerin</em>, <em>type</em>, <em>label</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = filter(headerin,type[,label])</p>
+<dl class="method">
+<dt id="+xplr.filter.filter">
+<code class="descname">filter</code><span class="sig-paren">(</span><em>headerin</em>, <em>type</em>, <em>label</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filter.filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>size and header of the input space</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filter.updateOperation">
+<code class="descname">updateOperation</code><span class="sig-paren">(</span><em>F</em>, <em>x</em>, <em>dims</em>, <em>slice</em>, <em>flag</em>, <em>ind</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filter.updateOperation" title="Permalink to this definition">¶</a></dt>
+<dd><p>here ‘data’ and ‘slice’ are xplr.xdata objects!</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filter.setFun">
+<code class="descname">setFun</code><span class="sig-paren">(</span><em>F</em>, <em>fun</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filter.setFun" title="Permalink to this definition">¶</a></dt>
+<dd><p>convert char to function handle</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filter.slicing">
+<code class="descname">slicing</code><span class="sig-paren">(</span><em>F</em>, <em>dat</em>, <em>dims</em>, <em>selsubidx</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filter.slicing" title="Permalink to this definition">¶</a></dt>
+<dd><p>slice data in dimension dim according to filter F
+here ‘dat’ and ‘slic’ are simple Matlab arrays</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filter.operation">
+<code class="descname">operation</code><span class="sig-paren">(</span><em>F</em>, <em>x</em>, <em>dims</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filter.operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>here ‘data’ and ‘slice’ are xplr.xdata objects!</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.filter.type">
+<code class="descname">type</code><em class="property"> = u&quot;'selection'&quot;</em><a class="headerlink" href="#+xplr.filter.type" title="Permalink to this definition">¶</a></dt>
+<dd><p>‘selection’, ‘indices’ or ‘all’</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.filter.slicefun">
+<code class="descname">slicefun</code><em class="property"> = u'&#64;nmean'</em><a class="headerlink" href="#+xplr.filter.slicefun" title="Permalink to this definition">¶</a></dt>
+<dd><p>‘nmean’, ‘mean’, ‘max’, ‘min’, etc.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filter.updateSelection">
+<code class="descname">updateSelection</code><span class="sig-paren">(</span><em>F</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filter.updateSelection" title="Permalink to this definition">¶</a></dt>
+<dd><p>function updateSelection(F,value)
+function updateSelection(F,’new|all’,value[,’label1’,headervalues1,…])
+function updateSelection(F,’new|chg|add’,ind,value[,’label1’,headervalues1,…])
+function updateSelection(F,’chg|add’,ind,value)
+function updateSelection(F,’remove|perm’,ind)</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.filterAndPoint">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">filterAndPoint</code><span class="sig-paren">(</span><em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filterAndPoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>The class filerAndPoint combines a filter (operating on a
+n-dimensional space) and a set of n points.</p>
+<dl class="attribute">
+<dt id="+xplr.filterAndPoint.index">
+<code class="descname">index</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.filterAndPoint.index" title="Permalink to this definition">¶</a></dt>
+<dd><p>current point</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filterAndPoint.filterAndPoint">
+<code class="descname">filterAndPoint</code><span class="sig-paren">(</span><em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filterAndPoint.filterAndPoint" title="Permalink to this definition">¶</a></dt>
+<dd><p>set filter</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filterAndPoint.setAddHeaderInfo">
+<code class="descname">setAddHeaderInfo</code><span class="sig-paren">(</span><em>F</em>, <em>~</em>, <em>~</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filterAndPoint.setAddHeaderInfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>#ok&lt;INUSD,STOUT&gt;</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.filterAndPoint.updateOperation">
+<code class="descname">updateOperation</code><span class="sig-paren">(</span><em>F</em>, <em>x</em>, <em>dims</em>, <em>slice</em>, <em>flag</em>, <em>ind</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.filterAndPoint.updateOperation" title="Permalink to this definition">¶</a></dt>
+<dd><p>check input</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.filterAndPoint.indices">
+<code class="descname">indices</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.filterAndPoint.indices" title="Permalink to this definition">¶</a></dt>
+<dd><p>current selection</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.filterAndPoint.index0">
+<code class="descname">index0</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.filterAndPoint.index0" title="Permalink to this definition">¶</a></dt>
+<dd><p>current point</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.header">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">header</code><span class="sig-paren">(</span><em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>function H = header(label[,unit],n,start,scale)   [measure]</dt>
+<dd>function H = header(label,unit,n[,start,scale])   [measure]
+function H = header(label,n)                      [categorical]
+function H = header([label,]sublabels,values)     [categorical]
+function H = header({args header 1},{args header 2},…)</dd>
+</dl>
+<dl class="docutils">
+<dt>—</dt>
+<dd><p class="first">Container for header information in a single dimension.</p>
+<p>Input:
+- label   a dimensionlabel object or a string (in the latter case</p>
+<blockquote>
+<div>a dimensionlabel object will be created)</div></blockquote>
+<ul class="simple">
+<li><dl class="first docutils">
+<dt>unit    unit; add a ‘+’ sign (e.g. ‘ms+’) to try recognizing the</dt>
+<dd>unit and storing other available units for this measure</dd>
+</dl>
+</li>
+<li>n       expected number of data elements</li>
+<li>start   numerical value for first data element</li>
+<li>scale   numerical value for step between data elements</li>
+<li><dl class="first docutils">
+<dt>values  a cell array with n rows and as many columns as there are</dt>
+<dd>labels</dd>
+</dl>
+</li>
+</ul>
+<p>There are two types of header; this type is automatically inferred
+from the syntax of the call to ‘header’ constructor.
+- ‘measure’ header typically corresponds to a continuous dimension</p>
+<blockquote>
+<div>along which data is acquired at regularly-spaced intervals (e.g.
+time or space), though it can be discrete as well (e.g. day number)</div></blockquote>
+<ul class="simple">
+<li>‘categorical’ header corresponds to samples without regular
+organizations; information about this samples can be given using
+a table of values that can be multi-column (e.g. date and location)</li>
+</ul>
+<p class="last">A header object, despite being a handle, cannot be modified by the
+user (this would be too risky, as the same header can be shared by
+multiple data or filter objects). Instead of modifying a header,
+it should be replaced by a newly created header.</p>
+</dd>
+</dl>
+<dl class="method">
+<dt id="+xplr.header.updateMeasureHeader">
+<code class="descname">updateMeasureHeader</code><span class="sig-paren">(</span><em>H</em>, <em>newn</em>, <em>newstart</em>, <em>newscale</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.updateMeasureHeader" title="Permalink to this definition">¶</a></dt>
+<dd><p>function newhead = updateMeasureHeader(H,newn[,newstart[,newscale]])</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.header.header">
+<code class="descname">header</code><span class="sig-paren">(</span><em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.header" title="Permalink to this definition">¶</a></dt>
+<dd><p>special cases</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.header.sublabels">
+<code class="descname">sublabels</code><em class="property"> = u'xplr.dimensionlabel.empty(1,0)'</em><a class="headerlink" href="#+xplr.header.sublabels" title="Permalink to this definition">¶</a></dt>
+<dd><p>a dimensionlabel object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.header.isequal">
+<code class="descname">isequal</code><span class="sig-paren">(</span><em>H1</em>, <em>H2</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.isequal" title="Permalink to this definition">¶</a></dt>
+<dd><p>cannot use the default isqual function, because property
+itemnames or ID might be computed for one header and not for
+the other</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.header.label">
+<code class="descname">label</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.header.label" title="Permalink to this definition">¶</a></dt>
+<dd><p>char</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.header.scale">
+<code class="descname">scale</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.header.scale" title="Permalink to this definition">¶</a></dt>
+<dd><p>scalar - for measure only</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.header.categorical">
+<code class="descname">categorical</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.header.categorical" title="Permalink to this definition">¶</a></dt>
+<dd><p>boolean</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.header.n">
+<code class="descname">n</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.header.n" title="Permalink to this definition">¶</a></dt>
+<dd><p>length</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.header.updateHeader">
+<code class="descname">updateHeader</code><span class="sig-paren">(</span><em>H</em>, <em>flag</em>, <em>ind</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.updateHeader" title="Permalink to this definition">¶</a></dt>
+<dd><p>function newhead = updateHeader(H,flag,ind,value)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.header.start">
+<code class="descname">start</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.header.start" title="Permalink to this definition">¶</a></dt>
+<dd><p>scalar - for measure only</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.header.getValue">
+<code class="descname">getValue</code><span class="sig-paren">(</span><em>H</em>, <em>label</em>, <em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.getValue" title="Permalink to this definition">¶</a></dt>
+<dd><p>function x = getValue(H,label[,idx])
+—</p>
+<blockquote>
+<div>access value(s) in the table (categorical header only)</div></blockquote>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.header.values">
+<code class="descname">values</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.header.values" title="Permalink to this definition">¶</a></dt>
+<dd><p>cell array (categorical) or vector (measure)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.header.checkHeaderUpdate">
+<code class="descname">checkHeaderUpdate</code><span class="sig-paren">(</span><em>H</em>, <em>flag</em>, <em>ind</em>, <em>newhead</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.checkHeaderUpdate" title="Permalink to this definition">¶</a></dt>
+<dd><p>check that the new header seems to meet with the specified
+change</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.header.addLabel">
+<code class="descname">addLabel</code><span class="sig-paren">(</span><em>H</em>, <em>label</em>, <em>value</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.addLabel" title="Permalink to this definition">¶</a></dt>
+<dd><p>xplr.dimensionlabel object</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.headerEdit">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">headerEdit</code><span class="sig-paren">(</span><em>data</em>, <em>callback</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit" title="Permalink to this definition">¶</a></dt>
+<dd><p>function E = headerEdit(data [, callback])
+—</p>
+<blockquote>
+<div>callback is a function with prototype fun(header) to execute once the ok
+button is pressed</div></blockquote>
+<dl class="method">
+<dt id="+xplr.headerEdit.cellselect">
+<code class="descname">cellselect</code><span class="sig-paren">(</span><em>E</em>, <em>e</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.cellselect" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special actions can occur when selecting a cell inside a row
+where there is some guess</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.headerEdit.init_table">
+<code class="descname">init_table</code><span class="sig-paren">(</span><em>E</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.init_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>figure</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.headerEdit.editMeasure">
+<code class="descname">editMeasure</code><span class="sig-paren">(</span><em>E</em>, <em>oldlabel</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.editMeasure" title="Permalink to this definition">¶</a></dt>
+<dd><p>which measure to edit / new unit</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.headerEdit.dat">
+<code class="descname">dat</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.headerEdit.dat" title="Permalink to this definition">¶</a></dt>
+<dd><p>header under construction</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.headerEdit.header">
+<code class="descname">header</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.headerEdit.header" title="Permalink to this definition">¶</a></dt>
+<dd><p>graphics</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.headerEdit.done">
+<code class="descname">done</code><span class="sig-paren">(</span><em>E</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.done" title="Permalink to this definition">¶</a></dt>
+<dd><p>build headers</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.headerEdit.hf">
+<code class="descname">hf</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.headerEdit.hf" title="Permalink to this definition">¶</a></dt>
+<dd><p>callback</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.headerEdit.headerEdit">
+<code class="descname">headerEdit</code><span class="sig-paren">(</span><em>data</em>, <em>callback</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.headerEdit" title="Permalink to this definition">¶</a></dt>
+<dd><p>data</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.headerEdit.useguess">
+<code class="descname">useguess</code><span class="sig-paren">(</span><em>E</em>, <em>i</em>, <em>j</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.useguess" title="Permalink to this definition">¶</a></dt>
+<dd><p>update ore reset header</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.headerEdit.color_table">
+<code class="descname">color_table</code><span class="sig-paren">(</span><em>E</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.color_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>color rows with values that need being confirmed</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.list">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">list</code><span class="sig-paren">(</span><em>F</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.list" title="Permalink to this definition">¶</a></dt>
+<dd><p>function L = list(filter[,’in’,fig/axes/uicontrol/ctrl+label][,other options…])</p>
+<dl class="attribute">
+<dt id="+xplr.list.hlabel">
+<code class="descname">hlabel</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.list.hlabel" title="Permalink to this definition">¶</a></dt>
+<dd><p>precomputed list of values</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.list.F">
+<code class="descname">F</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.list.F" title="Permalink to this definition">¶</a></dt>
+<dd><p>xplr.filterAndPoint object</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.list.scrollwheel">
+<code class="descname">scrollwheel</code><em class="property"> = u&quot;'on'&quot;</em><a class="headerlink" href="#+xplr.list.scrollwheel" title="Permalink to this definition">¶</a></dt>
+<dd><p>‘on’, ‘off’ or ‘default’</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.list.list">
+<code class="descname">list</code><span class="sig-paren">(</span><em>F</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.list.list" title="Permalink to this definition">¶</a></dt>
+<dd><p>options for initialization</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.list.doroi">
+<code class="descname">doroi</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.list.doroi" title="Permalink to this definition">¶</a></dt>
+<dd><p>direct parent</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.list.hf">
+<code class="descname">hf</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.list.hf" title="Permalink to this definition">¶</a></dt>
+<dd><p>figure parent</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.list.event">
+<code class="descname">event</code><span class="sig-paren">(</span><em>L</em>, <em>flag</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.list.event" title="Permalink to this definition">¶</a></dt>
+<dd><p>possible values for flag:
+- select          selection by user click in list display
+- unisel          selection by user double-click
+- (‘scroll’,n)    scrolling
+- newuni, newgroup
+- definegroup
+- add
+- sort
+- reorder…
+- rmall, rmgroup, rmgroupall, rmuni, rmuniall, rm</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.listcombo">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">listcombo</code><span class="sig-paren">(</span><em>container</em>, <em>linkkey</em>, <em>filters</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.listcombo" title="Permalink to this definition">¶</a></dt>
+<dd><p>function C = listcombo(container,linkkey,filters)
+—</p>
+<blockquote>
+<div>if container is empty, a new figure will be created; this
+figure will auto-delete once all filters will be removed</div></blockquote>
+<dl class="method">
+<dt id="+xplr.listcombo.listcombo">
+<code class="descname">listcombo</code><span class="sig-paren">(</span><em>container</em>, <em>linkkey</em>, <em>filters</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.listcombo.listcombo" title="Permalink to this definition">¶</a></dt>
+<dd><p>input</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.listcombo.removeList">
+<code class="descname">removeList</code><span class="sig-paren">(</span><em>C</em>, <em>x</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.listcombo.removeList" title="Permalink to this definition">¶</a></dt>
+<dd><p>function removeList(C,hp|idx|filter)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.listcombo.showList">
+<code class="descname">showList</code><span class="sig-paren">(</span><em>C</em>, <em>filter</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.listcombo.showList" title="Permalink to this definition">¶</a></dt>
+<dd><p>add filter list, only if not already present</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.listcombo.addList">
+<code class="descname">addList</code><span class="sig-paren">(</span><em>C</em>, <em>filter</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.listcombo.addList" title="Permalink to this definition">¶</a></dt>
+<dd><p>empty or multiple filters?</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="+xplr.parseInput">
+<code class="descclassname">+xplr.</code><code class="descname">parseInput</code><span class="sig-paren">(</span><em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.parseInput" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>function [optinit optadd] = parseInput(optinit,’name’,’value’,…)</dt>
+<dd>function opt = parseInput(‘name’,’value’,…)</dd>
+</dl>
+<dl class="docutils">
+<dt>—</dt>
+<dd>optinit is a structure, but optadd/opt is a cell array</dd>
+</dl>
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.slicer">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">slicer</code><span class="sig-paren">(</span><em>data</em>, <em>dim</em>, <em>filters</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer" title="Permalink to this definition">¶</a></dt>
+<dd><p>function S = slicer(data[,dims,filters])
+—</p>
+<blockquote>
+<div>Compute and automatically update operations applied to an initial
+‘data’, resulting in an output data called ‘slice’.
+In addition to filters, points define positions where to extract the
+data in some dimensions in the event where there is no filter in this
+dimension, or the filter is empty.</div></blockquote>
+<dl class="method">
+<dt id="+xplr.slicer.rmFilterDim">
+<code class="descname">rmFilterDim</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>doslicing</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.rmFilterDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>function rmFilterDim(S,dim[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.slicer.slicer">
+<code class="descname">slicer</code><span class="sig-paren">(</span><em>data</em>, <em>dim</em>, <em>filters</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.slicer" title="Permalink to this definition">¶</a></dt>
+<dd><p>set data</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.slicer.insertFilter">
+<code class="descname">insertFilter</code><span class="sig-paren">(</span><em>S</em>, <em>idx</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.insertFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function insertFilter(S,idx,dim,newfilt[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.slicer.rmFilter">
+<code class="descname">rmFilter</code><span class="sig-paren">(</span><em>S</em>, <em>idx</em>, <em>doslicing</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.rmFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function rmFilter(S,idx[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.slicer.replaceFilterDim">
+<code class="descname">replaceFilterDim</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.replaceFilterDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>function replaceFilterDim(S,dim,newfilt[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.slicer.addFilter">
+<code class="descname">addFilter</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.addFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function addFilter(S,dim,newfilt[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.slicer.permFilters">
+<code class="descname">permFilters</code><span class="sig-paren">(</span><em>S</em>, <em>perm</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.permFilters" title="Permalink to this definition">¶</a></dt>
+<dd><p>function permFilters(S,perm)
+—</p>
+<blockquote>
+<div>modify the order in which filters are applied</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="+xplr.test">
+<code class="descclassname">+xplr.</code><code class="descname">test</code><span class="sig-paren">(</span><em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Example:
+test [same as ‘test all’]
+test xdata
+test filter slicer</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.xdata">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">xdata</code><span class="sig-paren">(</span><em>dat</em>, <em>head</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.xdata" title="Permalink to this definition">¶</a></dt>
+<dd><p>function x = xdata(dat[,head[,name]])
+—</p>
+<blockquote>
+<div>A container for data associated with header information
+A number of different events are thrown when the data or header
+information is being changed    
+When headers are not provided, opens a graphic interface allowing
+user to set the headers.</div></blockquote>
+<dl class="method">
+<dt id="+xplr.xdata.updateDataDim">
+<code class="descname">updateDataDim</code><span class="sig-paren">(</span><em>x</em>, <em>flag</em>, <em>dim</em>, <em>newdata</em>, <em>newhead</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.xdata.updateDataDim" title="Permalink to this definition">¶</a></dt>
+<dd><p>update header</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.xdata.updateData">
+<code class="descname">updateData</code><span class="sig-paren">(</span><em>x</em>, <em>flag</em>, <em>dim</em>, <em>ind</em>, <em>value</em>, <em>newhead</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.xdata.updateData" title="Permalink to this definition">¶</a></dt>
+<dd><p>function updateData(x,flag,dim,ind,value,newhead)
+—</p>
+<blockquote>
+<div><p>arguments value and newhead are supposed to be only the
+updated parts, i.e.:
+- for flags ‘new’ and ‘chg’, value is the data only for</p>
+<blockquote>
+<div>indices ind</div></blockquote>
+<ul class="simple">
+<li>newhead is only the header in dimension dim</li>
+</ul>
+<p>however giving the full updated data for value, or the full
+header for newhead, is tolerated</p>
+</div></blockquote>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.xdata.data">
+<code class="descname">data</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.xdata.data" title="Permalink to this definition">¶</a></dt>
+<dd><p>ND array</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.zoomfilter">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">zoomfilter</code><span class="sig-paren">(</span><em>S</em>, <em>headerin</em>, <em>zoom</em>, <em>bin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomfilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function Z = zoomfilter(headerin[,zoom[,bin]])
+—</p>
+<blockquote>
+<div>defines zooming, but also binning</div></blockquote>
+<dl class="attribute">
+<dt id="+xplr.zoomfilter.zoomvalue">
+<code class="descname">zoomvalue</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.zoomfilter.zoomvalue" title="Permalink to this definition">¶</a></dt>
+<dd><p>[istart istop]</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.zoomfilter.updateOperation">
+<code class="descname">updateOperation</code><span class="sig-paren">(</span><em>Z</em>, <em>x</em>, <em>dims</em>, <em>slice</em>, <em>flag</em>, <em>ind</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomfilter.updateOperation" title="Permalink to this definition">¶</a></dt>
+<dd><p>there is no ‘smart’ way of updating operation: just do the
+slicing</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.zoomfilter.zoom">
+<code class="descname">zoom</code><em class="property"> = u&quot;':'&quot;</em><a class="headerlink" href="#+xplr.zoomfilter.zoom" title="Permalink to this definition">¶</a></dt>
+<dd><p>‘:’ or [istart istop] with 1 &lt;= istart &lt;= istop &lt;= headerin.n</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.zoomfilter.slicing">
+<code class="descname">slicing</code><span class="sig-paren">(</span><em>Z</em>, <em>dat</em>, <em>dims</em>, <em>selsubidx</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomfilter.slicing" title="Permalink to this definition">¶</a></dt>
+<dd><p>here Z can be non-scalar!</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.zoomfilter.S">
+<code class="descname">S</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.zoomfilter.S" title="Permalink to this definition">¶</a></dt>
+<dd><p>zoomslicer parent</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.zoomfilter.indicesout">
+<code class="descname">indicesout</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.zoomfilter.indicesout" title="Permalink to this definition">¶</a></dt>
+<dd><p>data positions after zooming AND BINING (is equal to indicesin only if bin=1)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.zoomfilter.operation">
+<code class="descname">operation</code><span class="sig-paren">(</span><em>Z</em>, <em>x</em>, <em>dims</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomfilter.operation" title="Permalink to this definition">¶</a></dt>
+<dd><p>here ‘data’ and ‘slice’ are xplr.xdata objects!</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.zoomfilter.indicesin">
+<code class="descname">indicesin</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.zoomfilter.indicesin" title="Permalink to this definition">¶</a></dt>
+<dd><p>data points that will be extracted</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="+xplr.zoomslicer">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">zoomslicer</code><span class="sig-paren">(</span><em>data</em>, <em>D</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomslicer" title="Permalink to this definition">¶</a></dt>
+<dd><p>function S = zoomslicer(data)
+—</p>
+<blockquote>
+<div>The zoomslicer class is a specialized version of the slicer class:
+filters are not set by the user, but zoom filters are automatically
+assigned to every dimension.</div></blockquote>
+<dl class="method">
+<dt id="+xplr.zoomslicer.autoZoomFilter">
+<code class="descname">autoZoomFilter</code><span class="sig-paren">(</span><em>S</em>, <em>linkkey</em>, <em>dim</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomslicer.autoZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function Z = autoZoomFilter(S,linkkey[,dim])
+—</p>
+<blockquote>
+<div>Create, connect and return zoom filter for specified (or all)
+dimension(s) and for specified link key (get from / add to
+the bank if appropriate).
+But does not add / replace it in the zoomslicer: this needs
+to be done by the calling function.</div></blockquote>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.zoomslicer.D">
+<code class="descname">D</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.zoomslicer.D" title="Permalink to this definition">¶</a></dt>
+<dd><p>parent ‘display’ object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.zoomslicer.zoomslicer">
+<code class="descname">zoomslicer</code><span class="sig-paren">(</span><em>data</em>, <em>D</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomslicer.zoomslicer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Construct slicer object</p>
+</dd></dl>
+
+</dd></dl>
+
+<p><code class="xref py py-mod docutils literal notranslate"><span class="pre">+xplr</span></code> is a dataviz app</p>
+<dl class="class">
+<dt>
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">slicer</code><span class="sig-paren">(</span><em>data</em>, <em>dim</em>, <em>filters</em><span class="sig-paren">)</span></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">xplr.graphnode</span></code></p>
+<p>function S = slicer(data[,dims,filters])
+—</p>
+<blockquote>
+<div>Compute and automatically update operations applied to an initial
+‘data’, resulting in an output data called ‘slice’.
+In addition to filters, points define positions where to extract the
+data in some dimensions in the event where there is no filter in this
+dimension, or the filter is empty.</div></blockquote>
+<dl class="method">
+<dt>
+<code class="descname">rmFilterDim</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>doslicing</em><span class="sig-paren">)</span></dt>
+<dd><p>function rmFilterDim(S,dim[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">slicer</code><span class="sig-paren">(</span><em>data</em>, <em>dim</em>, <em>filters</em><span class="sig-paren">)</span></dt>
+<dd><p>set data</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">insertFilter</code><span class="sig-paren">(</span><em>S</em>, <em>idx</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span></dt>
+<dd><p>function insertFilter(S,idx,dim,newfilt[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">rmFilter</code><span class="sig-paren">(</span><em>S</em>, <em>idx</em>, <em>doslicing</em><span class="sig-paren">)</span></dt>
+<dd><p>function rmFilter(S,idx[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">replaceFilterDim</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span></dt>
+<dd><p>function replaceFilterDim(S,dim,newfilt[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">addFilter</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span></dt>
+<dd><p>function addFilter(S,dim,newfilt[,doslicing])</p>
+</dd></dl>
+
+<dl class="method">
+<dt>
+<code class="descname">permFilters</code><span class="sig-paren">(</span><em>S</em>, <em>perm</em><span class="sig-paren">)</span></dt>
+<dd><p>function permFilters(S,perm)
+—</p>
+<blockquote>
+<div>modify the order in which filters are applied</div></blockquote>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+<div class="section" id="indices-and-tables">
+<h1>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Permalink to this headline">¶</a></h1>
+<ul class="simple">
+<li><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></li>
+<li><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></li>
+<li><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></li>
+</ul>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="#">xplor-matlab</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Install via Github:</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Try with examples datasets:</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="#">Documentation overview</a><ul>
+      <li>Next: <a href="usage/installation.html" title="next chapter">Install via Github:</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, remi girard.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/index.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
