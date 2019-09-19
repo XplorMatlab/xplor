@@ -1,19 +1,20 @@
 classdef cliptool < xplr.graphnode
+% cliptool 
     
     % properties controlled by (and as seen from) the menu
     properties (SetObservable=true, AbortSet, SetAccess='private')
         autoclipmode = 'minmax';
     end
     properties (SetObservable=true, AbortSet)
-        autoclipmodeNocenter = 'minmax'
-        center = []             % [], 0 or 1
-        adjust = 'mean(line)'   % 'none', 'mean' or 'mean(line)'
-        span = 'local'          % 'curview', 'local' or 'shared (sharename)'
+        autoclipmodeNocenter = 'minmax'     % 
+        center = []                         % [], 0 or 1
+        adjust = 'mean(line)'               % 'none', 'mean' or 'mean(line)'
+        span = 'local'                      % 'curview', 'local' or 'shared (sharename)'
     end
-    % other properties
+
     properties (SetAccess='private')
-        sharename = ''
-        menu
+        sharename = ''                      % 
+        menu                                % 
     end
     
     events
@@ -22,6 +23,7 @@ classdef cliptool < xplr.graphnode
    
     methods
         function C = cliptool(hf)
+            % constructor
             if nargin==0
                 hf = figure(826);
                 clf(hf)

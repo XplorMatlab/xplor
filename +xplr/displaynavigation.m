@@ -1,15 +1,13 @@
 classdef displaynavigation < xplr.graphnode
-    
+% display navigation
+
     properties (SetAccess='private')
-        % parent xplr.viewdisplay and other external objects
-        D
+        D                                       % parent xplr.viewdisplay
         ha
         hf
         graph
-        % slider objects
-        sliders = struct('x',[],'y',[]);
-        % connected zoom filters
-        zoomfilters = struct('x',[],'y',[]);
+        sliders = struct('x',[],'y',[]);        % slider objects
+        zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
     end
     
     % Constructor

@@ -1,5 +1,6 @@
 classdef displaylabels < xplr.graphnode
-    
+% displaylabels
+
     properties (Access='private')
         % parent xplr.viewdisplay object and other external objects
         D
@@ -20,12 +21,13 @@ classdef displaylabels < xplr.graphnode
         org
     end
         
-    
-    % Constructor, Get dependent
     methods
         function L = displaylabels(D)
+            % contructor displaylabels
+            
             % parent xplr.viewdisplay object
             L.D = D;
+            
             L.graph = D.graph;
             createLabels(L,'global')
             getHeights(L)

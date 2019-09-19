@@ -1,7 +1,6 @@
 classdef dimensionlabel
+    % dimensionlabel defines a dimension
     % function L = dimensionlabel(label,type[,unit|allunits])
-    %---
-    % Define a dimension.
     % 
     % Input:
     % - label   a string (e.g. 'time')

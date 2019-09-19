@@ -200,4 +200,4 @@ todo_include_todos = True
 
 ## myValues
 ## by default function are ordered alphabetically, the following parameter set to 'bysource' keep the original order
-autodoc_member_order = 'bysource'
+autodoc_member_order = 'groupwise'

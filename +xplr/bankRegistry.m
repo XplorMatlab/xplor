@@ -1,5 +1,6 @@
 classdef bankRegistry < handle
-    
+% bank registry
+%
     properties (Dependent, SetAccess='private')
         n
     end
@@ -33,7 +34,7 @@ classdef bankRegistry < handle
                         idx = R.n+1;
                         R.content(idx) = struct('key',key{1},'value',R1,'users',{cell(1,0)});
                     elseif ~isa(R1,'xplr.bankRegistry')
-                        error 'key is invalid: encoutered a leave instead of a sub-registry'
+                        error 'key is invalid: encountered a leave instead of a sub-registry'
                     end
                     if douser
                         register(R1,key(2:end),value,user)

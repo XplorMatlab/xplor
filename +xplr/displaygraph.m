@@ -1,10 +1,8 @@
 classdef displaygraph < xplr.graphnode
     
     properties (SetAccess='private')
-        % parent xplr.viewdisplay object
-        D
-        % graphic objects
-        xyticks
+        D % parent xplr.viewdisplay object
+        xyticks % graphic objects
     end
     properties (Dependent, SetAccess='private')
         ha

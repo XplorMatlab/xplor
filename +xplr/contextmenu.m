@@ -2,20 +2,27 @@ classdef contextmenu < hgsetget
     % A context menu that is created only when it is being raised
     
     properties (Access='private')
-        % parent view
-        V
-        % context menu handle
-        menu
+        V       % parent view
+        menu    % context menu handle
     end
     
     % Constructor and on-the-fly creation
     methods
         function M = contextmenu(V)
+            % contextmenu constructor
+            % contextmenu (V), take the view as argument set it as parent
+            % then set matlab uicontextmenu 
             M.V = V;
             M.menu = uicontextmenu('parent',V.hf);
         end
         function raise(M,flag,varargin)
-            % Delete previous entries
+            % raise(M,flag,varargin) displays the uicontextmenu
+            % M is the contextmenu
+            % flag can be 'label' if it's the context menu of the label of a dimension of the graph
+            %   or 'datadim' if it's the context menu of the dimensions list next to the graph 
+            % varargin
+            
+            % Hide and delete previous entries of this context menu
             set(M.menu,'visible','off')
             delete(get(M.menu,'children'))
             % Create the entries

@@ -1,4 +1,6 @@
 classdef view < hgsetget
+    % Main window
+    %
     
     % Components 
     properties (SetAccess = 'private')

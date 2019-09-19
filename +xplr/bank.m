@@ -5,30 +5,23 @@ classdef bank < hgsetget
 %  * recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored
 %  * measures: units for measures conversion
 %  * filterssets: filters and zoomfilters stored by linkkey
-%
 %   * linkey
 %   * registry
 %   * combo
 %   * zregistry
 
+
     properties (SetAccess='private')
-        
-        % views
-        currentviews = struct('obj',cell(1,0),'hl',cell(1,0)); % all current views are registered here
-        % units
-        measures = struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}));
-        % headers
-        recentheaders = xplr.header.empty(1,0);
-        % headers will be ordered according to their appearance date
-        
-        % filter sets
-        filtersets = xplr.filterSet.empty(1,0);
+        currentviews = struct('obj',cell(1,0),'hl',cell(1,0));                                  % all current views are registered here
+        measures = struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}));   % units
+        recentheaders = xplr.header.empty(1,0);                                                 % headers will be ordered according to their appearance date 
+        filtersets = xplr.filterSet.empty(1,0);                                                 % filter sets
     end
     
-    methods (SetAccess='private')
+    methods (Access='private')
         function B = bank()
             % bank constructor
-            
+
             % load saved measures
             B.loadprop('measures')
             % load saved recent headers
@@ -40,12 +33,12 @@ classdef bank < hgsetget
             % Unique filter bank is attached to the root graphic object.
             % This is preferrable to using a global variable that might be
             % deleted with the 'clear' command.
-%             if isappdata(0,'xplr_filterbank')
-%                 B = getappdata(0,'xplr_filterbank');
-%             else
-%                 B = xplr.bank();
-%                 setappdata(0,'xplr_filterbank',B)
-%             end
+            % if isappdata(0,'xplr_filterbank')
+            %   B = getappdata(0,'xplr_filterbank');
+            % else
+            %   B = xplr.bank();
+            %   setappdata(0,'xplr_filterbank',B)
+            % end
             persistent B0
             if isempty(B0)
                 B0 = xplr.bank();
@@ -56,13 +49,6 @@ classdef bank < hgsetget
     
     % Views
     methods (Static)
-        function unregisterView(V)
-            % unregister view
-            B = xplr.bank.getbank();
-            idx = ([B.currentviews.obj]==V);
-            delete([B.currentviews(idx).hl])
-            B.currentviews(idx) = [];
-        end
         function registerView(V)
             % register view
             B = xplr.bank.getbank();
@@ -71,14 +57,13 @@ classdef bank < hgsetget
             % update list of recent headers
             xplr.bank.registerheaders(V.data.header)
         end
-
     end
     
     % Load/save field
     methods (Access='private')
         function loadprop(B,prop)
-            % loadprop
             
+            % loadprop
             fsave = fn_userconfig('configfolder','xplr.bank');
             warning('off','MATLAB:load:variableNotFound')
             try %#ok<TRYNC>
@@ -101,7 +86,7 @@ classdef bank < hgsetget
     methods (Static)
         function [measurelabel conversion measure] = getunitinfo(unit)
             % function [measurelabel conversion measure] = getunitinfo(unit)
-            %---
+            %
             % if 'unit' is a registered unit (e.g. 'ms'), returns the label 
             % of the corresponding measure (e.g. 'time') and the conversion
             % to the reference unit (e.g. 1e-3, reference unit being 's') 
@@ -118,6 +103,13 @@ classdef bank < hgsetget
                 end
             end
             [measurelabel conversion measure] = deal([]);
+        end
+        function unregisterView(V)
+            % unregister view
+            B = xplr.bank.getbank();
+            idx = ([B.currentviews.obj]==V);
+            delete([B.currentviews(idx).hl])
+            B.currentviews(idx) = [];
         end
         function m = getMeasures()
             m = xplr.bank.getbank().measures;

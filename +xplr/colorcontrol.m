@@ -1,9 +1,10 @@
 classdef colorcontrol < xplr.graphnode
+   % color control
    
     properties
-        hu
-        values
-        color
+        hu      %
+        values  %
+        color   %
     end
     
     methods

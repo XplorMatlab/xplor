@@ -1,10 +1,10 @@
 classdef viewcontrol < hgsetget
+% view control
     
     properties (SetAccess='private')
-        V   % parent 'view' object
-        hp  % display panel
-        items
-        %         dimcontrols % uicontrols
+        V               % parent 'view' object
+        hp              % display panel
+        items           % dimcontrols % uicontrols
         dimlist         % list of dimensions
         privatelists    % listcombo object
     end
@@ -12,6 +12,8 @@ classdef viewcontrol < hgsetget
     % Constructor
     methods
         function C = viewcontrol(V)
+            % constructor viewcontrol
+            
             % parent 'view' object and panel
             C.V = V;
             C.hp = V.panels.control;

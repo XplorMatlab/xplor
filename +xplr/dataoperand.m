@@ -1,4 +1,5 @@
 classdef dataoperand < xplr.graphnode
+% dataoperand
 % Abstract class defining an operation on an xdata object
     
     properties (SetAccess='protected')
