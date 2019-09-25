@@ -4,3 +4,4 @@ demo data/calcium.mat
 demo data/ceye.mat
 *.asv
 /testdata.mat
+*.swp
