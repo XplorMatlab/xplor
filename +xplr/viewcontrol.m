@@ -97,20 +97,11 @@ classdef viewcontrol < hgsetget
         function dimaction(C,flag,key,dim)
             % get list combo for the specified key
             isprivate = (key==0);
-            if isprivate
-                % private filter: list combo display should be handled here
-                combo = C.getPrivateLists();
-            else
-                % public filter: list combo will be handled directly by the
-                % associated filter set
-            end
             
             % loop on selected dimensions
             newfilters = struct('d',cell(1,0),'F',[]);
             rmfilters = [];
             for d = dim
-                head = C.V.data.header(d);
-                
                 % any filter already?
                 slicefilters = C.V.slicer.filters;
                 filteridx = find([slicefilters.dim]==d);
@@ -125,48 +116,40 @@ classdef viewcontrol < hgsetget
 %                     end
 %                 end
                 
-                % add/show/remove filter
+                % create/replace/remove filter
                 switch flag
                     case 'filter'
-                        % create/get filter
+                        % create/replace filter
+
                         if filteridx
-                            % filter already present in slicer
+                            % a filter is already present in slicer, does
+                            % it have the requested key?
                             F = slicefilters(filteridx).obj;
-                        else
-                            % create filter or get existing one from the
-                            % related public filters set
-                            if isprivate
-                                F = xplr.filterAndPoint(head,'indices');
+                            if F.linkkey == key
+                                % if the existing filter has already the
+                                % key of the requested new filter then
+                                % nothing to do
+                                continue
                             else
-                                F = xplr.bank.getFilter(key,head,C);
-                                if isempty(F)
-                                    F = xplr.filterAndPoint(head,'indices');
-                                    xplr.bank.registerFilter(key,F,C) % viewcontrol object C will be registered as a user of filter F
-                                end
+                                % the filter has to be remove before
+                                % creating a new one with the new key
+                                filterToRemove = C.V.slicer.filters(filteridx);
+                                C.removefilter(filterToRemove);
+                                % add the dimension to the slice's filters removal list
+                                rmfilters = [rmfilters filteridx]; %#ok<AGROW>
                             end
-                            % add to the list of new filters
-                            newfilters(end+1) = struct('d',d,'F',F); %#ok<AGROW>
-                            % add the filter to the items
-                            str = ['filter ' head.label ' (' char(F.F.slicefun) ')'];
-                            C.addFilterItem(d,str,F)
                         end
-                        % show list in combo
-                        if isprivate
-                            combo.showList(F)
-                        end
+                        % create the new filter
+                        filterCreated = C.createfilter(d,key);
+                        % add to the list of new filters
+                        newfilters(end+1) = struct('d',d,'F',filterCreated); %#ok<AGROW>
                     case 'rmfilter'
-                        if ~filteridx, continue, end
-                        % add the dimension to the filter removal list
+                        % remove filter from the viewcontrol and the bank
+                        filter = C.V.slicer.filters(filteridx);
+                        C.removefilter(filter);
+                        
+                         % add the dimension to the slice's filters removal list
                         rmfilters = [rmfilters filteridx]; %#ok<AGROW>
-                        % remove filter from the items
-                        C.rmItem(['filter ' num2str(d)])
-                        % remove filter from the lists display
-                        F = slicefilters(filteridx).obj;
-                        if isprivate
-                            combo.removeFilter(F)
-                        else
-                            xplr.bank.unregisterFilter(key,F,C) % viewcontrol object C will be unregistered for the users list of filter F; if this list will become empty, F will be unregistered from the filters set
-                        end
                     case 'toggleactive'
                         itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));
                         hlab = C.items(itemidx).label;
@@ -183,11 +166,11 @@ classdef viewcontrol < hgsetget
             
             % Add/remove all filters in the slicer at once (to have a unique
             % display update)
-            if ~isempty(newfilters)
-                C.V.slicer.addFilter({newfilters.d},[newfilters.F])
-            end
             if ~isempty(rmfilters)
                 C.V.slicer.rmFilter(rmfilters)
+            end
+            if ~isempty(newfilters)
+                C.V.slicer.addFilter({newfilters.d},[newfilters.F])
             end
             
             % Empty the dimension selection
@@ -202,7 +185,7 @@ classdef viewcontrol < hgsetget
             % label
             hlab = uicontrol('parent',panel,'units','normalized','pos',[0 0 1 1], ...
                 'style','text','string',label,'horizontalalignment','left', ...
-                'backgroundcolor',xplr.colors('linkkey',1), ...
+                'backgroundcolor',xplr.colors('linkkey',F.linkkey), ...
                 'enable','inactive','buttondownfcn',@(u,e)clickFilterItem(C,d,id));
             C.items(itemidx).label = hlab;
             % buttons
@@ -212,6 +195,10 @@ classdef viewcontrol < hgsetget
             uclose = uicontrol('parent',panel,'cdata',x, ...
                 'callback',@(u,e)C.dimaction('rmfilter',1,d));
             fn_controlpositions(uclose,panel,[1 .5 0 .5],[-11 0 11 0])
+            
+            udisable = uicontrol('parent',panel,'cdata',x, ...
+                'callback',@(u,e)C.dimaction('toggleactive',1,d));
+            fn_controlpositions(udisable,panel,[.05 .5 0 .5],[-11 -5 11 2])
         end
         function clickFilterItem(C,d,id)
             hf = C.V.hf;
@@ -283,5 +270,59 @@ classdef viewcontrol < hgsetget
             end
         end
     end
+    
+    % private filter management
+    methods (Access='private')
+        function removefilter(C,filter)
+            % remove the filter from the viewcontrol and the bank
+            % this function does not remove the filter from the slicer
+            
+            % if filter is empty, does nothing and leave the function
+            if isempty(filter), return, end
+            % remove filter from the items
+            C.rmItem(['filter ' num2str(filter.dim)])
+            % remove filter from the lists display
+            % if the filter is private
+            if filter.obj.linkkey == 0
+                % remove the filter from the combo
+                combo = C.getPrivateLists();
+                combo.removeList(filter.obj)
+            else
+                % viewcontrol object C will be unregistered for the users
+                % list of filter F; if this list will become empty, F will
+                % be unregistered from the filters set
+                xplr.bank.unregisterFilter(filter.obj.linkkey,filter.obj,C) 
+            end
+        end
+        
+        function filter = createfilter(C,dimension,key)
+            % create filter or get existing one from the
+            % related public filters set
+            
+            header = C.V.data.header(dimension);
+            % if the filter has to be private
+            if key == 0
+                % create private filter
+                filter = xplr.filterAndPoint(header,'indices');
+                % show filter in combo
+                combo = C.getPrivateLists();
+                combo.showList(filter)
+            else
+                % search for the filter in the bank with key and dimension
+                filter = xplr.bank.getFilter(key,header,C);
+                if isempty(filter)
+                    filter = xplr.filterAndPoint(header,'indices');
+                    % viewcontrol object C will be registered as a user of the filter
+                    xplr.bank.registerFilter(key,filter,C);
+                end
+            end
+            
+            % add the filter to the items, it is important that
+            % filter.linkkey is set before using addFilterItem
+            str = ['filter ' header.label ' (' char(filter.F.slicefun) ')'];
+            C.addFilterItem(dimension,str,filter)
+        end
+    end
+    
     
 end

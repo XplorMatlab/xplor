@@ -43,6 +43,9 @@ switch name
         lumrange = 1;
         cmap = squeeze(hsv2rgb([4 6 2 1 3]/6,ones(1,5)*satrange,ones(1,5)*lumrange));
         infinitemap = true;
+        % index might be zero! add one to make indexing start from 1
+        cmap = [[1 1 1]*.94; cmap];
+        k = k+1;
     otherwise
         error('unknown color set name ''%s''',name)
 end

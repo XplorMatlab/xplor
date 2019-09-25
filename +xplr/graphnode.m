@@ -30,6 +30,7 @@ classdef graphnode < hgsetget
                 for obj = other
                     self.disconnect(obj)
                 end
+                return
             end
             % scan list of objects that self is listening, remove items
             % where self listens to other

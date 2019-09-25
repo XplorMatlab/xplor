@@ -91,7 +91,8 @@ classdef filterSet < hgsetget
             % Create list combo?
             if isempty(FS.combo)
                 FS.combo = xplr.listcombo([],FS.linkkey);
-                connectlistener(FS.combo,FS,'Empty',@(u,e)set(FS,'combo',[])); % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
+                % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
+                connectlistener(FS.combo,FS,'Empty',@(u,e)set(FS,'combo',[])); 
             end
             
             % Display filter

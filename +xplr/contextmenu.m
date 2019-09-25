@@ -71,7 +71,7 @@ classdef contextmenu < hgsetget
                     % select ZoomFilter key (check the created menu item
                     % that corresponds to the current key)
                     m2 = uimenu(m,'label','zoom filter','Separator',fn_switch(docolor));
-                    availablekeys = xplr.bank.availableZoomFilterKeys();
+                    availablekeys = xplr.bank.availableFilterKeys();
                     newkey = max(availablekeys)+1;
                     keyvalues = [0 availablekeys newkey];
                     fn_num2str(availablekeys, 'shared zoom %i', 'cell');
@@ -91,7 +91,25 @@ classdef contextmenu < hgsetget
                     % Change filters
                     uimenu(m,'label','Add/Show Filters','callback',@(u,e)dimaction(C,'filter',1,dim))
                     uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',1,dim))
-                    uimenu(m,'label','Add private filter','callback',@(u,e)dimaction(C,'filter',0,dim))
+                    
+                    % display the available keys to apply a new or existing
+                    % filter. 
+                    m2 = uimenu(m,'label','Add a filter');
+                    availablekeys = xplr.bank.availableFilterKeys();
+                    newkey = max(availablekeys)+1;
+                    keyvalues = [0 availablekeys newkey];
+                    fn_num2str(availablekeys, 'shared zoom %i', 'cell');
+                    keydisplays = [ ...
+                        'private filter' ...
+                        fn_num2str(availablekeys, 'shared filter %i', 'cell') ...
+                        num2str(newkey,'shared filter %i (new key)')
+                        ];
+                    for i=1:length(keyvalues)
+                        keyvalue = keyvalues(i);      
+                        uimenu(m2,'label',keydisplays{i}, ...
+                            'callback',@(u,e)dimaction(C,'filter',keyvalue,dim));
+                    end
+                    
                     % uimenu(m,'label','Synchronize Zoom','callback',)
                     %m1 = uimenu(m,'label','scroll wheel','separator','on');
                     %    L.menuitems.scrollwheel = uimenu(m1,'label','activated', ...
