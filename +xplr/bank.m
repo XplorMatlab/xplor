@@ -180,7 +180,7 @@ classdef bank < hgsetget
     end
     
     % Filter sets
-    methods (Static, Access=private)
+    methods (Static)
         function FS = getFilterSet(linkkey)
             B = xplr.bank.getbank();
             if linkkey<=length(B.filtersets)

@@ -34,7 +34,9 @@ classdef viewcontrol < hgsetget
     methods (Access='private')
         function init_items(C)
             fn_pixelsizelistener(C.hp,@(u,e)itemPositions(C))
-            C.items = struct('id',cell(1,0),'span',[],'obj',[]); % note that other fields will be added, e.g. in addFilterItem
+            
+            % note that other fields will be added, e.g. in addFilterItem
+            C.items = struct('id',cell(1,0),'span',[],'obj',[]);
         end
         function itemPositions(C,idx)
             if nargin<2, idx = 1:length(C.items); end
@@ -161,6 +163,24 @@ classdef viewcontrol < hgsetget
                         disp 'very bad way to determine filter index'
                         filteridx = itemidx-2;
                         C.V.slicer.chgFilterActive(filteridx,active)
+                    case 'showFilterWindow'
+                        % re-create the filter window if not existing or
+                        % put it in the front
+                        
+                        % if the filter is not private
+                        if key ~= 0
+                            % filterSet and filter are needed to use
+                            % filterSet.showList
+                            
+                            % get filterSet from the bank
+                            filterSet = xplr.bank.getFilterSet(key);
+                            
+                            % get filter from the filterSet
+                            header = C.V.data.header(dim);
+                            filter = filterSet.getFilter(header);
+                            
+                            filterSet.showList(filter);
+                        end
                 end
             end
             
@@ -196,9 +216,11 @@ classdef viewcontrol < hgsetget
                 'callback',@(u,e)C.dimaction('rmfilter',1,d));
             fn_controlpositions(uclose,panel,[1 .5 0 .5],[-11 0 11 0])
             
-            udisable = uicontrol('parent',panel,'cdata',x, ...
+            udisable = uicontrol('parent',panel,'Style','checkbox', ...
+                'backgroundcolor',xplr.colors('linkkey',F.linkkey), ...
+                'Value',1, ...
                 'callback',@(u,e)C.dimaction('toggleactive',1,d));
-            fn_controlpositions(udisable,panel,[.05 .5 0 .5],[-11 -5 11 2])
+            fn_controlpositions(udisable,panel,[0 0 0 1],[0 0 13 0])
         end
         function clickFilterItem(C,d,id)
             hf = C.V.hf;
@@ -247,7 +269,7 @@ classdef viewcontrol < hgsetget
             end
             
             % toggle active if there was no move
-            if ~moved, dimaction(C,'toggleactive',1,d), end
+            if ~moved, dimaction(C,'showFilterWindow',C.items(idxitem).F.linkkey,d), end
         end
     end
     
@@ -319,7 +341,8 @@ classdef viewcontrol < hgsetget
             
             % add the filter to the items, it is important that
             % filter.linkkey is set before using addFilterItem
-            str = ['filter ' header.label ' (' char(filter.F.slicefun) ')'];
+            % TODO: change how the string filter is shifted
+            str = ['    filter ' header.label ' (' char(filter.F.slicefun) ')'];
             C.addFilterItem(dimension,str,filter)
         end
     end
