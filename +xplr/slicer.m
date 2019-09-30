@@ -30,8 +30,6 @@ classdef slicer < xplr.graphnode
             % set data
             S.data = data;
             S.addListener(data,'ChangedData',@(u,e)datachange(S,e));
-            % without any filter, slice is identical data
-            S.slice = data.copy();
             % set filters
             if nargin>=2 && ~isempty(filters)
                 addFilter(S,dim,filters)
