@@ -9,7 +9,6 @@ classdef slicer < xplr.graphnode
     
     properties 
         data
-        slice
         filters = struct('active',[],'dim',cell(1,0),'obj',[]);
     end
     properties (Access='protected')
@@ -22,6 +21,7 @@ classdef slicer < xplr.graphnode
         nddata
         ndslice
         nactivefilt
+        slice
     end
     
     % Constructor, destructor, basig access and get/set dependent
@@ -30,8 +30,6 @@ classdef slicer < xplr.graphnode
             % set data
             S.data = data;
             S.addListener(data,'ChangedData',@(u,e)datachange(S,e));
-            % without any filter, slice is identical data
-            S.slice = data.copy();
             % set filters
             if nargin>=2 && ~isempty(filters)
                 addFilter(S,dim,filters)
@@ -46,6 +44,21 @@ classdef slicer < xplr.graphnode
         function n = get.nactivefilt(S)
             n = sum([S.filters.active]);
         end
+        
+        function slice = get.slice(S)
+            % slice is a dependent variable, instead of creating a copy of
+            % a xdata. If no filter are applied, the slicing chain is empty
+            % then return the input xdata. Else return the last xdata of the
+            % slicing chain.
+            if (isempty(S.slicingchain))
+                % if there is not filter get S.data
+                slice = S.data;
+            else 
+                % else get the the last xdata on the slicing chain
+                slice = S.slicingchain(end).res;
+            end
+        end
+        
         %         function obj = getfilter(S,dim) % should this function return only active filter? 
         %             idx = fn_find(dim,{S.filters.dim});
         %             obj = [S.filters(idx).obj];
