@@ -55,7 +55,7 @@ classdef slicer < xplr.graphnode
                 slice = S.data;
             else 
                 % else get the the last xdata on the slicing chain
-                slice = S.slicingchain(end).dimdata2slice;
+                slice = S.slicingchain(end).res;
             end
         end
         
