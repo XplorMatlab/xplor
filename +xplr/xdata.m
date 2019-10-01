@@ -6,6 +6,15 @@ classdef xdata < xplr.graphnode
     % information is being changed    
     % When headers are not provided, opens a graphic interface allowing
     % user to set the headers.
+    % 
+    % Input:
+    % dat   ND array
+    % head  a cell array with as many elements as data dimensions, 
+    %       each element is itself a cell array containing arguments for
+    %       the xplr.header constructor
+    % name  string
+    %
+    % See also xplr.header
     
     properties (SetAccess='private')
         data        % ND array
