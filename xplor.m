@@ -32,13 +32,21 @@ else
 end
 if ~isa(data,'xplr.xdata')
     data = squeeze(data); % remove singleton dimensions
-    xplr.headerEdit(data, @(header)launch_view({data, header, name}, varargin{:}));
+    % does user expect an output?
+    if nargout > 0
+        header = xplr.editHeader(data);
+        V = launch_view({data, header, name}, varargin{:});
+    else
+        xplr.headerEdit(data, @(header)launch_view({data, header, name}, varargin{:}));
+        V = [];
+    end
 else
-    launch_view(data, varargin{:})
+    V = launch_view(data, varargin{:});
 end
+if nargout == 0, clear V, end
 
 %---
-function launch_view(x, varargin)
+function V = launch_view(x, varargin)
 
 % combine data and header
 if iscell(x)
@@ -48,4 +56,4 @@ else
 end
 
 % go!
-xplr.view(data,varargin{:});
+V = xplr.view(data,varargin{:});
