@@ -54,6 +54,27 @@ x = reshape(1:120,[3 2 5 4]);
 data = xplr.xdata(x,header);
 V = xplr.view(data);
 
+%---
+function test_zoomcentral
+%%
+
+% two displays with y coordinate not sampled the same way
+load 'clown';
+x1 = xplr.xdata(X,{{'x' 'px' 200} {'y' 'px' 320}});
+x2 = xplr.xdata(X(:,1:2:end),{{'x' 'px' 200} {'y' 'px' 160 0 2}});
+
+V1 = xplor(x1);
+V2 = xplor(x2);
+
+
+% connect the 2 zoom filters in the y coordinate
+ZC = xplr.zoomcentral('y', 'px');
+ZF1 = V1.D.zoomslicer.getFilter(2);
+ZC.connectZoomFilter(ZF1);
+ZF2 = V2.D.zoomslicer.getFilter(2);
+ZC.connectZoomFilter(ZF2);
+
+
 % %% OLD CODE
 % 
 % %% view
