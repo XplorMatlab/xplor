@@ -56,6 +56,10 @@ classdef bankRegistry < handle
             idx = R.n+1;
             if douser
                 R.content(idx) = struct('key',key,'value',value,'users',{{user}});
+                if isobject(user)
+                    addlistener(user,'ObjectBeingDestroyed', ...
+                        @(u,e)R.unregister(key,user));
+                end
             else
                 R.content(idx) = struct('key',key,'value',value,'users',{cell(1,0)});
             end
@@ -152,6 +156,10 @@ classdef bankRegistry < handle
                 idxuser = fn_find(newuser,R.content(idx).users,'first');
                 if isempty(idxuser)
                     R.content(idx).users{end+1} = newuser;
+                    if isobject(newuser)
+                        addlistener(newuser,'ObjectBeingDestroyed', ...
+                            @(u,e)R.unregister(key,newuser));
+                    end
                 else
                     disp 'new user to register was already found in users list'
                 end
