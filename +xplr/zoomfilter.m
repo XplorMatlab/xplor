@@ -4,7 +4,6 @@ classdef zoomfilter < xplr.dataoperand
     % defines zooming, but also binning
    
     properties (SetAccess='private')
-        S % zoomslicer parent
         % filter definition
         zoom = ':'      % ':' or [istart istop] with 1 <= istart <= istop <= headerin.n
         bin = 1
@@ -23,15 +22,14 @@ classdef zoomfilter < xplr.dataoperand
     
     % Setting and updating filter
     methods
-        function Z = zoomfilter(S,headerin,zoom,bin)
-            Z.S = S;
+        function Z = zoomfilter(headerin,zoom,bin)
             % input
             if nargin<3, zoom = ':'; end
             if nargin<4, bin = 1; end
             if ~isscalar(headerin)
                 Z = xplr.zoomfilter.empty(1,0);
                 for i=1:length(headerin)
-                    Z(i) = xplr.zoomfilter(S,headerin(i));
+                    Z(i) = xplr.zoomfilter(headerin(i));
                 end
                 return
             end

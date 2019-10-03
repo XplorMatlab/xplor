@@ -45,11 +45,11 @@ classdef zoomslicer < xplr.slicer
                 if linkkey ~= 0
                     Zi = xplr.bank.getZoomFilter(linkkey,head,S);
                     if isempty(Zi)
-                        Zi = xplr.zoomfilter(S,S.data.header(d));
+                        Zi = xplr.zoomfilter(S.data.header(d));
                         xplr.bank.registerZoomFilter(linkkey, Zi, S)
                     end
                 else
-                    Zi = xplr.zoomfilter(S,S.data.header(dim));
+                    Zi = xplr.zoomfilter(S.data.header(dim));
                 end
                 Z(i) = Zi;
                 S.addListener(Z(i),'ChangedZoom',@(u,e)zoomchange(S,d,e));
