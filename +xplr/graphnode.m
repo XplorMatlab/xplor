@@ -151,8 +151,7 @@ end
 
 function doOneWayCallback(callback,u,e,waybacklistener)
 % Execute a callback, but first inhibit temporarily a given listener
-    enableListener(waybacklistener, false)
+    c = disableListener(waybacklistener);
     callback(u,e)
-    enableListener(waybacklistener, true)
-
+    % waybacklistener will be enable when c destroyed
 end
