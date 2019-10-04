@@ -7,6 +7,7 @@ classdef filterSet < hgsetget
         registry    % registered filters
         combo       % list combo displaying the registered filters
         zregistry   % registered zoomfilters
+        zcregistry  % registered zoomcentral
     end
     
     % Constructor should be called only by xplr.bank.getFilterSet
@@ -15,6 +16,7 @@ classdef filterSet < hgsetget
             FS.linkkey = key;
             FS.registry = xplr.bankRegistry;
             FS.zregistry = xplr.bankRegistry;
+            FS.zcregistry = xplr.bankRegistry;
         end
     end
     
@@ -28,7 +30,29 @@ classdef filterSet < hgsetget
         function F = getZoomFilter(FS,header,varargin)
             % function F = getZoomFilter(FS,header[,user])
             hID = getID(header);
+            % search a corresponding filter
             F = FS.zregistry.getValue(hID,varargin{:});
+            if ~isempty(F)
+                return
+            else
+                % if the filter does not exist then create it and register
+                % it
+                F = xplr.zoomfilter(header);
+                FS.addZoomFilter(F,varargin);
+                type = header.get.type();
+                if type == 'measure'
+                   key = fn_hash({ header.label, header.get.unit }, 'num');
+                   % search a corresponding zoomCentral in the filterSet
+                   % return existing zoomCentral if exist
+                   zoomCentral = FS.zcregistry.getValue(key,varargin);
+                   if isempty(zoomCentral)
+                       % create new zoomcentral
+                       zoomCentral = xplr.zoomcentral(header.label,header.unit);
+                       FS.zcregistry.register(key,zoomCentral,varargin);
+                   end
+                zoomCentral.connectZoomFilter(F);
+                end
+            end
         end
         function addFilter(FS,F,varargin)
             % function addFilter(FS,F[,user])

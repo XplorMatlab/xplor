@@ -9,6 +9,7 @@ classdef bank < hgsetget
 %   * registry
 %   * combo
 %   * zregistry
+%   * zcregistry
 
 
     properties (SetAccess='private')

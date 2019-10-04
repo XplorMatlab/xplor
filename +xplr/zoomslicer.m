@@ -44,10 +44,6 @@ classdef zoomslicer < xplr.slicer
                 head = S.data.header(d);
                 if linkkey ~= 0
                     Zi = xplr.bank.getZoomFilter(linkkey,head,S);
-                    if isempty(Zi)
-                        Zi = xplr.zoomfilter(S.data.header(d));
-                        xplr.bank.registerZoomFilter(linkkey, Zi, S)
-                    end
                 else
                     Zi = xplr.zoomfilter(S.data.header(dim));
                 end
