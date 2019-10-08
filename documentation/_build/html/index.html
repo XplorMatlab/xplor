@@ -62,6 +62,7 @@
 <li>registry</li>
 <li>combo</li>
 <li>zregistry</li>
+<li>zcregistry</li>
 </ul>
 </div></blockquote>
 <dl class="staticmethod">
@@ -93,16 +94,7 @@
 <em class="property">static </em><code class="descname">getbank</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getbank" title="Permalink to this definition">¶</a></dt>
 <dd><p>Unique filter bank is attached to the root graphic object.
 This is preferrable to using a global variable that might be
-deleted with the ‘clear’ command.
-if isappdata(0,’xplr_filterbank’)</p>
-<blockquote>
-<div>B = getappdata(0,’xplr_filterbank’);</div></blockquote>
-<dl class="docutils">
-<dt>else</dt>
-<dd>B = xplr.bank();
-setappdata(0,’xplr_filterbank’,B)</dd>
-</dl>
-<p>end</p>
+deleted with the ‘clear’ command.</p>
 </dd></dl>
 
 <dl class="staticmethod">
@@ -257,10 +249,9 @@ then set matlab uicontextmenu</p>
 <code class="descname">raise</code><span class="sig-paren">(</span><em>M</em>, <em>flag</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.contextmenu.raise" title="Permalink to this definition">¶</a></dt>
 <dd><p>raise(M,flag,varargin) displays the uicontextmenu
 M is the contextmenu
-flag can be ‘label’ if it’s the context menu of the label of a dimension of the graph</p>
-<blockquote>
-<div>or ‘datadim’ if it’s the context menu of the dimensions list next to the graph</div></blockquote>
-<p>varargin</p>
+flag can be ‘label’ if it’s the context menu of the label of a dimension of the graph
+or ‘datadim’ if it’s the context menu of the dimensions list next to the graph 
+varargin</p>
 </dd></dl>
 
 </dd></dl>
@@ -280,10 +271,8 @@ Abstract class defining an operation on an xdata object</p>
 <dt id="+xplr.dataoperand.followdims">
 <code class="descname">followdims</code><span class="sig-paren">(</span><em>O</em>, <em>ndbef</em>, <em>dims</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.dataoperand.followdims" title="Permalink to this definition">¶</a></dt>
 <dd><p>function dimbef2aft = followdims(O,nd,dims)
-—</p>
-<blockquote>
-<div>for each dimension of an original nd-dimensional data, at
-which new position is it going in the operated data</div></blockquote>
+for each dimension of an original nd-dimensional data, at
+which new position is it going in the operated data</p>
 </dd></dl>
 
 </dd></dl>
@@ -294,11 +283,9 @@ which new position is it going in the operated data</div></blockquote>
 <dd><p>dimensionlabel defines a dimension
 function L = dimensionlabel(label,type[,unit|allunits])</p>
 <p>Input:
-- label   a string (e.g. ‘time’)
-- type    ‘numeric’, ‘logical’, ‘char’ or ‘mixed’
-- unit    string, cell array with 2 columns, or struct with fields</p>
-<blockquote>
-<div>unit and value</div></blockquote>
+* label   a string (e.g. ‘time’)
+* type    ‘numeric’, ‘logical’, ‘char’ or ‘mixed’
+* unit    string, cell array with 2 columns, or struct with fields unit and value</p>
 <p>Examples:
 tlabel = dimensionlabel(‘time’,’numeric’,{‘s’ 1; ‘ms’ 1e-3; ‘min’ 60; ‘hour’ 3600};
 clabel = dimensionlabel(‘condition’,’char’);</p>
@@ -354,9 +341,7 @@ clabel = dimensionlabel(‘condition’,’char’);</p>
 <dt id="+xplr.displaynavigation.init_buttons">
 <code class="descname">init_buttons</code><span class="sig-paren">(</span><em>N</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.displaynavigation.init_buttons" title="Permalink to this definition">¶</a></dt>
 <dd><p>function init_buttons(N)
-—</p>
-<blockquote>
-<div>3 buttons that control clipping</div></blockquote>
+3 buttons that control clipping</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -383,43 +368,40 @@ clabel = dimensionlabel(‘condition’,’char’);</p>
 <dt id="+xplr.eventinfo">
 <em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">eventinfo</code><span class="sig-paren">(</span><em>type</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.eventinfo" title="Permalink to this definition">¶</a></dt>
 <dd><p>function obj = eventinfo(type,arguments…)
-—</p>
-<blockquote>
-<div><p>type: ‘filter’
-arguments:    ‘all’</p>
-<blockquote>
-<div>‘new’,ind
-‘chg’,ind
-‘remove’,ind
-‘chg&amp;new’,ind
-‘chg&amp;rm’,ind
-‘perm’,ind
-‘point’</div></blockquote>
+type: ‘filter’
+arguments:
+* ‘all’
+* ‘new’,ind
+* ‘chg’,ind
+* ‘remove’,ind
+* ‘chg&amp;new’,ind
+* ‘chg&amp;rm’,ind
+* ‘perm’,ind
+* ‘point’</p>
 <p>type: ‘point’
 arguments:    chgij [default false]</p>
 <p>type: ‘data’
-arguments:    ‘global’</p>
-<blockquote>
-<div>‘chgdata’
-‘insertdim’,dim
-‘rmdim’,dim
-‘chgdim’,dim
-‘all’,dim
-‘new’,dim,ind
-‘chg’,dim,ind
-‘remove’,dim,ind
-‘chg&amp;new’,{indchg indnew}
-‘chg&amp;rm’,{indchg indrm}
-‘perm’,dim,ind</div></blockquote>
+arguments:
+* ‘global’
+* ‘chgdata’
+* ‘insertdim’,dim
+* ‘rmdim’,dim
+* ‘chgdim’,dim
+* ‘all’,dim
+* ‘new’,dim,ind
+* ‘chg’,dim,ind
+* ‘remove’,dim,ind
+* ‘chg&amp;new’,{indchg indnew}
+* ‘chg&amp;rm’,{indchg indrm}
+* ‘perm’,dim,ind</p>
 <p>type: ‘zoom’
 arguments:    chgnout,dim</p>
 <p>type: ‘clip’
-arguments:    ‘clip’,value</p>
-<blockquote>
-<div>‘automode’
-‘adjust’
-‘span’</div></blockquote>
-</div></blockquote>
+arguments:
+* ‘clip’,value
+* ‘automode’
+* ‘adjust’
+* ‘span’</p>
 </dd></dl>
 
 <dl class="class">
@@ -538,7 +520,7 @@ function H = header({args header 1},{args header 2},…)</dd>
 <dt>—</dt>
 <dd><p class="first">Container for header information in a single dimension.</p>
 <p>Input:
-- label   a dimensionlabel object or a string (in the latter case</p>
+* label   a dimensionlabel object or a string (in the latter case</p>
 <blockquote>
 <div>a dimensionlabel object will be created)</div></blockquote>
 <ul class="simple">
@@ -558,7 +540,7 @@ function H = header({args header 1},{args header 2},…)</dd>
 </ul>
 <p>There are two types of header; this type is automatically inferred
 from the syntax of the call to ‘header’ constructor.
-- ‘measure’ header typically corresponds to a continuous dimension</p>
+* ‘measure’ header typically corresponds to a continuous dimension</p>
 <blockquote>
 <div>along which data is acquired at regularly-spaced intervals (e.g.
 time or space), though it can be discrete as well (e.g. day number)</div></blockquote>
@@ -590,9 +572,7 @@ change</p>
 <dt id="+xplr.header.getValue">
 <code class="descname">getValue</code><span class="sig-paren">(</span><em>H</em>, <em>label</em>, <em>idx</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.header.getValue" title="Permalink to this definition">¶</a></dt>
 <dd><p>function x = getValue(H,label[,idx])
-—</p>
-<blockquote>
-<div>access value(s) in the table (categorical header only)</div></blockquote>
+access value(s) in the table (categorical header only)</p>
 </dd></dl>
 
 <dl class="method">
@@ -669,10 +649,8 @@ the other</p>
 <dt id="+xplr.headerEdit">
 <em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">headerEdit</code><span class="sig-paren">(</span><em>data</em>, <em>callback</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit" title="Permalink to this definition">¶</a></dt>
 <dd><p>function E = headerEdit(data [, callback])
-—</p>
-<blockquote>
-<div>callback is a function with prototype fun(header) to execute once the ok
-button is pressed</div></blockquote>
+callback is a function with prototype fun(header) to execute once the ok
+button is pressed</p>
 <dl class="method">
 <dt id="+xplr.headerEdit.cellselect">
 <code class="descname">cellselect</code><span class="sig-paren">(</span><em>E</em>, <em>e</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.headerEdit.cellselect" title="Permalink to this definition">¶</a></dt>
@@ -797,10 +775,8 @@ where there is some guess</p>
 <dt id="+xplr.listcombo">
 <em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">listcombo</code><span class="sig-paren">(</span><em>container</em>, <em>linkkey</em>, <em>filters</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.listcombo" title="Permalink to this definition">¶</a></dt>
 <dd><p>function C = listcombo(container,linkkey,filters)
-—</p>
-<blockquote>
-<div>if container is empty, a new figure will be created; this
-figure will auto-delete once all filters will be removed</div></blockquote>
+if container is empty, a new figure will be created; this
+figure will auto-delete once all filters will be removed</p>
 <dl class="method">
 <dt id="+xplr.listcombo.addList">
 <code class="descname">addList</code><span class="sig-paren">(</span><em>C</em>, <em>filter</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.listcombo.addList" title="Permalink to this definition">¶</a></dt>
@@ -831,13 +807,11 @@ figure will auto-delete once all filters will be removed</div></blockquote>
 <dt id="+xplr.slicer">
 <em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">slicer</code><span class="sig-paren">(</span><em>data</em>, <em>dim</em>, <em>filters</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer" title="Permalink to this definition">¶</a></dt>
 <dd><p>function S = slicer(data[,dims,filters])
-—</p>
-<blockquote>
-<div>Compute and automatically update operations applied to an initial
+Compute and automatically update operations applied to an initial
 ‘data’, resulting in an output data called ‘slice’.
 In addition to filters, points define positions where to extract the
 data in some dimensions in the event where there is no filter in this
-dimension, or the filter is empty.</div></blockquote>
+dimension, or the filter is empty.</p>
 <dl class="method">
 <dt id="+xplr.slicer.addFilter">
 <code class="descname">addFilter</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.addFilter" title="Permalink to this definition">¶</a></dt>
@@ -854,9 +828,7 @@ dimension, or the filter is empty.</div></blockquote>
 <dt id="+xplr.slicer.permFilters">
 <code class="descname">permFilters</code><span class="sig-paren">(</span><em>S</em>, <em>perm</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.slicer.permFilters" title="Permalink to this definition">¶</a></dt>
 <dd><p>function permFilters(S,perm)
-—</p>
-<blockquote>
-<div>modify the order in which filters are applied</div></blockquote>
+modify the order in which filters are applied</p>
 </dd></dl>
 
 <dl class="method">
@@ -1004,13 +976,16 @@ define headers if needed</p>
 <dt id="+xplr.xdata">
 <em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">xdata</code><span class="sig-paren">(</span><em>dat</em>, <em>head</em>, <em>name</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.xdata" title="Permalink to this definition">¶</a></dt>
 <dd><p>function x = xdata(dat[,head[,name]])
-—</p>
-<blockquote>
-<div>A container for data associated with header information
+A container for data associated with header information
 A number of different events are thrown when the data or header
 information is being changed    
 When headers are not provided, opens a graphic interface allowing
-user to set the headers.</div></blockquote>
+user to set the headers.</p>
+<p>Input:
+* dat   ND array
+* head  a cell array with as many elements as data dimensions, each element is itself a cell array containing arguments for the xplr.header constructor
+* name  string</p>
+<p>See also xplr.header</p>
 <dl class="method">
 <dt id="+xplr.xdata.updateData">
 <code class="descname">updateData</code><span class="sig-paren">(</span><em>x</em>, <em>flag</em>, <em>dim</em>, <em>ind</em>, <em>value</em>, <em>newhead</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.xdata.updateData" title="Permalink to this definition">¶</a></dt>
@@ -1045,8 +1020,37 @@ header for newhead, is tolerated</p>
 </dd></dl>
 
 <dl class="class">
+<dt id="+xplr.zoomcentral">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">zoomcentral</code><span class="sig-paren">(</span><em>label</em>, <em>unit</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomcentral" title="Permalink to this definition">¶</a></dt>
+<dd><p>zoom central is made to synchronized zoom, it needs to be an external
+object to use as reference to sync different zooms with differents
+scale of the same unit</p>
+<blockquote>
+<div>zoomcentral herit from zoomfilter,</div></blockquote>
+<dl class="method">
+<dt id="+xplr.zoomcentral.connectZoomFilter">
+<code class="descname">connectZoomFilter</code><span class="sig-paren">(</span><em>ZC</em>, <em>zoomFilterToConnect</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomcentral.connectZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>connect a new zoomfilter to the zoomcentral using graphnode
+listeners connector</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.zoomcentral.localToCentral">
+<code class="descname">localToCentral</code><span class="sig-paren">(</span><em>ZC</em>, <em>zoomFilter</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomcentral.localToCentral" title="Permalink to this definition">¶</a></dt>
+<dd><p>get scale</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="+xplr.zoomcentral.zoomcentral">
+<code class="descname">zoomcentral</code><span class="sig-paren">(</span><em>label</em>, <em>unit</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomcentral.zoomcentral" title="Permalink to this definition">¶</a></dt>
+<dd><p>To create a zoomcentral</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
 <dt id="+xplr.zoomfilter">
-<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">zoomfilter</code><span class="sig-paren">(</span><em>S</em>, <em>headerin</em>, <em>zoom</em>, <em>bin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomfilter" title="Permalink to this definition">¶</a></dt>
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">zoomfilter</code><span class="sig-paren">(</span><em>headerin</em>, <em>zoom</em>, <em>bin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomfilter" title="Permalink to this definition">¶</a></dt>
 <dd><p>function Z = zoomfilter(headerin[,zoom[,bin]])
 —</p>
 <blockquote>
@@ -1070,10 +1074,10 @@ header for newhead, is tolerated</p>
 slicing</p>
 </dd></dl>
 
-<dl class="attribute">
-<dt id="+xplr.zoomfilter.S">
-<code class="descname">S</code><em class="property"> = None</em><a class="headerlink" href="#+xplr.zoomfilter.S" title="Permalink to this definition">¶</a></dt>
-<dd><p>zoomslicer parent</p>
+<dl class="method">
+<dt id="+xplr.zoomfilter.zoomfilter">
+<code class="descname">zoomfilter</code><span class="sig-paren">(</span><em>headerin</em>, <em>zoom</em>, <em>bin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomfilter.zoomfilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>input</p>
 </dd></dl>
 
 <dl class="attribute">
@@ -1106,11 +1110,10 @@ slicing</p>
 <dt id="+xplr.zoomslicer">
 <em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">zoomslicer</code><span class="sig-paren">(</span><em>data</em>, <em>D</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomslicer" title="Permalink to this definition">¶</a></dt>
 <dd><p>function S = zoomslicer(data)
-—</p>
-<blockquote>
-<div>The zoomslicer class is a specialized version of the slicer class:
+—
+The zoomslicer class is a specialized version of the slicer class:
 filters are not set by the user, but zoom filters are automatically
-assigned to every dimension.</div></blockquote>
+assigned to every dimension.</p>
 <dl class="method">
 <dt id="+xplr.zoomslicer.autoZoomFilter">
 <code class="descname">autoZoomFilter</code><span class="sig-paren">(</span><em>S</em>, <em>linkkey</em>, <em>dim</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.zoomslicer.autoZoomFilter" title="Permalink to this definition">¶</a></dt>
@@ -1197,13 +1200,11 @@ test filter slicer</p>
 <em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">slicer</code><span class="sig-paren">(</span><em>data</em>, <em>dim</em>, <em>filters</em><span class="sig-paren">)</span></dt>
 <dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">xplr.graphnode</span></code></p>
 <p>function S = slicer(data[,dims,filters])
-—</p>
-<blockquote>
-<div>Compute and automatically update operations applied to an initial
+Compute and automatically update operations applied to an initial
 ‘data’, resulting in an output data called ‘slice’.
 In addition to filters, points define positions where to extract the
 data in some dimensions in the event where there is no filter in this
-dimension, or the filter is empty.</div></blockquote>
+dimension, or the filter is empty.</p>
 <dl class="method">
 <dt>
 <code class="descname">addFilter</code><span class="sig-paren">(</span><em>S</em>, <em>dim</em>, <em>newfilt</em>, <em>doslicing</em><span class="sig-paren">)</span></dt>
@@ -1220,9 +1221,7 @@ dimension, or the filter is empty.</div></blockquote>
 <dt>
 <code class="descname">permFilters</code><span class="sig-paren">(</span><em>S</em>, <em>perm</em><span class="sig-paren">)</span></dt>
 <dd><p>function permFilters(S,perm)
-—</p>
-<blockquote>
-<div>modify the order in which filters are applied</div></blockquote>
+modify the order in which filters are applied</p>
 </dd></dl>
 
 <dl class="method">
