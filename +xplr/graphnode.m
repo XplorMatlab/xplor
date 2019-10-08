@@ -5,7 +5,7 @@ classdef graphnode < matlab.mixin.SetGet
     end
     
     properties
-        testVar     % test
+        id
     end
     
     
@@ -15,13 +15,20 @@ classdef graphnode < matlab.mixin.SetGet
         
     
     methods
+        function self = graphnode()
+            self.id = randi(999);
+        end
         function delete(self)
+            fn_dodebug('delete %s', self)
             % when object is being deleted, make sure no more listener can
             % trigger actions on it
             for i = 1:length(self.listening)
                 s = self.listening(i);
                 deleteValid(s.listener)                
             end
+        end
+        function str = char(self)
+            str = [class(self) num2str(self.id,'%.3i')];
         end
         function addListener(self,other,varargin)
             % function addListener(self,other,addlistener arguments...)

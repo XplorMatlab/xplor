@@ -35,20 +35,19 @@ classdef filterSet < hgsetget
             if ~isempty(F)
                 return
             else
-                % if the filter does not exist then create it and register
-                % it
+                % if the filter does not exist then create it and register it
                 F = xplr.zoomfilter(header);
-                FS.addZoomFilter(F,varargin);
+                FS.addZoomFilter(F,varargin{:});
                 type = header.get.type();
-                if type == 'measure'
+                if strcmp(type, 'measure')
                    key = fn_hash({ header.label, header.get.unit }, 'num');
                    % search a corresponding zoomCentral in the filterSet
                    % return existing zoomCentral if exist
-                   zoomCentral = FS.zcregistry.getValue(key,varargin);
+                   zoomCentral = FS.zcregistry.getValue(key,varargin{:});
                    if isempty(zoomCentral)
                        % create new zoomcentral
                        zoomCentral = xplr.zoomcentral(header.label,header.unit);
-                       FS.zcregistry.register(key,zoomCentral,varargin);
+                       FS.zcregistry.register(key,zoomCentral,varargin{:});
                    end
                 zoomCentral.connectZoomFilter(F);
                 end

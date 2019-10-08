@@ -35,8 +35,14 @@ classdef zoomcentral < xplr.graphnode
             zoomFilterScale = zoomFilter.headerin.scale;
             zoomFilterStart = zoomFilter.headerin.start;
             
-            zoomToSet = zoomFilterStart + (zoomFilter.zoom-1)*zoomFilterScale;
-
+            % TODO: bug fix, this is a special case when the zoom is ":".
+            % The correct behavior has to be defined when zoom is reset
+            % 
+            if(zoomFilter.zoom == ':')
+                zoomToSet = ':';
+            else
+                zoomToSet = zoomFilterStart + (zoomFilter.zoom-1)*zoomFilterScale;
+            end
             %sourceScale = ZC.label.scale;
 
             ZC.setZoom(zoomToSet);
@@ -47,8 +53,15 @@ classdef zoomcentral < xplr.graphnode
             zoomFilterScale = zoomFilter.headerin.scale;
             zoomFilterStart = zoomFilter.headerin.start;
             
-            zoomToSet = 1 + (ZC.zoom - zoomFilterStart)/zoomFilterScale;
-            
+            % TODO: bug fix, this is a special case when the zoom is ":".
+            % The correct behavior has to be defined when zoom is reset
+            % 
+            if(ZC.zoom == ':')
+                zoomToSet = ':';
+            else
+                zoomToSet = 1 + (ZC.zoom - zoomFilterStart)/zoomFilterScale;
+            end
+
             zoomFilter.setZoom(zoomToSet);
         end
         

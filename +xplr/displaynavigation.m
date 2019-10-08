@@ -8,6 +8,7 @@ classdef displaynavigation < xplr.graphnode
         graph
         sliders = struct('x',[],'y',[]);        % slider objects
         zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
+        activefilters = {};
     end
     
     % Constructor
@@ -37,9 +38,8 @@ classdef displaynavigation < xplr.graphnode
             fn_scrollwheelregister(D.ha,@(n)N.Scroll(n))
         end
         function init_buttons(N)
-            % function init_buttons(N)
-            %---
-            % 3 buttons that control clipping
+        % function init_buttons(N)
+        % 3 buttons that control clipping
             
             % first button to adjust clipping with mouse movements:
             % display image on it indicating how image luminance and
@@ -151,7 +151,10 @@ classdef displaynavigation < xplr.graphnode
                 case 'normal'
                     % zoom in
                     rect = fn_mouse(N.ha,'rectangle-');
-                    if ~any(any(diff(rect,1,2))), return, end
+                    if ~any(any(diff(rect,1,2)))
+                        point = rect(:,1);
+                        ijk = N.graph.graph2slice(point);
+                    end
                     ijk = N.graph.graph2slice(rect(:,[1 3]));
                     zoom = ijk(dim,:)';
                     for i=1:length(dim), zoom(:,i) = sort(zoom(:,i)); end

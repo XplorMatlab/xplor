@@ -1,4 +1,4 @@
-classdef viewcontrol < hgsetget
+classdef viewcontrol < xplr.graphnode
 % view control
     
     properties (SetAccess='private')
@@ -146,6 +146,10 @@ classdef viewcontrol < hgsetget
                         % add to the list of new filters
                         newfilters(end+1) = struct('d',d,'F',filterCreated); %#ok<AGROW>
                     case 'rmfilter'
+                        if filteridx == 0
+                            % no filter found for this dimension
+                            continue
+                        end
                         % remove filter from the viewcontrol and the bank
                         filter = C.V.slicer.filters(filteridx);
                         C.removefilter(filter);
