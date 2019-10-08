@@ -1,41 +1,43 @@
 classdef eventinfo < event.EventData & dynamicprops
     % function obj = eventinfo(type,arguments...)
-    %---
     % type: 'filter'
-    % arguments:    'all'
-    %               'new',ind
-    %               'chg',ind
-    %               'remove',ind
-    %               'chg&new',ind
-    %               'chg&rm',ind
-    %               'perm',ind
-    %               'point'
+    % arguments:
+    % * 'all'
+    % * 'new',ind
+    % * 'chg',ind
+    % * 'remove',ind
+    % * 'chg&new',ind
+    % * 'chg&rm',ind
+    % * 'perm',ind
+    % * 'point'
     %
     % type: 'point'
     % arguments:    chgij [default false]
     %
     % type: 'data'
-    % arguments:    'global'
-    %               'chgdata'
-    %               'insertdim',dim
-    %               'rmdim',dim
-    %               'chgdim',dim
-    %               'all',dim
-    %               'new',dim,ind
-    %               'chg',dim,ind
-    %               'remove',dim,ind
-    %               'chg&new',{indchg indnew}
-    %               'chg&rm',{indchg indrm}
-    %               'perm',dim,ind
+    % arguments:
+    % * 'global'
+    % * 'chgdata'
+    % * 'insertdim',dim
+    % * 'rmdim',dim
+    % * 'chgdim',dim
+    % * 'all',dim
+    % * 'new',dim,ind
+    % * 'chg',dim,ind
+    % * 'remove',dim,ind
+    % * 'chg&new',{indchg indnew}
+    % * 'chg&rm',{indchg indrm}
+    % * 'perm',dim,ind
     %
     % type: 'zoom'
     % arguments:    chgnout,dim
     % 
     % type: 'clip'
-    % arguments:    'clip',value
-    %               'automode'
-    %               'adjust'
-    %               'span'
+    % arguments:
+    % * 'clip',value
+    % * 'automode'
+    % * 'adjust'
+    % * 'span'
 
     properties 
         type

@@ -1,5 +1,5 @@
 classdef contextmenu < hgsetget
-    % A context menu that is created only when it is being raised
+% A context menu that is created only when it is being raised
     
     properties (Access='private')
         V       % parent view
@@ -12,15 +12,16 @@ classdef contextmenu < hgsetget
             % contextmenu constructor
             % contextmenu (V), take the view as argument set it as parent
             % then set matlab uicontextmenu 
+            
             M.V = V;
             M.menu = uicontextmenu('parent',V.hf);
         end
         function raise(M,flag,varargin)
-            % raise(M,flag,varargin) displays the uicontextmenu
-            % M is the contextmenu
-            % flag can be 'label' if it's the context menu of the label of a dimension of the graph
-            %   or 'datadim' if it's the context menu of the dimensions list next to the graph 
-            % varargin
+        % raise(M,flag,varargin) displays the uicontextmenu
+        % M is the contextmenu
+        % flag can be 'label' if it's the context menu of the label of a dimension of the graph
+        % or 'datadim' if it's the context menu of the dimensions list next to the graph 
+        % varargin
             
             % Hide and delete previous entries of this context menu
             set(M.menu,'visible','off')
@@ -89,12 +90,12 @@ classdef contextmenu < hgsetget
                         
                 case 'datadim'
                     % Change filters
-                    uimenu(m,'label','Add/Show Filters','callback',@(u,e)dimaction(C,'filter',1,dim))
-                    uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',1,dim))
+                    
                     
                     % display the available keys to apply a new or existing
                     % filter. 
-                    m2 = uimenu(m,'label','Add a filter');
+                    m2 = uimenu(m,'label','Add/Change filter');
+                    uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',1,dim))
                     availablekeys = xplr.bank.availableFilterKeys();
                     newkey = max(availablekeys)+1;
                     keyvalues = [0 availablekeys newkey];
@@ -111,11 +112,12 @@ classdef contextmenu < hgsetget
                     end
                     
                     % uimenu(m,'label','Synchronize Zoom','callback',)
-                    %m1 = uimenu(m,'label','scroll wheel','separator','on');
+                    % m1 = uimenu(m,'label','scroll wheel','separator','on');
                     %    L.menuitems.scrollwheel = uimenu(m1,'label','activated', ...
                     %'checked',L.scrollwheel,'callback',@(u,e)set(L,'scrollwheel',fn_switch(L.scrollwheel,'toggle')));
                     %    uimenu(m1,'label','make default in figure', ...
-                    %'callback',@(u,e)set(L,'scrollwheel','default'));
+                    % 'callback',@(u,e)set(L,'scrollwheel','default'));
+                    
                 otherwise
                     error('unknown flag ''%s''',flag)
             end

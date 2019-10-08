@@ -67,17 +67,17 @@ V1 = xplor(x1);
 V2 = xplor(x2);
 
 
-% connect the 2 zoom filters in the y coordinate
-ZF1 = V1.D.zoomslicer.getFilter(2);
-ZF2 = V2.D.zoomslicer.getFilter(2);
-
-%%
-ZC = xplr.zoomcentral('y', 'px');
-
-% notify(ZF1,'ChangedZoom',xplr.eventinfo('zoom',0))
-
-ZC.connectZoomFilter(ZF1);
-ZC.connectZoomFilter(ZF2);
+% % connect the 2 zoom filters in the y coordinate
+% ZF1 = V1.D.zoomslicer.getFilter(2);
+% ZF2 = V2.D.zoomslicer.getFilter(2);
+% 
+% %%
+% ZC = xplr.zoomcentral('y', 'px');
+% 
+% % notify(ZF1,'ChangedZoom',xplr.eventinfo('zoom',0))
+% 
+% ZC.connectZoomFilter(ZF1);
+% ZC.connectZoomFilter(ZF2);
 
 
 % %% OLD CODE

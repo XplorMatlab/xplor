@@ -1,6 +1,5 @@
 classdef headerEdit < hgsetget
 % function E = headerEdit(data [, callback])
-%---
 % callback is a function with prototype fun(header) to execute once the ok
 % button is pressed
 

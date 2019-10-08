@@ -1,6 +1,5 @@
 classdef listcombo < hgsetget
     % function C = listcombo(container,linkkey,filters)
-    %---
     % if container is empty, a new figure will be created; this
     % figure will auto-delete once all filters will be removed
     

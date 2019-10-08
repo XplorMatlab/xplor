@@ -1,6 +1,5 @@
 classdef slicer < xplr.graphnode
     % function S = slicer(data[,dims,filters])
-    %---
     % Compute and automatically update operations applied to an initial
     % 'data', resulting in an output data called 'slice'.
     % In addition to filters, points define positions where to extract the
@@ -161,7 +160,6 @@ classdef slicer < xplr.graphnode
         end
         function permFilters(S,perm)
             % function permFilters(S,perm)
-            %---
             % modify the order in which filters are applied
             
             % check

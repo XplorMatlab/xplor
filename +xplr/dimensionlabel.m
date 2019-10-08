@@ -1,16 +1,15 @@
 classdef dimensionlabel
-    % dimensionlabel defines a dimension
-    % function L = dimensionlabel(label,type[,unit|allunits])
-    % 
-    % Input:
-    % - label   a string (e.g. 'time')
-    % - type    'numeric', 'logical', 'char' or 'mixed'
-    % - unit    string, cell array with 2 columns, or struct with fields
-    %           unit and value
-    %
-    % Examples:
-    % tlabel = dimensionlabel('time','numeric',{'s' 1; 'ms' 1e-3; 'min' 60; 'hour' 3600};
-    % clabel = dimensionlabel('condition','char');   
+% dimensionlabel defines a dimension
+% function L = dimensionlabel(label,type[,unit|allunits])
+% 
+% Input:
+% * label   a string (e.g. 'time')
+% * type    'numeric', 'logical', 'char' or 'mixed'
+% * unit    string, cell array with 2 columns, or struct with fields unit and value
+%
+% Examples:
+% tlabel = dimensionlabel('time','numeric',{'s' 1; 'ms' 1e-3; 'min' 60; 'hour' 3600};
+% clabel = dimensionlabel('condition','char');   
     
     properties (SetAccess='private')
         label

@@ -8,22 +8,22 @@ classdef header < hgsetget
     % Container for header information in a single dimension.
     %
     % Input:
-    % - label   a dimensionlabel object or a string (in the latter case
+    % * label   a dimensionlabel object or a string (in the latter case
     %           a dimensionlabel object will be created)
-    % - unit    unit; add a '+' sign (e.g. 'ms+') to try recognizing the
+    % * unit    unit; add a '+' sign (e.g. 'ms+') to try recognizing the
     %           unit and storing other available units for this measure
-    % - n       expected number of data elements
-    % - start   numerical value for first data element
-    % - scale   numerical value for step between data elements
-    % - values  a cell array with n rows and as many columns as there are
+    % * n       expected number of data elements
+    % * start   numerical value for first data element
+    % * scale   numerical value for step between data elements
+    % * values  a cell array with n rows and as many columns as there are
     %           labels
     %
     % There are two types of header; this type is automatically inferred
     % from the syntax of the call to 'header' constructor.
-    % - 'measure' header typically corresponds to a continuous dimension
+    % * 'measure' header typically corresponds to a continuous dimension
     %   along which data is acquired at regularly-spaced intervals (e.g.
     %   time or space), though it can be discrete as well (e.g. day number)
-    % - 'categorical' header corresponds to samples without regular
+    % * 'categorical' header corresponds to samples without regular
     %   organizations; information about this samples can be given using
     %   a table of values that can be multi-column (e.g. date and location)
     % 
@@ -320,7 +320,6 @@ classdef header < hgsetget
     methods
         function x = getValue(H,label,idx)
             % function x = getValue(H,label[,idx])
-            %---
             % access value(s) in the table (categorical header only)
             if H.ismeasure, error 'measure header does not have sample values', end
             icol = strcmp({H.sublabels.label},label);

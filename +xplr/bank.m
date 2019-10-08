@@ -10,6 +10,7 @@ classdef bank < hgsetget
 %   * combo
 %   * zregistry
 %   * zcregistry
+%
 
 
     properties (SetAccess='private')
@@ -31,15 +32,9 @@ classdef bank < hgsetget
     end
     methods (Static)
         function B = getbank()
-            % Unique filter bank is attached to the root graphic object.
-            % This is preferrable to using a global variable that might be
-            % deleted with the 'clear' command.
-            % if isappdata(0,'xplr_filterbank')
-            %   B = getappdata(0,'xplr_filterbank');
-            % else
-            %   B = xplr.bank();
-            %   setappdata(0,'xplr_filterbank',B)
-            % end
+        % Unique filter bank is attached to the root graphic object.
+        % This is preferrable to using a global variable that might be
+        % deleted with the 'clear' command.
             persistent B0
             if isempty(B0)
                 B0 = xplr.bank();

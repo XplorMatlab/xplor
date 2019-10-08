@@ -58,10 +58,10 @@ classdef dataoperand < xplr.graphnode
             nd = length(O.headerout);
         end
         function dimbef2aft = followdims(O,ndbef,dims)
-            % function dimbef2aft = followdims(O,nd,dims)
-            %---
-            % for each dimension of an original nd-dimensional data, at
-            % which new position is it going in the operated data
+        % function dimbef2aft = followdims(O,nd,dims)
+        % for each dimension of an original nd-dimensional data, at
+        % which new position is it going in the operated data
+        
             if length(dims)~=O.ndin, error 'number of dimensions does not match filter input header', end
             [otherdim1 otherdim2] = deal(1:dims(1)-1,setdiff(dims(1):ndbef,dims));
             dimbef2aft = zeros(1,ndbef);

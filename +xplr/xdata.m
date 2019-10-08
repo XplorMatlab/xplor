@@ -1,6 +1,5 @@
 classdef xdata < xplr.graphnode
     % function x = xdata(dat[,head[,name]])
-    %---
     % A container for data associated with header information
     % A number of different events are thrown when the data or header
     % information is being changed    
@@ -8,11 +7,9 @@ classdef xdata < xplr.graphnode
     % user to set the headers.
     % 
     % Input:
-    % dat   ND array
-    % head  a cell array with as many elements as data dimensions, 
-    %       each element is itself a cell array containing arguments for
-    %       the xplr.header constructor
-    % name  string
+    % * dat   ND array
+    % * head  a cell array with as many elements as data dimensions, each element is itself a cell array containing arguments for the xplr.header constructor
+    % * name  string
     %
     % See also xplr.header
     

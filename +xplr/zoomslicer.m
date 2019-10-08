@@ -1,6 +1,6 @@
 classdef zoomslicer < xplr.slicer
     % function S = zoomslicer(data)
-    %---
+    % ---
     % The zoomslicer class is a specialized version of the slicer class:
     % filters are not set by the user, but zoom filters are automatically
     % assigned to every dimension.
@@ -25,6 +25,7 @@ classdef zoomslicer < xplr.slicer
             Z = autoZoomFilter(S, S.defaultlinkkey);
             dim = 1:length(S.data.header);
             S.addFilter(dim,Z)
+            
         end
         function Z = autoZoomFilter(S,linkkey,dim)
             % function Z = autoZoomFilter(S,linkkey[,dim])
