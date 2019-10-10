@@ -2,9 +2,10 @@ function out = debuginfo(category, message, varargin)
 %DEBUGINFO  display debug messages for developers only
 %---
 % function debugactive = debuginfo()
-% function debuginfo(code, message)
+% function debuginfo(code, message [, sprintf arguments])
 % function debuginfo('select')
 % function debuginfo('on|off')
+% function debuginfo('reset')
 %---
 % This function is only for XPLOR developers.
 % First activate debug info display by typing debuginfo('on') in Matlab.
@@ -12,6 +13,9 @@ function out = debuginfo(category, message, varargin)
 % be selected by the user by typing debuginfo('select').
 % Each time debuginfo(category, message) is called with a new category
 % name, user is asked whether this category should be displayed.
+% If some register categories are not used any more, use debuginfo('reset')
+% to remove all categories and rebuild the list from upcoming call to
+% debuginfo(category, message).
 %
 % Special category 'stop' stops the debugger in addition to displaying the
 % message.
