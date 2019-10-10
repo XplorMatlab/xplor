@@ -1,0 +1,244 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>The bank &#8212; xplor-matlab  documentation</title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Data container: xdata" href="xdata.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="the-bank">
+<h1>The bank<a class="headerlink" href="#the-bank" title="Permalink to this headline">¶</a></h1>
+<img alt="../_images/xplorDiagram-08.jpg" src="../_images/xplorDiagram-08.jpg" />
+<span class="target" id="module-+xplr"></span><dl class="class">
+<dt id="+xplr.bank">
+<em class="property">class </em><code class="descclassname">+xplr.</code><code class="descname">bank</code><a class="headerlink" href="#+xplr.bank" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">hgsetget</span></code></p>
+<p>xplr.bank The bank is unique and store several elements :</p>
+<ul class="simple">
+<li>currentviews: not used yet but it will be used for multiview</li>
+<li>recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored</li>
+<li>measures: units for measures conversion</li>
+<li>filterssets: filters and zoomfilters stored by linkkey</li>
+</ul>
+<blockquote>
+<div><ul class="simple">
+<li>linkey</li>
+<li>registry</li>
+<li>combo</li>
+<li>zregistry</li>
+<li>zcregistry</li>
+</ul>
+</div></blockquote>
+<dl class="staticmethod">
+<dt id="+xplr.bank.addMeasure">
+<em class="property">static </em><code class="descname">addMeasure</code><span class="sig-paren">(</span><em>label</em>, <em>units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.addMeasure" title="Permalink to this definition">¶</a></dt>
+<dd><p>check</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.editMeasure">
+<em class="property">static </em><code class="descname">editMeasure</code><span class="sig-paren">(</span><em>oldlabel</em>, <em>label</em>, <em>units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.editMeasure" title="Permalink to this definition">¶</a></dt>
+<dd><p>check</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.getFilter">
+<em class="property">static </em><code class="descname">getFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>head</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = getFilter(linkkey, header[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.getZoomFilter">
+<em class="property">static </em><code class="descname">getZoomFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>head</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = getZoomFilter(linkkey, header[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.getbank">
+<em class="property">static </em><code class="descname">getbank</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getbank" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unique filter bank is attached to the root graphic object.
+This is preferrable to using a global variable that might be
+deleted with the ‘clear’ command.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.getunitinfo">
+<em class="property">static </em><code class="descname">getunitinfo</code><span class="sig-paren">(</span><em>unit</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getunitinfo" title="Permalink to this definition">¶</a></dt>
+<dd><p>function [measurelabel conversion measure] = getunitinfo(unit)</p>
+<p>if ‘unit’ is a registered unit (e.g. ‘ms’), returns the label 
+of the corresponding measure (e.g. ‘time’) and the conversion
+to the reference unit (e.g. 1e-3, reference unit being ‘s’) 
+otherwise returns an empty label</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.registerFilter">
+<em class="property">static </em><code class="descname">registerFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function addFilter(linkkey, F[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.registerView">
+<em class="property">static </em><code class="descname">registerView</code><span class="sig-paren">(</span><em>V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerView" title="Permalink to this definition">¶</a></dt>
+<dd><p>register view</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.registerZoomFilter">
+<em class="property">static </em><code class="descname">registerZoomFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>varargin</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function addZoomFilter(linkkey, F[,user])</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.showList">
+<em class="property">static </em><code class="descname">showList</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.showList" title="Permalink to this definition">¶</a></dt>
+<dd><p>function removeFilter(linkkey, F, user)</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.unregisterFilter">
+<em class="property">static </em><code class="descname">unregisterFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function removeFilter(linkkey, F, user)</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.unregisterView">
+<em class="property">static </em><code class="descname">unregisterView</code><span class="sig-paren">(</span><em>V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterView" title="Permalink to this definition">¶</a></dt>
+<dd><p>unregister view</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.unregisterZoomFilter">
+<em class="property">static </em><code class="descname">unregisterZoomFilter</code><span class="sig-paren">(</span><em>linkkey</em>, <em>F</em>, <em>user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterZoomFilter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function removeZoomFilter(linkkey, F, user)</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.bank.currentviews">
+<code class="descname">currentviews</code><em class="property"> = u&quot;struct('obj',cell(1,0),'hl',cell(1,0))&quot;</em><a class="headerlink" href="#+xplr.bank.currentviews" title="Permalink to this definition">¶</a></dt>
+<dd><p>all current views are registered here</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.bank.filtersets">
+<code class="descname">filtersets</code><em class="property"> = u'xplr.filterSet.empty(1,0)'</em><a class="headerlink" href="#+xplr.bank.filtersets" title="Permalink to this definition">¶</a></dt>
+<dd><p>filter sets</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.bank.measures">
+<code class="descname">measures</code><em class="property"> = u&quot;struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}))&quot;</em><a class="headerlink" href="#+xplr.bank.measures" title="Permalink to this definition">¶</a></dt>
+<dd><p>units</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="+xplr.bank.recentheaders">
+<code class="descname">recentheaders</code><em class="property"> = u'xplr.header.empty(1,0)'</em><a class="headerlink" href="#+xplr.bank.recentheaders" title="Permalink to this definition">¶</a></dt>
+<dd><p>headers will be ordered according to their appearance date</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">xplor-matlab</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Install via Github</a></li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Try with examples datasets</a></li>
+<li class="toctree-l1"><a class="reference internal" href="objectmap.html">Object maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="xdata.html">Data container: xdata</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The bank</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="xdata.html" title="previous chapter">Data container: xdata</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2019, remi girard.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.5</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/usage/bank.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
