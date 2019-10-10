@@ -36,7 +36,8 @@ classdef zoomcentral < xplr.graphnode
             zoomFilterStart = zoomFilter.headerin.start;
             
             % TODO: bug fix, this is a special case when the zoom is ":".
-            % The correct behavior has to be defined when zoom is reset
+            % The correct behavior has to be defined when zoom is reset and
+            % wheen zoom is too small
             % 
             if(zoomFilter.zoom == ':')
                 zoomToSet = ':';
@@ -53,8 +54,9 @@ classdef zoomcentral < xplr.graphnode
             zoomFilterScale = zoomFilter.headerin.scale;
             zoomFilterStart = zoomFilter.headerin.start;
             
-            % TODO: bug fix, this is a special case when the zoom is ":".
-            % The correct behavior has to be defined when zoom is reset
+            % TODO: this is a special case when the zoom is ":".
+            % The correct behavior has to be defined when zoom is reset and
+            % when zoom is too small
             % 
             if(ZC.zoom == ':')
                 zoomToSet = ':';

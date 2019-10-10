@@ -1,3 +1,3 @@
-Install via Github:
+Install via Github
 *********************
 todo: add install process

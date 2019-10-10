@@ -12,7 +12,6 @@ classdef bank < hgsetget
 %   * zcregistry
 %
 
-
     properties (SetAccess='private')
         currentviews = struct('obj',cell(1,0),'hl',cell(1,0));                                  % all current views are registered here
         measures = struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}));   % units

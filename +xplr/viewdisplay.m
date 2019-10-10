@@ -1,4 +1,5 @@
 classdef viewdisplay < xplr.graphnode
+    % viewdisplay
     
     % Content
     properties (SetAccess='private')
@@ -19,24 +20,30 @@ classdef viewdisplay < xplr.graphnode
         clipping    % xplr.cliptool object
         colormap    % xplr.colormap object
     end
+    
     % Some "working memory"
     properties (Access='private')
         sliceChangeEvent
         listeners = struct;
     end
+    
     % Display properties
     properties (SetObservable=true, AbortSet=true)
         displaymode = 'image';  % 'time courses' or 'image'
         showcolorlegend = false; % false by default because of bug in Matlab's legend function, which inactivates several listeners
+        cross       % display cross selector
     end
+    
     properties (SetAccess='private')
         org                                 % set with function setOrg
         activedim = struct('x',[],'y',[])   % change with function makeDimActive(D,d)
         colordim = [];                      % set with setColorDim
         clip = [0 1]                        % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
     end
+    
     % Fast access (dependent)
     properties (Dependent, SetAccess='private')
+        
         nd
         slice
         zslice
@@ -53,7 +60,7 @@ classdef viewdisplay < xplr.graphnode
             
             % zoom slicer zooms into "slice" to yield "zslice"
             D.zoomslicer = xplr.zoomslicer(V.slicer.slice,D);
-
+            
             % axes
             D.ha = axes('parent',D.hp);
             axis(D.ha,[-.5 .5 -.5 .5]) % center 0, available space 1
@@ -63,7 +70,7 @@ classdef viewdisplay < xplr.graphnode
             D.listeners.axsiz = fn_pixelsizelistener(D.ha,@(u,e)axisresize(D));
             D.addListener(D.ha,D.listeners.axsiz);
             c = disableListener(D.listeners.axsiz); % prevent display update following automatic change of axis position during all the following initializations
-
+            
             % 'time courses'/'image' switch
             p = fn_propcontrol(D,'displaymode',{'popupmenu' 'time courses' 'image'},'parent',D.hp);
             fn_controlpositions(p.hu,D.hp,[1 1],[-90 -25 90 25])
@@ -202,9 +209,11 @@ classdef viewdisplay < xplr.graphnode
             end
         end
     end
+    
     methods
         function set.org(D,neworg)
             % check
+            %the line below generate an error on sphinx
             ok = isequal(fieldnames(neworg),{'x' 'y' 'ystatic' 'xy' 'yx'}') ...
                 && ~(strcmp(D.displaymode,'image') && ~isempty(neworg.ystatic)) ...
                 && length([neworg.xy neworg.yx])<=1;
@@ -248,7 +257,7 @@ classdef viewdisplay < xplr.graphnode
             % update active dim and connect slider
             if ismember(d,[D.org.x D.org.yx])
                 if dotoggle && any(d==D.activedim.x)
-                    D.activedim.x = []; 
+                    D.activedim.x = [];
                 else
                     D.activedim.x = d;
                     if ismember(d,D.org.yx) || any(ismember(D.activedim.y,[D.org.xy D.org.yx]))
@@ -259,7 +268,7 @@ classdef viewdisplay < xplr.graphnode
                 D.navigation.connectFilter('x')
             elseif ismember(d,[D.org.y D.org.xy])
                 if dotoggle && any(d==D.activedim.y)
-                    D.activedim.y = []; 
+                    D.activedim.y = [];
                 else
                     D.activedim.y = d;
                     if ismember(d,D.org.xy) || any(ismember(D.activedim.x,[D.org.xy D.org.yx]))
@@ -433,11 +442,11 @@ classdef viewdisplay < xplr.graphnode
                 % display was canceled last time: we need a global update
                 delete(hnodisplay)
                 flag = 'global';
-            end                
+            end
             
             % Show watch
             c = fn_watch(D.V.hf); %#ok<NASGU>
-
+            
             % To really run fast, avoid accessing object properties
             % repeatedly: access them once for all here
             dotimecourses = strcmp(D.displaymode,'time courses');
@@ -497,7 +506,7 @@ classdef viewdisplay < xplr.graphnode
             % Check that current htransform and hdisplay are valid
             nd = D.zslice.nd;
             sz1 = sz; sz1([xorg0 yorg0]) = 1;
-            sz1prev = sz1; 
+            sz1prev = sz1;
             if ~isempty(dim), sz1prev(dim) = sz1prev(dim)+(doremove-donew)*length(ind); end
             if ~isequal(xplr.strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))...
                     || ~isequal(xplr.strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))
@@ -661,6 +670,7 @@ classdef viewdisplay < xplr.graphnode
             D.nodisplay = ~ok;
         end
     end
+    
     methods
         function zslicechange(D,e)
             if nargin<2, flag = 'global'; else flag = e.flag; end
@@ -713,7 +723,7 @@ classdef viewdisplay < xplr.graphnode
                     % changes are within elements (the grid arrangement
                     % remains the same)
                     if fn_ismemberstr(flag,{'perm' 'chg'}) ...
-                            || (strcmp(flag,'all') && D.zslice.header(dim).n==prevsz(dim));
+                            || (strcmp(flag,'all') && D.zslice.header(dim).n==prevsz(dim))
                         flag = 'chgdata'; % no change in size
                     else
                         flag = 'chgdata&blocksize';
@@ -819,5 +829,114 @@ classdef viewdisplay < xplr.graphnode
             % re-display everything
             zslicechange(D)
         end
+        function displaycross(D)
+            
+            % cross
+            D.cross(1) = line('Parent',D.ha,'ydata',[-.5 .5]);
+            D.cross(2) = line('Parent',D.ha,'xdata',[-.5 .5]);
+            D.cross(3) = line('Parent',D.ha,'xdata',0,'ydata',0,'marker','.','linestyle','none'); % a single point
+            set(D.cross,'Color','white')
+            %for i=1:3, set(D.cross(i),'buttondownfcn',@(u,e)movecross(D,i)), end
+            
+            %fn4D_dbstack
+            %ij2 = D.SI.ij2;
+            % scaling and translation
+            %pt = IJ2AX(D.SI,ij2);
+            crossCenter = [0;0];
+            set(D.cross(1),'XData',crossCenter([1 1]))
+            %if D.SI.nd==2
+            set(D.cross(2),'YData',crossCenter([2 2]))
+            set(D.cross(3),'XData',crossCenter(1),'YData',crossCenter(2))
+            %end
+            
+            for i=1:3
+                set(D.cross(i),'buttondownfcn',@(u,e)movecross(D,i))
+            end
+        end
+        
+        function movecross(D,il)
+            %fn4D_dbstack
+            %if ~strcmp(get(D.hf,'selectiontype'),'normal')
+            % execute callback for axes
+            %    Mouse(D)
+            %    return
+            %end
+            set(D.V.hf,'pointer',fn_switch(il,1,'left',2,'top',3,'cross'))
+            %do1d = (D.SI.nd==1);
+            %si = D.SI;
+            %anymove = false;
+            fn_buttonmotion(@movecrosssub,D.V.hf)
+            set(D.V.hf,'pointer','arrow')
+            %if ~anymove
+            % execute callback for axes
+            %    Mouse(D,'pointonly')
+            %    return
+            %end
+            function movecrosssub
+                %anymove = true;
+                p = get(D.ha,'currentpoint'); p = p(1,1:2);
+                
+                switch il
+                    case 1
+                        set(D.cross(1),'xdata',p([1 1]))
+                        set(D.cross(3),'xdata',p(1))
+                    case 2
+                        set(D.cross(2),'ydata',p([2 2]))
+                        set(D.cross(3),'ydata',p(2))
+                    case 3
+                        set(D.cross(1),'xdata',p([1 1]))
+                        set(D.cross(2),'ydata',p([2 2]))
+                        set(D.cross(3),'xdata',p(1),'ydata',p(2))
+                    otherwise
+                        error('wrong il')
+                end
+                
+                %if do1d
+                %if il~=1
+                
+                %end
+                %if il~=2
+                %si.ij2 = AX2IJ(si,p(1));
+                %end
+                %else
+                %   ij2 = AX2IJ(si,p([1 2])');
+                %   switch il
+                %       case 1 % move x only
+                %           si.ij2(1) = ij2(1);
+                %       case 2 % move y only
+                %            si.ij2(2) = ij2(2);
+                %        case 3 % move x and y
+                %           si.ij2 = ij2;
+                %   end
+                %end
+            end
+            
+        end
+        
+        function removecross(D)
+            delete(D.cross)
+        end
+        
+        function realCoordinates = getCrossCoordinate(D)
+            crossDisplayCoordinates = ([get(D.cross(3),'xdata'), get(D.cross(3),'ydata')]);
+            
+            xdataApplied = D.zslice;
+            
+            
+            
+            xdataScale = double.empty(length(crossDisplayCoordinates),0);
+            xdataStart = double.empty(length(crossDisplayCoordinates),0);
+            xdataValuesCoordinates = double.empty(length(crossDisplayCoordinates),0);
+            realCoordinates = double.empty(length(crossDisplayCoordinates),0);
+            
+            for i = 1:length(crossDisplayCoordinates)
+                xdataScale(i) = D.V.data.header(i).scale;
+                xdataStart(i) = D.V.data.header(i).start;
+                xdataValuesCoordinates(i) = ((crossDisplayCoordinates(i) +1)/2)*xdataApplied.sz(i);
+                realCoordinates(i) = xdataStart(i) + (xdataValuesCoordinates(i)-1)*xdataScale(i);
+            end
+            
+        end
     end
+    
 end

@@ -1,11 +1,12 @@
 classdef xdata < xplr.graphnode
     % function x = xdata(dat[,head[,name]])
-    % A container for data associated with header information
+    %
+    % A container for data, associated with header information.
     % A number of different events are thrown when the data or header
-    % information is being changed    
+    % information is being changed
     % When headers are not provided, opens a graphic interface allowing
     % user to set the headers.
-    % 
+    %
     % Input:
     % * dat   ND array
     % * head  a cell array with as many elements as data dimensions, each element is itself a cell array containing arguments for the xplr.header constructor
@@ -18,6 +19,7 @@ classdef xdata < xplr.graphnode
         header = xplr.header.empty(1,0);
         name = '';
     end
+    
     properties (Dependent, SetAccess='private')
         sz
         nd
@@ -29,7 +31,8 @@ classdef xdata < xplr.graphnode
     
     methods
         function x = xdata(dat,head,name)
-            if nargin==0, return, end % default empty data            
+            % Contructor
+            if nargin==0, return, end % default empty data
             if nargin<2 || isempty(head)
                 % open user edition window to edit headers
                 head = xplr.editHeader(dat);
@@ -109,7 +112,7 @@ classdef xdata < xplr.graphnode
             if strcmp(flag,'all') && isequal(newhead,x.header(dim))
                 % flag 'chgdata' might be preferable to 'all' to indicate
                 % that header did not change
-                flag = 'chgdata'; 
+                flag = 'chgdata';
             end
             tmp = newhead; newhead = x.header; newhead(dim) = tmp; clear tmp
             % update data
@@ -164,7 +167,7 @@ classdef xdata < xplr.graphnode
                     if length(dim)~=length(newhead), error 'length of new header does not match number of new dimensions', end
                     ndnew = x.nd + length(dim);
                     newhead = [x.header newhead];
-                    perm = zeros(1,ndnew); 
+                    perm = zeros(1,ndnew);
                     perm(setdiff(1:x.nd,dim)) = 1:x.nd;
                     perm(dim) = x.nd + (1:length(dim));
                     x.nd = ndnew;

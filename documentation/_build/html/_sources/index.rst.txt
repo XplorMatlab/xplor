@@ -1,19 +1,12 @@
 .. xplor-matlab documentation master file, created by
    sphinx-quickstart on Mon Sep 16 13:53:45 2019.
-   You can adapt this file completely to your liking, but it should at least
+   You can adapt tghis file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
 Welcome to xplor-matlab's documentation!
 ========================================
 
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
 
-   usage/installation
-   usage/quickstart
-
-.. autofunction:: xplor()
 
 Index:
 ++++++
@@ -21,14 +14,14 @@ Index:
 .. toctree::
    :maxdepth: 2
 
-.. automodule:: +xplr
-   :members:
+   usage/installation
+   usage/quickstart
+   
+   usage/objectmap
 
-:mod:`+xplr` is a dataviz app
+   usage/xdata
+   usage/bank
 
-.. autoclass:: slicer
-    :show-inheritance:
-    :members:
 
 
 Indices and tables

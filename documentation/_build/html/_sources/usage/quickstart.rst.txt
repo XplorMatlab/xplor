@@ -1,4 +1,4 @@
-Try with examples datasets:
+Try with examples datasets
 ****************************
 
 todo: add guide 
