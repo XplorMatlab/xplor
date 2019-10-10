@@ -31,7 +31,6 @@ classdef viewdisplay < xplr.graphnode
     properties (SetObservable=true, AbortSet=true)
         displaymode = 'image';  % 'time courses' or 'image'
         showcolorlegend = false; % false by default because of bug in Matlab's legend function, which inactivates several listeners
-        cross       % display cross selector
     end
     
     properties (SetAccess='private')
@@ -591,6 +590,7 @@ classdef viewdisplay < xplr.graphnode
                 if dodispatch
                     if docreatecur
                         D.htransform(idx) = hgtransform('parent',D.ha,'matrix',M(:,:,idx),'HitTest','off');
+                        uistack(D.htransform(idx), 'bottom')
                     else
                         set(D.htransform(idx),'matrix',M(:,:,idx))
                     end
@@ -708,7 +708,7 @@ classdef viewdisplay < xplr.graphnode
             chgclip = strcmp(flag,'global') || strcmp(D.clipping.span,'curview');
             if chgclip, autoClip(D,false), end
             
-            % Update clipping and display
+            % Update display
             if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
                 % Reset display
                 updateDisplay(D,'global')
@@ -829,94 +829,6 @@ classdef viewdisplay < xplr.graphnode
             % re-display everything
             zslicechange(D)
         end
-        function displaycross(D)
-            
-            % cross
-            D.cross(1) = line('Parent',D.ha,'ydata',[-.5 .5]);
-            D.cross(2) = line('Parent',D.ha,'xdata',[-.5 .5]);
-            D.cross(3) = line('Parent',D.ha,'xdata',0,'ydata',0,'marker','.','linestyle','none'); % a single point
-            set(D.cross,'Color','white')
-            %for i=1:3, set(D.cross(i),'buttondownfcn',@(u,e)movecross(D,i)), end
-            
-            %fn4D_dbstack
-            %ij2 = D.SI.ij2;
-            % scaling and translation
-            %pt = IJ2AX(D.SI,ij2);
-            crossCenter = [0;0];
-            set(D.cross(1),'XData',crossCenter([1 1]))
-            %if D.SI.nd==2
-            set(D.cross(2),'YData',crossCenter([2 2]))
-            set(D.cross(3),'XData',crossCenter(1),'YData',crossCenter(2))
-            %end
-            
-            for i=1:3
-                set(D.cross(i),'buttondownfcn',@(u,e)movecross(D,i))
-            end
-        end
-        
-        function movecross(D,il)
-            %fn4D_dbstack
-            %if ~strcmp(get(D.hf,'selectiontype'),'normal')
-            % execute callback for axes
-            %    Mouse(D)
-            %    return
-            %end
-            set(D.V.hf,'pointer',fn_switch(il,1,'left',2,'top',3,'cross'))
-            %do1d = (D.SI.nd==1);
-            %si = D.SI;
-            %anymove = false;
-            fn_buttonmotion(@movecrosssub,D.V.hf)
-            set(D.V.hf,'pointer','arrow')
-            %if ~anymove
-            % execute callback for axes
-            %    Mouse(D,'pointonly')
-            %    return
-            %end
-            function movecrosssub
-                %anymove = true;
-                p = get(D.ha,'currentpoint'); p = p(1,1:2);
-                
-                switch il
-                    case 1
-                        set(D.cross(1),'xdata',p([1 1]))
-                        set(D.cross(3),'xdata',p(1))
-                    case 2
-                        set(D.cross(2),'ydata',p([2 2]))
-                        set(D.cross(3),'ydata',p(2))
-                    case 3
-                        set(D.cross(1),'xdata',p([1 1]))
-                        set(D.cross(2),'ydata',p([2 2]))
-                        set(D.cross(3),'xdata',p(1),'ydata',p(2))
-                    otherwise
-                        error('wrong il')
-                end
-                
-                %if do1d
-                %if il~=1
-                
-                %end
-                %if il~=2
-                %si.ij2 = AX2IJ(si,p(1));
-                %end
-                %else
-                %   ij2 = AX2IJ(si,p([1 2])');
-                %   switch il
-                %       case 1 % move x only
-                %           si.ij2(1) = ij2(1);
-                %       case 2 % move y only
-                %            si.ij2(2) = ij2(2);
-                %        case 3 % move x and y
-                %           si.ij2 = ij2;
-                %   end
-                %end
-            end
-            
-        end
-        
-        function removecross(D)
-            delete(D.cross)
-        end
-        
         function realCoordinates = getCrossCoordinate(D)
             crossDisplayCoordinates = ([get(D.cross(3),'xdata'), get(D.cross(3),'ydata')]);
             

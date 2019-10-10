@@ -25,7 +25,12 @@ classdef viewcontrol < xplr.graphnode
                 'callback',@(u,e)editHeader(C)})
             % (list of data dimensions)
             C.dimlist = C.newItem('dimlist',4,{'style','listbox','string',{V.data.header.label},'max',2, ...
-                'callback',@(u,e)C.V.context.raise('datadim',get(u,'value'))});            
+                'callback',@(u,e)C.V.context.raise('datadim',get(u,'value'))});
+            
+            % create a filter of key 1 for each dimension
+            for i = 1:C.V.slicer.nddata
+                C.dimaction('filter',1,i);
+            end
         end
     end
     

@@ -6,6 +6,7 @@ classdef displaynavigation < xplr.graphnode
         ha
         hf
         graph
+        cross       % display cross selector
         sliders = struct('x',[],'y',[]);        % slider objects
         zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
         activefilters = {};
@@ -22,6 +23,9 @@ classdef displaynavigation < xplr.graphnode
             
             % buttons
             init_buttons(N)
+            
+            % cross
+            N.displaycross()
             
             % sliders
             init_sliders(N)
@@ -144,27 +148,123 @@ classdef displaynavigation < xplr.graphnode
     
     % Mouse actions
     methods
-        function Mouse(N)
+        function Mouse(N, flag)
+            pointonly = (nargin==2 && strcmp(flag,'pointonly'));
+            point =  get(N.D.ha,'CurrentPoint'); point = point(1,[1 2])';
             dim = [N.D.activedim.x N.D.activedim.y];
             if isempty(dim), return, end
             switch get(N.hf,'SelectionType')
                 case 'normal'
-                    % zoom in
-                    rect = fn_mouse(N.ha,'rectangle-');
-                    if ~any(any(diff(rect,1,2)))
-                        point = rect(:,1);
-                        ijk = N.graph.graph2slice(point);
+                    % zoom in or select point
+                    if pointonly                        
+                        dozoom = false;
+                    else
+                        rect = fn_mouse(N.ha,'rectangle-');
+                        dozoom = any(any(diff(rect,1,2)));
                     end
-                    ijk = N.graph.graph2slice(rect(:,[1 3]));
-                    zoom = ijk(dim,:)';
-                    for i=1:length(dim), zoom(:,i) = sort(zoom(:,i)); end
-                    N.D.zoomslicer.setZoom(dim,zoom)
+                    if dozoom
+                        ijk = N.graph.graph2slice(rect(:,[1 3]));
+                        zoom = ijk(dim,:)';
+                        for i=1:length(dim), zoom(:,i) = sort(zoom(:,i)); end
+                        N.D.zoomslicer.setZoom(dim,zoom)
+                    else
+                        N.updatecross(point)
+                        %                         ijk = N.graph.graph2slice(point);
+                    end
                 case 'open'
                     % zoom reset
                     zoom = repmat(':',1,length(dim));
                     N.D.zoomslicer.setZoom(dim,zoom)
             end
         end
+    end
+    
+    % Cross point selection
+    methods
+        function displaycross(N)
+           
+            % cross
+            N.cross(1) = line('Parent',N.D.ha,'ydata',[-.5 .5]);
+            N.cross(2) = line('Parent',N.D.ha,'xdata',[-.5 .5]);
+            N.cross(3) = line('Parent',N.D.ha,'xdata',0,'ydata',0,'marker','.','linestyle','none'); % a single point
+            set(N.cross,'Color','k')
+            
+            %fn4D_dbstack
+            %ij2 = D.SI.ij2;
+            % scaling and translation
+            %pt = IJ2AX(D.SI,ij2);
+            crossCenter = [0; 0];
+            N.updatecross(crossCenter)
+            
+            for i=1:3
+                set(N.cross(i),'buttondownfcn',@(u,e)movecross(N,i))
+            end
+        end
+        function updatecross(N, crossCenter)
+            set(N.cross(1),'XData',crossCenter([1 1]))
+            set(N.cross(2),'YData',crossCenter([2 2]))
+            set(N.cross(3),'XData',crossCenter(1),'YData',crossCenter(2))
+        end
+        
+        function movecross(N,il)
+            if ~strcmp(get(N.hf,'selectiontype'),'normal')
+                % not a left click: execute callback for axes
+                Mouse(N)
+                return
+            end
+            set(N.hf,'pointer',fn_switch(il,1,'left',2,'top',3,'cross'))
+            anymove = fn_buttonmotion(@movecrosssub,N.hf,'moved?');
+            set(N.hf,'pointer','arrow')
+            if ~anymove
+                % execute callback for axes
+                Mouse(N, 'pointonly')
+                return
+            end
+            function movecrosssub
+                %anymove = true;
+                p = get(N.D.ha,'currentpoint'); p = p(1,1:2);
+                
+                switch il
+                    case 1
+                        set(N.cross(1),'xdata',p([1 1]))
+                        set(N.cross(3),'xdata',p(1))
+                    case 2
+                        set(N.cross(2),'ydata',p([2 2]))
+                        set(N.cross(3),'ydata',p(2))
+                    case 3
+                        set(N.cross(1),'xdata',p([1 1]))
+                        set(N.cross(2),'ydata',p([2 2]))
+                        set(N.cross(3),'xdata',p(1),'ydata',p(2))
+                    otherwise
+                        error('wrong il')
+                end
+                
+                %if do1d
+                %if il~=1
+                
+                %end
+                %if il~=2
+                %si.ij2 = AX2IJ(si,p(1));
+                %end
+                %else
+                %   ij2 = AX2IJ(si,p([1 2])');
+                %   switch il
+                %       case 1 % move x only
+                %           si.ij2(1) = ij2(1);
+                %       case 2 % move y only
+                %            si.ij2(2) = ij2(2);
+                %        case 3 % move x and y
+                %           si.ij2 = ij2;
+                %   end
+                %end
+            end
+            
+        end
+        
+        function removecross(N)
+            delete(N.cross)
+        end
+        
     end
     
     % Slider and scroll wheel callbacks: change zoom
