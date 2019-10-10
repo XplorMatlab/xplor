@@ -100,6 +100,10 @@ classdef viewdisplay < xplr.graphnode
             % defined
             delete(c)
         end
+        function delete(D)
+            delete@xplr.graphnode(D)
+            delete(D.zoomslicer)
+        end
     end
     
     % Dependent properties

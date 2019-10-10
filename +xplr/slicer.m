@@ -251,9 +251,9 @@ classdef slicer < xplr.graphnode
                     for k=1:length(S.slicingchain)
                         filterk = S.filters(k);
                         if filterk.active && any(intersect(filterk.dim,dim))
-                            if fn_dodebug && ~filterk.active
-                                disp 'change in an inactive filter should not lead to slice update! please check this'
-                                keyboard
+                            if ~filterk.active
+                                xplr.debuginfo('stop', ...
+                                    'change in an inactive filter should not lead to slice update! please check this')
                             end
                             kfilt = k; break
                         end

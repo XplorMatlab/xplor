@@ -60,11 +60,11 @@ classdef bankRegistry < handle
                     addlistener(user,'ObjectBeingDestroyed', ...
                         @(u,e)R.unregister(key,user));
                 end
-                fn_dodebug('registry: key %s 1st user %s (value %s)', ...
+                xplr.debuginfo('registry', 'key %s 1st user %s (value %s)', ...
                     fn_hash(key,3), user, value)
             else
                 R.content(idx) = struct('key',key,'value',value,'users',{cell(1,0)});
-                fn_dodebug('registry: key %s no user (value %s)', ...
+                xplr.debuginfo('registry', 'key %s no user (value %s)', ...
                 	fn_hash(key,3), value)
             end
         end
@@ -116,13 +116,13 @@ classdef bankRegistry < handle
                     disp 'user to unregister was not found in users list'
                 else
                     c = R.content(idx);
-                    fn_dodebug('registry: key %s rmv user %s', ...
+                    xplr.debuginfo('registry', 'key %s rmv user %s', ...
                         fn_hash(c.key,3), c.users{idxuser})
                     R.content(idx).users(idxuser) = [];                    
                 end
             end
             if isempty(R.content(idx).users)
-                fn_dodebug('registry: key %s remove key', ...
+                xplr.debuginfo('registry', 'key %s remove key', ...
                     fn_hash(R.content(idx).key,3))
                 R.content(idx) = [];
                 if isempty(rm), rm = true; end
@@ -165,7 +165,7 @@ classdef bankRegistry < handle
             if douser
                 idxuser = fn_find(newuser,R.content(idx).users,'first');
                 if isempty(idxuser)
-                    fn_dodebug('registry: key %s add user %s', ...
+                    xplr.debuginfo('registry', 'key %s add user %s', ...
                         fn_hash(R.content(idx).key,3), newuser)
                     R.content(idx).users{end+1} = newuser;
                     if isobject(newuser)
