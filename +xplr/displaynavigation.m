@@ -203,7 +203,7 @@ classdef displaynavigation < xplr.graphnode
                 end
                 % get filter from bank or create one for the header in this
                 % dimension
-                doshow=true;
+                doshow=false;
                 F = xplr.bank.getFilter(linkkey,head,doshow,N); % FilterAndPoint filter
                 N.dimfilters{d} = F;
                 % listen to the point filter event

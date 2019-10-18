@@ -185,13 +185,16 @@ classdef viewcontrol < xplr.graphnode
                             xplr.bank.showList(filter);
                         end
                     case 'showFilterPointWindow'
+                        % look for 
                         if key ~= 0
                             % get filter from the filterSet
-
                             header = C.V.data.header(dim);
+                            doshow=false;
+                            F = xplr.bank.getFilter(key,header,doshow);
+                            header = F.headerout;
                             doshow=true;
-                            
-                            F = xplr.bank.getFilter(key,header,doshow,C.V.D.navigation);
+                            F = xplr.bank.getFilter(key,header,doshow);
+                            xplr.bank.showList(F);
                         end
                 end
             end
