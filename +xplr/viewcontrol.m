@@ -178,12 +178,6 @@ classdef viewcontrol < xplr.graphnode
                         
                         % if the filter is not private
                         if key ~= 0
-                            % filterSet and filter are needed to use
-                            % filterSet.showList
-                            
-                            % get filterSet from the bank
-                            filterSet = xplr.bank.getFilterSet(key);
-                            
                             % get filter from the filterSet
                             header = C.V.data.header(dim);
                             doshow=true;
@@ -300,7 +294,7 @@ classdef viewcontrol < xplr.graphnode
                 C.V.slicer.permFilters(perm)
             end
             
-            % toggle active if there was no move
+            % show filter if there was no move
             if ~moved, dimaction(C,'showFilterWindow',C.items(idxitem).F.linkkey,d), end
         end
     end
@@ -345,7 +339,7 @@ classdef viewcontrol < xplr.graphnode
                 % viewcontrol object C will be unregistered for the users
                 % list of filter F; if this list will become empty, F will
                 % be unregistered from the filters set
-                xplr.bank.unregisterFilter(filter.obj.linkkey,filter.obj,C) 
+                xplr.bank.unregisterFilter(filter.obj,C) 
             end
         end
         

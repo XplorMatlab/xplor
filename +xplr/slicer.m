@@ -106,13 +106,33 @@ classdef slicer < xplr.graphnode
             filtrm = [S.filters(idx).obj];
             S.disconnect(filtrm)
             dimrm = [S.filters(idx).dim];
+            % among the dimensions for which filters will be removed, which
+            % are those where the filters were really active
+            active = [S.filters(idx).active];
+            idxinactive = idx(~active);
+            idxactive = idx(active);
+            % remove the filters
             S.filters(idx) = [];
             % remove invalid part of slicing chain
-            if any(idx), S.slicingchain(find(idx,1,'first'):end) = []; end
+            % (first remove everything from the first active dim)
+            if any(idxactive)
+                S.slicingchain(idxactive(1):end) = []; 
+            end
+            % (second remove elements of the chain corresponding to removed
+            % inactive filters, but without removing what follows)
+            if isempty(idxactive)
+                idxinactive_before_active = idxinactive;
+            else
+                idxinactive_before_active = idxinactive(idxinactive<idxactive(1));
+            end
+            if any(idxinactive_before_active)
+                S.slicingchain(idxinactive_before_active) = [];
+            end
             % update slice
-            if doslicing
-                if all([filtrm.ndout]==[filtrm.ndin])
-                    doslice(S,'filter','chgdim',dimrm)
+            if doslicing && ~isempty(idxactive)
+                if all([filtrm(active).ndout]==[filtrm(active).ndin])
+                    activedimrm = dimrm(active);
+                    doslice(S,'filter','chgdim',activedimrm)
                 else
                     error 'not implemented yet'
                 end

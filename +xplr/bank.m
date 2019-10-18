@@ -204,15 +204,23 @@ classdef bank < hgsetget
             doshow=true;
             FS.addFilter(F, doshow, varargin{:})
         end
-        function unregisterFilter(linkkey, F, user)
-            % function removeFilter(linkkey, F, user)
-            FS = xplr.bank.getFilterSet(linkkey);
+        function unregisterFilter(F, user)
+            % function unregisterFilter(F, user)
+            if F.linkkey == 0
+                disp 'attempt to unregister a private filter from the bank!'
+                return
+            end            
+            FS = xplr.bank.getFilterSet(F.linkkey);
             FS.removeFilter(F, user)
         end            
-        function showList(linkkey, F, user)
-            % function removeFilter(linkkey, F, user)
-            FS = xplr.bank.getFilterSet(linkkey);
-            FS.removeFilter(F, user)
+        function showList(F)
+            % function showList(F)
+            if F.linkkey == 0
+                disp 'attempt to show the list display from the bank for a private filter!'
+                return
+            end            
+            FS = xplr.bank.getFilterSet(F.linkkey);
+            FS.showList(F)
         end
         function F = getZoomFilter(linkkey, head, varargin)
             % function F = getZoomFilter(linkkey, header[,user])
@@ -220,15 +228,19 @@ classdef bank < hgsetget
             F = FS.getZoomFilter(head, varargin{:});
         end
         function registerZoomFilter(linkkey, F, varargin)
-            % function addZoomFilter(linkkey, F[,user])
+            % function registerZoomFilter(linkkey, F[,user])
             for i=F
                 FS = xplr.bank.getFilterSet(linkkey);
                 FS.addZoomFilter(i, varargin{:})
             end
         end
-        function unregisterZoomFilter(linkkey, F, user)
-            % function removeZoomFilter(linkkey, F, user)
-            FS = xplr.bank.getFilterSet(linkkey);
+        function unregisterZoomFilter(F, user)
+            % function unregisterZoomFilter(F, user)
+            if F.linkkey == 0
+                disp 'attempt to unregister a private zoom filter from the bank!'
+                return
+            end            
+            FS = xplr.bank.getFilterSet(F.linkkey);
             FS.removeZoomFilter(F, user)
         end       
         function keys = availableFilterKeys()

@@ -4,9 +4,9 @@
       <nheadermax>100</nheadermax>
    </bank>
    <display>
-      <NImageMax>1000</NImageMax>
+      <NImageMax>500</NImageMax>
       <NImagePixelMax>5000000</NImagePixelMax>
       <NLineMax>2000</NLineMax>
-      <NLinePointMax>5000000</NLinePointMax>
+      <NLinePointMax>2000000</NLinePointMax>
    </display>
 </s>

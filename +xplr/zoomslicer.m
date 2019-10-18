@@ -139,7 +139,7 @@ classdef zoomslicer < xplr.slicer
         function disconnect(S,F)
             disconnect@xplr.graphnode(S,F)
             if isa(F,'xplr.zoomfilter') && F.linkkey ~= 0
-                xplr.bank.unregisterZoomFilter(F.linkkey,F,S)
+                xplr.bank.unregisterZoomFilter(F,S)
             end
         end
     end
