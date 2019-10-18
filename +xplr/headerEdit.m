@@ -231,8 +231,7 @@ classdef headerEdit < hgsetget
             E.ok = uicontrol('parent',E.hf,'string','ok','pos',[W-80 1 80 30], ...
                 'callback',@(u,e)done(E));
             
-            % "confirm all" button masks ok button! (indeed, ok will not be
-            % enabled as long as there will remain dimensions to confirm)
+            % "confirm all" button masks ok button, but trigger done(E)
             E.uconfirm = uicontrol('parent',E.hf,'string','Confirm all','callback',@(u,e)confirmall(E), ...
                 'pos',[W-80 1 80 30]);
             uicontrol('parent',E.hf,'string','Reset all','callback',@(u,e)resetall(E), ...
@@ -481,6 +480,7 @@ classdef headerEdit < hgsetget
         function confirmall(E)
             [E.curhead.confirmed] = deal(true);
             E.display_header()
+            done(E);
         end
         function resetall(E)
             for i=1:E.nd
