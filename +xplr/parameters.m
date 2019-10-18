@@ -1,4 +1,10 @@
 classdef parameters < handle
+    % XPLR.PARAMETERS  handle parameters stored in a xml file
+    % has the following methods
+    % xplr.getAllPar()  get all parameters
+    % xplr.reload()     reload from file
+    % xplr.get(key)     get a specific parameter
+    % xplr.set(key, value)  set value of a parameter
     
     properties
         params
@@ -25,13 +31,13 @@ classdef parameters < handle
                 Pmem = xplr.parameters;
                 Pmem.params = s;
             end
-            P = Pmem;
+            P = Pmem.params;
         end
         function reload()
             xplr.parameters.getAllPar(true);
         end
         function value = get(str)
-            value = xplr.parameters.getAllPar().params;
+            value = xplr.parameters.getAllPar();
             if nargin
                 strc = fn_strcut(str,'.');
                 for i=1:length(strc)
@@ -47,8 +53,7 @@ classdef parameters < handle
                 error 'value is not a valid parameter'
             end
             % get parameter structure
-            P = xplr.parameters.getAllPar();
-            s = P.params;
+            s = xplr.parameters.getAllPar();
             % set value
             str = fn_strcut(str,'.');
             s = setstruct(s,str,value);
