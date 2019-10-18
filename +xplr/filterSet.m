@@ -4,7 +4,7 @@ classdef filterSet < hgsetget
         linkkey
 %     end
 %     properties (Access='private')
-        registry    % registered filters
+        registry    % registered filter&point filters
         combo       % list combo displaying the registered filters
         zregistry   % registered zoomfilters
         zcregistry  % registered zoomcentral

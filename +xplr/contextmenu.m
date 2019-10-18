@@ -87,6 +87,29 @@ classdef contextmenu < hgsetget
                         uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
                             'callback',@(u,e)ZS.changeKey(dim,keyvalue));
                     end
+                    
+                    % select crossSelector key 
+                    curfilt = D.navigation.dimfilters{dim};
+                    if ~isempty(curfilt)
+                        m2 = uimenu(m,'label','cross selector key','Separator',fn_switch(docolor));
+                        
+                        availablekeys = xplr.bank.availableFilterKeys();
+                        newkey = max(availablekeys)+1;
+                        keyvalues = [0 availablekeys newkey];
+                        fn_num2str(availablekeys, 'cross selector key %i', 'cell');
+                        keydisplays = [ ...
+                            'private cross selector' ...
+                            fn_num2str(availablekeys, 'cross selector key %i', 'cell') ...
+                            num2str(newkey,'cross selector key %i (new key)')
+                            ];
+                            curkey = curfilt.linkkey;
+                        uimenu(m2, 'label', 'show point filter','callback',@(u,e)dimaction(D.V.C,'showFilterPointWindow',curkey,dim));
+                        for i=1:length(keyvalues)
+                            keyvalue = keyvalues(i);
+                            uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
+                                'callback',@(u,e)connectPointFilter(D.navigation,dim,keyvalue));
+                        end
+                    end
                         
                 case 'datadim'
                     % Change filters

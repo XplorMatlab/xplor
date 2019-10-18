@@ -6,10 +6,11 @@ classdef displaynavigation < xplr.graphnode
         ha
         hf
         graph
-        cross       % display cross selector
+        crossCenter
+        cross                                   % display cross selector
         sliders = struct('x',[],'y',[]);        % slider objects
         zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
-        activefilters = {};
+        dimfilters = {};
     end
     
     % Constructor
@@ -33,7 +34,7 @@ classdef displaynavigation < xplr.graphnode
             % connect sliders to the active dimensions of the display
             % (note that this is in fact redundant with call in
             % viewdisplay.slicechange when viewdisplay object is created)
-            connectFilter(N)
+            connectZoomFilter(N)
 
             % mouse actions
             set(D.ha,'buttondownfcn',@(u,e)Mouse(N))
@@ -168,8 +169,7 @@ classdef displaynavigation < xplr.graphnode
                         for i=1:length(dim), zoom(:,i) = sort(zoom(:,i)); end
                         N.D.zoomslicer.setZoom(dim,zoom)
                     else
-                        N.updatecross(point)
-                        %                         ijk = N.graph.graph2slice(point);
+                        N.crossCenter = point;
                     end
                 case 'open'
                     % zoom reset
@@ -181,6 +181,57 @@ classdef displaynavigation < xplr.graphnode
     
     % Cross point selection
     methods
+        function connectPointFilter(N,dim,key)
+            if nargin < 3
+               key = 1; 
+            end
+            
+            if nargin < 2
+                disconnectPointFilter(N)
+                dim = 1:N.D.slice.nd;
+            else
+                disconnectPointFilter(N,dim)
+            end
+            for d = dim
+                linkkey = key;
+                head = N.D.slice.header(d);
+                % no interest in creating and controling a filter for a
+                % dimension with only 1 value
+                if head.n ==1 
+                    N.dimfilters{d} = [];
+                    continue
+                end
+                % get filter from bank or create one for the header in this
+                % dimension
+                doshow=true;
+                F = xplr.bank.getFilter(linkkey,head,doshow,N); % FilterAndPoint filter
+                N.dimfilters{d} = F;
+                % listen to the point filter event
+                P = F.P; % Point filter
+                N.addListener(P,'ChangedPoint',@(u,e)movedPoint(N, d))
+            end
+        end
+        function disconnectPointFilter(N,dim)
+            if nargin < 2
+                dim = 1:length(N.dimfilters);
+            end
+            for d = dim
+                F = N.dimfilters{d};
+                if isempty(F), continue, end
+                xplr.bank.unregisterFilter(F,N)
+                N.disconnect(F.P)  % this is the same as F.disconnect(N)!
+            end
+        end
+        function movedPoint(N, d)
+            F = N.dimfilters{d};
+            if isempty(F)
+                error('movedPoint callback called for dimension %i, but there is no filter in this dimension!', d)
+            end
+            P = F.P;
+            ijk = N.graph.graph2slice(N.crossCenter);
+            ijk(d) = P.index;
+            N.crossCenter = N.graph.slice2graph(ijk);
+        end
         function displaycross(N)
            
             % cross
@@ -193,20 +244,34 @@ classdef displaynavigation < xplr.graphnode
             %ij2 = D.SI.ij2;
             % scaling and translation
             %pt = IJ2AX(D.SI,ij2);
-            crossCenter = [0; 0];
-            N.updatecross(crossCenter)
+            N.crossCenter = [0 0];
             
             for i=1:3
-                set(N.cross(i),'buttondownfcn',@(u,e)movecross(N,i))
+                set(N.cross(i),'buttondownfcn',@(u,e)manualmovecross(N,i))
             end
         end
-        function updatecross(N, crossCenter)
+        function set.crossCenter(N, crossCenter)
+            % set the property
+            N.crossCenter = crossCenter;
+            
+            % move the cross
             set(N.cross(1),'XData',crossCenter([1 1]))
             set(N.cross(2),'YData',crossCenter([2 2]))
             set(N.cross(3),'XData',crossCenter(1),'YData',crossCenter(2))
+            
+            % update the point filters
+            try
+                ijk = N.graph.graph2slice(crossCenter,true);
+                for d = 1:length(ijk)
+                    P = N.dimfilters{d}.P;
+                    if ~isempty(P)
+                        P.index = ijk(d);
+                    end
+                end
+            end
+            
         end
-        
-        function movecross(N,il)
+        function manualmovecross(N,il)
             if ~strcmp(get(N.hf,'selectiontype'),'normal')
                 % not a left click: execute callback for axes
                 Mouse(N)
@@ -223,18 +288,13 @@ classdef displaynavigation < xplr.graphnode
             function movecrosssub
                 %anymove = true;
                 p = get(N.D.ha,'currentpoint'); p = p(1,1:2);
-                
                 switch il
                     case 1
-                        set(N.cross(1),'xdata',p([1 1]))
-                        set(N.cross(3),'xdata',p(1))
+                        N.crossCenter(1) = p(1);
                     case 2
-                        set(N.cross(2),'ydata',p([2 2]))
-                        set(N.cross(3),'ydata',p(2))
+                        N.crossCenter(2) = p(2);
                     case 3
-                        set(N.cross(1),'xdata',p([1 1]))
-                        set(N.cross(2),'ydata',p([2 2]))
-                        set(N.cross(3),'xdata',p(1),'ydata',p(2))
+                        N.crossCenter = p;
                     otherwise
                         error('wrong il')
                 end
@@ -260,11 +320,9 @@ classdef displaynavigation < xplr.graphnode
             end
             
         end
-        
         function removecross(N)
             delete(N.cross)
-        end
-        
+        end        
     end
     
     % Slider and scroll wheel callbacks: change zoom
@@ -303,11 +361,11 @@ classdef displaynavigation < xplr.graphnode
     
     % Update upon changes in active dim and zoom
     methods
-        function connectFilter(N,f)
+        function connectZoomFilter(N,f)
             % both x and y?
             if nargin<2
-                connectFilter(N,'x')
-                connectFilter(N,'y')
+                connectZoomFilter(N,'x')
+                connectZoomFilter(N,'y')
                 return
             end
             % slider object and corresponding data dimension

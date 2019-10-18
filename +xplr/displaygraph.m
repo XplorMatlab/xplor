@@ -440,16 +440,26 @@ classdef displaygraph < xplr.graphnode
             st = G.steps;
             
             if isvector(ijk), ijk = ijk(:); end
+            
+            % "exterior" dimensions must be rounded
+            doround = true(1, length(ijk));
+            if ~isempty(G.org.x), doround(G.org.x(1)) = false; end
+            if ~isempty(G.org.y), doround(G.org.y(1)) = false; end
+            ijk(doround) = round(ijk(doround));
+            
             x = sum(fn_add(st.xoffset(:), fn_mult(ijk(G.org.x,:),st.xstep(:))),1);
             y = sum(fn_add(st.yoffset(:), fn_mult(ijk(G.org.y,:),st.ystep(:))),1);
             xy = [x; y];
             if ~isempty(st.xydim), xy = xy + st.xyoffsets(:,ijk(st.xydim,:)); end
         end
-        function ijk = graph2zslice(G,xy)
-            % function ijk = graph2zslice(G[,xy])
+        function ijk = graph2zslice(G,xy,invertible)
+            % function ijk = graph2zslice(G[,xy[,invertible]])
             if nargin<2
                 xy = get(G.D.ha,'currentpoint');
                 xy = xy(1,1:2);
+            end
+            if nargin<3
+                invertible = false;
             end
             if isvector(xy), xy = xy(:); end
             np = size(xy,2);
@@ -492,19 +502,45 @@ classdef displaygraph < xplr.graphnode
                 ijk(d,:) = fn_div(y,st.ystep(iy));
                 y = y - fn_mult(round(ijk(d,:)),st.ystep(iy));
             end
+            
+            % we want an output that can be invertible by calling
+            % zslice2graph, this means that we should not give the
+            % conversion "per dimension" but in a global fashion where
+            % "exterior" dimensions are rounded
+            if invertible
+                doround = true(1, length(ijk));
+                if ~isempty(xorg), doround(xorg(1)) = false; end
+                if ~isempty(yorg), doround(yorg(1)) = false; end
+                ijk(doround) = round(ijk(doround));
+            end
         end
-        function ijk = graph2slice(G,xy)
-            % function ijk = graph2slice(G[,xy])
+        function xy = slice2graph(G,ijk)
+
+            % function xy = slice2graph(G,ijk)
+            
+            % first convert from slice to zoomed slice
+            [idxoffset, bin] = G.getZoom('off&bin');
+            zijk = fn_subtract(fn_div(ijk+.5,bin(:))-.5, idxoffset(:));
+            
+            % then convert to graphh coordinates
+            xy = zslice2graph(G,zijk);
+        end
+        function ijk = graph2slice(G,xy,invertible)
+            % function ijk = graph2slice(G[,xy[,invertible]])
+            % 
             if nargin<2
                 xy = get(G.D.ha,'currentpoint');
                 xy = xy(1,1:2);
             end
+            if nargin<3
+                invertible = false;
+            end
             
             % coordinates in zoomed slice
-            zijk = graph2zslice(G,xy);
+            zijk = graph2zslice(G,xy,invertible);
             
             % convert to before zooming
-            [idxoffset bin] = G.getZoom('off&bin');
+            [idxoffset, bin] = G.getZoom('off&bin');
             ijk = fn_add(idxoffset(:), .5+fn_mult(zijk-.5,bin(:)));
         end
         function M = gettransform(G,ijk,ylim_or_ybase,yextent)

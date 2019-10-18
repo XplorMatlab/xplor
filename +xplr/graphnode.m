@@ -90,7 +90,7 @@ classdef graphnode < matlab.mixin.SetGet
                     deleteValid(s.listener)
                 end
             end
-            self.listening(rm) = [];
+            other.listening(rm) = [];
         end
         function activateConnection(self,other,val)
             % Enable or disable a connection

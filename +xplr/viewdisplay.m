@@ -109,6 +109,9 @@ classdef viewdisplay < xplr.graphnode
         function delete(D)
             delete@xplr.graphnode(D)
             delete(D.zoomslicer)
+            delete(D.navigation)
+            delete(D.labels)
+            delete(D.graph)
         end
     end
     
@@ -202,7 +205,7 @@ classdef viewdisplay < xplr.graphnode
             
             % update display
             if doImmediateUpdate
-                D.navigation.connectFilter()
+                D.navigation.connectZoomFilter()
                 D.labels.updateLabels('active')
                 D.graph.setTicks()
             end
@@ -248,7 +251,7 @@ classdef viewdisplay < xplr.graphnode
             D.graph.setTicks()
             updateDisplay(D)
             % update slider connections
-            connectFilter(D.navigation)
+            connectZoomFilter(D.navigation)
         end
         function makeDimActive(D,d,flag)
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
@@ -261,10 +264,10 @@ classdef viewdisplay < xplr.graphnode
                     D.activedim.x = d;
                     if ismember(d,D.org.yx) || any(ismember(D.activedim.y,[D.org.xy D.org.yx]))
                         D.activedim.y = [];
-                        D.navigation.connectFilter('y')
+                        D.navigation.connectZoomFilter('y')
                     end
                 end
-                D.navigation.connectFilter('x')
+                D.navigation.connectZoomFilter('x')
             elseif ismember(d,[D.org.y D.org.xy])
                 if dotoggle && any(d==D.activedim.y)
                     D.activedim.y = [];
@@ -272,10 +275,10 @@ classdef viewdisplay < xplr.graphnode
                     D.activedim.y = d;
                     if ismember(d,D.org.xy) || any(ismember(D.activedim.x,[D.org.xy D.org.yx]))
                         D.activedim.x = [];
-                        D.navigation.connectFilter('x')
+                        D.navigation.connectZoomFilter('x')
                     end
                 end
-                D.navigation.connectFilter('y')
+                D.navigation.connectZoomFilter('y')
             end
             % update ticks and labels
             D.graph.setTicks()
@@ -383,6 +386,7 @@ classdef viewdisplay < xplr.graphnode
             % 'sliceChangeEvent' property to delay call to slicechange)
             
             if nargin<2, flag = 'global'; else flag = e.flag; end
+            xplr.debuginfo('viewdisplay','slicechange %s', flag)
             
             % Update organization
             switch flag
@@ -409,16 +413,28 @@ classdef viewdisplay < xplr.graphnode
             % Update active dim and slider connections
             if fn_ismemberstr(flag,{'global' 'insertdim' 'rmdim' 'permdim'})
                 D.checkActiveDim(false)
-                D.navigation.connectFilter()
+                D.navigation.connectZoomFilter()
             elseif fn_ismemberstr(flag,{'chgdata' 'chg'})
                 % slice size did not change
             else
                 D.checkActiveDim(false)
-                D.navigation.connectFilter()
+                D.navigation.connectZoomFilter()
             end
             
             % Update color dim
             D.checkColorDim(false)
+            
+            % Assign point filters to each updated dimension
+            switch flag
+                case 'chgdata'
+                    % nothing to do: only the data has changed
+                case {'global' 'insertdim' 'rmdim'}
+                    D.navigation.connectPointFilter()
+                case {'all' 'chgdim' 'new' 'remove' 'chg' 'chg&new' 'chg&rm' 'perm'}
+                    D.navigation.connectPointFilter(e.dim)
+                otherwise
+                    error('flag ''%s'' not handled', flag)
+            end
         end
         function updateDisplay(D,flag,dim,ind)
             % function updateDisplay(D[,flag,dim,ind])
@@ -674,6 +690,7 @@ classdef viewdisplay < xplr.graphnode
     methods
         function zslicechange(D,e)
             if nargin<2, flag = 'global'; else flag = e.flag; end
+            xplr.debuginfo('viewdisplay','zslicechange %s',flag)
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             
             % Did slice change as well?
@@ -830,6 +847,7 @@ classdef viewdisplay < xplr.graphnode
             zslicechange(D)
         end
         function realCoordinates = getCrossCoordinate(D)
+            % return "real world "coordinates from relative window coordinate 
             crossDisplayCoordinates = ([get(D.cross(3),'xdata'), get(D.cross(3),'ydata')]);
             
             xdataApplied = D.zslice;

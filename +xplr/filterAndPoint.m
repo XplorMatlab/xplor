@@ -56,7 +56,9 @@ classdef filterAndPoint < xplr.dataoperand
                 % set header values
                 % (tracking of input header values)
                 if ~isscalar(F.headerin) 
-                    % no tracking
+                    % no tracking: we keep the current value for
+                    % F.headerout
+                    return
                 elseif F.headerin.ncolumn>0
                     headvalues = F.headerin.values(F.P.index,:);
                     ncolin = size(headvalues,2);
