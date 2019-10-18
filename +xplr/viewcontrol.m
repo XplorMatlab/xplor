@@ -185,15 +185,22 @@ classdef viewcontrol < xplr.graphnode
                             xplr.bank.showList(filter);
                         end
                     case 'showFilterPointWindow'
-                        % look for 
+                        % display Filter Point associated with this
+                        % dimension
+                        
                         if key ~= 0
                             % get filter from the filterSet
                             header = C.V.data.header(dim);
                             doshow=false;
                             F = xplr.bank.getFilter(key,header,doshow);
+                            
+                            % look for the filter with same key and with header
+                            % corresponding wiht the headerout of the
+                            % active filter
                             header = F.headerout;
                             doshow=true;
                             F = xplr.bank.getFilter(key,header,doshow);
+                            % display the filter
                             xplr.bank.showList(F);
                         end
                 end
