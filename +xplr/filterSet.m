@@ -22,10 +22,16 @@ classdef filterSet < hgsetget
     
     % Filter registration
     methods
-        function F = getFilter(FS,header,varargin)
-            % function F = getFilter(FS,header[,user])
+        function F = getFilter(FS,header, doshow, varargin)
+            
+            % function F = getFilter(FS,header, doshow [,user])
             hID = getID(header);
             F = FS.registry.getValue(hID,varargin{:});
+            if isempty(F)
+                F = xplr.filterAndPoint(header,'indices');
+                % viewcontrol object C will be registered as a user of the filter
+                FS.addFilter(F, doshow, varargin{:});
+            end            
         end
         function F = getZoomFilter(FS,header,varargin)
             % function F = getZoomFilter(FS,header[,user])
@@ -53,12 +59,14 @@ classdef filterSet < hgsetget
                 end
             end
         end
-        function addFilter(FS,F,varargin)
+        function addFilter(FS,F,doshow,varargin)
             % function addFilter(FS,F[,user])
             hID = getID(F.headerin);
             F.linkkey = FS.linkkey;
             FS.registry.register(hID,F,varargin{:})
-            FS.showList(F)
+            if doshow
+                FS.showList(F)
+            end
         end
         function addZoomFilter(FS,F,varargin)
             % function addZoomFilter(FS,F[,user])

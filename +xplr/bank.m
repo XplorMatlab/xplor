@@ -175,7 +175,7 @@ classdef bank < hgsetget
     end
     
     % Filter sets
-    methods (Static)
+    methods (Static, Access='private')
         function FS = getFilterSet(linkkey)
             B = xplr.bank.getbank();
             if linkkey<=length(B.filtersets)
@@ -184,7 +184,7 @@ classdef bank < hgsetget
                 FS = xplr.filterSet(linkkey);
                 B.filtersets(end+1) = FS;
             else
-                error('New filter set key should be %i, encountered %i instead.',length(B.filtersets)+1,idx)
+                error('New filter set key should be %i, encountered %i instead.',length(B.filtersets)+1,linkkey)
             end
         end
     end
@@ -193,15 +193,16 @@ classdef bank < hgsetget
             B = xplr.bank.getbank();
             n = length(B.filtersets);
         end
-        function F = getFilter(linkkey, head, varargin)
-            % function F = getFilter(linkkey, header[,user])
+        function F = getFilter(linkkey, head, doshow, varargin)
+            % function F = getFilter(linkkey, header ,doshow [,user])
             FS = xplr.bank.getFilterSet(linkkey);
-            F = FS.getFilter(head, varargin{:});
+            F = FS.getFilter(head, doshow, varargin{:});
         end
         function registerFilter(linkkey, F, varargin)
-            % function addFilter(linkkey, F[,user])
+            % function registerFilter(linkkey, F[,user])
             FS = xplr.bank.getFilterSet(linkkey);
-            FS.addFilter(F, varargin{:})
+            doshow=true;
+            FS.addFilter(F, doshow, varargin{:})
         end
         function unregisterFilter(linkkey, F, user)
             % function removeFilter(linkkey, F, user)

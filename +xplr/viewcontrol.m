@@ -186,9 +186,18 @@ classdef viewcontrol < xplr.graphnode
                             
                             % get filter from the filterSet
                             header = C.V.data.header(dim);
-                            filter = filterSet.getFilter(header);
+                            doshow=true;
+                            filter = xplr.bank.getFilter(key,header,doshow);
+                            xplr.bank.showList(filter);
+                        end
+                    case 'showFilterPointWindow'
+                        if key ~= 0
+                            % get filter from the filterSet
+
+                            header = C.V.data.header(dim);
+                            doshow=true;
                             
-                            filterSet.showList(filter);
+                            F = xplr.bank.getFilter(key,header,doshow,C.V.D.navigation);
                         end
                 end
             end
@@ -354,12 +363,8 @@ classdef viewcontrol < xplr.graphnode
                 combo.showList(filter)
             else
                 % search for the filter in the bank with key and dimension
-                filter = xplr.bank.getFilter(key,header,C);
-                if isempty(filter)
-                    filter = xplr.filterAndPoint(header,'indices');
-                    % viewcontrol object C will be registered as a user of the filter
-                    xplr.bank.registerFilter(key,filter,C);
-                end
+                doshow=true;
+                filter = xplr.bank.getFilter(key,header,doshow,C);
             end
             
             % add the filter to the items, it is important that
