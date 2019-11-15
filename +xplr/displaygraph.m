@@ -273,7 +273,7 @@ classdef displaygraph < xplr.graphnode
                         [f ff] = deal('y','xy');
                 end
                 d = G.D.activedim.(f);
-                if isempty(d)
+                if isempty(d) || G.D.V.slice.header(d).n == 1
                     tick = [];
                     ticklabels = {};
                 else

@@ -103,7 +103,7 @@ classdef contextmenu < hgsetget
                             num2str(newkey,'cross selector key %i (new key)')
                             ];
                             curkey = curfilt.linkkey;
-                        uimenu(m2, 'label', 'show point filter','callback',@(u,e)dimaction(D.V.C,'showFilterPointWindow',curkey,dim));
+                        uimenu(m2, 'label', 'show point selector','callback',@(u,e)dimaction(D.V.C,'showFilterPointWindow',curkey,dim));
                         for i=1:length(keyvalues)
                             keyvalue = keyvalues(i);
                             uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...

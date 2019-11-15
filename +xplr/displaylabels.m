@@ -115,8 +115,8 @@ classdef displaylabels < xplr.graphnode
             % do not display labels of singleton dimensions
             sz = L.D.slice.sz; % slice size
             okdim = (sz>1);
-            if ~isempty(curorg.x), okdim(curorg.x(1)) = true; end % first x dimension must be visible regardless of its being singleton or not
-            if strcmp(L.D.displaymode,'image') && ~isempty(curorg.y), okdim(curorg.y(1)) = true; end % similar comment
+            %if ~isempty(curorg.x), okdim(curorg.x(1)) = true; end % first x dimension must be visible regardless of its being singleton or not
+            %if strcmp(L.D.displaymode,'image') && ~isempty(curorg.y), okdim(curorg.y(1)) = true; end % similar comment
             xorgok = curorg.x(okdim(curorg.x));
             yorgok = curorg.y(okdim(curorg.y));
             ystatok = curorg.ystatic(okdim(curorg.ystatic));

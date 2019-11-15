@@ -421,6 +421,9 @@ classdef viewdisplay < xplr.graphnode
                 D.navigation.connectZoomFilter()
             end
             
+            % Update cross visibility
+            % D.navigation.update_cross_visibility()
+            
             % Update color dim
             D.checkColorDim(false)
             
@@ -432,9 +435,12 @@ classdef viewdisplay < xplr.graphnode
                     D.navigation.connectPointFilter()
                 case {'all' 'chgdim' 'new' 'remove' 'chg' 'chg&new' 'chg&rm' 'perm'}
                     D.navigation.connectPointFilter(e.dim)
+                    
                 otherwise
                     error('flag ''%s'' not handled', flag)
             end
+            
+            
         end
         function updateDisplay(D,flag,dim,ind)
             % function updateDisplay(D[,flag,dim,ind])
@@ -721,6 +727,8 @@ classdef viewdisplay < xplr.graphnode
                 end
             end
             
+
+            
             % Update clipping
             chgclip = strcmp(flag,'global') || strcmp(D.clipping.span,'curview');
             if chgclip, autoClip(D,false), end
@@ -789,13 +797,18 @@ classdef viewdisplay < xplr.graphnode
                     end
                 end
             end
-            
+                      
+           % reposition cross
+           D.navigation.repositionCross()
+
             % Update legend
             if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
                 D.colordim = [];
             elseif ~strcmp(flag,'chgdata') && isequal(e.dim,D.colordim)
                 displayColorLegend(D)
             end
+            
+            %notify(D.P,'ChangedPoint')
         end
         function zoomchange(D,e)
             % update graph positions: if data has changed in size,

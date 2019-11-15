@@ -12,6 +12,10 @@ classdef displaynavigation < xplr.graphnode
         zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
         dimfilters = {};
     end
+    properties
+        selection = [];         % list of selectionND object
+        selectiondim = [];      % dimensions to which these selections apply
+    end
     
     % Constructor
     methods
@@ -161,7 +165,7 @@ classdef displaynavigation < xplr.graphnode
                         dozoom = false;
                     else
                         rect = fn_mouse(N.ha,'rectangle-');
-                        dozoom = any(any(diff(rect,1,2)));
+                        dozoom = any(any(abs(diff(rect,1,2))>1e-2));
                     end
                     if dozoom
                         ijk = N.graph.graph2slice(rect(:,[1 3]));
@@ -169,7 +173,7 @@ classdef displaynavigation < xplr.graphnode
                         for i=1:length(dim), zoom(:,i) = sort(zoom(:,i)); end
                         N.D.zoomslicer.setZoom(dim,zoom)
                     else
-                        N.crossCenter = point;
+                        N.manualclickmovecross(point);
                     end
                 case 'open'
                     % zoom reset
@@ -185,13 +189,14 @@ classdef displaynavigation < xplr.graphnode
             if nargin < 3
                key = 1; 
             end
-            
+
             if nargin < 2
                 disconnectPointFilter(N)
                 dim = 1:N.D.slice.nd;
             else
                 disconnectPointFilter(N,dim)
             end
+            
             for d = dim
                 linkkey = key;
                 head = N.D.slice.header(d);
@@ -223,14 +228,36 @@ classdef displaynavigation < xplr.graphnode
             end
         end
         function movedPoint(N, d)
+            if nargin < 1
+                return
+            end
+            
             F = N.dimfilters{d};
             if isempty(F)
                 error('movedPoint callback called for dimension %i, but there is no filter in this dimension!', d)
             end
             P = F.P;
             ijk = N.graph.graph2slice(N.crossCenter);
-            ijk(d) = P.index;
+            
+            ijk(d) = P.index0;
             N.crossCenter = N.graph.slice2graph(ijk);
+            disp('ijk')
+            disp(ijk)
+            update_cross_visibility(N);
+        end
+        function ijk = getPointIndexPosition(N)
+            nd = N.D.slice.nd;
+            ijk = ones(nd, 1);
+            for d = 1:nd
+                F = N.dimfilters{d};
+                if isempty(F), continue, end
+                ijk(d) = F.P.index0;
+            end
+        end
+        function repositionCross(N)
+            ijk = getPointIndexPosition(N);
+            N.crossCenter = N.graph.slice2graph(ijk);
+            update_cross_visibility(N);
         end
         function displaycross(N)
            
@@ -252,24 +279,14 @@ classdef displaynavigation < xplr.graphnode
         end
         function set.crossCenter(N, crossCenter)
             % set the property
+          
             N.crossCenter = crossCenter;
-            
+
             % move the cross
             set(N.cross(1),'XData',crossCenter([1 1]))
             set(N.cross(2),'YData',crossCenter([2 2]))
             set(N.cross(3),'XData',crossCenter(1),'YData',crossCenter(2))
-            
-            % update the point filters
-            try
-                ijk = N.graph.graph2slice(crossCenter,true);
-                for d = 1:length(ijk)
-                    P = N.dimfilters{d}.P;
-                    if ~isempty(P)
-                        P.index = ijk(d);
-                    end
-                end
-            end
-            
+
         end
         function manualmovecross(N,il)
             if ~strcmp(get(N.hf,'selectiontype'),'normal')
@@ -299,6 +316,16 @@ classdef displaynavigation < xplr.graphnode
                         error('wrong il')
                 end
                 
+                % update the point filters
+                ijk = N.graph.graph2slice(N.crossCenter,true);
+
+                for d = 1:length(ijk)
+                    F = N.dimfilters{d};
+                    if ~isempty(F)
+                       F.P.index = ijk(d);
+                    end
+                end
+                
                 %if do1d
                 %if il~=1
                 
@@ -320,9 +347,293 @@ classdef displaynavigation < xplr.graphnode
             end
             
         end
+        
+        function manualclickmovecross(N,point)
+            
+            
+            % update the point filters
+            ijk = N.graph.graph2slice(point,true);
+            zoomRealValues = N.graph.getZoom();
+            clickIsOutofDisplay = false;
+            
+            for dimension = 1:length(ijk)                
+                if ijk(dimension)<zoomRealValues(1,dimension) || ijk(dimension)>zoomRealValues(2,dimension)
+                    clickIsOutofDisplay = true;
+                end
+            end
+            
+            if(~clickIsOutofDisplay)
+                N.crossCenter = point;
+                for d = 1:length(ijk)
+                    F = N.dimfilters{d};
+                    if ~isempty(F)
+                        F.P.index = ijk(d);
+                    end
+                end
+            end
+        end
+        
         function removecross(N)
             delete(N.cross)
-        end        
+        end      
+        function update_cross_visibility(N)
+           
+            % if the slice has only one value in the dimension
+            % displayed in abscisse then hide vertical bar
+            x_singleton = true;
+            x_isOutOfDisplay = false;
+            ijk = getPointIndexPosition(N);
+            zoom = N.graph.getZoom();
+            
+            for dimension = N.D.org.x
+                dimension_isSingleton = (N.D.V.slice.header(dimension).n == 1);
+                if ~dimension_isSingleton, x_singleton = false; end
+                
+                % for all dimensions in org.x, check if the crossCenter is
+                % out of the display of this dimension. If the crossCenter
+                % is out of display, the vertical bar will be hidden
+                if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
+                    x_isOutOfDisplay = true;
+                end
+            end
+            
+            % Hide the vertical if all dimensions on x are singletons or if
+            % crossCenter is out of display on one dimension on x
+            set(N.cross(1),'Visible',fn_switch(~(x_singleton|x_isOutOfDisplay)));
+            
+            % same things for horizontal bar
+            y_singleton = true;
+            y_isOutOfDisplay = false;
+            for dimension = N.D.org.y
+                dimension_isSingleton = (N.D.V.slice.header(dimension).n == 1);
+                if ~dimension_isSingleton, y_singleton = false; end
+
+                if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
+                    y_isOutOfDisplay = true;
+                end
+            end
+
+            set(N.cross(2),'Visible',fn_switch(~(y_singleton|y_isOutOfDisplay)));
+            
+            updateCrossCenterVisibility(N);
+        end
+    end
+    
+    % Complex selection
+    methods
+        function displayselection(N)
+            disp(['selection in dimensions ' num2str(N.selectiondim) ':'])
+            disp(N.selection)
+            disp(' ')
+            N.selections(1).ConvertPoly2D;
+        end
+        function displayselectionold(D,flag,ind,value)
+%             fn4D_dbstack
+%             if isempty(D.selshow)
+%                 delete(findobj(D.ha,'tag','ActDispIm_Sel'))
+%                 return
+%             end
+            
+            % some params
+%             si = D.SI;
+%             seldimsnum = D.seldims-'w';
+%             selectionmarks = si.selection.getselset(seldimsnum).singleset;
+%             nsel = length(selectionmarks);
+            
+            % display set...
+%             if fn_ismemberstr(flag,{'all','reset'})
+%                 'findobj' allows a cleanup when some objects were not
+%                 removed correctly
+%                 delete(findobj(D.ha,'tag','ActDispIm_Sel'))
+%                 D.seldisp = cell(1,nsel);
+%                 isel = 1;
+%                 for k=1:nsel
+                     displayonesel(D,k,'new',isel);
+%                     if selectionmarks(k).active, isel = isel+1; end
+%                 end
+%                 return
+%             end
+            
+            % or display update
+%             if ~isempty(D.curselprev) && ~isempty(strfind(D.selshow,'number'))
+%                 set(D.seldisp{D.curselprev}(1),'color','w')
+%             end
+%             switch flag
+%                 case 'new'
+%                     isel = cumsum([selectionmarks.active]);
+%                     for idx=ind
+%                         displayonesel(D,idx,'new',isel(idx)); 
+%                     end
+%                 case {'add','change','affinity'}
+%                     % might be several indices
+%                     for k=ind, displayonesel(D,k,'pos'); end
+%                 case 'remove'
+%                     delete([D.seldisp{ind}])
+%                     D.seldisp(ind) = [];
+%                     nsel = length(D.seldisp);
+%                     if nsel==0, return, end
+%                     updateselorderdisplay(D)
+%                 case 'active'
+%                     % might be several indices
+%                     for k=ind, displayonesel(D,k,'active'), end
+%                     updateselorderdisplay(D)
+%                 case 'reorder'
+%                     perm = value;
+%                     D.seldisp = D.seldisp(perm);
+%                     updateselorderdisplay(D)
+%                 case 'indices'
+%                     % nothing to do
+%             end
+%             if ~isempty(D.currentselection) && ~isempty(strfind(D.selshow,'number'))
+%                 set(D.seldisp{D.currentselection}(1),'color','r')
+%             end
+        end   
+        function displayonesel(D,k,flag,varargin)
+            % function displayonesel(D,k,'new',isel)
+            % function displayonesel(D,k,'pos')
+            % function displayonesel(D,k,'isel',isel)
+            % function displayonesel(D,k,'active')
+            % function displayonesel(D,k,'edit')
+            
+            % flags
+%             [flagnew flagpos flagisel flagactive flagedit] = ...
+%                 fn_flags('new','pos','isel','active','edit',flag);
+%                 
+%             % Values
+%             seldimsnum = D.seldims-'w';
+%             selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
+%             selij = selectionmarks(k);
+%             if flagnew || flagedit || flagpos
+%                 if isscalar(D.seldims)
+%                     selij2 = convert(selij,'line1D');
+%                     if D.SI.nd == 1
+%                         sel = IJ2AX(D.SI,selij2);
+%                         poly = [sel.poly];
+%                         points = {poly.points};
+%                         orthsiz = D.oldaxis(2,:);
+%                     else
+%                         % i can't do better than by hand!!!
+%                         points = {selij2.poly.points};
+%                         npart = length(points);
+%                         for i=1:npart
+%                             points{i} = points{i}*D.SI.grid(seldimsnum,1) + D.SI.grid(seldimsnum,2);
+%                         end
+%                         orthdim = 3-seldimsnum;
+%                         orthsiz = [.5 D.SI.sizes(orthdim)+.5]*D.SI.grid(orthdim,1) + D.SI.grid(orthdim,2);
+%                     end
+%                     npart = length(points);
+%                     for i=1:npart
+%                         % line
+%                         points{i} = [points{i}([1 1 2 2 1]) NaN; orthsiz([1 2 2 1 1]) NaN];
+%                     end
+%                     polygon = [points{:}];
+%                 else
+                    %sel = IJ2AX(D.SI,selij);
+                    selij2 = convert(selij,'poly2D');
+                    %sel2 = IJ2AX(D.SI,selij2);
+                   % polygon = sel2.poly.points;
+%                 end
+%                 center = [nanmean(polygon(1,:)) nanmean(polygon(2,:))];
+%             end
+%             if flagnew || flagedit || flagactive || flagisel
+%                 if selij.active
+%                     colors = fn_colorset;
+%                     col = colors(mod(k-1,size(colors,1))+1,:);
+%                     linestyle = '-';
+%                     visible = 'on';
+%                 else
+%                     col = 'k';
+%                     linestyle = '--';
+%                     visible = 'off';
+%                 end
+%             end
+%             if flagnew || flagisel
+%                 isel = varargin{1};
+%                 str = num2str(isel);
+%             end
+%             
+%             % Create / update objects
+%             if flagnew
+%                 hl = [];
+%                 if strfind(D.selshow,'number')
+%                     hl(end+1) = text(center(1),center(2),str, ...
+%                         'Parent',D.ha,'color','w','visible',visible, ...
+%                         'horizontalalignment','center','verticalalignment','middle', ...
+%                         'color',fn_switch(k==D.currentselection,'r','w'));
+%                 end
+%                 if strfind(D.selshow,'shape')
+%                     hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',D.ha, ...
+%                         'Color',col,'LineStyle',linestyle, ...
+%                         'UserData',k); % set user data because this line will be used when in seledit mode
+%                 end
+%                 if strfind(D.selshow,'cross')
+%                     hl(end+1) = line(center(1),center(2),'Parent',D.ha, ...
+%                         'Color',col,'LineStyle','none', ...
+%                         'Marker','+','MarkerSize',4);
+%                 end
+%                 set(hl,'tag','ActDispIm_Sel','HitTest','off')
+%                 D.seldisp{k} = hl;
+%             else
+%                 hl = D.seldisp{k};
+%                 i=1; ht=[]; hs=[]; hc=[];
+%                 if strfind(D.selshow,'number'), ht=hl(i); i=i+1; end
+%                 if strfind(D.selshow,'shape'),  hs=hl(i); i=i+1; end
+%                 if strfind(D.selshow,'cross'),  hc=hl(i); i=i+1; end
+%                 he = hl(i:end);
+%                 if flagpos
+%                     set(ht,'position',center)
+%                     set(hs,'xdata',polygon(1,:),'ydata',polygon(2,:))
+%                     set(hc,'xdata',center(1),'ydata',center(2))
+%                 elseif flagisel
+%                     set(ht,'string',str)
+%                     set([hs hc he],'color',col)
+%                 elseif flagactive
+%                     set(hs,'color',col,'linestyle',linestyle)
+%                     set([ht hc he],'visible',visible)
+%                 end
+%             end
+%             
+%             % Advanced selection mode (in this mode, D.seldisp = [ht hl he]
+%             % because D.selshow = 'number+shape')
+%             if ~D.seleditmode || flagisel || flagactive, return, end 
+%             desc = [];
+%             switch selectionmarks(k).type
+%                 case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
+%                     polymark = polygon;
+%                 case 'rect2D'
+%                     polymark = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
+%                     desc = [sel.poly.points' sel.poly.vectors'];
+%                 case {'ellipse2D' 'ring2D'}
+%                     c = sel.poly.points;
+%                     u = sel.poly.vectors;
+%                     e = sel.poly.logic;
+%                     polymark = [c-u c+u];
+%                     desc = {c u e};
+%                 otherwise
+%                     error programming
+%             end
+%             if flagnew || flagedit
+%                 % right now, hl has 2 elements: number and shape
+%                 set(hl(2),'hittest','on','buttondownfcn', ...
+%                     @(h,evnt)seleditaction(D,get(h,'userdata'),'line'))
+%                 hl(3) = line(polymark(1,:),polymark(2,:),'Parent',D.ha, ...
+%                     'Color',col,'tag','ActDispIm_Sel', ...
+%                     'LineStyle','none','marker','.', ...
+%                     'UserData',k,'hittest','on','buttondownfcn',...
+%                     @(h,evnt)seleditaction(D,get(h,'userdata'),'point'));
+%                 if ~isempty(desc),
+%                     setappdata(hl(3),'description',desc)
+%                 end
+%                 D.seldisp{k} = hl;
+%             else
+%                 set(hl(3),'xdata',polymark(1,:),'ydata',polymark(2,:));
+%                 if ~isempty(desc)
+%                     setappdata(hl(3),'description',desc)
+%                 end
+%             end
+%         end
+%         
+        end
     end
     
     % Slider and scroll wheel callbacks: change zoom
@@ -345,14 +656,19 @@ classdef displaynavigation < xplr.graphnode
             origin = row(N.graph.graph2slice()); % current point in data coordinates
             zoomfactor = 1.5^nscroll;
             dim = [N.D.activedim.x N.D.activedim.y];
-            if nscroll<0 && ~any([N.D.org.xy N.D.org.yx])
-                % it does not make sense to zoom-in in a dimensions which
-                % does not fill its available space due to aspect ratio
-                % constraints
-                dim(N.graph.filling(dim)<1) = [];
-            end
             if isempty(dim), return, end
-            zoom = N.graph.getZoom(dim); %,'effective');
+            % This commented code had been put to replace the line below,
+            % but it seems that the effect is less intuitive. Let's go back
+            % to the previous code and see if we get errors or unintuitive
+            % behaviors to decide what to do. (TD 12/11/2019)
+            %             if nscroll<0 && ~any([N.D.org.xy N.D.org.yx])
+            %                 % it does not make sense to zoom-in in a dimensions which
+            %                 % does not fill its available space due to aspect ratio
+            %                 % constraints
+            %                 dim(N.graph.filling(dim)<1) = [];
+            %             end
+            %             zoom = N.graph.getZoom(dim); %,'effective');
+            zoom = N.graph.getZoom(dim,'effective');
             newzoom = fn_add(origin(dim), fn_mult(zoomfactor,fn_subtract(zoom,origin(dim))));
             %fprintf('%.2f -> %.2f\n',diff(zoom),diff(newzoom))
             N.D.zoomslicer.setZoom(dim,newzoom)
@@ -388,5 +704,21 @@ classdef displaynavigation < xplr.graphnode
             N.addListener(Z,'ChangedZoom',@(u,e)set(obj,'value',Z.zoomvalue));
         end
     end
+    
+    methods
+       
+        % check if one of the dimension of the cross is hidden to hide the
+        % cross center as well
+        function updateCrossCenterVisibility(N)
+            if fn_switch(get(N.cross(1), 'Visible')) && fn_switch(get(N.cross(2), 'Visible'))
+                set(N.cross(3), 'Visible', 'on')
+            else
+                set(N.cross(3), 'Visible', 'off')
+            end
+        end
+    end
+    
+    
+    
     
 end
