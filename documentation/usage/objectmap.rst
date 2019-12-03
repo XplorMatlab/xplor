@@ -2,11 +2,9 @@ Object maps
 ****************************
 
 .. image:: map/objectmap.jpg
-
 Diagram1:
 
 .. image:: map/xplorDiagram-01.jpg
-
 Diagram2:
 
 .. image:: map/xplorDiagram-02.jpg

@@ -442,10 +442,10 @@ classdef displaygraph < xplr.graphnode
             if isvector(ijk), ijk = ijk(:); end
             
             % "exterior" dimensions must be rounded
-            doround = true(1, length(ijk));
+            doround = true(1, G.D.nd);
             if ~isempty(G.org.x), doround(G.org.x(1)) = false; end
             if ~isempty(G.org.y), doround(G.org.y(1)) = false; end
-            ijk(doround) = round(ijk(doround));
+            ijk(doround,:) = round(ijk(doround,:));
             
             x = sum(fn_add(st.xoffset(:), fn_mult(ijk(G.org.x,:),st.xstep(:))),1);
             y = sum(fn_add(st.yoffset(:), fn_mult(ijk(G.org.y,:),st.ystep(:))),1);
@@ -522,7 +522,7 @@ classdef displaygraph < xplr.graphnode
             [idxoffset, bin] = G.getZoom('off&bin');
             zijk = fn_subtract(fn_div(ijk+.5,bin(:))-.5, idxoffset(:));
             
-            % then convert to graphh coordinates
+            % then convert to graph coordinates
             xy = zslice2graph(G,zijk);
         end
         function ijk = graph2slice(G,xy,invertible)

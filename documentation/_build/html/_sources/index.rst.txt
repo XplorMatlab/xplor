@@ -6,7 +6,14 @@
 Welcome to xplor-matlab's documentation!
 ========================================
 
+Xplor is an opensource toolbox to visualise easily N dimensional data.
 
+.. image:: usage/image/presentation-filter01.png
+.. image:: usage/image/presentation-filter02.png
+
+It started as a project for neuroscience at CNRS (French National Center for Scientific Research), however it can be used for any type of data as shown in the examples below.
+
+.. image:: usage/image/presentation-example01.png
 
 Index:
 ++++++
@@ -17,14 +24,9 @@ Index:
    usage/installation
    usage/quickstart
    
-   usage/objectmap
-
    usage/xdata
    usage/bank
-
-
-
-
+   usage/objectmap
 
 Indices and tables
 ==================

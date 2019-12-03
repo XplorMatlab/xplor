@@ -1,11 +1,15 @@
 Data container: xdata
 ****************************
 
-.. image:: map/xplorDiagram-02.jpg
+.. raw:: html
+
+    <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph="{&quot;highlight&quot;:&quot;#0000ff&quot;,&quot;nav&quot;:true,&quot;resize&quot;:true,&quot;toolbar&quot;:&quot;zoom layers lightbox&quot;,&quot;edit&quot;:&quot;_blank&quot;,&quot;xml&quot;:&quot;&lt;mxfile modified=\&quot;2019-11-19T14:38:31.075Z\&quot; host=\&quot;www.draw.io\&quot; agent=\&quot;Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:70.0) Gecko/20100101 Firefox/70.0\&quot; etag=\&quot;cf2JYLjVxQFVNlQ4KvOp\&quot; version=\&quot;12.2.7\&quot; type=\&quot;device\&quot; pages=\&quot;1\&quot;&gt;&lt;diagram id=\&quot;DjvJdhqhBUKX9mnW-fpU\&quot; name=\&quot;Page-1\&quot;&gt;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&lt;/diagram&gt;&lt;/mxfile&gt;&quot;}"></div>
+    <script type="text/javascript" src="https://www.draw.io/js/viewer.min.js"></script>
 
 .. automodule:: +xplr
 
 .. autoclass:: xdata
     :show-inheritance:
     :members: 
+
 

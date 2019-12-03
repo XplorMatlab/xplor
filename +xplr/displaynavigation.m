@@ -15,6 +15,7 @@ classdef displaynavigation < xplr.graphnode
     properties
         selection = [];         % list of selectionND object
         selectiondim = [];      % dimensions to which these selections apply
+        selectiondisplay        % displays of selectionND 
     end
     
     % Constructor
@@ -46,6 +47,7 @@ classdef displaynavigation < xplr.graphnode
             % scroll wheel zooming
             fn_scrollwheelregister(D.ha,@(n)N.Scroll(n))
         end
+        
         function init_buttons(N)
         % function init_buttons(N)
         % 3 buttons that control clipping
@@ -123,7 +125,7 @@ classdef displaynavigation < xplr.graphnode
                     %e = thr*exp(e/thr-1); % goes from thr for e=thr to 0 for e=-Inf
                     e = thr^2 / (2*thr-e); % goes from thr for e=thr to 0 for e=-Inf
                     clip = mean(clip) + [-.5 .5]*e;
-                end
+                end     
                 % update display
                 set(ht,'string',sprintf('min: %.3f,  max: %.3f',clip(1),clip(2)))
                 N.D.setClip(clip)
@@ -241,8 +243,7 @@ classdef displaynavigation < xplr.graphnode
             
             ijk(d) = P.index0;
             N.crossCenter = N.graph.slice2graph(ijk);
-            disp('ijk')
-            disp(ijk)
+
             update_cross_visibility(N);
         end
         function ijk = getPointIndexPosition(N)
@@ -349,20 +350,10 @@ classdef displaynavigation < xplr.graphnode
         end
         
         function manualclickmovecross(N,point)
-            
-            
-            % update the point filters
+
             ijk = N.graph.graph2slice(point,true);
-            zoomRealValues = N.graph.getZoom();
-            clickIsOutofDisplay = false;
-            
-            for dimension = 1:length(ijk)                
-                if ijk(dimension)<zoomRealValues(1,dimension) || ijk(dimension)>zoomRealValues(2,dimension)
-                    clickIsOutofDisplay = true;
-                end
-            end
-            
-            if(~clickIsOutofDisplay)
+            % update the point filters
+            if(~isOutOfDisplay(N,point))
                 N.crossCenter = point;
                 for d = 1:length(ijk)
                     F = N.dimfilters{d};
@@ -425,70 +416,22 @@ classdef displaynavigation < xplr.graphnode
             disp(['selection in dimensions ' num2str(N.selectiondim) ':'])
             disp(N.selection)
             disp(' ')
-            N.selections(1).ConvertPoly2D;
+
+            %N.selection(1).;
+            if ~isempty(N.selectiondisplay)
+                deleteValid(N.selectiondisplay{:})
+
+            end
+            
+            for i = 1:length(N.selection)
+                N.displayonesel(i,'new',i);
+            end
+                
         end
-        function displayselectionold(D,flag,ind,value)
-%             fn4D_dbstack
-%             if isempty(D.selshow)
-%                 delete(findobj(D.ha,'tag','ActDispIm_Sel'))
-%                 return
-%             end
-            
-            % some params
-%             si = D.SI;
-%             seldimsnum = D.seldims-'w';
-%             selectionmarks = si.selection.getselset(seldimsnum).singleset;
-%             nsel = length(selectionmarks);
-            
-            % display set...
-%             if fn_ismemberstr(flag,{'all','reset'})
-%                 'findobj' allows a cleanup when some objects were not
-%                 removed correctly
-%                 delete(findobj(D.ha,'tag','ActDispIm_Sel'))
-%                 D.seldisp = cell(1,nsel);
-%                 isel = 1;
-%                 for k=1:nsel
-                     displayonesel(D,k,'new',isel);
-%                     if selectionmarks(k).active, isel = isel+1; end
-%                 end
-%                 return
-%             end
-            
-            % or display update
-%             if ~isempty(D.curselprev) && ~isempty(strfind(D.selshow,'number'))
-%                 set(D.seldisp{D.curselprev}(1),'color','w')
-%             end
-%             switch flag
-%                 case 'new'
-%                     isel = cumsum([selectionmarks.active]);
-%                     for idx=ind
-%                         displayonesel(D,idx,'new',isel(idx)); 
-%                     end
-%                 case {'add','change','affinity'}
-%                     % might be several indices
-%                     for k=ind, displayonesel(D,k,'pos'); end
-%                 case 'remove'
-%                     delete([D.seldisp{ind}])
-%                     D.seldisp(ind) = [];
-%                     nsel = length(D.seldisp);
-%                     if nsel==0, return, end
-%                     updateselorderdisplay(D)
-%                 case 'active'
-%                     % might be several indices
-%                     for k=ind, displayonesel(D,k,'active'), end
-%                     updateselorderdisplay(D)
-%                 case 'reorder'
-%                     perm = value;
-%                     D.seldisp = D.seldisp(perm);
-%                     updateselorderdisplay(D)
-%                 case 'indices'
-%                     % nothing to do
-%             end
-%             if ~isempty(D.currentselection) && ~isempty(strfind(D.selshow,'number'))
-%                 set(D.seldisp{D.currentselection}(1),'color','r')
-%             end
-        end   
-        function displayonesel(D,k,flag,varargin)
+        
+
+        
+        function displayonesel(N,k,flag,varargin)
             % function displayonesel(D,k,'new',isel)
             % function displayonesel(D,k,'pos')
             % function displayonesel(D,k,'isel',isel)
@@ -496,145 +439,217 @@ classdef displaynavigation < xplr.graphnode
             % function displayonesel(D,k,'edit')
             
             % flags
-%             [flagnew flagpos flagisel flagactive flagedit] = ...
-%                 fn_flags('new','pos','isel','active','edit',flag);
-%                 
-%             % Values
-%             seldimsnum = D.seldims-'w';
-%             selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
-%             selij = selectionmarks(k);
-%             if flagnew || flagedit || flagpos
-%                 if isscalar(D.seldims)
-%                     selij2 = convert(selij,'line1D');
-%                     if D.SI.nd == 1
-%                         sel = IJ2AX(D.SI,selij2);
-%                         poly = [sel.poly];
-%                         points = {poly.points};
-%                         orthsiz = D.oldaxis(2,:);
-%                     else
-%                         % i can't do better than by hand!!!
-%                         points = {selij2.poly.points};
-%                         npart = length(points);
-%                         for i=1:npart
-%                             points{i} = points{i}*D.SI.grid(seldimsnum,1) + D.SI.grid(seldimsnum,2);
-%                         end
-%                         orthdim = 3-seldimsnum;
-%                         orthsiz = [.5 D.SI.sizes(orthdim)+.5]*D.SI.grid(orthdim,1) + D.SI.grid(orthdim,2);
-%                     end
-%                     npart = length(points);
-%                     for i=1:npart
-%                         % line
-%                         points{i} = [points{i}([1 1 2 2 1]) NaN; orthsiz([1 2 2 1 1]) NaN];
-%                     end
-%                     polygon = [points{:}];
-%                 else
-                    %sel = IJ2AX(D.SI,selij);
+            [flagnew, flagpos, flagisel, flagactive, flagedit] = ...
+                fn_flags('new','pos','isel','active','edit',flag);
+                
+            % Values
+            % seldimsnum = D.seldims-'w';
+            seldimsnum = N.selectiondim;
+            %selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
+            %selij = selectionmarks(k);
+            selij = N.selection(k);
+            if flagnew || flagedit || flagpos
+                % if this selection apply to only one dimension
+                if isscalar(seldimsnum)
+                    selij2 = convert(selij,'line1D');
+                    % if there is only one dimension
+                    if D.SI.nd == 1
+                        sel = IJ2AX(D.SI,selij2);
+                        poly = [sel.poly];
+                        points = {poly.points};
+                        orthsiz = D.oldaxis(2,:);
+                    else
+                        % i can't do better than by hand!!!
+                        points = {selij2.poly.points};
+                        npart = length(points);
+                        for i=1:npart
+                            points{i} = points{i}*D.SI.grid(seldimsnum,1) + D.SI.grid(seldimsnum,2);
+                        end
+                        orthdim = 3-seldimsnum;
+                        orthsiz = [.5 D.SI.sizes(orthdim)+.5]*D.SI.grid(orthdim,1) + D.SI.grid(orthdim,2);
+                    end
+                    npart = length(points);
+                    for i=1:npart
+                        % line
+                        points{i} = [points{i}([1 1 2 2 1]) NaN; orthsiz([1 2 2 1 1]) NaN];
+                    end
+                    polygon = [points{:}];
+                else
+                    % if the selection apply to more than one dimension:
+                    
+%                     sel = IJ2AX(D.SI,selij);
+%                     selij2 = convert(selij,'poly2D');
+%                     sel2 = IJ2AX(D.SI,selij2);
+%                    polygon = sel2.poly.points;
+                   
                     selij2 = convert(selij,'poly2D');
-                    %sel2 = IJ2AX(D.SI,selij2);
-                   % polygon = sel2.poly.points;
-%                 end
-%                 center = [nanmean(polygon(1,:)) nanmean(polygon(2,:))];
-%             end
-%             if flagnew || flagedit || flagactive || flagisel
-%                 if selij.active
-%                     colors = fn_colorset;
-%                     col = colors(mod(k-1,size(colors,1))+1,:);
-%                     linestyle = '-';
-%                     visible = 'on';
-%                 else
-%                     col = 'k';
-%                     linestyle = '--';
-%                     visible = 'off';
-%                 end
-%             end
-%             if flagnew || flagisel
-%                 isel = varargin{1};
-%                 str = num2str(isel);
-%             end
-%             
-%             % Create / update objects
-%             if flagnew
-%                 hl = [];
-%                 if strfind(D.selshow,'number')
-%                     hl(end+1) = text(center(1),center(2),str, ...
-%                         'Parent',D.ha,'color','w','visible',visible, ...
-%                         'horizontalalignment','center','verticalalignment','middle', ...
-%                         'color',fn_switch(k==D.currentselection,'r','w'));
-%                 end
-%                 if strfind(D.selshow,'shape')
-%                     hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',D.ha, ...
-%                         'Color',col,'LineStyle',linestyle, ...
-%                         'UserData',k); % set user data because this line will be used when in seledit mode
-%                 end
-%                 if strfind(D.selshow,'cross')
-%                     hl(end+1) = line(center(1),center(2),'Parent',D.ha, ...
-%                         'Color',col,'LineStyle','none', ...
-%                         'Marker','+','MarkerSize',4);
-%                 end
-%                 set(hl,'tag','ActDispIm_Sel','HitTest','off')
-%                 D.seldisp{k} = hl;
-%             else
-%                 hl = D.seldisp{k};
-%                 i=1; ht=[]; hs=[]; hc=[];
+%                     
+%                     polygon=double.empty(2,0);
+%                     for point = selij2.poly.points
+%                        pointSlice = cat(1,point,ones(3,1));
+%                        pointGraph = N.graph.slice2graph(pointSlice);
+%                        polygon = cat(2,polygon,pointGraph);
+%                     end
+
+
+                    % coordinates of the polygon inside a vignette (in index
+                    % coordinate system)
+                    points_vignette = selij2.poly.points;
+                    np = size(points_vignette, 2);
+                    
+                    % replace points that are outside of vignette by NaNs
+                    zoomSliceValues = N.graph.getZoom(N.selectiondim);
+                    
+
+                    % set the ouput to zeros (they will be set to one if one of the
+                    % dimension if it's out of display)
+                    polygonIsOutOfDisplay = zeros(1,size(points_vignette,2));
+
+                    for dimension = 1:size(zoomSliceValues,1)     
+                       % is equal to one if is out of limits of the zoom or if the
+                       % previous value was already 1
+                       polygonIsOutOfDisplay = points_vignette(dimension,:)<zoomSliceValues(1,dimension) | points_vignette(dimension,:)>zoomSliceValues(2,dimension) | polygonIsOutOfDisplay;
+                    end
+                    
+                    % coordinates in the full nd index coordinate system
+                    points = ones(N.D.nd, np);
+                    points(N.selectiondim, :) = points_vignette;
+ 
+                    % convert to display coordinate system
+                    polygon = N.graph.slice2graph(points);
+
+                    
+                    % if column n of polygonIsOutOfDisplay is equal to 1 it
+                    % means the point in column n of polygon is out of
+                    % display so replace all values on that column by Nan
+                    % to don't be drawn
+                    polygon(:,polygonIsOutOfDisplay) = NaN;
+                    
+                end
+                center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
+            end
+            if flagnew || flagedit || flagactive || flagisel
+                if selij.active
+                    colors = fn_colorset;
+                    col = colors(mod(k-1,size(colors,1))+1,:);
+                    linestyle = '-';
+                    visible = 'on';
+                else
+                    col = 'k';
+                    linestyle = '--';
+                    visible = 'off';
+                end
+            end
+            if flagnew || flagisel
+                isel = varargin{1};
+                str = num2str(isel);
+            end
+            
+            % Create / update objects
+            if flagnew
+                
+                hl = [];
+                %if strfind(D.selshow,'number')
+                if true
+                    hl(end+1) = text(center(1),center(2),str, ...
+                        'Parent',N.D.ha,'color','w','visible',visible, ...
+                        'horizontalalignment','center','verticalalignment','middle', ...
+                        'color','w');
+                    %'color',fn_switch(k==D.currentselection,'r','w'));
+                end
+                %if strfind(D.selshow,'shape')
+                if true
+                    hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
+                        'Color',col,'LineStyle',linestyle, ...
+                        'UserData',k); % set user data because this line will be used when in seledit mode
+                end
+                %if strfind(D.selshow,'cross')
+                if false
+                    hl(end+1) = line(center(1),center(2),'Parent',N.D.ha, ...
+                        'Color',col,'LineStyle','none', ...
+                        'Marker','+','MarkerSize',4);
+                end
+                set(hl,'tag','ActDispIm_Sel','HitTest','off')
+                
+                if k <= length(N.selectiondisplay)
+                    if isgraphics(N.selectiondisplay{k})
+                        delete(N.selectiondisplay{k});
+                    end
+                end
+                
+                N.selectiondisplay{k} = hl;
+
+                
+                
+            else
+                hl = N.selectiondisplay{k};
+                i=1; ht=[]; hs=[]; hc=[];
 %                 if strfind(D.selshow,'number'), ht=hl(i); i=i+1; end
 %                 if strfind(D.selshow,'shape'),  hs=hl(i); i=i+1; end
 %                 if strfind(D.selshow,'cross'),  hc=hl(i); i=i+1; end
-%                 he = hl(i:end);
-%                 if flagpos
-%                     set(ht,'position',center)
-%                     set(hs,'xdata',polygon(1,:),'ydata',polygon(2,:))
-%                     set(hc,'xdata',center(1),'ydata',center(2))
-%                 elseif flagisel
-%                     set(ht,'string',str)
-%                     set([hs hc he],'color',col)
-%                 elseif flagactive
-%                     set(hs,'color',col,'linestyle',linestyle)
-%                     set([ht hc he],'visible',visible)
-%                 end
-%             end
-%             
-%             % Advanced selection mode (in this mode, D.seldisp = [ht hl he]
-%             % because D.selshow = 'number+shape')
-%             if ~D.seleditmode || flagisel || flagactive, return, end 
-%             desc = [];
-%             switch selectionmarks(k).type
-%                 case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
-%                     polymark = polygon;
-%                 case 'rect2D'
-%                     polymark = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
-%                     desc = [sel.poly.points' sel.poly.vectors'];
-%                 case {'ellipse2D' 'ring2D'}
-%                     c = sel.poly.points;
-%                     u = sel.poly.vectors;
-%                     e = sel.poly.logic;
-%                     polymark = [c-u c+u];
-%                     desc = {c u e};
-%                 otherwise
-%                     error programming
-%             end
-%             if flagnew || flagedit
-%                 % right now, hl has 2 elements: number and shape
-%                 set(hl(2),'hittest','on','buttondownfcn', ...
-%                     @(h,evnt)seleditaction(D,get(h,'userdata'),'line'))
-%                 hl(3) = line(polymark(1,:),polymark(2,:),'Parent',D.ha, ...
-%                     'Color',col,'tag','ActDispIm_Sel', ...
-%                     'LineStyle','none','marker','.', ...
-%                     'UserData',k,'hittest','on','buttondownfcn',...
-%                     @(h,evnt)seleditaction(D,get(h,'userdata'),'point'));
-%                 if ~isempty(desc),
-%                     setappdata(hl(3),'description',desc)
-%                 end
-%                 D.seldisp{k} = hl;
-%             else
-%                 set(hl(3),'xdata',polymark(1,:),'ydata',polymark(2,:));
-%                 if ~isempty(desc)
-%                     setappdata(hl(3),'description',desc)
-%                 end
-%             end
-%         end
-%         
+                if true, ht=hl(i); i=i+1; end
+                if true,  hs=hl(i); i=i+1; end
+                if false,  hc=hl(i); i=i+1; end
+                he = hl(i:end);
+                if flagpos
+                    set(ht,'position',center)
+                    set(hs,'xdata',polygon(1,:),'ydata',polygon(2,:))
+                    set(hc,'xdata',center(1),'ydata',center(2))
+                elseif flagisel
+                    set(ht,'string',str)
+                    set([hs hc he],'color',col)
+                elseif flagactive
+                    set(hs,'color',col,'linestyle',linestyle)
+                    set([ht hc he],'visible',visible)
+                end
+            end
+            
+            %             % Advanced selection mode (in this mode, D.seldisp = [ht hl he]
+            %             % because D.selshow = 'number+shape')
+            %             if ~D.seleditmode || flagisel || flagactive, return, end
+            %             desc = [];
+            %             switch selectionmarks(k).type
+            %                 case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
+            %                     polymark = polygon;
+            %                 case 'rect2D'
+            %                     polymark = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
+            %                     desc = [sel.poly.points' sel.poly.vectors'];
+            %                 case {'ellipse2D' 'ring2D'}
+            %                     c = sel.poly.points;
+            %                     u = sel.poly.vectors;
+            %                     e = sel.poly.logic;
+            %                     polymark = [c-u c+u];
+            %                     desc = {c u e};
+            %                 otherwise
+            %                     error programming
+            %             end
+            %             if flagnew || flagedit
+            %                 % right now, hl has 2 elements: number and shape
+            %                 set(hl(2),'hittest','on','buttondownfcn', ...
+            %                     @(h,evnt)seleditaction(D,get(h,'userdata'),'line'))
+            %                 hl(3) = line(polymark(1,:),polymark(2,:),'Parent',D.ha, ...
+            %                     'Color',col,'tag','ActDispIm_Sel', ...
+            %                     'LineStyle','none','marker','.', ...
+            %                     'UserData',k,'hittest','on','buttondownfcn',...
+            %                     @(h,evnt)seleditaction(D,get(h,'userdata'),'point'));
+            %                 if ~isempty(desc),
+            %                     setappdata(hl(3),'description',desc)
+            %                 end
+            %                 D.seldisp{k} = hl;
+            %             else
+            %                 set(hl(3),'xdata',polymark(1,:),'ydata',polymark(2,:));
+            %                 if ~isempty(desc)
+            %                     setappdata(hl(3),'description',desc)
+            %                 end
+            %             end
         end
-    end
+        
+        function deletedisplayonesel(N,k)
+            delete(N.selectiondisplay{k});
+        end
+        
+   end
+
     
     % Slider and scroll wheel callbacks: change zoom
     methods
@@ -674,7 +689,8 @@ classdef displaynavigation < xplr.graphnode
             N.D.zoomslicer.setZoom(dim,newzoom)
         end
     end
-    
+
+        
     % Update upon changes in active dim and zoom
     methods
         function connectZoomFilter(N,f)
@@ -707,7 +723,7 @@ classdef displaynavigation < xplr.graphnode
     
     methods
        
-        % check if one of the dimension of the cross is hidden to hide the
+        %  if one of the dimension of the cross is hidden, hide the
         % cross center as well
         function updateCrossCenterVisibility(N)
             if fn_switch(get(N.cross(1), 'Visible')) && fn_switch(get(N.cross(2), 'Visible'))
@@ -716,6 +732,31 @@ classdef displaynavigation < xplr.graphnode
                 set(N.cross(3), 'Visible', 'off')
             end
         end
+        
+        
+        % return true if point (graph coordinates) is part of the slice
+        % data displayed by converting the point to slice coordinates and
+        % test if its between minimal and maximal values for all dimensions
+        %
+        % @param point: 2xn double 
+        % @return output: 1xn boolean
+        function output = isOutOfDisplay(N, point)
+            % get slice values of the point
+            ijk = N.graph.graph2slice(point,true);
+            % get the min and max slice values of the data displayed
+            zoomSliceValues = N.graph.getZoom();
+            
+            % set the ouput to zeros (they will be set to one if one of the
+            % dimension if it's out of display)
+            output = zeros(1,size(point,2));
+            
+            for dimension = 1:size(ijk,1)     
+               % is equal to one if is out of limits of the zoom or if the
+               % previous value was already 1
+               output = ijk(dimension,:)<zoomSliceValues(1,dimension) | ijk(dimension,:)>zoomSliceValues(2,dimension) | output;
+            end
+        end
+        
     end
     
     
