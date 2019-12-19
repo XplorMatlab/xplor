@@ -601,12 +601,27 @@ classdef displaygraph < xplr.graphnode
             % Output:
             % - ijk         index coordinates in the slice data
             
+         % Parse options
+            p = inputParser;
+            p.addParameter('invertible',false,@islogical)
+            p.addParameter('subdim',1:G.D.nd,@isnumeric)
+            p.addParameter('ijk0',[],@isnumeric)
+            p.addParameter('mode','point',@(s)ismember(s,{'point', 'vector'}))
+            parse(p,varargin{:})
+            s = p.Results;
+            [invertible, subdim, ijk0, mode] = ...
+                deal(s.invertible, s.subdim, s.ijk0, s.mode);
+            
             % coordinates in zoomed slice
             zijk = graph2zslice(G,xy,varargin{:});
             
             % convert to before zooming
-            [idxoffset, bin] = G.getZoom('off&bin');
-            ijk = fn_add(idxoffset(:), .5+fn_mult(zijk-.5,bin(:)));
+             if strcmp(mode,'vector')
+                  ijk = zijk;
+             else
+                [idxoffset, bin] = G.getZoom('off&bin');
+                ijk = fn_add(idxoffset(:), .5+fn_mult(zijk-.5,bin(:)));
+             end
         end
         function M = gettransform(G,ijk,ylim_or_ybase,yextent)
             % function M = gettransform(G,ijk,ybase)
