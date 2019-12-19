@@ -452,33 +452,73 @@ classdef displaygraph < xplr.graphnode
             xy = [x; y];
             if ~isempty(st.xydim), xy = xy + st.xyoffsets(:,ijk(st.xydim,:)); end
         end
-        function ijk = graph2zslice(G,xy,invertible)
-            % function ijk = graph2zslice(G[,xy[,invertible]])
-            if nargin<2
-                xy = get(G.D.ha,'currentpoint');
-                xy = xy(1,1:2);
-            end
-            if nargin<3
-                invertible = false;
-            end
+        function ijk = graph2zslice(G,xy,varargin)
+            % function ijk = graph2zslice(G,xy,options...)
+            %---
+            % Input:
+            % - xy          coordinates in the graph (between -0.5 and 0.5)
+            %
+            % Options (name/value pairs):
+            % - 'invertible'  [default false] if set to true, exterior
+            %               coordinates are rounded, this make the
+            %               conversion invertible by calling slice2graph
+            % - 'subdim'    [default all dims] dimensions in ijk for which
+            %               we perform the conversion; other dimensions
+            %               will be assigned to the fixed default values in
+            %               ijk0
+            % - 'ijk0'      [required if subdim is set] default values for
+            %               dimensions where no conversion is requested
+            % - 'mode'      value is 'point' or 'vector' [default]
+            %
+            % Output:
+            % - ijk         index coordinates in the zslice data
+            
+            % Input points
             if isvector(xy), xy = xy(:); end
             np = size(xy,2);
             ijk = zeros(G.D.nd,np);
             st = G.steps;
             sz = G.zslicesz;
             
+            % Parse options
+            p = inputParser;
+            p.addParameter('invertible',false,@islogical)
+            p.addParameter('subdim',1:G.D.nd,@isnumeric)
+            p.addParameter('ijk0',[],@isnumeric)
+            p.addParameter('mode','point',@(s)ismember(s,{'point', 'vector'}))
+            parse(p,varargin{:})
+            s = p.Results;
+            [invertible, subdim, ijk0, mode] = ...
+                deal(s.invertible, s.subdim, s.ijk0, s.mode);
+            
+            % If mode is 'vector', we cannot operate in xy/yx dims, and
+            % operate at most on one x and one y dims
+            if strcmp(mode,'vector')
+                ok = ~any(ismember(subdim,G.org.xy)) ...
+                    && ~any(ismember(subdim,G.org.yx)) ...
+                    && sum(ismember(subdim,G.org.x)) <= 1 ...
+                    && sum(ismember(subdim,G.org.y)) <= 1;
+                if ~ok
+                    error 'vector conversion not possible in graph2zslice for this set of dimensions'
+                end
+            end          
+                        
             % xy/yx
-            if ~isempty(st.xydim)
+            if strcmp(mode,'point') && ~isempty(st.xydim)
                 % take advantage on the fact that the grid spans the full
                 % axis
                 d = st.xydim;
                 x = .5+xy(1,:); y = .5-xy(2,:);
                 ncol = round(1/st.xysteps(1)); icol = .5 + x*ncol;
                 nrow = round(1/abs(st.xysteps(2))); irow = .5 + y*nrow;
-                if d==G.org.xy
-                    ijk(d,:) = icol + ncol*round(irow-1);
+                if ismember(d,subdim)
+                    if d==G.org.xy
+                        ijk(d,:) = icol + ncol*round(irow-1);
+                    else
+                        ijk(d,:) = irow + nrow*round(icol-1);
+                    end
                 else
-                    ijk(d,:) = irow + nrow*round(icol-1);
+                    ijk(d,:) = ijk0(d,:);
                 end
                 xy = xy - st.xyoffsets(:,fn_coerce(round(ijk(d,:)),1,sz(d)));
             end
@@ -488,9 +528,17 @@ classdef displaygraph < xplr.graphnode
             xorg = G.org.x;
             for ix = length(xorg):-1:1
                 d = xorg(ix);
-                x = x - st.xoffset(ix);
-                ijk(d,:) = fn_div(x,st.xstep(ix));
-                x = x - fn_mult(round(ijk(d,:)),st.xstep(ix));
+                if strcmp(mode,'point')
+                    x = x - st.xoffset(ix);
+                end
+                if ismember(d,subdim)
+                    ijk(d,:) = fn_div(x,st.xstep(ix));
+                else
+                    ijk(d,:) = ijk0(d,:);
+                end
+                if strcmp(mode,'point')
+                    x = x - fn_mult(round(ijk(d,:)),st.xstep(ix));
+                end
             end
             
             % y
@@ -498,9 +546,17 @@ classdef displaygraph < xplr.graphnode
             yorg = G.org.y;
             for iy = length(yorg):-1:1
                 d = yorg(iy);
-                y = y - st.yoffset(iy);
-                ijk(d,:) = fn_div(y,st.ystep(iy));
-                y = y - fn_mult(round(ijk(d,:)),st.ystep(iy));
+                if strcmp(mode,'point')
+                    y = y - st.yoffset(iy);
+                end
+                if ismember(d,subdim)
+                    ijk(d,:) = fn_div(y,st.ystep(iy));
+                else
+                    ijk(d,:) = ijk0(d,:);
+                end
+                if strcmp(mode,'point')
+                    y = y - fn_mult(round(ijk(d,:)),st.ystep(iy));
+                end
             end
             
             % we want an output that can be invertible by calling
@@ -515,7 +571,6 @@ classdef displaygraph < xplr.graphnode
             end
         end
         function xy = slice2graph(G,ijk)
-
             % function xy = slice2graph(G,ijk)
             
             % first convert from slice to zoomed slice
@@ -525,19 +580,29 @@ classdef displaygraph < xplr.graphnode
             % then convert to graph coordinates
             xy = zslice2graph(G,zijk);
         end
-        function ijk = graph2slice(G,xy,invertible)
-            % function ijk = graph2slice(G[,xy[,invertible]])
-            % 
-            if nargin<2
-                xy = get(G.D.ha,'currentpoint');
-                xy = xy(1,1:2);
-            end
-            if nargin<3
-                invertible = false;
-            end
+        function ijk = graph2slice(G,xy,varargin)
+            % function ijk = graph2slice(G,xy,options...)
+            %---
+            % Input:
+            % - xy          coordinates in the graph (between -0.5 and 0.5)
+            %
+            % Options (name/value pairs):
+            % - 'invertible'  [default false] if set to true, exterior
+            %               coordinates are rounded, this make the
+            %               conversion invertible by calling slice2graph
+            % - 'subdim'    [default all dims] dimensions in ijk for which
+            %               we perform the conversion; other dimensions
+            %               will be assigned to the fixed default values in
+            %               ijk0
+            % - 'ijk0'      [required if subdim is set] default values for
+            %               dimensions where no conversion is requested
+            % - 'mode'      value is 'point' or 'vector' [default]
+            %
+            % Output:
+            % - ijk         index coordinates in the slice data
             
             % coordinates in zoomed slice
-            zijk = graph2zslice(G,xy,invertible);
+            zijk = graph2zslice(G,xy,varargin{:});
             
             % convert to before zooming
             [idxoffset, bin] = G.getZoom('off&bin');
