@@ -157,7 +157,7 @@ classdef selectionND < xplr.graphnode
                     if length(data)<2 || numel(data{1})~=2 || numel(data{2})>2
                         error 'center or radius is ill-defined'
                     end
-                    [c u] = deal(data{1:2});
+                    [c, u] = deal(data{1:2});
                     c = c(:); u = u(:);
                     if isscalar(u), u = [u; 0]; end
                     % eccentricity and ring secondary radius
@@ -825,12 +825,12 @@ end
 % Ellipse defined either by center, main radius vector and eccentricity, or
 % by its bilinear equation (x-c)'A(x-c) = 1,
 
-function [u e A] = EllipseAffinity(u,e,A,M)
+function [u, e, A] = EllipseAffinity(u,e,A,M)
 
 % ellipse equation becomes, for y=Mx: (y-Mc)'(M^-1' A M^-1)(y-Mc) = 1
 M1 = M^-1;
 A = M1'*A*M1;
-[u e] = EllipseSym2Vector(A);
+[u, e] = EllipseSym2Vector(A);
 
 end
 

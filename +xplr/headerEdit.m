@@ -546,14 +546,14 @@ function donothing(~,~)
 end
 
 %---
-function [iL iU iV iA iC] = columnIndices
+function [iL, iU, iV, iA, iC] = columnIndices
 
-[iL iU iV iA iC] = deal(3,4,5,7,6);
+[iL, iU, iV, iA, iC] = deal(3,4,5,7,6);
 
 end
 
 %---
-function [unit str measure conversion] = read_unit(unit)
+function [unit, str, measure, conversion] = read_unit(unit)
 % if unit is recognized as a unit for a known measure, return an enhanced
 % string display and the list of all units for this measure
 
@@ -572,7 +572,7 @@ str = [unit comment];
 end
 
 %---
-function [type value] = read_value(scale_value,n)
+function [type, value] = read_value(scale_value,n)
 
 % empty?
 if isempty(scale_value)

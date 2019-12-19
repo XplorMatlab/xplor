@@ -17,6 +17,13 @@ classdef displaynavigation < xplr.graphnode
         selectiondim = [];      % dimensions to which these selections apply
         selectiondisplay        % displays of selectionND 
     end
+    properties (SetObservable)
+        selectionshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
+        selectionadvanced = false
+    end
+    properties (Access='private')
+        selectionmenu
+    end
     
     % Constructor
     methods
@@ -46,6 +53,9 @@ classdef displaynavigation < xplr.graphnode
 
             % scroll wheel zooming
             fn_scrollwheelregister(D.ha,@(n)N.Scroll(n))
+            
+            % selection menu
+            init_selection_menu(N)
         end
         
         function init_buttons(N)
@@ -81,6 +91,21 @@ classdef displaynavigation < xplr.graphnode
                 'backgroundcolor',pcol*.75,'slidercolor',pcol*.95)
             fn_controlpositions(N.sliders.x,N.ha,[0 1 1 0], [0 0 0 12]);
             fn_controlpositions(N.sliders.y,N.ha,[1 0 0 1], [0 0 12 -48]);
+        end
+        function init_selection_menu(N)
+            if isempty(N.selectionmenu)
+                m = uimenu('parent',N.D.V.hf,'label','Selection');
+                N.selectionmenu = m;
+            else
+                m = N.selectionmenu;
+                delete(get(m,'children'))
+            end
+            fn_propcontrol(N,'selectionshape', ...
+                {'menuval' {'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
+                {'parent',m,'label','shape'});
+            fn_propcontrol(N,'selectionadvanced', ...
+                'menu', ...
+                {'parent',m,'label','advanced selection'});
         end
     end
     
@@ -166,7 +191,9 @@ classdef displaynavigation < xplr.graphnode
                     if pointonly                        
                         dozoom = false;
                     else
+                        % rect = fn_mouse(N.ha,'rectangle-');
                         rect = fn_mouse(N.ha,'rectangle-');
+                       % rect=[-0.3911,-0.3911,-0.2189,-0.2189;0.2391,0.0468,0.0468,0.2391];
                         dozoom = any(any(abs(diff(rect,1,2))>1e-2));
                     end
                     if dozoom
@@ -181,6 +208,42 @@ classdef displaynavigation < xplr.graphnode
                     % zoom reset
                     zoom = repmat(':',1,length(dim));
                     N.D.zoomslicer.setZoom(dim,zoom)
+                case 'alt'
+                    
+                    % TODO: the code below is work in progress, very
+                    % specific. It has to be generalized.
+                    N.selectiondim = [1 2];
+                    ellipse = fn_mouse(N.ha,'ellipse-*');
+%                     disp("ellipse");
+%                     ellipse{2} = ellipse{1} + ellipse{2};
+%                     ellipse{1}
+%                     ellipse{2}
+%                     ellipse{3}
+%                     disp("end ellipse");
+                    ijk1 = N.graph.graph2slice(ellipse{1},...
+                        'mode','point', ...
+                        'subdim',N.selectiondim', ...
+                        'ijk0',ones(N.D.nd,1));
+                    ijk2 = N.graph.graph2slice(ellipse{2},...
+                        'mode','vector', ...
+                        'subdim',N.selectiondim', ...
+                        'ijk0',ones(N.D.nd,1));
+                                        
+                    ijk = {ijk1(N.selectiondim),ijk2(N.selectiondim), ellipse{3}};
+                    ellipseSelection = selectionND('ellipse2D',ijk);
+                    
+                    if isempty(N.selection)
+                       N.selection=ellipseSelection; 
+                    else
+                        N.selection(end+1)=ellipseSelection;
+                    end
+                    % create a random selection                    
+%                     slicesz = N.D.slice.sz(:);
+%                     poly = 1 + fn_mult(rand(2,3), slicesz(N.selectiondim)-1);
+%                     selij = selectionND('poly2D',poly);
+%                     
+%                     N.selection = selij;
+                    N.displayselection('new',length(N.selection))
             end
         end
     end
@@ -318,7 +381,7 @@ classdef displaynavigation < xplr.graphnode
                 end
                 
                 % update the point filters
-                ijk = N.graph.graph2slice(N.crossCenter,true);
+                ijk = N.graph.graph2slice(N.crossCenter,'invertible',true);
 
                 for d = 1:length(ijk)
                     F = N.dimfilters{d};
@@ -351,7 +414,7 @@ classdef displaynavigation < xplr.graphnode
         
         function manualclickmovecross(N,point)
 
-            ijk = N.graph.graph2slice(point,true);
+            ijk = N.graph.graph2slice(point,'invertible',true);
             % update the point filters
             if(~isOutOfDisplay(N,point))
                 N.crossCenter = point;
@@ -412,20 +475,93 @@ classdef displaynavigation < xplr.graphnode
     
     % Complex selection
     methods
-        function displayselection(N)
+        function displayselection(N,flag,ind,value)
+            % @param flag: string 'all', 'new'
+            % @param ind: integer
+            % @param value:
+            %
+            % @return:
+           
+            
             disp(['selection in dimensions ' num2str(N.selectiondim) ':'])
             disp(N.selection)
             disp(' ')
+       
 
-            %N.selection(1).;
-            if ~isempty(N.selectiondisplay)
-                deleteValid(N.selectiondisplay{:})
+%             %N.selection(1).;
+%             if ~isempty(N.selectiondisplay)
+%                 deleteValid(N.selectiondisplay{:})
+% 
+%             end
+%             
+%             for i = 1:length(N.selection)
+%                 N.displayonesel(i,'new',i);
+%             end
+            
+            % copied from explor:
+            
+%             fn4D_dbstack
+%             if isempty(N.D.selshow)
+%                 delete(findobj(D.ha,'tag','ActDispIm_Sel'))
+%                 return
+%             end
+            
+            % some params
+%             si = N.D.SI;
+%             seldimsnum = N.D.seldims-'w';
+%             selectionmarks = si.selection.getselset(seldimsnum).singleset;
+%             nsel = length(selectionmarks);
+            
+            % display set...
 
+            if fn_ismemberstr(flag,{'all','reset'})
+                % 'findobj' allows a cleanup when some objects were not
+                % removed correctly
+%                 delete(findobj(N.D.ha,'tag','ActDispIm_Sel'))
+%                 N.D.seldisp = cell(1,nsel);
+                isel = 1;
+                for k=1:length(N.selection)
+                     displayonesel(N,k,'new',isel);
+%                     if selectionmarks(k).active
+                        isel = isel+1;
+%                     end
+                end
+                return
             end
             
-            for i = 1:length(N.selection)
-                N.displayonesel(i,'new',i);
+            % or display update
+%             if ~isempty(N.D.curselprev) && ~isempty(strfind(N.D.selshow,'number'))
+%                 set(N.D.seldisp{N.D.curselprev}(1),'color','w')
+%             end
+            switch flag
+                case 'new'
+                    isel = cumsum([N.selection.active]);
+                    for idx=ind
+                        displayonesel(N,idx,'new',isel(idx)); 
+                    end
+                case {'add','change','affinity'}
+                    % might be several indices
+                    for k=ind, displayonesel(N,k,'pos'); end
+                case 'remove'
+                    delete([N.D.seldisp{ind}])
+                    N.D.seldisp(ind) = [];
+                    nsel = length(N.D.seldisp);
+                    if nsel==0, return, end
+                    updateselorderdisplay(N.D)
+                case 'active'
+                    % might be several indices
+                    for k=ind, displayonesel(N.D,k,'active'), end
+                    updateselorderdisplay(N.D)
+                case 'reorder'
+                    perm = value;
+                    N.D.seldisp = N.D.seldisp(perm);
+                    updateselorderdisplay(N.D)
+                case 'indices'
+                    % nothing to do
             end
+%             if ~isempty(N.D.currentselection) && ~isempty(strfind(N.D.selshow,'number'))
+%                 set(N.D.seldisp{N.D.currentselection}(1),'color','r')
+%             end
                 
         end
         
@@ -562,6 +698,7 @@ classdef displaynavigation < xplr.graphnode
                     hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
                         'Color',col,'LineStyle',linestyle, ...
                         'UserData',k); % set user data because this line will be used when in seledit mode
+                     drawnow limitrate
                 end
                 %if strfind(D.selshow,'cross')
                 if false
@@ -577,7 +714,7 @@ classdef displaynavigation < xplr.graphnode
                     end
                 end
                 
-                N.selectiondisplay{k} = hl;
+                 N.selectiondisplay{k} = hl;
 
                 
                 
@@ -668,7 +805,8 @@ classdef displaynavigation < xplr.graphnode
             end
         end
         function Scroll(N,nscroll)
-            origin = row(N.graph.graph2slice()); % current point in data coordinates
+            p = get(N.D.ha,'currentpoint'); p = p(1,1:2);
+            origin = row(N.graph.graph2slice(p)); % current point in data coordinates
             zoomfactor = 1.5^nscroll;
             dim = [N.D.activedim.x N.D.activedim.y];
             if isempty(dim), return, end
@@ -742,7 +880,7 @@ classdef displaynavigation < xplr.graphnode
         % @return output: 1xn boolean
         function output = isOutOfDisplay(N, point)
             % get slice values of the point
-            ijk = N.graph.graph2slice(point,true);
+            ijk = N.graph.graph2slice(point,'invertible',true);
             % get the min and max slice values of the data displayed
             zoomSliceValues = N.graph.getZoom();
             

@@ -80,9 +80,6 @@ classdef viewdisplay < xplr.graphnode
             % automatic label positionning
             D.labels = xplr.displaylabels(D);
             
-            % navigation (sliders, mouse actions)
-            D.navigation = xplr.displaynavigation(D);
-            
             % clipping tool
             D.clipping = xplr.cliptool(V.hf); % creates a menu
             D.addListener(D.clipping,'ChangedClip',@(u,e)clipchange(D,e));
@@ -90,6 +87,9 @@ classdef viewdisplay < xplr.graphnode
             % colormap tool
             D.colormap = xplr.colormaptool(D); % creates a menu
             D.addListener(D.colormap,'ChangedColorMap',@(u,e)colormap(V.hf,D.colormap.cmap)); %#ok<CPROP>
+            
+            % navigation (sliders, mouse actions)
+            D.navigation = xplr.displaynavigation(D); % creates a menu
             
             % set organization, connect sliders, display data and labels
             D.sliceChangeEvent = struct('flag','global');
@@ -800,7 +800,8 @@ classdef viewdisplay < xplr.graphnode
                       
            % reposition cross
            D.navigation.repositionCross()
-           D.navigation.displayselection()
+           % display zone selections (ellipse)
+           D.navigation.displayselection('all')
 
             % Update legend
             if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
