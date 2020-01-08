@@ -634,32 +634,134 @@ classdef displaynavigation < xplr.graphnode
                     np = size(points_vignette, 2);
                     
                     % replace points that are outside of vignette by NaNs
-                    zoomSliceValues = N.graph.getZoom(N.selectiondim);
+                    zoomSliceValues = N.graph.getZoom(N.selectiondim,'indices');
                     
 
                     % set the ouput to zeros (they will be set to one if one of the
                     % dimension if it's out of display)
                     polygonIsOutOfDisplay = zeros(1,size(points_vignette,2));
+                    
+                    
+                    
 
                     for dimension = 1:size(zoomSliceValues,1)     
                        % is equal to one if is out of limits of the zoom or if the
                        % previous value was already 1
-                       polygonIsOutOfDisplay = points_vignette(dimension,:)<zoomSliceValues(1,dimension) | points_vignette(dimension,:)>zoomSliceValues(2,dimension) | polygonIsOutOfDisplay;
+                        polygonIsOutOfDisplay = points_vignette(dimension,:)<(zoomSliceValues(1,dimension)-.5) | points_vignette(dimension,:)>(zoomSliceValues(2,dimension)+.5) | polygonIsOutOfDisplay;
+
                     end
                     
-                    % coordinates in the full nd index coordinate system
-                    points = ones(N.D.nd, np);
-                    points(N.selectiondim, :) = points_vignette;
- 
-                    % convert to display coordinate system
-                    polygon = N.graph.slice2graph(points);
-
+                    % array of ones' boundaries in polygonIsOutOfDisplay.
+                    % Represent the start (1) and finish (-1) of lines not displayed
+                    boundaries=diff([0 polygonIsOutOfDisplay 0]);
                     
+                    % if the first point and last point are hidden, don't
+                    % consider them as start and finish of group of ones
+                    if boundaries(1) == 1 && boundaries(end) == -1
+                       boundaries(1)=0;
+                       boundaries(end)=0;
+                    end
+                    
+                    boundariesIndexes=find(boundaries==-1 | boundaries==1);
+
+
+                    % add intermediate points between points displayed and 
+                    % points not displayed 
+
+                    points = ones(N.D.nd, np);
+                    
+                    for boundariesIndex = 1:length(boundariesIndexes)
+                        pointIndex = boundariesIndexes(boundariesIndex) + boundariesIndex -1;
+                        
+                        if boundariesIndexes(boundariesIndex) == length(points_vignette)
+                            boundaryNext = 2;
+                        else
+                            boundaryNext = boundariesIndexes(boundariesIndex)+1;
+                        end
+                        
+                        if boundariesIndexes(boundariesIndex) == 1
+                            boundaryPrev = length(points_vignette)-1;
+                        else
+                            boundaryPrev = boundariesIndexes(boundariesIndex)-1;
+                        end
+                        
+                        
+                        
+                        if(boundaries(boundariesIndexes(boundariesIndex))==1)
+                            % find the lowest ratio before limit of the
+                            % next point
+                            biggestRatio = 0;
+                            for dimension = 1:size(zoomSliceValues,1)
+                                vector = points_vignette(dimension,boundaryPrev) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMin = (zoomSliceValues(1, dimension)-.5) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMax = (zoomSliceValues(2, dimension)+.5) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
+                                
+                                % if same sign
+                                V = [vectorToLimitMax, vectorToLimitMin];
+                                if (~any(diff(sign(V(V~=0)))))
+                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
+                                end
+                            end
+                            points_vignette(N.selectiondim,boundariesIndexes(boundariesIndex)) = points_vignette(:,boundariesIndexes(boundariesIndex))+(points_vignette(:,boundaryPrev)-points_vignette(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                        else
+                            boundariesIndexes(boundariesIndex) = boundaryPrev;
+                            if boundariesIndexes(boundariesIndex) == length(points_vignette)
+                                boundaryNext = 2;
+                            else
+                                boundaryNext = boundariesIndexes(boundariesIndex)+1;
+                            end
+
+                            if boundariesIndexes(boundariesIndex) == 1
+                                boundaryPrev = length(points_vignette)-1;
+                            else
+                                boundaryPrev = boundariesIndexes(boundariesIndex)-1;
+                            end
+                            % find the lowest ratio before limit of the
+                            % next point
+                            biggestRatio = 0;
+                            for dimension = 1:size(zoomSliceValues,1)
+                                vector = points_vignette(dimension,boundaryNext) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMin = (zoomSliceValues(1,dimension)-.5)- points_vignette(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMax = (zoomSliceValues(2,dimension)+.5) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
+                                
+                                % if same sign
+                                V = [vectorToLimitMax, vectorToLimitMin];
+                                if (~any(diff(sign(V(V~=0)))))
+                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
+                                end
+             
+                            end
+                            points_vignette(N.selectiondim,boundariesIndexes(boundariesIndex)) = points_vignette(:,boundariesIndexes(boundariesIndex))+(points_vignette(:,boundaryNext)-points_vignette(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                        end
+                        
+                    end
+                    
+                    
+
                     % if column n of polygonIsOutOfDisplay is equal to 1 it
                     % means the point in column n of polygon is out of
                     % display so replace all values on that column by Nan
                     % to don't be drawn
-                    polygon(:,polygonIsOutOfDisplay) = NaN;
+                    
+                    
+                    % coordinates in the full nd index coordinate system
+                    
+                    polygonIsOutOfDisplay(boundariesIndexes) = 0;
+                    points_vignette(:,polygonIsOutOfDisplay) = NaN;
+                    
+                    
+                    
+                    
+                    points(N.selectiondim, :) = points_vignette;
+                    
+                    % convert to display coordinate system
+                    polygon = N.graph.slice2graph(points);
+                    
+                    
+%                     
+%                     polygon = nan(size(ellipse,1),size(ellipse,2)+size(boundariesIndexes,2));
+%                     polygon(:,setdiff(1:end,boundariesIndexes)) = ellipse;
+                    
                     
                 end
                 center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
