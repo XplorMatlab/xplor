@@ -5,7 +5,7 @@ classdef graphnode < matlab.mixin.SetGet
     end
     
     properties
-        id
+        idGraphNode
     end
     
     
@@ -16,7 +16,7 @@ classdef graphnode < matlab.mixin.SetGet
     
     methods
         function self = graphnode()
-            self.id = randi(999);
+            self.idGraphNode = randi(999);
         end
         function delete(self)
             xplr.debuginfo('graphnode', 'delete %s', self)
@@ -28,7 +28,7 @@ classdef graphnode < matlab.mixin.SetGet
             end
         end
         function str = char(self)
-            str = [class(self) num2str(self.id,'%.3i')];
+            str = [class(self) num2str(self.idGraphNode,'%.3i')];
         end
         function addListener(self,other,varargin)
             % function addListener(self,other,addlistener arguments...)

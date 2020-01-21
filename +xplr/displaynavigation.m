@@ -105,7 +105,7 @@ classdef displaynavigation < xplr.graphnode
                 {'parent',m,'label','shape'});
             fn_propcontrol(N,'selectionadvanced', ...
                 'menu', ...
-                {'parent',m,'label','advanced selection'});
+                {'parent',m,'label','advanced selection', 'accelerator','A'});
         end
     end
     
@@ -230,7 +230,7 @@ classdef displaynavigation < xplr.graphnode
                         'ijk0',ones(N.D.nd,1));
                                         
                     ijk = {ijk1(N.selectiondim),ijk2(N.selectiondim), ellipse{3}};
-                    ellipseSelection = selectionND('ellipse2D',ijk);
+                    ellipseSelection = xplr.selectionND('ellipse2D',ijk);
                     
                     if isempty(N.selection)
                        N.selection=ellipseSelection; 
@@ -519,12 +519,8 @@ classdef displaynavigation < xplr.graphnode
                 % removed correctly
 %                 delete(findobj(N.D.ha,'tag','ActDispIm_Sel'))
 %                 N.D.seldisp = cell(1,nsel);
-                isel = 1;
                 for k=1:length(N.selection)
-                     displayonesel(N,k,'new',isel);
-%                     if selectionmarks(k).active
-                        isel = isel+1;
-%                     end
+                     displayonesel(N,k,'new');
                 end
                 return
             end
@@ -535,13 +531,19 @@ classdef displaynavigation < xplr.graphnode
 %             end
             switch flag
                 case 'new'
-                    isel = cumsum([N.selection.active]);
                     for idx=ind
-                        displayonesel(N,idx,'new',isel(idx)); 
+                        displayonesel(N,idx,'new'); 
                     end
                 case {'add','change','affinity'}
                     % might be several indices
                     for k=ind, displayonesel(N,k,'pos'); end
+                case 'changereferential'
+                    % it is not the positions of selections that have
+                    % changed, but the referential of these positions
+                    % relative to the main display axes: we need then to
+                    % recompute the positions of each selection display
+                    % inside this new referential
+                    for k = 1:length(N.selection), displayonesel(N, k, 'pos'), end
                 case 'remove'
                     delete([N.D.seldisp{ind}])
                     N.D.seldisp(ind) = [];
@@ -565,10 +567,8 @@ classdef displaynavigation < xplr.graphnode
                 
         end
         
-
-        
         function displayonesel(N,k,flag,varargin)
-            % function displayonesel(D,k,'new',isel)
+            % function displayonesel(D,k,'new')
             % function displayonesel(D,k,'pos')
             % function displayonesel(D,k,'isel',isel)
             % function displayonesel(D,k,'active')
@@ -611,158 +611,13 @@ classdef displaynavigation < xplr.graphnode
                     end
                     polygon = [points{:}];
                 else
-                    % if the selection apply to more than one dimension:
-                    
-%                     sel = IJ2AX(D.SI,selij);
-%                     selij2 = convert(selij,'poly2D');
-%                     sel2 = IJ2AX(D.SI,selij2);
-%                    polygon = sel2.poly.points;
+
                    
                     selij2 = convert(selij,'poly2D');
-%                     
-%                     polygon=double.empty(2,0);
-%                     for point = selij2.poly.points
-%                        pointSlice = cat(1,point,ones(3,1));
-%                        pointGraph = N.graph.slice2graph(pointSlice);
-%                        polygon = cat(2,polygon,pointGraph);
-%                     end
-
-
-                    % coordinates of the polygon inside a vignette (in index
-                    % coordinate system)
-                    points_vignette = selij2.poly.points;
-                    np = size(points_vignette, 2);
-                    
-                    % replace points that are outside of vignette by NaNs
-                    zoomSliceValues = N.graph.getZoom(N.selectiondim,'indices');
-                    
-
-                    % set the ouput to zeros (they will be set to one if one of the
-                    % dimension if it's out of display)
-                    polygonIsOutOfDisplay = zeros(1,size(points_vignette,2));
-                    
-                    
-                    
-
-                    for dimension = 1:size(zoomSliceValues,1)     
-                       % is equal to one if is out of limits of the zoom or if the
-                       % previous value was already 1
-                        polygonIsOutOfDisplay = points_vignette(dimension,:)<(zoomSliceValues(1,dimension)-.5) | points_vignette(dimension,:)>(zoomSliceValues(2,dimension)+.5) | polygonIsOutOfDisplay;
-
-                    end
-                    
-                    % array of ones' boundaries in polygonIsOutOfDisplay.
-                    % Represent the start (1) and finish (-1) of lines not displayed
-                    boundaries=diff([0 polygonIsOutOfDisplay 0]);
-                    
-                    % if the first point and last point are hidden, don't
-                    % consider them as start and finish of group of ones
-                    if boundaries(1) == 1 && boundaries(end) == -1
-                       boundaries(1)=0;
-                       boundaries(end)=0;
-                    end
-                    
-                    boundariesIndexes=find(boundaries==-1 | boundaries==1);
-
-
-                    % add intermediate points between points displayed and 
-                    % points not displayed 
-
-                    points = ones(N.D.nd, np);
-                    
-                    for boundariesIndex = 1:length(boundariesIndexes)
-                        pointIndex = boundariesIndexes(boundariesIndex) + boundariesIndex -1;
-                        
-                        if boundariesIndexes(boundariesIndex) == length(points_vignette)
-                            boundaryNext = 2;
-                        else
-                            boundaryNext = boundariesIndexes(boundariesIndex)+1;
-                        end
-                        
-                        if boundariesIndexes(boundariesIndex) == 1
-                            boundaryPrev = length(points_vignette)-1;
-                        else
-                            boundaryPrev = boundariesIndexes(boundariesIndex)-1;
-                        end
-                        
-                        
-                        
-                        if(boundaries(boundariesIndexes(boundariesIndex))==1)
-                            % find the lowest ratio before limit of the
-                            % next point
-                            biggestRatio = 0;
-                            for dimension = 1:size(zoomSliceValues,1)
-                                vector = points_vignette(dimension,boundaryPrev) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
-                                vectorToLimitMin = (zoomSliceValues(1, dimension)-.5) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
-                                vectorToLimitMax = (zoomSliceValues(2, dimension)+.5) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
-                                
-                                % if same sign
-                                V = [vectorToLimitMax, vectorToLimitMin];
-                                if (~any(diff(sign(V(V~=0)))))
-                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
-                                end
-                            end
-                            points_vignette(N.selectiondim,boundariesIndexes(boundariesIndex)) = points_vignette(:,boundariesIndexes(boundariesIndex))+(points_vignette(:,boundaryPrev)-points_vignette(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
-                        else
-                            boundariesIndexes(boundariesIndex) = boundaryPrev;
-                            if boundariesIndexes(boundariesIndex) == length(points_vignette)
-                                boundaryNext = 2;
-                            else
-                                boundaryNext = boundariesIndexes(boundariesIndex)+1;
-                            end
-
-                            if boundariesIndexes(boundariesIndex) == 1
-                                boundaryPrev = length(points_vignette)-1;
-                            else
-                                boundaryPrev = boundariesIndexes(boundariesIndex)-1;
-                            end
-                            % find the lowest ratio before limit of the
-                            % next point
-                            biggestRatio = 0;
-                            for dimension = 1:size(zoomSliceValues,1)
-                                vector = points_vignette(dimension,boundaryNext) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
-                                vectorToLimitMin = (zoomSliceValues(1,dimension)-.5)- points_vignette(dimension,boundariesIndexes(boundariesIndex));
-                                vectorToLimitMax = (zoomSliceValues(2,dimension)+.5) - points_vignette(dimension,boundariesIndexes(boundariesIndex));
-                                
-                                % if same sign
-                                V = [vectorToLimitMax, vectorToLimitMin];
-                                if (~any(diff(sign(V(V~=0)))))
-                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
-                                end
-             
-                            end
-                            points_vignette(N.selectiondim,boundariesIndexes(boundariesIndex)) = points_vignette(:,boundariesIndexes(boundariesIndex))+(points_vignette(:,boundaryNext)-points_vignette(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
-                        end
-                        
-                    end
-                    
-                    
-
-                    % if column n of polygonIsOutOfDisplay is equal to 1 it
-                    % means the point in column n of polygon is out of
-                    % display so replace all values on that column by Nan
-                    % to don't be drawn
-                    
-                    
-                    % coordinates in the full nd index coordinate system
-                    
-                    polygonIsOutOfDisplay(boundariesIndexes) = 0;
-                    points_vignette(:,polygonIsOutOfDisplay) = NaN;
-                    
-                    
-                    
-                    
-                    points(N.selectiondim, :) = points_vignette;
-                    
+                    polygon = visiblePolygon(N, selij2.poly.points);
                     % convert to display coordinate system
-                    polygon = N.graph.slice2graph(points);
-                    
-                    
-%                     
-%                     polygon = nan(size(ellipse,1),size(ellipse,2)+size(boundariesIndexes,2));
-%                     polygon(:,setdiff(1:end,boundariesIndexes)) = ellipse;
-                    
-                    
+                    polygon = N.graph.slice2graph(polygon);
+                      
                 end
                 center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
             end
@@ -778,9 +633,11 @@ classdef displaynavigation < xplr.graphnode
                     visible = 'off';
                 end
             end
-            if flagnew || flagisel
+            if flagisel
                 isel = varargin{1};
                 str = num2str(isel);
+            elseif flagnew
+                str = num2str(k);
             end
             
             % Create / update objects
@@ -800,7 +657,6 @@ classdef displaynavigation < xplr.graphnode
                     hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
                         'Color',col,'LineStyle',linestyle, ...
                         'UserData',k); % set user data because this line will be used when in seledit mode
-                     drawnow limitrate
                 end
                 %if strfind(D.selshow,'cross')
                 if false
@@ -885,6 +741,126 @@ classdef displaynavigation < xplr.graphnode
         
         function deletedisplayonesel(N,k)
             delete(N.selectiondisplay{k});
+        end
+        
+        function polygon = visiblePolygon(N,points)
+        % visiblePolygon(N, points);
+                    
+                    % coordinates of the polygon inside a vignette (in index
+                    % coordinate system)
+                    %points = selij2.poly.points;
+                    np = size(points, 2);
+                    
+                    % replace points that are outside of vignette by NaNs
+                    zoomSliceValues = N.graph.getZoom(N.selectiondim,'indices');
+                    
+                    % set the ouput to zeros (they will be set to one if one of the
+                    % dimension if it's out of display)
+                    polygonIsOutOfDisplay = zeros(1,size(points,2));
+                    
+                    for dimension = 1:size(zoomSliceValues,1)     
+                       % is equal to one if is out of limits of the zoom or if the
+                       % previous value was already 1
+                        polygonIsOutOfDisplay = points(dimension,:)<(zoomSliceValues(1,dimension)-.5) | points(dimension,:)>(zoomSliceValues(2,dimension)+.5) | polygonIsOutOfDisplay;
+
+                    end
+                    
+                    % array of ones' boundaries in polygonIsOutOfDisplay.
+                    % Represent the start (1) and finish (-1) of lines not displayed
+                    boundaries=diff([0 polygonIsOutOfDisplay 0]);
+                    
+                    % if the first point and last point are hidden, don't
+                    % consider them as start and finish of group of ones
+                    if boundaries(1) == 1 && boundaries(end) == -1
+                       boundaries(1)=0;
+                       boundaries(end)=0;
+                    end
+                    
+                    boundariesIndexes=find(boundaries==-1 | boundaries==1);
+                    boundariesValues=nan(size(points,1),size(boundariesIndexes,2));
+
+                    % add intermediate points between points displayed and 
+                    % points not displayed
+                    numberOfPointsAdded=0;
+                    for boundariesIndex = 1:length(boundariesIndexes)
+                        if boundariesIndexes(boundariesIndex) == 1
+                            boundaryPrev = length(points)-1;
+                        else
+                            boundaryPrev = boundariesIndexes(boundariesIndex)-1;
+                        end
+
+                        if(boundaries(boundariesIndexes(boundariesIndex))==1)
+                            % find the lowest ratio before limit of the
+                            % next point
+                            biggestRatio = 0;
+                            for dimension = 1:size(zoomSliceValues,1)
+                                vector = points(dimension,boundaryPrev) - points(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMin = (zoomSliceValues(1, dimension)-.5) - points(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMax = (zoomSliceValues(2, dimension)+.5) - points(dimension,boundariesIndexes(boundariesIndex));
+                                
+                                % if same sign
+                                V = [vectorToLimitMax, vectorToLimitMin];
+                                if (~any(diff(sign(V(V~=0)))))
+                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
+                                end
+                            end
+                            
+                            boundariesValues(:,boundariesIndex) = points(:,boundariesIndexes(boundariesIndex))+(points(:,boundaryPrev)-points(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                            boundariesIndexes(boundariesIndex) = boundariesIndexes(boundariesIndex) + numberOfPointsAdded;
+
+                        else
+                            boundariesIndexes(boundariesIndex) = boundaryPrev;
+                            if boundariesIndexes(boundariesIndex) == length(points)
+                                boundaryNext = 2;
+                            else
+                                boundaryNext = boundariesIndexes(boundariesIndex)+1;
+                            end
+
+                            % find the lowest ratio before limit of the
+                            % next point
+                            biggestRatio = 0;
+                            for dimension = 1:size(zoomSliceValues,1)
+                                vector = points(dimension,boundaryNext) - points(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMin = (zoomSliceValues(1,dimension)-.5) - points(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMax = (zoomSliceValues(2,dimension)+.5) - points(dimension,boundariesIndexes(boundariesIndex));
+                                
+                                % if same sign
+                                V = [vectorToLimitMax, vectorToLimitMin];
+                                if (~any(diff(sign(V(V~=0)))))
+                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
+                                end
+             
+                            end
+                            
+                            boundariesValues(:,boundariesIndex) = points(:,boundariesIndexes(boundariesIndex))+(points(:,boundaryNext)-points(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                            boundariesIndexes(boundariesIndex) = boundaryNext + numberOfPointsAdded;
+%                             points(N.selectiondim,boundariesIndexes(boundariesIndex)) = points(:,boundariesIndexes(boundariesIndex))+(points(:,boundaryNext)-points(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                        end
+                        
+                        numberOfPointsAdded = numberOfPointsAdded + 1;
+                    end
+                    
+                    
+
+                    % if column n of polygonIsOutOfDisplay is equal to 1 it
+                    % means the point in column n of polygon is out of
+                    % display so replace all values on those columns by Nan
+                    % to don't be drawn
+                    
+                    
+                    % coordinates in the full nd index coordinate system
+                    
+
+                    points(:,polygonIsOutOfDisplay) = NaN;
+                    
+                    
+                    polygon = ones(N.D.nd, np + size(boundariesValues,2));
+                    
+                    polygon(N.selectiondim,setdiff(1:end,boundariesIndexes)) = points;
+                    polygon(N.selectiondim,boundariesIndexes) = boundariesValues;
+                    
+                    
+
         end
         
    end

@@ -284,7 +284,7 @@ classdef selectionND < xplr.graphnode
     % (note: specialized operations are in functions outside the classdef)
     methods
         function sel2 = copy(sel)
-            sel2 = selectionND('empty',sel.nd);
+            sel2 = xplr.selectionND('empty',sel.nd);
             sel2.id = sel.id;
             sel2.poly = sel.poly;
             sel2.datasizes = sel.datasizes;

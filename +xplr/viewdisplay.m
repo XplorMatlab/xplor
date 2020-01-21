@@ -801,7 +801,7 @@ classdef viewdisplay < xplr.graphnode
            % reposition cross
            D.navigation.repositionCross()
            % display zone selections (ellipse)
-           D.navigation.displayselection('all')
+           D.navigation.displayselection('changereferential')
 
             % Update legend
             if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
