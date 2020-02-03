@@ -72,7 +72,7 @@ classdef selectionND < xplr.graphnode
                 if nargin>=3, siz = {sizes}; else siz = {}; end
                 nsel = numel(data);
                 sel(nsel) = sel; % initialize vect
-                for i=1:nsel, sel(i) = selectionND(type,data{i},siz{:}); end
+                for i=1:nsel, sel(i) = xplr.selectionND(type,data{i},siz{:}); end
                 return
             end
             
@@ -588,7 +588,7 @@ classdef selectionND < xplr.graphnode
     
     % User
     methods
-        function [dataind mask] = realworld2dataindices(sel,mat,datasizes)
+        function [dataind, mask] = realworld2dataindices(sel,mat,datasizes)
             % function [dataind mask] = realworld2dataindices(sel,mat,datasizes)
             %---
             % this function returns the indices of data points that are
