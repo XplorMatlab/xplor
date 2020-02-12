@@ -13,12 +13,15 @@ classdef displaynavigation < xplr.graphnode
         dimfilters = {};
     end
     properties
-        selection = [];         % list of selectionND object
         selectiondim = [];      % dimensions to which these selections apply
+        selectionfilter         % filter being modified by the selections
         selectiondisplay        % displays of selectionND 
+%     end
+%     properties (Dependent, SetAccess='private')
+        selection               % list of selectionND object
     end
     properties (SetObservable)
-        selectionshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
+        selectionshape = 'ellipse'; % 'xsegment', 'ysegment', 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selectionadvanced = false
     end
     properties (Access='private')
@@ -101,7 +104,7 @@ classdef displaynavigation < xplr.graphnode
                 delete(get(m,'children'))
             end
             fn_propcontrol(N,'selectionshape', ...
-                {'menuval' {'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
+                {'menuval' {'ysegment', 'xsegment','poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
                 {'parent',m,'label','shape'});
             fn_propcontrol(N,'selectionadvanced', ...
                 'menu', ...
@@ -209,41 +212,176 @@ classdef displaynavigation < xplr.graphnode
                     zoom = repmat(':',1,length(dim));
                     N.D.zoomslicer.setZoom(dim,zoom)
                 case 'alt'
+                    % on right click: create a new selection in N.selection
+                    % depending on the parameter selectionshape
                     
                     % TODO: the code below is work in progress, very
                     % specific. It has to be generalized.
-                    N.selectiondim = [1 2];
-                    ellipse = fn_mouse(N.ha,'ellipse-*');
-%                     disp("ellipse");
-%                     ellipse{2} = ellipse{1} + ellipse{2};
-%                     ellipse{1}
-%                     ellipse{2}
-%                     ellipse{3}
-%                     disp("end ellipse");
-                    ijk1 = N.graph.graph2slice(ellipse{1},...
-                        'mode','point', ...
-                        'subdim',N.selectiondim', ...
-                        'ijk0',ones(N.D.nd,1));
-                    ijk2 = N.graph.graph2slice(ellipse{2},...
-                        'mode','vector', ...
-                        'subdim',N.selectiondim', ...
-                        'ijk0',ones(N.D.nd,1));
-                                        
-                    ijk = {ijk1(N.selectiondim),ijk2(N.selectiondim), ellipse{3}};
-                    ellipseSelection = xplr.selectionND('ellipse2D',ijk);
                     
-                    if isempty(N.selection)
-                       N.selection=ellipseSelection; 
-                    else
-                        N.selection(end+1)=ellipseSelection;
+                    switch N.selectionshape
+                        
+                        case {'ysegment' 'xsegment'}
+                            d = fn_switch(N.selectionshape,'xsegment',1,'ysegment', 2);
+                            N.selectiondim = d;
+                            
+                            % user interaction
+                            oneDselection = fn_mouse(N.ha,[N.selectionshape '-']);
+                            
+                            % convert to slice indices in the selected
+                            % dimension
+                            xy = zeros(2,2);
+                            xy(d,:) = oneDselection;
+                            ijk = N.graph.graph2slice(xy,...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            isegment = sort(ijk(d,:));
+                            
+                            % create selection in slice indices coordinates
+                            sz = N.D.slice.sz(d); % size of data in the dimension where selection is made
+                            oneDselection = xplr.selectionND('line1D',isegment,sz);
+                            
+                            % update selection
+                            if isempty(N.selection)
+                               N.selection=oneDselection; 
+                            else
+                               N.selection(end+1)=oneDselection;
+                            end
+                                                        
+                            % update filter
+                            N.selectionfilter.updateSelection('new',{oneDselection.dataind})
+                            
+                            % update display
+                            N.displayselection('new',length(N.selection))
+                        case 'poly'
+                            N.selectiondim =[1 2];
+                            poly = fn_mouse(N.ha,'poly');
+                            ijk = N.graph.graph2slice(poly,...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            
+                            polySelection = xplr.selectionND('poly2D',ijk(N.selectiondim,:));
+                             if isempty(N.selection)
+                               N.selection=polySelection; 
+                            else
+                                N.selection(end+1)=polySelection;
+                            end
+                            N.displayselection('new',length(N.selection))
+                        case 'free'
+                            N.selectiondim =[1 2];
+                            poly = fn_mouse(N.ha,'free');
+                            ijk = N.graph.graph2slice(poly,...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            
+                            polySelection = xplr.selectionND('poly2D',ijk(N.selectiondim,:));
+                             if isempty(N.selection)
+                               N.selection=polySelection; 
+                            else
+                                N.selection(end+1)=polySelection;
+                            end
+                            N.displayselection('new',length(N.selection))
+                        case 'rect'
+                            N.selectiondim = [1 2];
+                            rectangle = fn_mouse(N.ha,'rectangle-');
+                            
+                            ijk1 = N.graph.graph2slice(rectangle(:,1),...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            ijk2 = N.graph.graph2slice(rectangle(:,3),...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            vector=ijk1-ijk2;
+                            width = abs(vector(N.selectiondim(1),1));
+                            height= abs(vector(N.selectiondim(2),1));
+                            x = min(ijk1(N.selectiondim(1),1),ijk2(N.selectiondim(1),1));
+                            y = min(ijk1(N.selectiondim(2),1),ijk2(N.selectiondim(2),1));
+                            rectangleSelection = xplr.selectionND('rect2D',[x,y,width,height]);
+                            if isempty(N.selection)
+                               N.selection=rectangleSelection; 
+                            else
+                                N.selection(end+1)=rectangleSelection;
+                            end
+                            N.displayselection('new',length(N.selection))
+                        case 'ellipse'
+                            N.selectiondim = [1 2];
+                            ellipse = fn_mouse(N.ha,'ellipse-*');
+        %                     disp("ellipse");
+        %                     ellipse{2} = ellipse{1} + ellipse{2};
+        %                     ellipse{1}
+        %                     ellipse{2}
+        %                     ellipse{3}
+        %                     disp("end ellipse");
+                            ijk1 = N.graph.graph2slice(ellipse{1},...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            ijk2 = N.graph.graph2slice(ellipse{2},...
+                                'mode','vector', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+
+                            ijk = {ijk1(N.selectiondim),ijk2(N.selectiondim), ellipse{3}};
+                            ellipseSelection = xplr.selectionND('ellipse2D',ijk);
+
+                            if isempty(N.selection)
+                               N.selection=ellipseSelection; 
+                            else
+                                N.selection(end+1)=ellipseSelection;
+                            end
+
+                            N.displayselection('new',length(N.selection))
+                        case 'ring'
+                            N.selectiondim = [1 2];
+                            ring = fn_mouse(N.ha,'ring*');
+        %                     disp("ellipse");
+        %                     ellipse{2} = ellipse{1} + ellipse{2};
+        %                     ellipse{1}
+        %                     ellipse{2}
+        %                     ellipse{3}
+        %                     disp("end ellipse");
+                            ijk1 = N.graph.graph2slice(ring{1},...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            ijk2 = N.graph.graph2slice(ring{2},...
+                                'mode','vector', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+
+                            ijk = {ijk1(N.selectiondim),ijk2(N.selectiondim), [ring{3},ring{4}]};
+                            ellipseSelection = xplr.selectionND('ring2D',ijk);
+
+                            if isempty(N.selection)
+                               N.selection=ellipseSelection; 
+                            else
+                                N.selection(end+1)=ellipseSelection;
+                            end
+
+                            N.displayselection('new',length(N.selection))
+                        case 'segment'
+                            N.selectiondim =[1 2];
+                            poly = fn_mouse(N.ha,'segment');
+                            ijk = N.graph.graph2slice(poly,...
+                                'mode','point', ...
+                                'subdim',N.selectiondim', ...
+                                'ijk0',ones(N.D.nd,1));
+                            
+                            polySelection = xplr.selectionND('poly2D',ijk(N.selectiondim,:));
+                             if isempty(N.selection)
+                               N.selection=polySelection; 
+                            else
+                                N.selection(end+1)=polySelection;
+                            end
+                            N.displayselection('new',length(N.selection))
+                        otherwise
+                            % don't exist yet
+                        
                     end
-                    % create a random selection                    
-%                     slicesz = N.D.slice.sz(:);
-%                     poly = 1 + fn_mult(rand(2,3), slicesz(N.selectiondim)-1);
-%                     selij = selectionND('poly2D',poly);
-%                     
-%                     N.selection = selij;
-                    N.displayselection('new',length(N.selection))
             end
         end
     end
@@ -473,8 +611,56 @@ classdef displaynavigation < xplr.graphnode
         end
     end
     
-    % Complex selection
+    % ROI selection
     methods
+%         function sel = get.selection(N)
+%             F = N.selectionfilter;
+%             if isempty(F)
+%                 sel = [];
+%             elseif F.headerin(1).categorical
+%                 sel = F.indices;
+%             else
+%                 sel = F.selection;
+%             end
+%         end
+%         
+        function setselectiondim(N,dim)
+        
+            N.selectiondim = dim;
+            
+            headerin = N.D.slice.header(dim); 
+%             if ~headerin.categorical
+%                 error 'Currently displaynavigation can create selection only on categorical dimensions'
+%             end
+            
+            F = xplr.bank.getFilter(1, headerin);
+            % if F is empty, create it
+            
+            % remove selections of this filter if any
+            nsel = F.szout;
+            if nsel > 0
+                F.updateSelection('reset') 
+            end
+            
+            % watch changes in filter to update display!
+            N.addListener(F,'ChangedOperation',@(u,e)selectionfilterchange(N,e));
+            
+            % store filter in property
+            N.selectionfilter = F;
+            N.selection = []; % selection is empty since we "emptied" F
+            
+            % update display
+            N.displayselection()
+            
+        end
+        
+        function selectionfilterchange(N,e)
+            
+            % U
+            disp(e)
+            
+        end
+        
         function displayselection(N,flag,ind,value)
             % @param flag: string 'all', 'new'
             % @param ind: integer
@@ -514,11 +700,12 @@ classdef displaynavigation < xplr.graphnode
             
             % display set...
 
+            if nargin<2, flag = 'all'; end
             if fn_ismemberstr(flag,{'all','reset'})
                 % 'findobj' allows a cleanup when some objects were not
                 % removed correctly
-%                 delete(findobj(N.D.ha,'tag','ActDispIm_Sel'))
-%                 N.D.seldisp = cell(1,nsel);
+                deleteValid(N.selectiondisplay)
+                N.selectiondisplay = cell(1,length(N.selection));
                 for k=1:length(N.selection)
                      displayonesel(N,k,'new');
                 end
@@ -580,44 +767,67 @@ classdef displaynavigation < xplr.graphnode
                 
             % Values
             % seldimsnum = D.seldims-'w';
-            seldimsnum = N.selectiondim;
+            
             %selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
             %selij = selectionmarks(k);
             selij = N.selection(k);
+            
+            % TODO: the selection must have the information of the dimension to which
+            % it applies. Maybe this has to be done with the bank to
+            % synchronize filters like the zoomFilters. For now seldimsnum
+            % is equal to the number of dimension information
             if flagnew || flagedit || flagpos
+                
+                % multiple shapes not handled yet
+                if ~isscalar(selij.poly)
+                    error 'Cannot display selection made of the union of several shapes'
+                end
+                
                 % if this selection apply to only one dimension
-                if isscalar(seldimsnum)
-                    selij2 = convert(selij,'line1D');
+                seltype = selij.poly.type;
+                if strcmp(seltype,'line1D')
+                    %selij2 = convert(selij,'line1D');
                     % if there is only one dimension
-                    if D.SI.nd == 1
-                        sel = IJ2AX(D.SI,selij2);
-                        poly = [sel.poly];
-                        points = {poly.points};
-                        orthsiz = D.oldaxis(2,:);
-                    else
-                        % i can't do better than by hand!!!
-                        points = {selij2.poly.points};
-                        npart = length(points);
-                        for i=1:npart
-                            points{i} = points{i}*D.SI.grid(seldimsnum,1) + D.SI.grid(seldimsnum,2);
-                        end
-                        orthdim = 3-seldimsnum;
-                        orthsiz = [.5 D.SI.sizes(orthdim)+.5]*D.SI.grid(orthdim,1) + D.SI.grid(orthdim,2);
-                    end
-                    npart = length(points);
-                    for i=1:npart
-                        % line
-                        points{i} = [points{i}([1 1 2 2 1]) NaN; orthsiz([1 2 2 1 1]) NaN];
-                    end
-                    polygon = [points{:}];
-                else
+%                     if N.D.nd == 1
+%                         sel = IJ2AX(D.SI,selij2);
+%                         poly = [sel.poly];
+%                         points = {poly.points};
+%                         orthsiz = D.oldaxis(2,:);
+%                     else
+%                         points = selij2.poly.points;
+%                         npart = length(points);
+% %                         for i=1:npart
+% %                             points{i} = points{i}*D.SI.grid(seldimsnum,1) + D.SI.grid(seldimsnum,2);
+% %                         end
+% %                         orthdim = 3-seldimsnum;
+% %                         orthsiz = [.5 D.SI.sizes(orthdim)+.5]*D.SI.grid(orthdim,1) + D.SI.grid(orthdim,2);
+%                     end
 
-                   
+                    selij2 = visiblePolygon(N, selij.poly.points,1);
+                    lines = N.graph.slice2graph(selij2);
+                    polygon = ones(2,3,size(lines,2)); 
+                    
+                    for i = 1:size(lines,1)
+                        polygon(:,(i-1)*3+1) = [lines(1,i); .5];
+                        polygon(:,(i-1)*3+2) = [lines(1,i); -.5];
+                        polygon(:,(i-1)*3+3) = [NaN; NaN];
+                    end
+                elseif strcmp(seltype,'point1D')
+                    
+                    selij2 = visiblePolygon(N, selij.poly.points,1);
+                    points = N.graph.slice2graph(selij2);
+                    polygon = ones(2,3,length(points));
+                    
+                    for i = 1:length(points)
+                        polygon()
+                    end
+                    
+                    
+                else
                     selij2 = convert(selij,'poly2D');
-                    polygon = visiblePolygon(N, selij2.poly.points);
+                    polygon = visiblePolygon(N, selij2.poly.points,[1, 2]);
                     % convert to display coordinate system
                     polygon = N.graph.slice2graph(polygon);
-                      
                 end
                 center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
             end
@@ -743,8 +953,16 @@ classdef displaynavigation < xplr.graphnode
             delete(N.selectiondisplay{k});
         end
         
-        function polygon = visiblePolygon(N,points)
-        % visiblePolygon(N, points);
+        function output = visiblePolygon(N,points,selectionDimension)
+                    % visiblePolygon(N, points);
+                    
+                    % @param points: nxn double list of points with
+                    % coordinates vertical
+                    % @param selectionDimension: 1xn list of dimension to
+                    % which the selection applies
+                    % @return output: same double list of points with NaN instead of
+                    % points not visible and additional points to display
+                    % selection properly
                     
                     % coordinates of the polygon inside a vignette (in index
                     % coordinate system)
@@ -752,13 +970,13 @@ classdef displaynavigation < xplr.graphnode
                     np = size(points, 2);
                     
                     % replace points that are outside of vignette by NaNs
-                    zoomSliceValues = N.graph.getZoom(N.selectiondim,'indices');
+                    zoomSliceValues = N.graph.getZoom(selectionDimension,'indices');
                     
                     % set the ouput to zeros (they will be set to one if one of the
                     % dimension if it's out of display)
                     polygonIsOutOfDisplay = zeros(1,size(points,2));
                     
-                    for dimension = 1:size(zoomSliceValues,1)     
+                    for dimension = 1:size(zoomSliceValues,2)     
                        % is equal to one if is out of limits of the zoom or if the
                        % previous value was already 1
                         polygonIsOutOfDisplay = points(dimension,:)<(zoomSliceValues(1,dimension)-.5) | points(dimension,:)>(zoomSliceValues(2,dimension)+.5) | polygonIsOutOfDisplay;
@@ -793,7 +1011,7 @@ classdef displaynavigation < xplr.graphnode
                             % find the lowest ratio before limit of the
                             % next point
                             biggestRatio = 0;
-                            for dimension = 1:size(zoomSliceValues,1)
+                            for dimension = 1:size(zoomSliceValues,2)
                                 vector = points(dimension,boundaryPrev) - points(dimension,boundariesIndexes(boundariesIndex));
                                 vectorToLimitMin = (zoomSliceValues(1, dimension)-.5) - points(dimension,boundariesIndexes(boundariesIndex));
                                 vectorToLimitMax = (zoomSliceValues(2, dimension)+.5) - points(dimension,boundariesIndexes(boundariesIndex));
@@ -819,7 +1037,7 @@ classdef displaynavigation < xplr.graphnode
                             % find the lowest ratio before limit of the
                             % next point
                             biggestRatio = 0;
-                            for dimension = 1:size(zoomSliceValues,1)
+                            for dimension = 1:size(zoomSliceValues,2)
                                 vector = points(dimension,boundaryNext) - points(dimension,boundariesIndexes(boundariesIndex));
                                 vectorToLimitMin = (zoomSliceValues(1,dimension)-.5) - points(dimension,boundariesIndexes(boundariesIndex));
                                 vectorToLimitMax = (zoomSliceValues(2,dimension)+.5) - points(dimension,boundariesIndexes(boundariesIndex));
@@ -834,32 +1052,25 @@ classdef displaynavigation < xplr.graphnode
                             
                             boundariesValues(:,boundariesIndex) = points(:,boundariesIndexes(boundariesIndex))+(points(:,boundaryNext)-points(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
                             boundariesIndexes(boundariesIndex) = boundaryNext + numberOfPointsAdded;
-%                             points(N.selectiondim,boundariesIndexes(boundariesIndex)) = points(:,boundariesIndexes(boundariesIndex))+(points(:,boundaryNext)-points(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+%                             points(selectionDimension,boundariesIndexes(boundariesIndex)) = points(:,boundariesIndexes(boundariesIndex))+(points(:,boundaryNext)-points(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
                         end
                         
                         numberOfPointsAdded = numberOfPointsAdded + 1;
                     end
-                    
-                    
 
                     % if column n of polygonIsOutOfDisplay is equal to 1 it
                     % means the point in column n of polygon is out of
                     % display so replace all values on those columns by Nan
                     % to don't be drawn
-                    
-                    
+
                     % coordinates in the full nd index coordinate system
-                    
 
                     points(:,polygonIsOutOfDisplay) = NaN;
+
+                    output = ones(N.D.nd, np + size(boundariesValues,2));
                     
-                    
-                    polygon = ones(N.D.nd, np + size(boundariesValues,2));
-                    
-                    polygon(N.selectiondim,setdiff(1:end,boundariesIndexes)) = points;
-                    polygon(N.selectiondim,boundariesIndexes) = boundariesValues;
-                    
-                    
+                    output(selectionDimension,setdiff(1:end,boundariesIndexes)) = points;
+                    output(selectionDimension,boundariesIndexes) = boundariesValues;
 
         end
         
@@ -974,7 +1185,6 @@ classdef displaynavigation < xplr.graphnode
         end
         
     end
-    
     
     
     

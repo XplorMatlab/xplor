@@ -195,6 +195,7 @@ classdef bank < hgsetget
         end
         function F = getFilter(linkkey, head, doshow, varargin)
             % function F = getFilter(linkkey, header ,doshow [,user])
+            if nargin<3, doshow = false; end
             FS = xplr.bank.getFilterSet(linkkey);
             F = FS.getFilter(head, doshow, varargin{:});
         end

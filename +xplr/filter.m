@@ -67,6 +67,7 @@ classdef filter < xplr.dataoperand
             % function updateSelection(F,'new|chg|add',ind,value[,'label1',headervalues1,...])
             % function updateSelection(F,'chg|add',ind,value)
             % function updateSelection(F,'remove|perm',ind)
+            % function updateSelection(F,'reset')
             
             % check filter type
             if ~fn_ismemberstr(F.type,{'selection' 'indices'})
@@ -76,39 +77,59 @@ classdef filter < xplr.dataoperand
             
             % input
             if isscalar(varargin)
-                flag = 'all';
+                if ischar(varargin{1})
+                    if strcmp(varargin{1},'reset')
+                        flag = 'all';
+                        value = [];
+                    else
+                        error 'only flag ''reset'' can be used without arguments'
+                    end
+                else
+                    flag = 'all';
+                    value = varargin{1};
+                end
+                addheaderinfo = cell(2,0);
             else
                 flag = varargin{1};
                 varargin(1) = [];
-            end
-            value = [];
-            switch flag
-                case 'all'
-                    value = varargin{1};
-                    addheaderinfo = reshape(varargin(2:end),2,[]);
-                case {'new' 'chg' 'add' 'chg&new' 'chg&rm'}
-                    if strcmp(flag,'new') && mod(nargin,2)==1
-                        % flag 'new', ind not specified
+                value = [];
+                switch flag
+                    case 'all'
                         value = varargin{1};
-                        ind = F.nsel+(1:length(value));
                         addheaderinfo = reshape(varargin(2:end),2,[]);
-                    else
-                        [ind value] = deal(varargin{1:2});
-                        addheaderinfo = reshape(varargin(3:end),2,[]);
-                    end
-                case {'remove' 'perm'}
-                    ind = varargin{1};
-                otherwise
-                    error('flag ''%s'' not handled by xplr.filter.updateSelection')
+                    case {'new' 'chg' 'add' 'chg&new' 'chg&rm'}
+                        if strcmp(flag,'new') && mod(nargin,2)==1
+                            % flag 'new', ind not specified
+                            value = varargin{1};
+                            ind = F.nsel+(1:length(value));
+                            addheaderinfo = reshape(varargin(2:end),2,[]);
+                        else
+                            [ind value] = deal(varargin{1:2});
+                            addheaderinfo = reshape(varargin(3:end),2,[]);
+                        end
+                    case {'remove' 'perm'}
+                        ind = varargin{1};
+                    case 'reset'
+                    otherwise
+                        error('flag ''%s'' not handled by xplr.filter.updateSelection')
+                end
             end
+            
             
             % compute indices
             if fn_ismemberstr(flag,{'all' 'new' 'chg' 'add' 'chg&new' 'chg&rm'})
                 if indicesonly
                     dataind = value;
                     if ~iscell(dataind)
-                        if isscalar(ind)
+                        if isscalar(dataind)
                             dataind = {dataind};
+                        elseif strcmp(flag,'all')
+                            % warning: the value is ambiguous, for example
+                            % does value [1 2 3] mean that we want 3
+                            % singleton selections (replace by {1 2 3} or
+                            % a single selection of 3 indices (replace by
+                            % {[1 2 3]}? We assume the first case.
+                            dataind = num2cell(dataind);
                         elseif length(dataind)==length(ind)
                             dataind = num2cell(dataind);
                         else
@@ -127,7 +148,7 @@ classdef filter < xplr.dataoperand
                     % note that even if value is already equal to
                     % F.selections, we cannot just return, because
                     % addheaderinfo might bear some changes
-                    ind = 1:length(value);
+                    ind = 1:length(dataind);
                     if ~indicesonly
                         F.selections = row(value); % in particular row(...) transform 0x0 array in 1x0 array
                     end
@@ -177,7 +198,7 @@ classdef filter < xplr.dataoperand
             end
             
             % notification
-            notify(F,'ChangedOperation',xplr.eventinfo('filter',flag,ind))
+            notify(F,'ChangedOperation',xplr.eventinfo('filter',flag,ind,value))
         end
         function setFun(F,fun)
             % convert char to function handle

@@ -51,7 +51,7 @@ classdef eventinfo < event.EventData & dynamicprops
                 case 'data'
                     F = {'flag' 'dim' 'ind'};
                 case 'filter'
-                    F = {'flag' 'ind'};
+                    F = {'flag' 'ind' 'value'};
                 case 'zoom'
                     F = {'chgnout' 'dim'};
                 case 'clip'
