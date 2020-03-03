@@ -68,7 +68,7 @@ classdef xdata < xplr.graphnode
         function chgData(x,data)
             if isequal(data,x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
-            datasz = xplr.strictsize(data,x.nd);
+            datasz = strictsize(data,x.nd);
             if length(datasz)>x.nd, error 'Cannot increase number of dimensions. Use updateData to change both data and headers.', end
             chgsz = (datasz~=x.sz);
             if any([x.header(chgsz).iscategoricalwithvalues]), error 'Cannot change data size in categorical dimensions. Use updateData to change both data and headers', end
@@ -146,7 +146,7 @@ classdef xdata < xplr.graphnode
                 otherwise
                     error('invalid flag ''%s'' for xdata updateData method')
             end
-            if ~isequal(xplr.strictsize(newdata,length(newhead)),[newhead.n])
+            if ~isequal(strictsize(newdata,length(newhead)),[newhead.n])
                 error 'new data size does not match header(s)'
             end
             % really update data only now (after all checks occured)
@@ -190,7 +190,7 @@ classdef xdata < xplr.graphnode
                     if nargin>=4 && ~isequal(newdata,x.data), error 'new data does not match dim permutation', end
                 otherwise
                     if x.nd==1 && isvector(newdata), newdata = newdata(:); end % don't generate an error for a row vector input
-                    if ~isequal(xplr.strictsize(newdata,x.nd),x.sz)
+                    if ~isequal(strictsize(newdata,x.nd),x.sz)
                         error 'new data size does not match new header'
                     end
                     x.data = newdata;

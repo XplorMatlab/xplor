@@ -3,6 +3,7 @@ function [opt optadd] = parseInput(varargin)
 % function opt = parseInput('name','value',...)
 %---
 % optinit is a structure, but optadd/opt is a cell array
+
 initflag = isstruct(varargin{1});
 if initflag
     optinit = varargin{1};

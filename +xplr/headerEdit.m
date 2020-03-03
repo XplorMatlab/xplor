@@ -39,7 +39,7 @@ classdef headerEdit < hgsetget
             else
                 inputhead = [];
                 E.dat = data;
-                E.sz = xplr.strictsize(data);
+                E.sz = strictsize(data);
             end
             E.nd = length(E.sz);
             

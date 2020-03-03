@@ -16,6 +16,11 @@ for i=1:length(flags)
 end
 
 %---
+function test_private
+% test th
+strictsize(2,3)
+
+%---
 function test_all
 
 test_header

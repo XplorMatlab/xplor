@@ -529,8 +529,8 @@ classdef viewdisplay < xplr.graphnode
             sz1 = sz; sz1([xorg0 yorg0]) = 1;
             sz1prev = sz1;
             if ~isempty(dim), sz1prev(dim) = sz1prev(dim)+(doremove-donew)*length(ind); end
-            if ~isequal(xplr.strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))...
-                    || ~isequal(xplr.strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))
+            if ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))...
+                    || ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))
                 [doreset dodispatch doalldata] = deal(true);
                 doselectdata = false;
             end

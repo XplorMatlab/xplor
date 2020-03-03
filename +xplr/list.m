@@ -28,7 +28,7 @@ classdef list < xplr.graphnode
                 head = xplr.header('testheader',10);
                 F = xplr.filterAndPoint(head,'indices');
             end
-            [opt optadd] = xplr.parseInput(opt,varargin{:});
+            [opt optadd] = parseInput(opt,varargin{:});
             
             % check filter
             L.F = F;
