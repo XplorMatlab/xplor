@@ -819,7 +819,7 @@ classdef displaynavigation < xplr.graphnode
                     polygon = ones(2,3,length(points));
                     
                     for i = 1:length(points)
-                        polygon()
+                      
                     end
                     
                     

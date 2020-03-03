@@ -13,6 +13,11 @@
 
 /* -- page layout ----------------------------------------------------------- */
 
+html {
+    /* CSS hack for macOS's scrollbar (see #1125) */
+    background-color: #FFFFFF;
+}
+
 body {
     font-family: sans-serif;
     font-size: 100%;
@@ -65,7 +70,24 @@ div.related a {
 }
 
 div.sphinxsidebar {
+    top: 30px;
+    bottom: 0;
+    margin: 0;
+    position: fixed;
+    overflow: auto;
+    height: auto;
 }
+/* this is nice, but it it leads to hidden headings when jumping
+   to an anchor */
+/*
+div.related {
+    position: fixed;
+}
+
+div.documentwrapper {
+    margin-top: 30px;
+}
+*/
 
 div.sphinxsidebar h3 {
     font-family: 'Trebuchet MS', sans-serif;
@@ -233,7 +255,7 @@ code {
     font-size: 0.95em;
 }
 
-th {
+th, dl.field-list > dt {
     background-color: #ede;
 }
 

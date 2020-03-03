@@ -53,6 +53,7 @@ extensions = [
     'sphinxcontrib.matlab',
     'sphinx.ext.autosectionlabel',
 ]
+primary_domain = 'mat'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -89,6 +90,9 @@ pygments_style = None
 #
 html_theme = 'classic'
 
+html_theme_options = {'stickysidebar': True}
+
+
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
@@ -113,6 +117,7 @@ html_css_files = [
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
+html_sidebars = { '**': ['globaltoc.html', 'relations.html', 'sourcelink.html', 'searchbox.html'] }
 
 
 # -- Options for HTMLHelp output ---------------------------------------------
