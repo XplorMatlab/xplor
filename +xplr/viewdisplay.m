@@ -242,6 +242,7 @@ classdef viewdisplay < xplr.graphnode
             % update labels
             if doImmediateDisplay, D.checkActiveDim(false), end
             D.labels.updateLabels()
+            drawnow
             % update ticks and display
             if ~doImmediateDisplay, return, end
             D.checkColorDim(false)

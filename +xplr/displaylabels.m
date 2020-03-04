@@ -297,7 +297,7 @@ classdef displaylabels < xplr.graphnode
                     end
                     ythr = NaN(2,length(ylayout)); ythr(:,oky) = ythrok;
                 end
-                ythr = [-Inf row(ythr)]
+                ythr = [-Inf row(ythr)];
             end
             
             % make sure label will not be covered by data display
