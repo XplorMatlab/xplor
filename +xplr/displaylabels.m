@@ -10,6 +10,7 @@ classdef displaylabels < xplr.graphnode
         rotheight
         h
         movingdim
+        movingclone
         listeners = struct('slice',[]);
         prevorgSetpos     % last organization seen by setPositions
     end
@@ -18,7 +19,7 @@ classdef displaylabels < xplr.graphnode
     end
     properties (Dependent, Access='private')
         ha
-        org
+        org_nonsingleton
     end
         
     methods
@@ -31,7 +32,7 @@ classdef displaylabels < xplr.graphnode
             L.graph = D.graph;
             createLabels(L,'global')
             getHeights(L)
-            if ~isempty(D.org), setPositions(L), end
+            if ~isempty(D.layout), setPositions(L), end
             % watch in axes size (no need to take care of deleting this
             % listener when L is deleted, because there is no reason that L
             % be deleted without D, D.ha, and the listener itself being
@@ -43,8 +44,10 @@ classdef displaylabels < xplr.graphnode
         function ha = get.ha(L)
             ha = L.D.ha;
         end
-        function org = get.org(L)
-            org = L.D.org;
+        function layout = get.org_nonsingleton(L)
+            % which dimensions 
+            layout = L.D.layout;
+            okdim = (L.D.slice.sz>1);
         end
     end
     
@@ -101,42 +104,40 @@ classdef displaylabels < xplr.graphnode
             L.prevorgSetpos = []; % next call to setPositions should have doloose set to false
         end
         function setPositions(L)
-            % do 'loose' update? (i.e. do not adjust position for
-            % non-relevant coordinates)
-            curorg = L.org;
-            if isempty(L.movingdim)
-                doloose = isequal(curorg,L.prevorgSetpos);
-                L.prevorgSetpos = curorg;
-            else
-                doloose = false;
-                L.prevorgSetpos = [];
-            end
+            persistent prevorg
             
-            % do not display labels of singleton dimensions
+            % current layout
+            org = L.D.layout;
+            
+            % visible labels and active dimensions
             sz = L.D.slice.sz; % slice size
             okdim = (sz>1);
-            %if ~isempty(curorg.x), okdim(curorg.x(1)) = true; end % first x dimension must be visible regardless of its being singleton or not
-            %if strcmp(L.D.displaymode,'image') && ~isempty(curorg.y), okdim(curorg.y(1)) = true; end % similar comment
-            xorgok = curorg.x(okdim(curorg.x));
-            yorgok = curorg.y(okdim(curorg.y));
-            ystatok = curorg.ystatic(okdim(curorg.ystatic));
-            orgperdim = org2perdim(curorg,length(sz));
             isactive = false(1,length(sz)); 
             isactive([L.D.activedim.x L.D.activedim.y]) = true;
+            
+            % do 'loose' update? (i.e. do not adjust position for
+            % non-relevant coordinates)
+            if isempty(L.movingdim)
+                doloose = isequal(org,prevorg);
+                prevorg = org;
+            else
+                doloose = false;
+                prevorg = [];
+            end
             
             % set positions 
             for d=1:length(sz)
                 if ~isgraphics(L.h(d),'text')
                     % it can happen that labels do not exist yet when
                     % updateLabels(L,'axsiz') is invoked
-                    L.prevorgSetpos = []; % positions will not be set, so do not store a 'prevorg'!
+                    prevorg = []; % positions will not be set, so do not store a 'prevlayout'!
                     continue
                 end
                 if ~okdim(d)
                     % do not display the label of singleton dimension
                     set(L.h(d),'visible','off')
                 else
-                    f = orgperdim{d};
+                    f = org.dim_locations{d};
                     % fixed properties
                     set(L.h(d),'visible','on', ...
                         'rotation',fn_switch(f,{'y' 'yx'},90,0), ...
@@ -146,20 +147,20 @@ classdef displaylabels < xplr.graphnode
                     % set position
                     switch f
                         case 'x'
-                            i = find(xorgok==d,1);
+                            i = find(org.x==d,1);
                             xpos = .5 + L.graph.labelPosition(d);
                             newpos = [xpos -(1+i)*L.height];
                         case 'y'
-                            i = find(yorgok==d,1);
+                            i = find(org.y==d,1);
                             ypos = .5 + L.graph.labelPosition(d);
                             newpos = [-(1+i)*L.rotheight ypos];
                         case 'ystatic'
-                            i = find(ystatok==d,1);
-                            newpos = [-4*L.rotheight (length(curorg.ystatic)+.5-i)*L.height];
+                            i = find(org.ystatic==d,1);
+                            newpos = [-4*L.rotheight (length(org.ystatic)+.5-i)*L.height];
                         case 'xy'
                             newpos = [0 1+1.5*L.height];
                         case 'yx'
-                            newpos = [-(length(yorgok)+2)*L.rotheight 1];
+                            newpos = [-(length(org.y)+2)*L.rotheight 1];
                     end
                     if doloose
                         pos = get(L.h(d),'pos');
@@ -171,8 +172,15 @@ classdef displaylabels < xplr.graphnode
                             otherwise
                                 set(L.h(d),'pos',newpos)
                         end
-                    elseif ~any(d==L.movingdim)
-                        set(L.h(d),'pos',newpos)
+                    else
+                        if any(d==L.movingdim)
+                            set(L.movingclone,'pos',newpos, ...
+                                'rotation',get(L.h(d),'rotation'), ...
+                                'horizontalalignment',get(L.h(d),'horizontalalignment'), ...
+                                'verticalalignment',get(L.h(d),'verticalalignment'))
+                        else
+                            set(L.h(d),'pos',newpos)
+                        end
                     end
                 end
             end
@@ -192,7 +200,7 @@ classdef displaylabels < xplr.graphnode
                     % some specific properties need to be updated
                     for d=dim, changeLabel(L,d), end
                 case 'axsiz'
-                    if isempty(L.org), return, end % happens sometimes at init because figure size changes for no clear reason
+                    if isempty(L.D.layout), return, end % happens sometimes at init because figure size changes for no clear reason
                     getHeights(L)
                 case 'pos'
                 case 'active'
@@ -228,133 +236,135 @@ classdef displaylabels < xplr.graphnode
         end
         function labelMove(L,d,obj)
             % prepare for changing organization
-            [prevorg curorg org0] = deal(L.org);
-            F = fieldnames(L.org);
-            for i=1:length(F)
-                f = F{i};
-                if ismember(d,L.org.(f))
-                    dorg = f; didx = find(L.org.(f)==d);
-                    org0.(f) = setdiff(L.org.(f),d,'stable');
-                    break
-                elseif i==length(F)
-                    warning('dimension %i not found in current organization',d)
-                    dorg = '';
-                end
-            end
+            [prevlayout, layout_d, layout] = deal(L.D.layout0); % previous, previous without d, current
+            dlayout = layout.dim_locations{d};
+            didx = find(layout.(dlayout)==d);
+            layout_d.(dlayout) = setdiff(layout.(dlayout),d,'stable');
             % (if d is assigned to xy or yx and there is already a
             % dimension there, this one will need to be moved away)
-            xydim = [org0.xy org0.yx]; 
+            xydim = [layout_d.xy layout_d.yx];
+            
             % prepare the global variables used in 'setthresholds' and
             % 'movelabel'
             sz = L.D.slice.sz; okdim = (sz>1);
             xthr = []; ythr = [];
             setthresholds()
+            
             function setthresholds
                 % thresholds will first be computed while ignoring
                 % singleton dimensions, then NaNs will be inserted at the
                 % locations of these singleton dimensions
                 % (x)
-                xorg = curorg.x; xthr = .5+L.graph.labelPosition(xorg); % first get threshold with d and singleton dimensions still included
-                xthr(xorg==d) = []; xorg(xorg==d) = [];                 % remove dimension d
-                okx = okdim(xorg); xthr(~okx) = NaN;                    % make it impossible to insert to the right of a singleton dimension
-                if strcmp(dorg,'y')                                     % refine intervals in case of swapping
+                xlayout = layout.x; xthr = .5+L.graph.labelPosition(xlayout); % first get threshold with d and singleton dimensions still included
+                xthr(xlayout==d) = []; xlayout(xlayout==d) = [];                 % remove dimension d
+                okx = okdim(xlayout); xthr(~okx) = NaN;                    % make it impossible to insert to the right of a singleton dimension
+                if strcmp(dlayout,'y')                                     % refine intervals in case of swapping
                     % not only x insertions, but also x/y swaps are possible
+                    % for example:
+                    %      pos =    0   x           x               1
+                    %   -> thr =       | |       |     |
                     nokx = sum(okx);
-                    tmp = [0 xthr(okx) 1];
+                    pos = [0 xthr(okx) 1]; % add absolute min and max
                     xthrok = zeros(2,nokx);
                     for ithr=1:nokx
-                        dmax = min(tmp(ithr+1)-tmp(ithr),tmp(ithr+2)-tmp(ithr+1))/4; % maximal distance to an x-label to swap with this label
-                        xthrok(:,ithr) = tmp(ithr+1)+[-dmax dmax];
+                        dmax = min(pos(ithr+1)-pos(ithr),pos(ithr+2)-pos(ithr+1))/4; % maximal distance to an x-label to swap with this label
+                        xthrok(:,ithr) = pos(ithr+1)+[-dmax dmax];
                     end
-                    xthr = NaN(2,length(xorg)); xthr(:,okx) = xthrok;
+                    xthr = NaN(2,length(xlayout)); xthr(:,okx) = xthrok;
                 end
                 xthr = [-Inf row(xthr)];
                 % (y)
-                yorg = curorg.y; ythr = .5+L.graph.labelPosition(yorg); % first get threshold with d and singleton dimensions still included
-                ythr(yorg==d) = []; yorg(yorg==d) = [];                 % remove dimension d
-                oky = okdim(yorg); ythr(~oky) = NaN;                    % make it impossible to insert to the right of a singleton dimension
-                if strcmp(dorg,'x')
+                ylayout = layout.y; ythr = .5+L.graph.labelPosition(ylayout); % first get threshold with d and singleton dimensions still included
+                ythr(ylayout==d) = []; ylayout(ylayout==d) = [];                 % remove dimension d
+                oky = okdim(ylayout); ythr(~oky) = NaN;                    % make it impossible to insert to the right of a singleton dimension
+                if strcmp(dlayout,'x')
                     % not only y insertions, but also x/y swaps are possible
                     noky = sum(oky);
-                    tmp = [0 ythr(oky) 1];
+                    pos = [0 ythr(oky) 1];
                     ythrok = zeros(2,noky);
                     for ithr=1:noky
-                        dmax = min(tmp(ithr)-tmp(ithr+1),tmp(ithr+1)-tmp(ithr+2))/4; % maximal distance to an x-label to swap with this label
-                        ythrok(:,ithr) = tmp(ithr+1)+[dmax -dmax];
+                        dmax = min(pos(ithr)-pos(ithr+1),pos(ithr+1)-pos(ithr+2))/4; % maximal distance to an x-label to swap with this label
+                        ythrok(:,ithr) = pos(ithr+1)+[dmax -dmax];
                     end
+                    ythr = NaN(2,length(ylayout)); ythr(:,oky) = ythrok;
                 end
-                ythr = [+Inf row(ythr)];
+                ythr = [-Inf row(ythr)];
             end
+            
             % make sure label will not be covered by data display
             uistack(obj,'top')
             % move
             L.movingdim = d;
+            L.movingclone = copyobj(obj,L.ha);
+            set(L.movingclone,'color',[1 1 1]*.6,'edgecolor','none','BackgroundColor','none')
+            uistack(L.movingclone,'bottom')
             %movelabel()
             moved = fn_buttonmotion(@movelabel,L.D.V.hf,'moved?');
+            
             function movelabel
                 p = get(L.ha,'currentpoint');
                 p = fn_coordinates(L.ha,'a2c',p(1,1:2)','position'); % convert to 'normalized' unit
                 % move object
                 set(obj,'pos',p)
                 % update organization and object location
-                neworg = org0;
+                newlayout = layout_d;
                 if p(2)<=0 && p(2)<=p(1)
                     % insert in x
                     idx = find(p(1)>=xthr,1,'last'); % never empty thanks to the -Inf
                     % x/y swap rather than insert?
-                    if strcmp(dorg,'y')
+                    if strcmp(dlayout,'y')
                         doswap = ~mod(idx,2);
                         idx = ceil(idx/2);
                     else
                         doswap = false;
                     end
                     if doswap
-                        neworg.x = [org0.x(1:idx-1) d org0.x(idx+1:end)];
-                        neworg.y = [org0.y(1:didx-1) org0.x(idx) org0.y(didx:end)];
+                        newlayout.x = [layout_d.x(1:idx-1) d layout_d.x(idx+1:end)];
+                        newlayout.y = [layout_d.y(1:didx-1) layout_d.x(idx) layout_d.y(didx:end)];
                     else
-                        neworg.x = [org0.x(1:idx-1) d org0.x(idx:end)];
+                        newlayout.x = [layout_d.x(1:idx-1) d layout_d.x(idx:end)];
                     end
-                    %while ~okdim(neworg.x(1)), neworg.x = neworg.x([2:end 1]); end % do not let the first dimension become singleton (note that d is non-singleton, so the loop will not be infinite)
+                    %while ~okdim(newlayout.x(1)), newlayout.x = newlayout.x([2:end 1]); end % do not let the first dimension become singleton (note that d is non-singleton, so the loop will not be infinite)
                 elseif p(1)<=0 && strcmp(L.D.displaymode,'time courses') && p(2)<=.25
                     % goes in ystatic
-                    neworg.ystatic(end+1) = d;
+                    newlayout.ystatic(end+1) = d;
                 elseif p(1)<=0
                     % insert in y
-                    idx = find(p(2)<=ythr,1,'last'); % never empty thanks to the +Inf
+                    idx = find(1-p(2)>=ythr,1,'last'); % never empty thanks to the +Inf
                     % x/y swap rather than insert?
-                    if strcmp(dorg,'x')
+                    if strcmp(dlayout,'x')
                         doswap = ~mod(idx,2);
                         idx = ceil(idx/2);
                     else
                         doswap = false;
                     end
                     if doswap
-                        neworg.x = [org0.x(1:didx-1) org0.y(idx) org0.x(didx:end)];
-                        neworg.y = [org0.y(1:idx-1) d org0.y(idx+1:end)];
+                        newlayout.x = [layout_d.x(1:didx-1) layout_d.y(idx) layout_d.x(didx:end)];
+                        newlayout.y = [layout_d.y(1:idx-1) d layout_d.y(idx+1:end)];
                     else
-                        neworg.y = [neworg.y(1:idx-1) d neworg.y(idx:end)];
+                        newlayout.y = [newlayout.y(1:idx-1) d newlayout.y(idx:end)];
                     end
-                    %while ~okdim(neworg.y(1)), neworg.y = neworg.y([2:end 1]); end % do not let the first dimension become singleton (note that d is non-singleton, so the loop will not be infinite)
+                    %while ~okdim(newlayout.y(1)), newlayout.y = newlayout.y([2:end 1]); end % do not let the first dimension become singleton (note that d is non-singleton, so the loop will not be infinite)
                 else
                     % xy or yx
                     if p(1)>=p(2) || p(1)>=(1-p(2))
                         % xy arrangement is more usual than yx, therefore
                         % give it more 'space
-                        neworg.xy = d; neworg.yx = [];
+                        newlayout.xy = d; newlayout.yx = [];
                     else
-                        neworg.xy = []; neworg.yx = d;
+                        newlayout.xy = []; newlayout.yx = d;
                     end
                     if xydim
                         % move away dimension that was occupying xy or yx
-                        tmp = neworg.(dorg);
-                        neworg.(dorg) = [tmp(1:didx-1) xydim tmp(didx:end)];
+                        tmp = newlayout.(dlayout);
+                        newlayout.(dlayout) = [tmp(1:didx-1) xydim tmp(didx:end)];
                     end
                 end
                 % update organization (-> will trigger automatic display
                 % update)
-                if ~isequal(neworg,curorg)
-                    curorg = neworg;
-                    L.D.setOrg(curorg,L.doImmediateDisplay)
+                if ~isequal(newlayout,layout)
+                    layout = newlayout;
+                    L.D.setLayout(layout,L.doImmediateDisplay)
                 end
                 drawnow update
                 % (do not) update position thresholds (this was nice before
@@ -362,43 +372,33 @@ classdef displaylabels < xplr.graphnode
                 % shaky)
                 % setthresholds
             end
+            
             % finish 
             L.movingdim = [];
+            delete(L.movingclone)
+            L.movingclone = [];
             if ~moved
                 % label was not moved, make d the active x or y dimension
                 % if appropriate
                 makeDimActive(L.D,d,'toggle')
-            elseif isequal(curorg,prevorg)
+            elseif isequal(layout,prevlayout)
                 % update label positions once more to put the one for dimension
                 % d in place, but keep the "non-so-meaningful" coordinate
                 % at its new position (maybe user moved the label to a
                 % better place where it does not hide other information)
                 setPositions(L)
-            elseif L.doImmediateDisplay || isequal(curorg,prevorg)
+            elseif L.doImmediateDisplay || isequal(layout,prevlayout)
                 % update label positions once more to put the one for dimension
                 % d in place
                 setPositions(L)
             else
                 % change organization (which will trigger data display
                 % update)only now
-                L.D.setOrg(curorg,true); % second argument (true) is needed to force display update even though D.org is already set to curorg
+                L.D.setLayout(layout,true); % second argument (true) is needed to force display update even though D.layout is already set to curlayout
             end
         end
     end
     
-end
-
-
-%---
-function orgperdim = org2perdim(org,nd)
-
-orgperdim = cell(1,nd);
-F = fieldnames(org);
-for i=1:length(F)
-    f = F{i};
-    orgperdim(org.(f)) = {f};
-end
-
 end
 
 

@@ -34,7 +34,7 @@ classdef viewdisplay < xplr.graphnode
     end
     
     properties (SetAccess='private')
-        org                                 % set with function setOrg
+        layout0                             % set with function setLayout
         activedim = struct('x',[],'y',[])   % change with function makeDimActive(D,d)
         colordim = [];                      % set with setColorDim
         clip = [0 1]                        % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
@@ -42,11 +42,11 @@ classdef viewdisplay < xplr.graphnode
     
     % Fast access (dependent)
     properties (Dependent, SetAccess='private')
-        
         nd
         slice
         zslice
         zoomfilters
+        layout
     end
     
     % Constructor, destructor
@@ -129,6 +129,13 @@ classdef viewdisplay < xplr.graphnode
         function zoomfilters = get.zoomfilters(D)
             zoomfilters = [D.zoomslicer.filters.obj];
         end
+        function layout = get.layout(D)
+            if isempty(D.layout0)
+                layout = [];
+            else
+                layout = D.layout0.strip_singleton();
+            end
+        end
     end
     
     % Some usefull simple methods
@@ -158,40 +165,40 @@ classdef viewdisplay < xplr.graphnode
             % check that current active dims are ok, but also set active
             % dims if there aren't
             if nargin<2, doImmediateUpdate = true; end
-            curorg = D.org;
+            org = D.layout;
             sz = D.slice.sz; okdim = (sz>1);
-            if ~isempty(curorg.x), okdim(curorg.x(1)) = true; end
-            if strcmp(D.displaymode,'image') && ~isempty(curorg.y), okdim(curorg.y(1)) = true; end
+            if ~isempty(org.x), okdim(org.x(1)) = true; end
+            if strcmp(D.displaymode,'image') && ~isempty(org.y), okdim(org.y(1)) = true; end
             
             % invalid dimensions
             % (x)
             dx = D.activedim.x;
-            if ~isempty(dx) && ~(okdim(dx) && any(dx==[curorg.x curorg.yx]))
+            if ~isempty(dx) && ~(okdim(dx) && any(dx==[org.x org.yx]))
                 dx = [];
             end
             % (y)
             dy = D.activedim.y;
-            if ~isempty(dy) && ~(okdim(dy) && any(dy==[curorg.y curorg.xy]))
+            if ~isempty(dy) && ~(okdim(dy) && any(dy==[org.y org.xy]))
                 dy = [];
             end
             
             % set new values
-            if isempty([dx dy]) && ~isempty([curorg.xy curorg.yx])
+            if isempty([dx dy]) && ~isempty([org.xy org.yx])
                 % (xy/yx)
-                if ~isempty(curorg.xy)
-                    dy = curorg.xy;
+                if ~isempty(org.xy)
+                    dy = org.xy;
                 else
-                    dx = curorg.yx;
+                    dx = org.yx;
                 end
             else
                 % (x)
                 if isempty(dx)
-                    xorgok = curorg.x; xorgok(~okdim(xorgok)) = [];
+                    xorgok = org.x; xorgok(~okdim(xorgok)) = [];
                     if ~isempty(xorgok), dx = xorgok(end); end
                 end
                 % (y)
                 if isempty(dy)
-                    yorgok = curorg.y; yorgok(~okdim(yorgok)) = [];
+                    yorgok = org.y; yorgok(~okdim(yorgok)) = [];
                     if ~isempty(yorgok), dy = yorgok(end); end
                 end
             end
@@ -213,30 +220,20 @@ classdef viewdisplay < xplr.graphnode
     end
     
     methods
-        function set.org(D,neworg)
-            % check
-            %the line below generate an error on sphinx
-            ok = isequal(fieldnames(neworg),{'x' 'y' 'ystatic' 'xy' 'yx'}') ...
-                && ~(strcmp(D.displaymode,'image') && ~isempty(neworg.ystatic)) ...
-                && length([neworg.xy neworg.yx])<=1;
-            if ~ok, error 'organization structure is invalid', end
-            % set
-            D.org = neworg;
-        end
-        function setOrg(D,neworg,doImmediateDisplay)
-            % function setOrg(D,neworg[,doImmediateDisplay])
+        function setLayout(D,newlayout,doImmediateDisplay)
+            % function setLayout(D,newlayout[,doImmediateDisplay])
             %---
             % if doImmediateDisplay is set to false, only labels are
             % updated; if it is set to true, update happens regardless of
-            % whether neworg is actually new or not (this allows finishing
+            % whether newlayout is actually new or not (this allows finishing
             % a previous incomplete update with doImmediateDisplay set to
             % false)
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             if nargin<3
-                if isequal(neworg,D.org), return, end
+                if isequal(newlayout,D.layout), return, end
                 doImmediateDisplay = true;
             end
-            D.org = neworg;
+            D.layout0 = newlayout;
             % is zslice too large for being displayed
             D.checkzslicesize()
             % first update graph (new positionning will be needed for both
@@ -257,23 +254,23 @@ classdef viewdisplay < xplr.graphnode
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             dotoggle = nargin>=3 && strcmp(flag,'toggle');
             % update active dim and connect slider
-            if ismember(d,[D.org.x D.org.yx])
+            if ismember(d,[D.layout.x D.layout.yx])
                 if dotoggle && any(d==D.activedim.x)
                     D.activedim.x = [];
                 else
                     D.activedim.x = d;
-                    if ismember(d,D.org.yx) || any(ismember(D.activedim.y,[D.org.xy D.org.yx]))
+                    if ismember(d,D.layout.yx) || any(ismember(D.activedim.y,[D.layout.xy D.layout.yx]))
                         D.activedim.y = [];
                         D.navigation.connectZoomFilter('y')
                     end
                 end
                 D.navigation.connectZoomFilter('x')
-            elseif ismember(d,[D.org.y D.org.xy])
+            elseif ismember(d,[D.layout.y D.layout.xy])
                 if dotoggle && any(d==D.activedim.y)
                     D.activedim.y = [];
                 else
                     D.activedim.y = d;
-                    if ismember(d,D.org.xy) || any(ismember(D.activedim.x,[D.org.xy D.org.yx]))
+                    if ismember(d,D.layout.xy) || any(ismember(D.activedim.x,[D.layout.xy D.layout.yx]))
                         D.activedim.x = [];
                         D.navigation.connectZoomFilter('x')
                     end
@@ -291,7 +288,7 @@ classdef viewdisplay < xplr.graphnode
         function setColorDim(D,d,doImmediateDisplay)
             if ~isnumeric(d) || numel(d)>1, error 'colordim must be empty or scalar', end
             if isequal(d,D.colordim), return, end
-            if ~isempty(d) && ~isempty(D.org.x) && d==D.org.x(1), disp 'first x-dimension cannot be used for colors', return, end
+            if ~isempty(d) && ~isempty(D.layout.x) && d==D.layout.x(1), disp 'first x-dimension cannot be used for colors', return, end
             if nargin<3, doImmediateDisplay = true; end
             % set property
             D.colordim = d;
@@ -306,7 +303,7 @@ classdef viewdisplay < xplr.graphnode
         end
         function checkColorDim(D,doImmediateDisplay)
             cdim = D.colordim;
-            if ~isempty(cdim) && ~isempty(D.org.x) && cdim==D.org.x(1)
+            if ~isempty(cdim) && ~isempty(D.layout.x) && cdim==D.layout.x(1)
                 % cannot color according to the first x-dimension
                 if nargin<2, doImmediateDisplay = false; end
                 D.setColorDim([],doImmediateDisplay)
@@ -379,13 +376,13 @@ classdef viewdisplay < xplr.graphnode
         function slicechange(D,e)
             % function slicechange(D,e)
             %---
-            % function slicechange updates the 'org' property and slider
+            % function slicechange updates the 'layout' property and slider
             % connections, but does not update display
             % it should be called after the zoomslicer has already
             % completed its update after slice change (hence the use of the
             % 'sliceChangeEvent' property to delay call to slicechange)
             
-            if nargin<2, flag = 'global'; else flag = e.flag; end
+            if nargin<2, flag = 'global'; else, flag = e.flag; end
             xplr.debuginfo('viewdisplay','slicechange %s', flag)
             
             % Update organization
@@ -393,14 +390,8 @@ classdef viewdisplay < xplr.graphnode
                 case 'global'
                     % default organization: 1st and 4th dimension in x, 2nd
                     % and all other dimensions in y
-                    neworg = struct('x',[],'y',[],'ystatic',[],'xy',[],'yx',[]);
-                    nd = D.nd;
-                    doimage = strcmp(D.displaymode,'image');
-                    if nd==0, return, end
-                    if nd==3 && doimage, neworg.xy = 3; end
-                    if nd>=4, neworg.x = [1 4]; elseif nd>=1, neworg.x = 1; end
-                    if nd>=3+doimage, neworg.y = [2 3 5:nd]; elseif nd>=2, neworg.y = 2; end
-                    if ~isequal(neworg,D.org), D.org = neworg; end
+                    newlayout = xplr.displaylayout(D);
+                    if ~isequal(newlayout,D.layout), D.layout0 = newlayout; end
                 case 'insertdim'
                     error 'not implemented yet'
                 case 'rmdim'
@@ -492,41 +483,41 @@ classdef viewdisplay < xplr.graphnode
             
             % Reshape slice data adequately
             sz = D.zslice.sz;
-            if ~isempty(D.org.x)
-                xorg0 = D.org.x(1);
+            if ~isempty(D.layout.x)
+                xlayout0 = D.layout.x(1);
             else
-                xorg0 = length(sz)+1;
+                xlayout0 = length(sz)+1;
                 sz(end+1) = 1;
             end
             x = D.zslice.data;
             if dotimecourses
-                nt = sz(xorg0);
+                nt = sz(xlayout0);
                 if nt==1
                     lineopt = {'linestyle','none','marker','.'};
                 else
                     lineopt = {'linestyle','-','marker','none'};
                 end
-                szo = [prod(sz(1:xorg0-1)) prod(sz(xorg0+1:end))];
+                szo = [prod(sz(1:xlayout0-1)) prod(sz(xlayout0+1:end))];
                 x = reshape(x,[szo(1) nt szo(2)]);
-                yorg0 = [];
+                ylayout0 = [];
             else
-                if ~isempty(D.org.y)
-                    yorg0 = D.org.y(1);
+                if ~isempty(D.layout.y)
+                    ylayout0 = D.layout.y(1);
                 else
-                    yorg0 = length(sz)+1;
+                    ylayout0 = length(sz)+1;
                     sz(end+1) = 1;
                 end
-                dotranspose = (yorg0<xorg0);
-                if dotranspose, [xorg0 yorg0] = deal(yorg0,xorg0); end
-                nx = sz(xorg0);
-                ny = sz(yorg0);
-                szo = [prod(sz(1:xorg0-1)) prod(sz(xorg0+1:yorg0-1)) prod(sz(yorg0+1:end))];
+                dotranspose = (ylayout0<xlayout0);
+                if dotranspose, [xlayout0 ylayout0] = deal(ylayout0,xlayout0); end
+                nx = sz(xlayout0);
+                ny = sz(ylayout0);
+                szo = [prod(sz(1:xlayout0-1)) prod(sz(xlayout0+1:ylayout0-1)) prod(sz(ylayout0+1:end))];
                 x = reshape(x,[szo(1) nx szo(2) ny szo(3)]);
             end
             
             % Check that current htransform and hdisplay are valid
             nd = D.zslice.nd;
-            sz1 = sz; sz1([xorg0 yorg0]) = 1;
+            sz1 = sz; sz1([xlayout0 ylayout0]) = 1;
             sz1prev = sz1;
             if ~isempty(dim), sz1prev(dim) = sz1prev(dim)+(doremove-donew)*length(ind); end
             if ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))...
@@ -553,7 +544,7 @@ classdef viewdisplay < xplr.graphnode
             end
             
             % Prepare display and grid
-            sz1 = sz; sz1([xorg0 yorg0]) = 1;
+            sz1 = sz; sz1([xlayout0 ylayout0]) = 1;
             if doreset          % reset display and grid elements
                 deleteValid(D.htransform) % this will also delete children D.hdisplay
                 [D.htransform D.hdisplay] = deal(gobjects([sz1 1]));
@@ -680,8 +671,8 @@ classdef viewdisplay < xplr.graphnode
         end
         function checkzslicesize(D)
             sztest = D.zslice.sz;
-            if ~isempty(D.org.x), sztest(D.org.x(1)) = 1; end
-            if strcmp(D.displaymode,'image') && ~isempty(D.org.y), sztest(D.org.y(1)) = 1; end
+            if ~isempty(D.layout.x), sztest(D.layout.x(1)) = 1; end
+            if strcmp(D.displaymode,'image') && ~isempty(D.layout.y), sztest(D.layout.y(1)) = 1; end
             if strcmp(D.displaymode,'time courses')
                 ok = (prod(sztest) <= xplr.parameters.get('display.NLineMax')) && ...
                     (prod(D.zslice.sz) <= xplr.parameters.get('display.NLinePointMax'));
@@ -743,8 +734,8 @@ classdef viewdisplay < xplr.graphnode
             else
                 % Smart display update
                 dim = e.dim;
-                if (~isempty(D.org.x) && D.org.x(1)==dim) ...
-                        || (strcmp(D.displaymode,'image') && ~isempty(D.org.y) && D.org.y(1)==dim)
+                if (~isempty(D.layout.x) && D.layout.x(1)==dim) ...
+                        || (strcmp(D.displaymode,'image') && ~isempty(D.layout.y) && D.layout.y(1)==dim)
                     % changes are within elements (the grid arrangement
                     % remains the same)
                     if fn_ismemberstr(flag,{'perm' 'chg'}) ...
@@ -836,14 +827,14 @@ classdef viewdisplay < xplr.graphnode
             c = disableListener(D.listeners.axsiz); %#ok<MCSUP,NASGU> % prevent display update following automatic change of axis position
             % set property
             D.displaymode = mode;
-            % for 'image' mode, check that org is valid, and modify it if
+            % for 'image' mode, check that layout is valid, and modify it if
             % necessary
-            if strcmp(mode,'image') && ~isempty(D.org.ystatic)
-                % it is not possible to superimpose images -> change org
-                neworg = D.org;
-                neworg.y = [D.org.y D.org.ystatic];
-                neworg.ystatic = [];
-                D.setOrg(neworg) % this automatically updates display among other things
+            if strcmp(mode,'image') && ~isempty(D.layout.ystatic)
+                % it is not possible to superimpose images -> change layout
+                newlayout = D.layout;
+                newlayout.y = [D.layout.y D.layout.ystatic];
+                newlayout.ystatic = [];
+                D.setLayout(newlayout) % this automatically updates display among other things
             else
                 % update display
                 D.checkzslicesize() % is zslice too large for being displayed

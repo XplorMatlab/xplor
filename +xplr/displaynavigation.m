@@ -577,11 +577,11 @@ classdef displaynavigation < xplr.graphnode
             ijk = getPointIndexPosition(N);
             zoom = N.graph.getZoom();
             
-            for dimension = N.D.org.x
+            for dimension = N.D.layout.x
                 dimension_isSingleton = (N.D.V.slice.header(dimension).n == 1);
                 if ~dimension_isSingleton, x_singleton = false; end
                 
-                % for all dimensions in org.x, check if the crossCenter is
+                % for all dimensions in layout.x, check if the crossCenter is
                 % out of the display of this dimension. If the crossCenter
                 % is out of display, the vertical bar will be hidden
                 if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
@@ -596,7 +596,7 @@ classdef displaynavigation < xplr.graphnode
             % same things for horizontal bar
             y_singleton = true;
             y_isOutOfDisplay = false;
-            for dimension = N.D.org.y
+            for dimension = N.D.layout.y
                 dimension_isSingleton = (N.D.V.slice.header(dimension).n == 1);
                 if ~dimension_isSingleton, y_singleton = false; end
 
@@ -1103,7 +1103,7 @@ classdef displaynavigation < xplr.graphnode
             % but it seems that the effect is less intuitive. Let's go back
             % to the previous code and see if we get errors or unintuitive
             % behaviors to decide what to do. (TD 12/11/2019)
-            %             if nscroll<0 && ~any([N.D.org.xy N.D.org.yx])
+            %             if nscroll<0 && ~any([N.D.layout.xy N.D.layout.yx])
             %                 % it does not make sense to zoom-in in a dimensions which
             %                 % does not fill its available space due to aspect ratio
             %                 % constraints

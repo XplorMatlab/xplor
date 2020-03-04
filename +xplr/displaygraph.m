@@ -6,7 +6,7 @@ classdef displaygraph < xplr.graphnode
     end
     properties (Dependent, SetAccess='private')
         ha
-        org
+        layout
     end
     % parameters
     properties (SetAccess='private')
@@ -32,8 +32,8 @@ classdef displaygraph < xplr.graphnode
         function ha = get.ha(G)
             ha = G.D.ha;
         end
-        function org = get.org(G)
-            org = G.D.org;
+        function layout = get.layout(G)
+            layout = G.D.layout;
         end
     end
     
@@ -46,8 +46,8 @@ classdef displaygraph < xplr.graphnode
             header = G.D.zslice.header;
             sz = [header.n]; nd = length(sz);
             szorig = G.D.slice.sz; okdim = (szorig>1);
-            xorg = orgin.x;         yorg = orgin.y;
-            nx = length(xorg);      ny = length(yorg);
+            xlayout = orgin.x;         ylayout = orgin.y;
+            nx = length(xlayout);      ny = length(ylayout);
             zoom = G.getZoom('value');              % the 'true' coordinates (i.e. in data before zooming) of space edges
             [idxoffset bin] = G.getZoom('off&bin'); % coordinates conversions between original and zoomed data
             
@@ -77,11 +77,11 @@ classdef displaygraph < xplr.graphnode
             %             % organization. Choose method 1 otherwise.
             %             [zm ze] = deal(zm1, ze1);
             %             if any(orgin.xy) || any(orgin.yx)
-            %                 din = [xorg yorg];
+            %                 din = [xlayout ylayout];
             %             else
-            %                 lastx = find(okdim(xorg),1,'last'); % index of "extern" x dimension
-            %                 lasty = find(okdim(yorg),1,'last'); % index of "extern" y dimension
-            %                 din = [xorg(1:lastx-1) yorg(1:lasty-1)]; % "internal" dimensions
+            %                 lastx = find(okdim(xlayout),1,'last'); % index of "extern" x dimension
+            %                 lasty = find(okdim(ylayout),1,'last'); % index of "extern" y dimension
+            %                 din = [xlayout(1:lastx-1) ylayout(1:lasty-1)]; % "internal" dimensions
             %             end
             %             zm(din) = zm2(din);
             %             ze(din) = ze2(din);
@@ -92,12 +92,12 @@ classdef displaygraph < xplr.graphnode
             % (in addition, a small correction is applied for signals,
             % whose edges will be at 1 and n instead of .5 and n+.5 for
             % images and grid cells)
-            if dosignal && nx>=1 && sz(xorg(1))>1
-                ze(xorg(1)) = ze(xorg(1))-1;
+            if dosignal && nx>=1 && sz(xlayout(1))>1
+                ze(xlayout(1)) = ze(xlayout(1))-1;
             end 
 
             % specific data aspect ratio for some dimensions?
-            xhead = header(xorg);   yhead = header(yorg);
+            xhead = header(xlayout);   yhead = header(ylayout);
             [xpair ypair] = checkpairs(xhead,yhead,dosignal);
             [w h] = fn_pixelsize(G.D.ha);
             axisratio = h/w;
@@ -166,7 +166,7 @@ classdef displaygraph < xplr.graphnode
             % from the last dimensions)
             [st.xoffset st.xstep] = deal(zeros(1,nx)); % offsets will be adjusted so as to keep data point of "center-zoom" coordinates in the middle of the display
             [st.yoffset st.ystep] = deal(zeros(1,ny));
-            fill([xorg yorg]) = 1;
+            fill([xlayout ylayout]) = 1;
             ix = nx; iy = ny;
             while ix>0 || iy>0
                 % go down to the next pair
@@ -175,7 +175,7 @@ classdef displaygraph < xplr.graphnode
                 if isempty(ixnext), [ixnext iynext] = deal(1); end
                 % (x)
                 for ix=ix:-1:ixnext
-                    d = xorg(ix);
+                    d = xlayout(ix);
                     st.xspan(ix) = xavail;
                     st.xstep(ix) = xavail / ze(d);
                     st.xoffset(ix) = -zm(d)*st.xstep(ix);   % middle of zoom should be placed at the middle of the available space
@@ -183,7 +183,7 @@ classdef displaygraph < xplr.graphnode
                 end
                 % (y)
                 for iy=iy:-1:iynext
-                    d = yorg(iy);
+                    d = ylayout(iy);
                     st.yspan(iy) = yavail;
                     st.ystep(iy) = -yavail / ze(d);        % start from top of the screen (i.e. higher values of y) rather than bottom
                     st.yoffset(iy) = -zm(d)*st.ystep(iy);   % middle of zoom should be placed at the middle of the available space
@@ -198,7 +198,7 @@ classdef displaygraph < xplr.graphnode
                 correction = targetratio/curratio;
                 if correction>1
                     % need to reduce x-span
-                    d = xorg(ix);
+                    d = xlayout(ix);
                     st.xspan(ix) = st.xspan(ix)/correction;
                     st.xoffset(ix) = st.xoffset(ix) + zm(d)*st.xstep(ix)*(1-1/correction);
                     st.xstep(ix) = st.xstep(ix)/correction;
@@ -206,7 +206,7 @@ classdef displaygraph < xplr.graphnode
                     xavail = xavail/correction;
                 elseif correction<1
                     % need to reduce y-span
-                    d = yorg(iy);
+                    d = ylayout(iy);
                     st.yspan(iy) = st.yspan(iy)*correction;
                     st.yoffset(iy) = st.yoffset(iy) + zm(d)*st.ystep(iy)*(1-1*correction);
                     st.ystep(iy) = st.ystep(iy)*correction;
@@ -218,12 +218,12 @@ classdef displaygraph < xplr.graphnode
             end
             
             % case empty
-            if isempty(xorg)
+            if isempty(xlayout)
                 % coordinate 1 should go to the center
                 st.xoffset = -xavail;
                 st.xstep = xavail;
             end
-            if isempty(yorg)
+            if isempty(ylayout)
                 % coordinate 1 should go to the center
                 st.yoffset = yavail;
                 st.ystep = -yavail; % ystep must be negative
@@ -239,7 +239,7 @@ classdef displaygraph < xplr.graphnode
             
             % compute steps
             if nargout>0, prevsteps = G.steps; end
-            [G.steps G.zslicesz G.filling xpair] = computeStepsPrivate(G,G.org); %#ok<ASGLU>
+            [G.steps G.zslicesz G.filling xpair] = computeStepsPrivate(G,G.layout); %#ok<ASGLU>
             
             % any change
             if nargout>0
@@ -281,7 +281,7 @@ classdef displaygraph < xplr.graphnode
                     n = head.n;
                     % conversion between data coordinates and graph
                     domeasure = head.ismeasure;
-                    dogrid = (d==G.org.(ff));
+                    dogrid = (d==G.layout.(ff));
                     if dogrid
                         % step for ncol (or nrow) data points
                         ncol = find(diff(st.xyoffsets(k,:)),1);
@@ -292,7 +292,7 @@ classdef displaygraph < xplr.graphnode
                         f_off = st.xyoffsets(k,1) - (ncol+1)/2*f_step;
                         domeasure = false;
                     else
-                        jf = find(d==G.org.(f),1);
+                        jf = find(d==G.layout.(f),1);
                         if isempty(jf), error('%s activedim must have either ''%s'' or ''%s'' organization!',f,f,ff), end
                         switch f
                             case 'x'
@@ -443,12 +443,12 @@ classdef displaygraph < xplr.graphnode
             
             % "exterior" dimensions must be rounded
             doround = true(1, G.D.nd);
-            if ~isempty(G.org.x), doround(G.org.x(1)) = false; end
-            if ~isempty(G.org.y), doround(G.org.y(1)) = false; end
+            if ~isempty(G.layout.x), doround(G.layout.x(1)) = false; end
+            if ~isempty(G.layout.y), doround(G.layout.y(1)) = false; end
             ijk(doround,:) = round(ijk(doround,:));
             
-            x = sum(fn_add(st.xoffset(:), fn_mult(ijk(G.org.x,:),st.xstep(:))),1);
-            y = sum(fn_add(st.yoffset(:), fn_mult(ijk(G.org.y,:),st.ystep(:))),1);
+            x = sum(fn_add(st.xoffset(:), fn_mult(ijk(G.layout.x,:),st.xstep(:))),1);
+            y = sum(fn_add(st.yoffset(:), fn_mult(ijk(G.layout.y,:),st.ystep(:))),1);
             xy = [x; y];
             if ~isempty(st.xydim), xy = xy + st.xyoffsets(:,ijk(st.xydim,:)); end
         end
@@ -494,10 +494,10 @@ classdef displaygraph < xplr.graphnode
             % If mode is 'vector', we cannot operate in xy/yx dims, and
             % operate at most on one x and one y dims
             if strcmp(mode,'vector')
-                ok = ~any(ismember(subdim,G.org.xy)) ...
-                    && ~any(ismember(subdim,G.org.yx)) ...
-                    && sum(ismember(subdim,G.org.x)) <= 1 ...
-                    && sum(ismember(subdim,G.org.y)) <= 1;
+                ok = ~any(ismember(subdim,G.layout.xy)) ...
+                    && ~any(ismember(subdim,G.layout.yx)) ...
+                    && sum(ismember(subdim,G.layout.x)) <= 1 ...
+                    && sum(ismember(subdim,G.layout.y)) <= 1;
                 if ~ok
                     error 'vector conversion not possible in graph2zslice for this set of dimensions'
                 end
@@ -512,7 +512,7 @@ classdef displaygraph < xplr.graphnode
                 ncol = round(1/st.xysteps(1)); icol = .5 + x*ncol;
                 nrow = round(1/abs(st.xysteps(2))); irow = .5 + y*nrow;
                 if ismember(d,subdim)
-                    if d==G.org.xy
+                    if d==G.layout.xy
                         ijk(d,:) = icol + ncol*round(irow-1);
                     else
                         ijk(d,:) = irow + nrow*round(icol-1);
@@ -525,9 +525,9 @@ classdef displaygraph < xplr.graphnode
             
             % x 
             x = xy(1,:);
-            xorg = G.org.x;
-            for ix = length(xorg):-1:1
-                d = xorg(ix);
+            xlayout = G.layout.x;
+            for ix = length(xlayout):-1:1
+                d = xlayout(ix);
                 if strcmp(mode,'point')
                     x = x - st.xoffset(ix);
                 end
@@ -543,9 +543,9 @@ classdef displaygraph < xplr.graphnode
             
             % y
             y = xy(2,:);
-            yorg = G.org.y;
-            for iy = length(yorg):-1:1
-                d = yorg(iy);
+            ylayout = G.layout.y;
+            for iy = length(ylayout):-1:1
+                d = ylayout(iy);
                 if strcmp(mode,'point')
                     y = y - st.yoffset(iy);
                 end
@@ -565,8 +565,8 @@ classdef displaygraph < xplr.graphnode
             % "exterior" dimensions are rounded
             if invertible
                 doround = true(1, length(ijk));
-                if ~isempty(xorg), doround(xorg(1)) = false; end
-                if ~isempty(yorg), doround(yorg(1)) = false; end
+                if ~isempty(xlayout), doround(xlayout(1)) = false; end
+                if ~isempty(ylayout), doround(ylayout(1)) = false; end
                 ijk(doround) = round(ijk(doround));
             end
         end
@@ -671,15 +671,15 @@ classdef displaygraph < xplr.graphnode
             % Offset: handle separately offsets relative to
             % in-curve/in-image  dimension(s) and to other dimensions
             % (x)
-            M(1,4,:) = fn_add( sum(st.xoffset), sum(fn_mult(column(st.xstep(2:end)),ijk(G.org.x(2:end),:)),1) );
+            M(1,4,:) = fn_add( sum(st.xoffset), sum(fn_mult(column(st.xstep(2:end)),ijk(G.layout.x(2:end),:)),1) );
             % (y)
             switch G.D.displaymode
                 case 'image'
-                    M(2,4,:) = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.org.y(2:end),:)),1) );
+                    M(2,4,:) = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.layout.y(2:end),:)),1) );
                 case 'time courses'
                     % we subtract yscale*ybase so that ybase goes to
                     % the center
-                    M(2,4,:) = fn_add( sum(st.yoffset)-yscale*ybase, sum(fn_mult(st.ystep(:),ijk(G.org.y,:)),1) );
+                    M(2,4,:) = fn_add( sum(st.yoffset)-yscale*ybase, sum(fn_mult(st.ystep(:),ijk(G.layout.y,:)),1) );
             end
             % (xy)
             if ~isempty(st.xydim)
@@ -693,7 +693,7 @@ classdef displaygraph < xplr.graphnode
             if nargin==3
                 st = computeStepsPrivate(G,orgin);
             else
-                orgin = G.org;
+                orgin = G.layout;
                 st = G.steps;
                 if isempty(st)
                     % code here added on 04/06/2018 to avoid error
