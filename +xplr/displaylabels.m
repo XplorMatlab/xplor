@@ -6,8 +6,8 @@ classdef displaylabels < xplr.graphnode
         D
         graph
         % internal
-        height
-        rotheight
+        height     % unit: normalized to axis size
+        rotheight  % unit: normalized to axis size
         h
         movingdim
         movingclone
@@ -79,6 +79,7 @@ classdef displaylabels < xplr.graphnode
                 str = curheaders(d).label;
                 if curheaders(d).ismeasure, str = [str ' (' curheaders(d).unit ')']; end
                 L.h(d) = text('string',['  ' str '  '],'parent',L.ha, ...
+                    'margin',1, ...
                     'backgroundcolor',[1 1 1]*.95,'units','normalized', ...
                     'userdata',d,'buttondownfcn',@(u,e)labelClick(L,u));
             end
@@ -99,8 +100,8 @@ classdef displaylabels < xplr.graphnode
             hinch = 1.5*fontsize/72;
             hpix = hinch*get(0,'ScreenPixelsPerInch');
             axsiz = fn_pixelsize(L.ha);
-            L.height = hpix/axsiz(2);
-            L.rotheight = hpix/axsiz(1);
+            L.height = hpix/axsiz(2);     % normalized to axis size
+            L.rotheight = hpix/axsiz(1);  % normalized to axis size
             L.prevorgSetpos = []; % next call to setPositions should have doloose set to false
         end
         function setPositions(L)
@@ -125,6 +126,12 @@ classdef displaylabels < xplr.graphnode
                 prevorg = [];
             end
             
+            % steps in the direction orthogonal to the positioning one
+            axis_pos = fn_pixelpos(L.D.ha);
+            available_space = axis_pos(1:2)./axis_pos(3:4) - L.height;
+            xvstep = min(1.5*L.height, available_space(2)/(1.5+length(org.x)));
+            yhstep = min(1.5*L.rotheight, available_space(1)/(1.5+length(org.y)));
+            
             % set positions 
             for d=1:length(sz)
                 if ~isgraphics(L.h(d),'text')
@@ -142,18 +149,18 @@ classdef displaylabels < xplr.graphnode
                     set(L.h(d),'visible','on', ...
                         'rotation',fn_switch(f,{'y' 'yx'},90,0), ...
                         'horizontalalignment',fn_switch(f,{'x' 'y'},'center',{'xy' 'ystatic'},'left','yx','right'), ...
-                        'verticalalignment',fn_switch(f,{'y' 'yx'},'bottom','middle'), ...
+                        'verticalalignment',fn_switch(f,'yx','bottom','middle'), ...
                         'EdgeColor',fn_switch(isactive(d),'k','none'))
                     % set position
                     switch f
                         case 'x'
                             i = find(org.x==d,1);
                             xpos = .5 + L.graph.labelPosition(d);
-                            newpos = [xpos -(1+i)*L.height];
+                            newpos = [xpos -(1.5+i)*xvstep];
                         case 'y'
                             i = find(org.y==d,1);
                             ypos = .5 + L.graph.labelPosition(d);
-                            newpos = [-(1+i)*L.rotheight ypos];
+                            newpos = [-(1.5+i)*yhstep ypos];
                         case 'ystatic'
                             i = find(org.ystatic==d,1);
                             newpos = [-4*L.rotheight (length(org.ystatic)+.5-i)*L.height];
@@ -274,7 +281,7 @@ classdef displaylabels < xplr.graphnode
                 end
                 xthr = [-Inf row(xthr)];
                 % (y)
-                ylayout = layout.y; ythr = .5+L.graph.labelPosition(ylayout); % first get threshold with d and singleton dimensions still included
+                ylayout = layout.y; ythr = .5-L.graph.labelPosition(ylayout); % first get threshold with d and singleton dimensions still included
                 ythr(ylayout==d) = []; ylayout(ylayout==d) = [];                 % remove dimension d
                 oky = okdim(ylayout); ythr(~oky) = NaN;                    % make it impossible to insert to the right of a singleton dimension
                 if strcmp(dlayout,'x')
@@ -283,12 +290,12 @@ classdef displaylabels < xplr.graphnode
                     pos = [0 ythr(oky) 1];
                     ythrok = zeros(2,noky);
                     for ithr=1:noky
-                        dmax = min(pos(ithr)-pos(ithr+1),pos(ithr+1)-pos(ithr+2))/4; % maximal distance to an x-label to swap with this label
-                        ythrok(:,ithr) = pos(ithr+1)+[dmax -dmax];
+                        dmax = min(pos(ithr+1)-pos(ithr),pos(ithr+2)-pos(ithr+1))/4; % maximal distance to an x-label to swap with this label
+                        ythrok(:,ithr) = pos(ithr+1)+[-dmax dmax];
                     end
                     ythr = NaN(2,length(ylayout)); ythr(:,oky) = ythrok;
                 end
-                ythr = [-Inf row(ythr)];
+                ythr = [-Inf row(ythr)]
             end
             
             % make sure label will not be covered by data display
