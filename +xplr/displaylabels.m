@@ -118,8 +118,10 @@ classdef displaylabels < xplr.graphnode
             
             % do 'loose' update? (i.e. do not adjust position for
             % non-relevant coordinates)
+            % NO MORE NEEDED, as automatic positionning should be good
+            % enough now
             if isempty(L.movingdim)
-                doloose = isequal(org,prevorg);
+                doloose = false; %isequal(org,prevorg);
                 prevorg = org;
             else
                 doloose = false;
