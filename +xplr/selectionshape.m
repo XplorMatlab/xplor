@@ -32,7 +32,7 @@ classdef selectionshape
                     S.points = data(:)';
                     S.vectors = zeros(1,0);
                 case 'line1D'
-                    lines = data(:)';
+                    lines = row(data);
                     if mod(length(lines),2) || any(diff(lines(:))<=0)
                         error('set of lines should come as ordered non-intersecting segments')
                     end
@@ -115,25 +115,6 @@ classdef selectionshape
     
     % Union
     methods
-        function S = union1D(S)
-            
-            if any(strcmp({S.type},'all'))
-                S = xplr.selectionshape('all');
-                return
-            end
-            polypoint = S(strcmp({S.type},'point1D'));
-            if ~isempty(polypoint), polypoint = xplr.selectionshape('point1D',unique([polypoint.points])); end
-            polyline = S(strcmp({S.type},'line1D'));
-            if ~isempty(polyline), polyline = ConvertLine1D(polyline); end
-            polyindices = S(strcmp({S.type},'indices'));
-            if ~isempty(polyindices)
-                indices = unique([polyindices.special]);
-                polyindices = xplr.selectionshape('indices');
-                polyindices.special = indices;
-            end
-            S = [polypoint polyline];
-            
-        end
         function S2 = simplify(S)
             % special
             if any(strcmp({S.type},'all'))
@@ -159,7 +140,7 @@ classdef selectionshape
             S(idx) = [];
             idx = strcmp({S.type},'line1D');
             if ~isempty(lines1D)
-                S2 = [S2 ConvertLine1D(S(idx))];
+                S2 = [S2 xplr.selectionshape('line1D',ConvertLine1D(S(idx)))];
             end
             S(idx) = [];
             idx = strcmp({S.type},'indices');
@@ -271,82 +252,91 @@ classdef selectionshape
     
     % Conversion
     methods
-        function poly2 = ConvertLine1D(S)
-            lines = zeros(0,2);
+        function lines = ConvertLine1D(S)
+            lines = zeros(2,0);
             for k=1:length(S)
                 switch S(k).type
                     case 'line1D'
-                        lines(end+1,:) = S(k).points; %#ok<AGROW>
-                    case 'point1D'
-                        pointsk = S(k).points;
-                        linesk = fn_add(round(pointsk)',[-.5 .5]);
+                        lines(:,end+1) = S(k).points; %#ok<AGROW>
+                    case {'point1D' 'indices'}
+                        if strcmp(S(k).type,'point1D')
+                            indices = sort(round(S(k).points));
+                        else
+                            indices = S(k).special;
+                        end
+                        gaps = diff(indices)>1;
+                        start = indices([true gaps]);
+                        stop = indices([gaps true]);
+                        linesk = fn_add(double([start; stop]), [-.5; .5]);
                         lines = [lines; linesk]; %#ok<AGROW>
                     case 'all'
                         disp 'converting ''all1D'' selection by a [-1e30 1e30] line'
-                        lines = [-1 1]*1e30;
-                        break
+                        lines = [-1; 1]*1e30;
+                        return
                     otherwise
                         error programming
                 end
             end
-            merge = xor( bsxfun(@lt,lines(:,1),lines(:,2)'), bsxfun(@lt,lines(:,2),lines(:,1)') );
-            for i=1:size(lines,1), merge(i,i) = false; end
+            merge = xor( bsxfun(@lt,lines(1,:)',lines(2,:)), bsxfun(@lt,lines(2,:)',lines(1,:)) );
+            for i=1:size(lines,2), merge(i,i) = false; end
             while any(merge(:))
-                [i j] = find(merge,1,'first');
-                lines(i,:) = [min(lines([i j],1)) max(lines([i j],2))];
+                [i, j] = find(merge,1,'first');
+                lines(:,i) = [min(lines(1,[i j])) max(lines(2,[i j]))];
                 merge(i,:) = merge(i,:) | merge(j,:);
                 merge(:,i) = merge(:,i) | merge(:,j);
                 merge(i,i) = false;
-                lines(j,:) = [];
+                lines(:,j) = [];
                 merge(j,:) = [];
                 merge(:,j) = [];
             end
-            lines = num2cell(lines,2)';
-            poly2 = xplr.selectionshape('line1D',lines);
         end
-        function poly2 = ConvertPoly2D(S)
-            if ~isscalar(S), error('S must be a scalar structure here'), end
-            switch S.type
-                case 'poly2D'
-                    poly2 = S;
-                    return
-                case 'point2D'
-                    points = round(S.points);
-                    points2 = zeros(2,0);
-                    for i=1:size(points,2)
-                        points2 = fn4D_polyunion(points2, ...
-                            fn_add(points(:,i),[-.5 -.5 .5 .5 -.5; -.5 .5 .5 -.5 -.5]));
-                    end
-                case 'rect2D'
-                    points2 = fn_add(S.points,fn_mult(S.vectors,[0 0 1 1 0; 0 1 1 0 0]));
-                case {'ellipse2D' 'ring2D'}
-                    c = S.points;
-                    u = S.vectors;
-                    e = S.logic(1);
-                    phi = linspace(0,2*pi,20);
-                    udata = cos(phi);
-                    vdata = e*sin(phi);
-                    if strcmp(S.type,'ring2D')
-                        r = S.logic(2);
-                        udata = [udata NaN r*udata];
-                        vdata = [vdata NaN r*vdata];
-                    end
-                    points2 = fn_add(c,fn_mult(u,udata)+fn_mult([u(2);-u(1)],vdata));
-                case 'line2D'
-                    points2 = S.points;
-                case 'all'
-                    disp 'converting ''all2D'' selection by a [-1e30 1e30] square'
-                    points2 = [-1 -1 1 1 -1; -1 1 1 -1 -1]*1e30;
-                otherwise
-                    error programming
+        function poly = ConvertPoly2D(S)
+            poly = zeros(2,0);
+            for k = 1:length(S)
+                Sk = S(k);
+                switch Sk.type
+                    case 'poly2D'
+                        polyk = Sk.points;
+                    case 'point2D'
+                        p = round(Sk.points);
+                        np = size(p,1);
+                        polyk = kron(p,ones(1,6)) + repmat([-.5 -.5 .5 .5 -.5 NaN; -.5 .5 .5 -.5 -.5 NaN],1,np);
+                        polyk(end,:) = []; % remove last NaN
+                    case 'rect2D'
+                        polyk = fn_add(Sk.points,fn_mult(Sk.vectors,[0 0 1 1 0; 0 1 1 0 0]));
+                    case {'ellipse2D' 'ring2D'}
+                        c = Sk.points;
+                        u = Sk.vectors;
+                        e = Sk.logic(1);
+                        phi = linspace(0,2*pi,20);
+                        udata = cos(phi);
+                        vdata = e*sin(phi);
+                        if strcmp(Sk.type,'ring2D')
+                            r = Sk.logic(2);
+                            udata = [udata NaN r*udata];
+                            vdata = [vdata NaN r*vdata];
+                        end
+                        polyk = fn_add(c,fn_mult(u,udata)+fn_mult([u(2);-u(1)],vdata));
+                    case 'line2D'
+                        polyk = Sk.points;
+                    case 'all'
+                        disp 'converting ''all2D'' selection by a [-1e30 1e30] square'
+                        polyk = [-1 -1 1 1 -1; -1 1 1 -1 -1]*1e30;
+                    otherwise
+                        error programming
+                end
             end
-            poly2 = xplr.selectionshape('poly2D',points2);
+            if k == 1
+                poly = polyk;
+            else
+                poly = [poly [NaN; NaN] polyk];
+            end
         end
     end
 
     % Affinity
     methods
-        function S = affinity(S,mat)
+        function S = applyaffinity(S,mat)
             for k=1:length(S)
                 Sk = S(k);
                 xpoints = [ones(1,size(Sk.points,2)); Sk.points];
