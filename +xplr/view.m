@@ -65,7 +65,7 @@ classdef view < hgsetget
 %             for i=1:length(head)
 %                 [Fi Pi] = xplr.bank.getFilterAndPoint(head(i));
 % %                 % default selection: all
-% %                 Fi.setSelection(selectionND('all1D'))
+% %                 Fi.setSelection(xplr.selectionnd('all1D'))
 %                 F = [F Fi]; %#ok<AGROW>
 %                 P = [P Pi]; %#ok<AGROW>
 %             end

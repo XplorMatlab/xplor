@@ -25,7 +25,7 @@ classdef filter < xplr.dataoperand
             F.type = type;
             switch type
                 case 'selection'
-                    F.spec = selectionND.empty(1,0);
+                    F.spec = xplr.selectionnd.empty(1,0);
                 case {'indices' 'all'}
                     % no need for further specification
                 otherwise

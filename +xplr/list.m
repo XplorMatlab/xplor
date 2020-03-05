@@ -284,7 +284,7 @@ classdef list < xplr.graphnode
                         if iscell(val), newsel = val; else newsel = {val}; end
                         if L.doroi
                             for i=1:length(newsel)
-                                newsel{i} = selectionND('point1D',newsel{i}); 
+                                newsel{i} = xplr.selectionnd('point1D',newsel{i});
                             end
                         end
                     catch
@@ -292,7 +292,7 @@ classdef list < xplr.graphnode
                         return
                     end
                 case 'add'
-                    newsel = selectionND('point1D',val);
+                    newsel = xplr.selectionnd('point1D',val);
                     if nsoft, updateSelection(L.F,'remove',isoft), end % remove all soft selections
                     if ~isempty(isolid)
                         updateSelection(L.F,'add',isolid(end),newsel)
@@ -335,7 +335,7 @@ classdef list < xplr.graphnode
                     % ones: this can performs some clean-up when errors
                     % occured previously
                     if L.doroi
-                        newsel = selectionND.empty(1,0);
+                        newsel = xplr.selectionnd.empty(1,0);
                     else
                         newsel = cell(1,0);
                     end
@@ -386,16 +386,16 @@ classdef list < xplr.graphnode
                     if L.F.headerin.ismeasure && all(diff(val)==1)
                         % selection is a segment rather than a mere
                         % list of points
-                        sel = selectionND('line1D',val([1 end]));
+                        sel = xplr.selectionnd('line1D',val([1 end]));
                     else
-                        sel = selectionND('point1D',val);
+                        sel = xplr.selectionnd('point1D',val);
                     end
                 else
                     sel = num2cell(val);
                 end
             else
                 if L.doroi
-                    sel = selectionND('point1D',val);
+                    sel = xplr.selectionnd('point1D',val);
                 else
                     sel = {val};
                 end

@@ -15,10 +15,10 @@ classdef displaynavigation < xplr.graphnode
     properties
         selectiondim = [];      % dimensions to which these selections apply
         selectionfilter         % filter being modified by the selections
-        selectiondisplay        % displays of selectionND 
+        selectiondisplay        % displays of selectionnd
 %     end
 %     properties (Dependent, SetAccess='private')
-        selection               % list of selectionND object
+        selection               % list of selectionnd object
     end
     properties (SetObservable)
         selectionshape = 'ellipse'; % 'xsegment', 'ysegment', 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
@@ -239,7 +239,7 @@ classdef displaynavigation < xplr.graphnode
                             
                             % create selection in slice indices coordinates
                             sz = N.D.slice.sz(d); % size of data in the dimension where selection is made
-                            oneDselection = xplr.selectionND('line1D',isegment,sz);
+                            oneDselection = xplr.selectionnd('line1D',isegment,sz);
                             
                             % update selection
                             if isempty(N.selection)
@@ -261,7 +261,7 @@ classdef displaynavigation < xplr.graphnode
                                 'subdim',N.selectiondim', ...
                                 'ijk0',ones(N.D.nd,1));
                             
-                            polySelection = xplr.selectionND('poly2D',ijk(N.selectiondim,:));
+                            polySelection = xplr.selectionnd('poly2D',ijk(N.selectiondim,:));
                              if isempty(N.selection)
                                N.selection=polySelection; 
                             else
@@ -276,7 +276,7 @@ classdef displaynavigation < xplr.graphnode
                                 'subdim',N.selectiondim', ...
                                 'ijk0',ones(N.D.nd,1));
                             
-                            polySelection = xplr.selectionND('poly2D',ijk(N.selectiondim,:));
+                            polySelection = xplr.selectionnd('poly2D',ijk(N.selectiondim,:));
                              if isempty(N.selection)
                                N.selection=polySelection; 
                             else
@@ -300,7 +300,7 @@ classdef displaynavigation < xplr.graphnode
                             height= abs(vector(N.selectiondim(2),1));
                             x = min(ijk1(N.selectiondim(1),1),ijk2(N.selectiondim(1),1));
                             y = min(ijk1(N.selectiondim(2),1),ijk2(N.selectiondim(2),1));
-                            rectangleSelection = xplr.selectionND('rect2D',[x,y,width,height]);
+                            rectangleSelection = xplr.selectionnd('rect2D',[x,y,width,height]);
                             if isempty(N.selection)
                                N.selection=rectangleSelection; 
                             else
@@ -326,7 +326,7 @@ classdef displaynavigation < xplr.graphnode
                                 'ijk0',ones(N.D.nd,1));
 
                             ijk = {ijk1(N.selectiondim),ijk2(N.selectiondim), ellipse{3}};
-                            ellipseSelection = xplr.selectionND('ellipse2D',ijk);
+                            ellipseSelection = xplr.selectionnd('ellipse2D',ijk);
 
                             if isempty(N.selection)
                                N.selection=ellipseSelection; 
@@ -354,7 +354,7 @@ classdef displaynavigation < xplr.graphnode
                                 'ijk0',ones(N.D.nd,1));
 
                             ijk = {ijk1(N.selectiondim),ijk2(N.selectiondim), [ring{3},ring{4}]};
-                            ellipseSelection = xplr.selectionND('ring2D',ijk);
+                            ellipseSelection = xplr.selectionnd('ring2D',ijk);
 
                             if isempty(N.selection)
                                N.selection=ellipseSelection; 
@@ -371,7 +371,7 @@ classdef displaynavigation < xplr.graphnode
                                 'subdim',N.selectiondim', ...
                                 'ijk0',ones(N.D.nd,1));
                             
-                            polySelection = xplr.selectionND('poly2D',ijk(N.selectiondim,:));
+                            polySelection = xplr.selectionnd('poly2D',ijk(N.selectiondim,:));
                              if isempty(N.selection)
                                N.selection=polySelection; 
                             else
@@ -778,22 +778,22 @@ classdef displaynavigation < xplr.graphnode
             if flagnew || flagedit || flagpos
                 
                 % multiple shapes not handled yet
-                if ~isscalar(selij.poly)
+                if ~isscalar(selij.shapes)
                     error 'Cannot display selection made of the union of several shapes'
                 end
                 
                 % if this selection apply to only one dimension
-                seltype = selij.poly.type;
+                seltype = selij.shapes.type;
                 if strcmp(seltype,'line1D')
                     %selij2 = convert(selij,'line1D');
                     % if there is only one dimension
 %                     if N.D.nd == 1
 %                         sel = IJ2AX(D.SI,selij2);
-%                         poly = [sel.poly];
-%                         points = {poly.points};
+%                         shapes = [sel.shapes];
+%                         points = {shapes.points};
 %                         orthsiz = D.oldaxis(2,:);
 %                     else
-%                         points = selij2.poly.points;
+%                         points = selij2.shapes.points;
 %                         npart = length(points);
 % %                         for i=1:npart
 % %                             points{i} = points{i}*D.SI.grid(seldimsnum,1) + D.SI.grid(seldimsnum,2);
@@ -802,7 +802,7 @@ classdef displaynavigation < xplr.graphnode
 % %                         orthsiz = [.5 D.SI.sizes(orthdim)+.5]*D.SI.grid(orthdim,1) + D.SI.grid(orthdim,2);
 %                     end
 
-                    selij2 = visiblePolygon(N, selij.poly.points,1);
+                    selij2 = visiblePolygon(N, selij.shapes.points,1);
                     lines = N.graph.slice2graph(selij2);
                     polygon = ones(2,3,size(lines,2)); 
                     
@@ -813,7 +813,7 @@ classdef displaynavigation < xplr.graphnode
                     end
                 elseif strcmp(seltype,'point1D')
                     
-                    selij2 = visiblePolygon(N, selij.poly.points,1);
+                    selij2 = visiblePolygon(N, selij.shapes.points,1);
                     points = N.graph.slice2graph(selij2);
                     polygon = ones(2,3,length(points));
                     
@@ -824,7 +824,7 @@ classdef displaynavigation < xplr.graphnode
                     
                 else
                     selij2 = convert(selij,'poly2D');
-                    polygon = visiblePolygon(N, selij2.poly.points,[1, 2]);
+                    polygon = visiblePolygon(N, selij2.shapes.points,[1, 2]);
                     % convert to display coordinate system
                     polygon = N.graph.slice2graph(polygon);
                 end
@@ -917,11 +917,11 @@ classdef displaynavigation < xplr.graphnode
             %                     polymark = polygon;
             %                 case 'rect2D'
             %                     polymark = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
-            %                     desc = [sel.poly.points' sel.poly.vectors'];
+            %                     desc = [sel.shapes.points' sel.shapes.vectors'];
             %                 case {'ellipse2D' 'ring2D'}
-            %                     c = sel.poly.points;
-            %                     u = sel.poly.vectors;
-            %                     e = sel.poly.logic;
+            %                     c = sel.shapes.points;
+            %                     u = sel.shapes.vectors;
+            %                     e = sel.shapes.logic;
             %                     polymark = [c-u c+u];
             %                     desc = {c u e};
             %                 otherwise
@@ -965,7 +965,7 @@ classdef displaynavigation < xplr.graphnode
                     
                     % coordinates of the polygon inside a vignette (in index
                     % coordinate system)
-                    %points = selij2.poly.points;
+                    %points = selij2.shapes.points;
                     np = size(points, 2);
                     
                     % replace points that are outside of vignette by NaNs
