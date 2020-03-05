@@ -551,16 +551,15 @@ classdef displaynavigation < xplr.graphnode
         end
         
         function manualclickmovecross(N,point)
+            % move the cross upon click in the display
 
             ijk = N.graph.graph2slice(point,'invertible',true);
-            % update the point filters
-            if(~isOutOfDisplay(N,point))
-                N.crossCenter = point;
-                for d = 1:length(ijk)
-                    F = N.dimfilters{d};
-                    if ~isempty(F)
-                        F.P.index = ijk(d);
-                    end
+            % update the point filters (only for dimensions where the point
+            % remains within the slice)
+            for d = find(~isOutOfDisplay(N,point,true))
+                F = N.dimfilters{d};
+                if ~isempty(F)
+                    F.P.index = ijk(d);
                 end
             end
         end
@@ -1166,21 +1165,27 @@ classdef displaynavigation < xplr.graphnode
         % test if its between minimal and maximal values for all dimensions
         %
         % @param point: 2xn double 
+        % @param perdim: whether to return a single logical value per point
+        %                (point is/isn't inside slice, default behavior)
+        %                or a vector (for each dimension, if perdim=true)
         % @return output: 1xn boolean
-        function output = isOutOfDisplay(N, point)
+        function output = isOutOfDisplay(N, point, perdim)
+            if nargin<3, perdim = false; end
+            
             % get slice values of the point
-            ijk = N.graph.graph2slice(point,'invertible',true);
+            ijk = N.graph.graph2slice(point,'invertible',true)'; % n x ndim
+            
             % get the min and max slice values of the data displayed
-            zoomSliceValues = N.graph.getZoom();
+            zoomSliceValues = N.graph.getZoom(); % 2 x ndim
             
             % set the ouput to zeros (they will be set to one if one of the
             % dimension if it's out of display)
-            output = zeros(1,size(point,2));
-            
-            for dimension = 1:size(ijk,1)     
-               % is equal to one if is out of limits of the zoom or if the
-               % previous value was already 1
-               output = ijk(dimension,:)<zoomSliceValues(1,dimension) | ijk(dimension,:)>zoomSliceValues(2,dimension) | output;
+            if perdim
+                output = bsxfun(@lt,ijk,zoomSliceValues(1,:)) ...
+                    | bsxfun(@gt,ijk,zoomSliceValues(2,:)); % n x ndim
+            else
+                output = min(ijk,1)<zoomSliceValues(1,:) ...
+                    | max(ijk,1)>zoomSliceValues(2,:); % 1 x ndim
             end
         end
         
