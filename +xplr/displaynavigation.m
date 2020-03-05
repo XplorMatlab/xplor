@@ -16,8 +16,8 @@ classdef displaynavigation < xplr.graphnode
         selectiondim = [];      % dimensions to which these selections apply
         selectionfilter         % filter being modified by the selections
         selectiondisplay        % displays of selectionnd
-%     end
-%     properties (Dependent, SetAccess='private')
+    end
+    properties (Dependent, SetAccess='private')
         selection               % list of selectionnd object
     end
     properties (SetObservable)
@@ -241,12 +241,12 @@ classdef displaynavigation < xplr.graphnode
                             sz = N.D.slice.sz(d); % size of data in the dimension where selection is made
                             oneDselection = xplr.selectionnd('line1D',isegment,sz);
                             
-                            % update selection
-                            if isempty(N.selection)
-                               N.selection=oneDselection; 
-                            else
-                               N.selection(end+1)=oneDselection;
-                            end
+%                             % update selection
+%                             if isempty(N.selection)
+%                                N.selection=oneDselection; 
+%                             else
+%                                N.selection(end+1)=oneDselection;
+%                             end
                                                         
                             % update filter
                             N.selectionfilter.updateSelection('new',{oneDselection.dataind})
@@ -612,17 +612,19 @@ classdef displaynavigation < xplr.graphnode
     
     % ROI selection
     methods
-%         function sel = get.selection(N)
-%             F = N.selectionfilter;
-%             if isempty(F)
-%                 sel = [];
-%             elseif F.headerin(1).categorical
-%                 sel = F.indices;
-%             else
+        function sel = get.selection(N)
+            F = N.selectionfilter;
+            if isempty(F)
+                sel = [];
+            else
+                sel = xplr.selectionnd.empty(1,0);
+                for i = 1:length(F.indices)
+                    sel(i) = xplr.selectionnd('indices',F.indices{i},N.D.slice.sz(N.selectiondim));
+                end
 %                 sel = F.selection;
-%             end
-%         end
-%         
+            end
+        end
+        
         function setselectiondim(N,dim)
         
             N.selectiondim = dim;
@@ -646,7 +648,7 @@ classdef displaynavigation < xplr.graphnode
             
             % store filter in property
             N.selectionfilter = F;
-            N.selection = []; % selection is empty since we "emptied" F
+%             N.selection = []; % selection is empty since we "emptied" F
             
             % update display
             N.displayselection()
@@ -656,7 +658,7 @@ classdef displaynavigation < xplr.graphnode
         function selectionfilterchange(N,e)
             
             % U
-            disp(e)
+            N.displayselection()
             
         end
         
@@ -785,10 +787,10 @@ classdef displaynavigation < xplr.graphnode
                 % if this selection apply to only one dimension
                 seltype = selij.shapes.type;
                 if strcmp(seltype,'line1D')
-                    %selij2 = convert(selij,'line1D');
+%                     lines = selij.shape;
                     % if there is only one dimension
 %                     if N.D.nd == 1
-%                         sel = IJ2AX(D.SI,selij2);
+%                         sel = IJ2AX(D.SI,selij);
 %                         shapes = [sel.shapes];
 %                         points = {shapes.points};
 %                         orthsiz = D.oldaxis(2,:);
@@ -823,8 +825,7 @@ classdef displaynavigation < xplr.graphnode
                     
                     
                 else
-                    selij2 = convert(selij,'poly2D');
-                    polygon = visiblePolygon(N, selij2.shapes.points,[1, 2]);
+                    polygon = visiblePolygon(N, selij.polygon,[1, 2]);
                     % convert to display coordinate system
                     polygon = N.graph.slice2graph(polygon);
                 end
@@ -1075,7 +1076,6 @@ classdef displaynavigation < xplr.graphnode
         
    end
 
-    
     % Slider and scroll wheel callbacks: change zoom
     methods
         function chgzoom(N,f,obj)
@@ -1116,7 +1116,6 @@ classdef displaynavigation < xplr.graphnode
         end
     end
 
-        
     % Update upon changes in active dim and zoom
     methods
         function connectZoomFilter(N,f)
