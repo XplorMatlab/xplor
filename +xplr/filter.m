@@ -1,64 +1,41 @@
 classdef filter < xplr.dataoperand
-    % function F = filter(headerin,type[,label])
+    % function F = filter(headerin[,label])
    
     properties (SetAccess='private')
         % input: headerin is already a property of the dataoperand mother class        
         % operation:
-        type = 'selection';  % 'selection', 'indices' or 'all'
+        selection = xplr.selectionnd.empty(1,0);
         slicefun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
-        spec
-        indices = cell(1,0);
         % output: headerout is already a property of the dataoperand mother class
     end
     properties(Dependent, SetAccess='private')
         nsel
+        indices
     end
     
     % Setting and updating filter
     methods
-        function F = filter(headerin,type,label)
+        function F = filter(headerin,label)
             % size and header of the input space
             if ~isa(headerin,'xplr.header'), error 'first argument must be an xplr.header object', end
             F.headerin = headerin;
             
-            % operation type
-            F.type = type;
-            switch type
-                case 'selection'
-                    F.spec = xplr.selectionnd.empty(1,0);
-                case {'indices' 'all'}
-                    % no need for further specification
-                otherwise
-                    error('unknown filtering type ''%s''',type)
-            end
-            
             % header of the output space
-            if nargin<3, label = headerin.label; end
-            switch type
-                case 'selection'
-                    % output header is categorical, values will keep track
-                    % of the selections made
-                    error 'not implemented yet'
-                case 'indices'
-                    % output header is categorical
-                    if ~isscalar(headerin)
-                        % header output will be a mere enumeration (no
-                        % values)
-                        F.headerout = xplr.header(label,0);
-                    elseif headerin.ncolumn>0
-                        % categorical header: we will keep track of values
-                        F.headerout = xplr.header(label,headerin.sublabels,cell(0,headerin.ncolumn));
-                    elseif headerin.categorical
-                        % categorical header with no values: keep track of indices
-                        F.headerout = xplr.header(label,xplr.dimensionlabel('Index','numeric'),cell(0,1));
-                    else
-                        % measure header: keep track of values
-                        F.headerout = xplr.header(label,headerin.sublabels,cell(0,1));
-                    end
-                case 'all'
-                    % no output header because data is averaged to a single
-                    % value!
-                    F.headerout = xplr.header.empty(1,0);
+            if nargin<2, label = headerin.label; end
+
+            % output header is categorical
+            if ~isscalar(headerin)
+                % header output will be a mere enumeration (no values)
+                F.headerout = xplr.header(label,0);
+            elseif headerin.ncolumn>0
+                % categorical header: we will keep track of values
+                F.headerout = xplr.header(label,headerin.sublabels,cell(0,headerin.ncolumn));
+            elseif headerin.categorical
+                % categorical header with no values: keep track of indices
+                F.headerout = xplr.header(label,xplr.dimensionlabel('Index','numeric'),cell(0,1));
+            else
+                % measure header: keep track of values
+                F.headerout = xplr.header(label,headerin.sublabels,cell(0,1));
             end
         end
         function updateSelection(F,varargin)
@@ -69,18 +46,12 @@ classdef filter < xplr.dataoperand
             % function updateSelection(F,'remove|perm',ind)
             % function updateSelection(F,'reset')
             
-            % check filter type
-            if ~fn_ismemberstr(F.type,{'selection' 'indices'})
-                error('method ''updateSelection'' is not valid for filter type ''%s''',F.type)
-            end
-            indicesonly = strcmp(F.type,'indices');
-            
             % input
             if isscalar(varargin)
                 if ischar(varargin{1})
                     if strcmp(varargin{1},'reset')
                         flag = 'all';
-                        value = [];
+                        value = xplr.selectionnd.empty(1,0);
                     else
                         error 'only flag ''reset'' can be used without arguments'
                     end
@@ -92,7 +63,6 @@ classdef filter < xplr.dataoperand
             else
                 flag = varargin{1};
                 varargin(1) = [];
-                value = [];
                 switch flag
                     case 'all'
                         value = varargin{1};
@@ -109,7 +79,7 @@ classdef filter < xplr.dataoperand
                         end
                     case {'remove' 'perm'}
                         ind = varargin{1};
-                    case 'reset'
+                        value = []; % should not be used
                     otherwise
                         error('flag ''%s'' not handled by xplr.filter.updateSelection')
                 end
@@ -118,67 +88,33 @@ classdef filter < xplr.dataoperand
             
             % compute indices
             if fn_ismemberstr(flag,{'all' 'new' 'chg' 'add' 'chg&new' 'chg&rm'})
-                if indicesonly
-                    dataind = value;
-                    if ~iscell(dataind)
-                        if isscalar(dataind)
-                            dataind = {dataind};
-                        elseif strcmp(flag,'all')
-                            % warning: the value is ambiguous, for example
-                            % does value [1 2 3] mean that we want 3
-                            % singleton selections (replace by {1 2 3} or
-                            % a single selection of 3 indices (replace by
-                            % {[1 2 3]}? We assume the first case.
-                            dataind = num2cell(dataind);
-                        elseif length(dataind)==length(ind)
-                            dataind = num2cell(dataind);
-                        else
-                            error 'value should be a cell array of arrays (of indices)'
-                        end
-                    end
-                else
-                    value = value.ComputeInd([F.headerin.datalen]);
-                    dataind = {value.dataind};
-                end
+                value = value.ComputeInd([F.headerin.n]);
+                dataind = {value.dataind};
             end
             
             % update selection
             switch flag
                 case 'all'
                     % note that even if value is already equal to
-                    % F.selections, we cannot just return, because
+                    % F.selection, we cannot just return, because
                     % addheaderinfo might bear some changes
                     ind = 1:length(dataind);
-                    if ~indicesonly
-                        F.selections = row(value); % in particular row(...) transform 0x0 array in 1x0 array
-                    end
-                    F.indices = row(dataind);
+                    F.selection = row(value); % in particular row(...) transform 0x0 array in 1x0 array
                 case {'new' 'chg'}
-                    if ~indicesonly, F.selections(ind) = value; end
-                    F.indices(ind) = dataind;
+                    F.selection(ind) = value;
                 case 'add'
                     if ~isscalar(ind), error 'only one selection at a time can be augmented with flag ''add''', end
-                    if ~indicesonly
-                        F.selections(ind) = F.selections(ind).union(value); % automatic union of indices as well
-                        F.indices(ind) = F.selections(ind).dataind;
-                    else
-                        F.indices(ind) = union(F.indices,dataind);
-                    end
+                    F.selection(ind) = F.selection(ind).union(value); % automatic union of indices as well
                     flag = 'chg'; % for the notification
                 case 'chg&new'
-                    if ~indicesonly, F.selections([ind{:}]) = value; end
-                    F.indices([ind{:}]) = dataind;
+                    F.selection([ind{:}]) = value;
                 case 'chg&rm'
-                    if ~indicesonly, F.selections(ind{1}) = value; end
-                    F.indices(ind{1}) = dataind;
-                    if ~indicesonly, F.selections(ind{2}) = []; end
-                    F.indices(ind{2}) = [];
+                    F.selection(ind{1}) = value;
+                    F.selection(ind{2}) = [];
                 case 'remove'
-                    if ~indicesonly, F.selections(ind) = []; end
-                    F.indices(ind) = [];
+                    F.selection(ind) = [];
                 case 'perm'
-                    if ~indicesonly, F.selections = F.selections(ind); end
-                    F.indices = F.indices(ind);
+                    F.selection = F.selection(ind);
             end
             
             % update header of output space
@@ -228,10 +164,13 @@ classdef filter < xplr.dataoperand
     % Get/Set Dependent
     methods
         function nsel = get.nsel(F)
-            if strcmp(F.type,'all')
-                nsel = 1;
-            else
-                nsel = length(F.indices);
+            nsel = length(F.selection);
+        end
+        function indices = get.indices(F)
+            % get data indices from selections
+            indices = cell(1,F.nsel);
+            for i = 1:F.nsel
+                indices{i} = F.selection(i).ComputeInd([F.headerin.n]).dataind;
             end
         end
     end
@@ -239,19 +178,13 @@ classdef filter < xplr.dataoperand
     % Slicing
     methods (Access='private')
         function headvalue = sliceHeader(F,ind,addheaderinfo)
-            if ~fn_ismemberstr(F.type,{'selection' 'indices'})
-                error('no output header for filter of type ''%s''',F.type)
-            end
-            
             % columns to which values have been assigned
             nind = length(ind);
             headvalue = cell(nind,F.headerout.ncolumn);
             okcolumn = false(1,F.headerout.ncolumn);
             
             % tracking of input header values
-            if strcmp(F.type,'selection')
-                error 'not implemented yet'
-            elseif ~isscalar(F.headerin)
+            if ~isscalar(F.headerin)
                 % no tracking when input space has more than one dimensions
             elseif F.headerin.ncolumn>0
                 % track values: call to a xplr.header method
@@ -303,12 +236,7 @@ classdef filter < xplr.dataoperand
             
             % slicing
             if nselslice==1
-                switch F.type
-                    case 'all'
-                        slic = F.slicefun(dat,2);
-                    otherwise
-                        slic = F.slicefun(dat(:,F.indices{selsubidx},:),2);
-                end
+                slic = F.slicefun(dat(:,F.indices{selsubidx},:),2);
             else
                 datatype = fn_switch(class(dat),'double','double','single');
                 slic = zeros([prod(s(dbef)) nselslice prod(s(daft))],datatype);

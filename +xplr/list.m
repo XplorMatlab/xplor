@@ -3,7 +3,7 @@ classdef list < xplr.graphnode
         
     properties (SetAccess='private')
         F           % xplr.filterAndPoint object
-        doroi
+        seltype
         hu
         hp  % direct parent
         hf  % figure parent
@@ -26,7 +26,7 @@ classdef list < xplr.graphnode
                 );
             if nargin==0
                 head = xplr.header('testheader',10);
-                F = xplr.filterAndPoint(head,'indices');
+                F = xplr.filterAndPoint(head);
             end
             [opt optadd] = parseInput(opt,varargin{:});
             
@@ -34,7 +34,7 @@ classdef list < xplr.graphnode
             L.F = F;
             if F.ndin~=1 || F.ndout~=1, error 'input and output of list filter must be one-dimensional', end
             if ~isa(F,'xplr.filterAndPoint'), error 'list can act only on a filterAndPoint object', end
-            L.doroi = strcmp(F.F.type,'selection');
+            L.seltype = fn_switch(F.headerin.categorical,'indices','point1D');
             
             % add 'SoftSelection' label to output header
             F.augmentHeader('SoftSelection','logical')
@@ -281,11 +281,10 @@ classdef list < xplr.graphnode
                     if isempty(str), disp 'interrupted', return, end
                     try
                         val = evalin('base',['[' str{1} ']']);
-                        if iscell(val), newsel = val; else newsel = {val}; end
-                        if L.doroi
-                            for i=1:length(newsel)
-                                newsel{i} = xplr.selectionnd('point1D',newsel{i});
-                            end
+                        if ~iscell(val), val = {val}; end
+                        newsel = xplr.selectionnd(length(val));
+                        for i=1:length(val)
+                            newsel(i) = xplr.selectionnd(L.seltype,val{i});
                         end
                     catch
                         errordlg('Command could not be evaluated correctly')
@@ -334,11 +333,7 @@ classdef list < xplr.graphnode
                     % set empty selections rather than remove all existing
                     % ones: this can performs some clean-up when errors
                     % occured previously
-                    if L.doroi
-                        newsel = xplr.selectionnd.empty(1,0);
-                    else
-                        newsel = cell(1,0);
-                    end
+                    newsel = xplr.selectionnd.empty(1,0);
                     updateSelection(L.F,'all',newsel)
                     return
                 case {'rmgroup' 'rmgroupall' 'rmuni' 'rmuniall' 'rm'}
@@ -381,24 +376,11 @@ classdef list < xplr.graphnode
         end
         function sel = buildCurrentSelection(L,domultin)
             val = get(L.hu,'value');
-            if domultin
-                if L.doroi
-                    if L.F.headerin.ismeasure && all(diff(val)==1)
-                        % selection is a segment rather than a mere
-                        % list of points
-                        sel = xplr.selectionnd('line1D',val([1 end]));
-                    else
-                        sel = xplr.selectionnd('point1D',val);
-                    end
-                else
-                    sel = num2cell(val);
-                end
+            if domultin && L.F.headerin.ismeasure && ~isscalar(val) && all(diff(val)==1)
+                % selection is a segment rather than a mere list of points
+                sel = xplr.selectionnd('line1D',val([1 end]));
             else
-                if L.doroi
-                    sel = xplr.selectionnd('point1D',val);
-                else
-                    sel = {val};
-                end
+                sel = xplr.selectionnd(L.seltype,val);
             end
         end
     end

@@ -26,9 +26,6 @@ classdef filterAndPoint < xplr.dataoperand
         function F = filterAndPoint(varargin)
             % set filter
             F.F = xplr.filter(varargin{:});
-            if ~ismember(F.F.type,{'selection' 'indices'})
-                error 'filterAndPoint filter can be only of type ''selection'' or ''indices'''
-            end
             F.headerin = F.F.headerin;
             connectlistener(F.F,F,'ChangedOperation',@(u,e)transitNotification(F,'filter',e))
             

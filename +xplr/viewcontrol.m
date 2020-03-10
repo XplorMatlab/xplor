@@ -361,7 +361,7 @@ classdef viewcontrol < xplr.graphnode
             % if the filter has to be private
             if key == 0
                 % create private filter
-                filter = xplr.filterAndPoint(header,'indices');
+                filter = xplr.filterAndPoint(header);
                 % show filter in combo
                 combo = C.getPrivateLists();
                 combo.showList(filter)

@@ -121,7 +121,7 @@ classdef listcombo < hgsetget
         function C = test
             head = xplr.header({'x' 10},{'y' 12},{'cond' {'a' 'b' 'c' 'd'}});
             for i=1:length(head)
-                Filters(i) = xplr.filterAndPoint(head(i),'indices'); %#ok<AGROW>
+                Filters(i) = xplr.filterAndPoint(head(i)); %#ok<AGROW>
             end
             key = 2;
             C = xplr.listcombo([],key,Filters);

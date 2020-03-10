@@ -18,7 +18,7 @@ classdef displaynavigation < xplr.graphnode
         selectiondisplay        % displays of selectionnd
     end
     properties (Dependent, SetAccess='private')
-        selection               % list of selectionnd object
+        selection               % list of selectionnd object from the filter
     end
     properties (SetObservable)
         selectionshape = 'ellipse'; % 'xsegment', 'ysegment', 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
@@ -626,15 +626,20 @@ classdef displaynavigation < xplr.graphnode
         end
         
         function setselectiondim(N,dim)
-        
+            % function setselectiondim(N,dim)
+            %---
+            % Select the dimension(s) for which selections are displayed and
+            % made in the display
+            
+            % check dimension(s)
+            if ~ismember(length(dim),[1 2])
+                error 'number of dimension for selection display must be 1 or 2'
+            end
             N.selectiondim = dim;
             
             headerin = N.D.slice.header(dim); 
-%             if ~headerin.categorical
-%                 error 'Currently displaynavigation can create selection only on categorical dimensions'
-%             end
-            
-            F = xplr.bank.getFilter(1, headerin);
+            F = xplr.bank.getFilter(1, headerin); % xplr.filterAndPoint object
+            F = F.F; % xplr.filter object
             % if F is empty, create it
             
             % remove selections of this filter if any
@@ -670,9 +675,9 @@ classdef displaynavigation < xplr.graphnode
             % @return:
            
             
-            disp(['selection in dimensions ' num2str(N.selectiondim) ':'])
-            disp(N.selection)
-            disp(' ')
+%             disp(['selection in dimensions ' num2str(N.selectiondim) ':'])
+%             disp(N.selection)
+%             disp(' ')
        
 
 %             %N.selection(1).;
@@ -700,7 +705,17 @@ classdef displaynavigation < xplr.graphnode
 %             nsel = length(selectionmarks);
             
             % display set...
+            
+            % before all, check that selections can be displayed
+            selectionaxis = [N.D.layout.dim_locations{N.selectiondim}];
+            if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
+                disp('selections cannot be displayed')
+                delete([N.D.seldisp{ind}])
+                N.D.seldisp(ind) = [];
+                return
+            end
 
+            
             if nargin<2, flag = 'all'; end
             if fn_ismemberstr(flag,{'all','reset'})
                 % 'findobj' allows a cleanup when some objects were not
@@ -757,7 +772,7 @@ classdef displaynavigation < xplr.graphnode
             % function displayonesel(D,k,'isel',isel) - has its number changed
             % function displayonesel(D,k,'edit')      - edit mode has been turned on
             
-            % flags: 
+            % flags: what kind of update
             [flagnew, flagpos, flagisel, flagedit] = ...
                 fn_flags('new','pos','isel','edit',flag);
                 
@@ -779,51 +794,44 @@ classdef displaynavigation < xplr.graphnode
                     error 'Cannot display selection made of the union of several shapes'
                 end
                 
-                % if this selection apply to only one dimension
-                seltype = selij.shapes.type;
-                if strcmp(seltype,'line1D')
-%                     lines = selij.shape;
-                    % if there is only one dimension
-%                     if N.D.nd == 1
-%                         sel = IJ2AX(D.SI,selij);
-%                         shapes = [sel.shapes];
-%                         points = {shapes.points};
-%                         orthsiz = D.oldaxis(2,:);
-%                     else
-%                         points = selij2.shapes.points;
-%                         npart = length(points);
-% %                         for i=1:npart
-% %                             points{i} = points{i}*D.SI.grid(seldimsnum,1) + D.SI.grid(seldimsnum,2);
-% %                         end
-% %                         orthdim = 3-seldimsnum;
-% %                         orthsiz = [.5 D.SI.sizes(orthdim)+.5]*D.SI.grid(orthdim,1) + D.SI.grid(orthdim,2);
-%                     end
-
-                    selij2 = visiblePolygon(N, selij.shapes.points,1);
-                    lines = N.graph.slice2graph(selij2);
-                    polygon = ones(2,3,size(lines,2)); 
-                    
-                    for i = 1:size(lines,1)
-                        polygon(:,(i-1)*3+1) = [lines(1,i); .5];
-                        polygon(:,(i-1)*3+2) = [lines(1,i); -.5];
-                        polygon(:,(i-1)*3+3) = [NaN; NaN];
-                    end
-                elseif strcmp(seltype,'point1D')
-                    
-                    selij2 = visiblePolygon(N, selij.shapes.points,1);
-                    points = N.graph.slice2graph(selij2);
-                    polygon = ones(2,3,length(points));
-                    
-                    for i = 1:length(points)
-                      
-                    end
-                    
-                    
-                else
-                    polygon = visiblePolygon(N, selij.polygon,[1, 2]);
-                    % convert to display coordinate system
-                    polygon = N.graph.slice2graph(polygon);
+                % convert selection to displayable polygon
+                selectionaxis = [N.D.layout.dim_locations{N.selectiondim}];
+                if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
+                    error('selection cannot be displayed')
                 end
+                
+                switch selij.nd
+                    case 1
+                        % selij.polygon is a set of lines: each of them
+                        % must be displayed as a rectangle
+                        lines = selij.polygon;
+                        
+                        % convert to graph coordinates
+                        pointsgraph = N.D.graph.slice2graph(row(lines),'subdim',N.selectiondim);
+                        switch selectionaxis
+                            case 'x'
+                                lines(:) = pointsgraph(1,:);
+                            case 'y'
+                                lines(:) = pointsgraph(2,:);
+                        end
+                        
+                        % build polygon
+                        nline = size(lines,2);
+                        polygon = nan(2,6,nline);
+                        polygon(1,1:5,:) = shiftdim(lines([1 1 2 2 1],:),-1);
+                        polygon(2,1:5,:) = repmat([-.5 .5 .5 -.5 -.5], [1 1 nline]);
+                        
+                        % switch x and y coordinates if appropriate
+                        if strcmp(selectionaxis,'y')
+                            polygon = polygon([2 1],:);
+                        end
+                    case 2
+                        error 'not implemented yet'
+                        
+                        % visible part of the polygon
+                        polygon = visiblePolygon(N, selij.polygon,[1, 2]);
+                end
+                
                 center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
             end
             if flagnew || flagedit || flagisel

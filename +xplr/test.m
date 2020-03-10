@@ -47,7 +47,7 @@ function test_filterAndPoint
 header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
 x = reshape(1:120,[3 2 5 4]);
 data = xplr.xdata(x,header);
-F = xplr.filterAndPoint(header(1),'indices');
+F = xplr.filterAndPoint(header(1));
 F.updateSelection('all',{1:2 3},'origin',{'titi' 'tata'})
 slice = F.operation(data,1);
 
@@ -97,7 +97,7 @@ V2 = xplor(x2);
 % S.addFilter(1,F1)
 % 
 % %%
-% F2 = xplr.filterAndPoint(header(2),'indices');
+% F2 = xplr.filterAndPoint(header(2));
 % S.addFilter(2,F2)
 % 
 % %%

@@ -1,6 +1,6 @@
 classdef graphnode < matlab.mixin.SetGet
     
-    properties (Access='private')
+    properties %(Access='private')
         listening = struct('object',{},'listener',{});
     end
     

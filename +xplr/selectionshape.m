@@ -253,7 +253,7 @@ classdef selectionshape
     % Conversion
     methods
         function lines = ConvertLine1D(S)
-            lines = zeros(0, 2);
+            lines = zeros(2, 0);
             for k=1:length(S)
                 switch S(k).type
                     case 'line1D'
@@ -268,7 +268,7 @@ classdef selectionshape
                         start = indices([true gaps]);
                         stop = indices([gaps true]);
                         linesk = fn_add(double([start; stop]), [-.5; .5]);
-                        lines = [lines; linesk]; %#ok<AGROW>
+                        lines = [lines linesk]; %#ok<AGROW>
                     case 'all'
                         disp 'converting ''all1D'' selection by a [-1e30 1e30] line'
                         lines = [-1; 1]*1e30;

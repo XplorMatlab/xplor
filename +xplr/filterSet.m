@@ -28,7 +28,7 @@ classdef filterSet < hgsetget
             hID = getID(header);
             F = FS.registry.getValue(hID,varargin{:});
             if isempty(F)
-                F = xplr.filterAndPoint(header,'indices');
+                F = xplr.filterAndPoint(header);
                 % viewcontrol object C will be registered as a user of the filter
                 FS.addFilter(F, doshow, varargin{:});
             end            

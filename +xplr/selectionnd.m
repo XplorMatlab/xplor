@@ -46,9 +46,14 @@ classdef selectionnd < xplr.graphnode
         function sel = selectionnd(type,data,sizes)
             % function sel = selectionnd('type',data[,sizes])
             
-            % empty selection (invalid)
+            % initialize a single object or an array thereof, invalid(s)
+            % for the moment
             if nargin==0
                 sel.nd = 0;
+                return
+            elseif isnumeric(type)
+                n = type;
+                sel(n) = xplr.selectionnd;
                 return
             end
             
