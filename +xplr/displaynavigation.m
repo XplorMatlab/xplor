@@ -738,10 +738,6 @@ classdef displaynavigation < xplr.graphnode
                     nsel = length(N.D.seldisp);
                     if nsel==0, return, end
                     updateselorderdisplay(N.D)
-                case 'active'
-                    % might be several indices
-                    for k=ind, displayonesel(N.D,k,'active'), end
-                    updateselorderdisplay(N.D)
                 case 'reorder'
                     perm = value;
                     N.D.seldisp = N.D.seldisp(perm);
@@ -756,15 +752,14 @@ classdef displaynavigation < xplr.graphnode
         end
         
         function displayonesel(N,k,flag,varargin)
-            % function displayonesel(D,k,'new')
-            % function displayonesel(D,k,'pos')
-            % function displayonesel(D,k,'isel',isel)
-            % function displayonesel(D,k,'active')
-            % function displayonesel(D,k,'edit')
+            % function displayonesel(D,k,'new')       - selection at index k is new
+            % function displayonesel(D,k,'pos')       - has changed
+            % function displayonesel(D,k,'isel',isel) - has its number changed
+            % function displayonesel(D,k,'edit')      - edit mode has been turned on
             
-            % flags
-            [flagnew, flagpos, flagisel, flagactive, flagedit] = ...
-                fn_flags('new','pos','isel','active','edit',flag);
+            % flags: 
+            [flagnew, flagpos, flagisel, flagedit] = ...
+                fn_flags('new','pos','isel','edit',flag);
                 
             % Values
             % seldimsnum = D.seldims-'w';
@@ -831,17 +826,10 @@ classdef displaynavigation < xplr.graphnode
                 end
                 center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
             end
-            if flagnew || flagedit || flagactive || flagisel
-                if selij.active
-                    colors = fn_colorset;
-                    col = colors(mod(k-1,size(colors,1))+1,:);
-                    linestyle = '-';
-                    visible = 'on';
-                else
-                    col = 'k';
-                    linestyle = '--';
-                    visible = 'off';
-                end
+            if flagnew || flagedit || flagisel
+                colors = fn_colorset;
+                col = colors(mod(k-1,size(colors,1))+1,:);
+                visible = 'on';
             end
             if flagisel
                 isel = varargin{1};
@@ -865,7 +853,7 @@ classdef displaynavigation < xplr.graphnode
                 %if strfind(D.selshow,'shape')
                 if true
                     hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
-                        'Color',col,'LineStyle',linestyle, ...
+                        'Color',col, ...
                         'UserData',k); % set user data because this line will be used when in seledit mode
                 end
                 %if strfind(D.selshow,'cross')
@@ -903,15 +891,12 @@ classdef displaynavigation < xplr.graphnode
                 elseif flagisel
                     set(ht,'string',str)
                     set([hs hc he],'color',col)
-                elseif flagactive
-                    set(hs,'color',col,'linestyle',linestyle)
-                    set([ht hc he],'visible',visible)
                 end
             end
             
             %             % Advanced selection mode (in this mode, D.seldisp = [ht hl he]
             %             % because D.selshow = 'number+shape')
-            %             if ~D.seleditmode || flagisel || flagactive, return, end
+            %             if ~D.seleditmode || flagisel, return, end
             %             desc = [];
             %             switch selectionmarks(k).type
             %                 case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'

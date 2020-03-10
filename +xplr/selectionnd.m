@@ -29,9 +29,6 @@ classdef selectionnd < xplr.graphnode
     % 
     % See also xplr.selectionshape
 
-    properties
-        active = true;
-    end    
     properties (SetAccess='private')
         nd
         shapes = xplr.selectionshape.empty(1,0);
@@ -76,9 +73,6 @@ classdef selectionnd < xplr.graphnode
             else
                 error('unknown selection type ''%s''',type)
             end
-            
-            % active by default
-            sel.active = true;
             
             % shape
             if ~strcmp(type,'empty')

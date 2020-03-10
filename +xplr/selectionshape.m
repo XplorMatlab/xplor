@@ -253,7 +253,7 @@ classdef selectionshape
     % Conversion
     methods
         function lines = ConvertLine1D(S)
-            lines = zeros(2,0);
+            lines = zeros(0, 2);
             for k=1:length(S)
                 switch S(k).type
                     case 'line1D'
