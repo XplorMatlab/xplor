@@ -13,7 +13,6 @@ classdef displaynavigation < xplr.graphnode
         dimfilters = {};
     end
     properties
-        selectiondim = [];      % dimensions to which these selections apply
         selectionfilter         % filter being modified by the selections
         selectiondisplay        % displays of selectionnd
     end
@@ -22,12 +21,9 @@ classdef displaynavigation < xplr.graphnode
         selection               % list of selectionnd object from the filter
     end
     properties (SetObservable)
+        selectiondim            % dimensions to which these selections apply
         selection2Dshape = 'ellipse'; % 'xsegment', 'ysegment', 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selectionadvanced = false
-    end
-    properties (Access='private')
-        selectionmenu
-        selectionmenu_2Dshape
     end
     
     % Constructor
@@ -60,9 +56,8 @@ classdef displaynavigation < xplr.graphnode
             fn_scrollwheelregister(D.ha,@(n)N.Scroll(n))
             
             % selection menu
-            init_selection_menu(N)
+            uimenu(N.hf,'Label','Selection','callback',@(m,e)N.selectionMenu(m))
         end
-        
         function init_buttons(N)
         % function init_buttons(N)
         % 3 buttons that control clipping
@@ -96,22 +91,6 @@ classdef displaynavigation < xplr.graphnode
                 'backgroundcolor',pcol*.75,'slidercolor',pcol*.95)
             fn_controlpositions(N.sliders.x,N.ha,[0 1 1 0], [0 0 0 12]);
             fn_controlpositions(N.sliders.y,N.ha,[1 0 0 1], [0 0 12 -48]);
-        end
-        function init_selection_menu(N)
-            if isempty(N.selectionmenu)
-                m = uimenu('parent',N.D.V.hf,'label','Selection');
-                N.selectionmenu = m;
-            else
-                m = N.selectionmenu;
-                delete(get(m,'children'))
-            end
-            N.selectionmenu_2Dshape = fn_propcontrol(N,'selection2Dshape', ...
-                {'menuval' {'ysegment', 'xsegment','poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
-                {'parent',m,'label','shape'});
-            set(N.selectionmenu_2Dshape,'visible','off')
-            fn_propcontrol(N,'selectionadvanced', ...
-                'menu', ...
-                {'parent',m,'label','advanced selection', 'accelerator','A'});
         end
     end
     
@@ -596,6 +575,27 @@ classdef displaynavigation < xplr.graphnode
     
     % ROI selection
     methods
+        function selectionMenu(N,m)
+            % Selection menu is populated when being activated
+            delete(get(m,'children'))
+            
+            nd = N.D.slice.nd;
+            fn_propcontrol(N,'selectiondim', ...
+                {'menuval' [num2cell(1:nd) {[]}] fn_num2str(1:nd,'cell')}, ...
+                'parent',m,'label','in dimension(s)')
+            if length(N.selectiondim) == 2
+                fn_propcontrol(N,'selection2Dshape', ...
+                    {'menuval' {'ysegment', 'xsegment','poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
+                    'parent',m,'label','shape');
+            end
+            if ~isempty(N.selectiondim)
+                uimenu(m,'label','clear selections','separator','on', ...
+                    'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
+            end
+            fn_propcontrol(N,'selectionadvanced', ...
+                'menu', ...
+                {'parent',m,'label','advanced selection','separator','on'});
+        end
         function sel = get.selection(N)
             F = N.selectionfilter;
             if isempty(F)
@@ -604,8 +604,7 @@ classdef displaynavigation < xplr.graphnode
                 sel = F.selection;
             end
         end
-        
-        function setselectiondim(N,dim)
+        function set.selectiondim(N,dim)
             % function setselectiondim(N,dim)
             %---
             % Select the dimension(s) for which selections are displayed and
@@ -621,9 +620,6 @@ classdef displaynavigation < xplr.graphnode
                 return
             end
             N.selectiondim = dim;
-            
-            % menu to select selection 2D shape visible?
-            set(N.selectionmenu_2Dshape,'visible',fn_switch(nd==2))
             
             % disconnect from previous filter
             F = N.selectionfilter;
@@ -667,7 +663,6 @@ classdef displaynavigation < xplr.graphnode
             % Update selection display
             N.displayselection()
         end
-        
         function displayselection(N,flag,ind,value)
             % @param flag: string 'all', 'new'
             % @param ind: integer
@@ -771,7 +766,6 @@ classdef displaynavigation < xplr.graphnode
 %             end
                 
         end
-        
         function displayonesel(N,k,flag,varargin)
             % function displayonesel(D,k,'new')       - selection at index k is new
             % function displayonesel(D,k,'pos')       - has changed
@@ -911,11 +905,9 @@ classdef displaynavigation < xplr.graphnode
             %                 end
             %             end
         end
-        
         function deletedisplayonesel(N,k)
             delete(N.selectiondisplay{k});
         end
-        
         function output = visiblePolygon(N,points,selectionDimension)
                     % visiblePolygon(N, points);
                     
@@ -1036,7 +1028,6 @@ classdef displaynavigation < xplr.graphnode
                     output(selectionDimension,boundariesIndexes) = boundariesValues;
 
         end
-        
    end
 
     % Slider and scroll wheel callbacks: change zoom

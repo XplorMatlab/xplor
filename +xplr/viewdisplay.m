@@ -157,7 +157,7 @@ classdef viewdisplay < xplr.graphnode
         end
     end
     
-    % Change organization and active dim
+    % Change filters, zoomfilters binning, organization and active dim
     methods (Access='private')
         function out = checkActiveDim(D,doImmediateUpdate)
             % function anychg = checkActiveDim(D,doImmediateUpdate)
@@ -217,9 +217,87 @@ classdef viewdisplay < xplr.graphnode
                 D.graph.setTicks()
             end
         end
-    end
-    
+    end    
     methods
+        function dimensionContextMenu(D,m,dim)
+            % function dimensionContextMenu(D,m,dim)
+            %---
+            % This function populates the context menu that appears when
+            % right-clicking on a label
+            
+            delete(get(m,'children'))
+            
+            % Line properties
+            % (color)
+            docolor = strcmp(D.displaymode,'time courses');
+            if docolor
+                uimenu(m,'label',['Color according to ' head.label],'checked',fn_switch(isequal(D.colordim,dim)), ...
+                    'callback',@(u,e)D.setColorDim(fn_switch(isequal(D.colordim,dim),[],dim)))
+                uimenu(m,'label','Display color legend', ...
+                    'enable',fn_switch(isequal(D.colordim,dim)),'checked',fn_switch(D.showcolorlegend), ...
+                    'callback',@(u,e)set(D,'showcolorlegend',~D.showcolorlegend))
+            end
+
+            % Binning
+            m1 = uimenu(m,'label','Binning','Separator',fn_switch(docolor));
+            binvalues = {1 2 3 4 'set'};
+            bindisplays = {'none' '2' '3' '4' 'other...'};
+            curbin = D.zoomfilters(dim).bin;
+            for i=1:length(binvalues)
+                bin = binvalues{i};
+                uimenu(m1,'label',bindisplays{i},'checked',fn_switch(isequal(curbin,bin)), ...
+                    'callback',@(u,e)setbin(D,dim,bin));
+            end
+
+            % select ZoomFilter key (check the created menu item
+            % that corresponds to the current key)
+            m2 = uimenu(m,'label','zoom filter','Separator',fn_switch(docolor));
+            availablekeys = xplr.bank.availableFilterKeys();
+            newkey = max(availablekeys)+1;
+            keyvalues = [0 availablekeys newkey];
+            fn_num2str(availablekeys, 'shared zoom %i', 'cell');
+            keydisplays = [ ...
+                'private zoom' ...
+                fn_num2str(availablekeys, 'shared zoom %i', 'cell') ...
+                num2str(newkey,'shared zoom %i (new key)')
+                ];
+            curkey = D.zoomfilters(dim).linkkey;
+            for i=1:length(keyvalues)
+                keyvalue = keyvalues(i);      
+                uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
+                    'callback',@(u,e)ZS.changeKey(dim,keyvalue));
+            end
+
+            % select crossSelector key 
+            curfilt = D.navigation.dimfilters{dim};
+            if ~isempty(curfilt)
+                m2 = uimenu(m,'label','cross selector key','Separator',fn_switch(docolor));
+
+                availablekeys = xplr.bank.availableFilterKeys();
+                newkey = max(availablekeys)+1;
+                keyvalues = [0 availablekeys newkey];
+                fn_num2str(availablekeys, 'cross selector key %i', 'cell');
+                keydisplays = [ ...
+                    'private cross selector' ...
+                    fn_num2str(availablekeys, 'cross selector key %i', 'cell') ...
+                    num2str(newkey,'cross selector key %i (new key)')
+                    ];
+                    curkey = curfilt.linkkey;
+                uimenu(m2, 'label', 'show point selector','callback',@(u,e)dimaction(D.V.C,'showFilterPointWindow',curkey,dim));
+                for i=1:length(keyvalues)
+                    keyvalue = keyvalues(i);
+                    uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
+                        'callback',@(u,e)connectPointFilter(D.navigation,dim,keyvalue));
+                end
+            end
+        end
+        function setbin(D,d,bin)
+            if strcmp(bin,'set')
+                bin = fn_input('Binning',D.zoomfilters(d).bin,'stepper 1 1 Inf 1');
+                if isempty(bin), return, end
+            end
+            D.zoomfilters(d).setBin(bin)
+        end
         function setLayout(D,newlayout,doImmediateDisplay)
             % function setLayout(D,newlayout[,doImmediateDisplay])
             %---

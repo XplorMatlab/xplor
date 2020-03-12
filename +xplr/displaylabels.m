@@ -29,6 +29,7 @@ classdef displaylabels < xplr.graphnode
             % parent xplr.viewdisplay object
             L.D = D;
             
+            % create labels and position them
             L.graph = D.graph;
             createLabels(L,'global')
             getHeights(L)
@@ -81,7 +82,8 @@ classdef displaylabels < xplr.graphnode
                 L.h(d) = text('string',['  ' str '  '],'parent',L.ha, ...
                     'margin',1, ...
                     'backgroundcolor',[1 1 1]*.95,'units','normalized', ...
-                    'userdata',d,'buttondownfcn',@(u,e)labelClick(L,u));
+                    'userdata',d,'buttondownfcn',@(u,e)labelClick(L,u), ...
+                    'UIContextMenu',uicontextmenu(L.D.V.hf,'callback',@(m,e)L.D.dimensionContextMenu(m,d)));
             end
         end
         function changeLabel(L,d)
@@ -238,9 +240,6 @@ classdef displaylabels < xplr.graphnode
                 case 'normal'
                     % move the label; if it is not moved, change active dim
                     labelMove(L,d,obj)
-                case 'alt'
-                    % show context menu
-                    L.D.V.context.raise('label',d)
             end
         end
         function labelMove(L,d,obj)

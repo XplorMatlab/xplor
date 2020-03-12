@@ -24,8 +24,9 @@ classdef viewcontrol < xplr.graphnode
             C.newItem('data',1,{'string',V.data.name,'backgroundcolor',xplr.colors('gui.controls.dataname'), ...
                 'callback',@(u,e)editHeader(C)})
             % (list of data dimensions)
-            C.dimlist = C.newItem('dimlist',4,{'style','listbox','string',{V.data.header.label},'max',2, ...
-                'callback',@(u,e)C.V.context.raise('datadim',get(u,'value'))});
+            C.dimlist = C.newItem('dimlist',4, ...
+                {'style','listbox','string',{V.data.header.label},'max',2, ...
+                'uicontextmenu',uicontextmenu(V.hf,'callback',@C.dimensionContextMenu)}); %, ...
             
             % create a filter of key 1 for each dimension
             for i = 1:C.V.slicer.nddata
@@ -101,6 +102,32 @@ classdef viewcontrol < xplr.graphnode
     
     % Dimensions menu
     methods
+        function dimensionContextMenu(C,m,~)
+            % populate context menu
+            delete(get(m,'children'))
+            
+            % selected dimension
+            dim = get(C.dimlist,'value');
+            
+            % display the available keys to apply a new or existing
+            % filter. 
+            m2 = uimenu(m,'label','Add/Change filter');
+            uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',1,dim))
+            availablekeys = xplr.bank.availableFilterKeys();
+            newkey = max(availablekeys)+1;
+            keyvalues = [0 availablekeys newkey];
+            fn_num2str(availablekeys, 'shared zoom %i', 'cell');
+            keydisplays = [ ...
+                'private filter' ...
+                fn_num2str(availablekeys, 'shared filter %i', 'cell') ...
+                num2str(newkey,'shared filter %i (new key)')
+                ];
+            for i=1:length(keyvalues)
+                keyvalue = keyvalues(i);      
+                uimenu(m2,'label',keydisplays{i}, ...
+                    'callback',@(u,e)dimaction(C,'filter',keyvalue,dim));
+            end
+        end
         function dimaction(C,flag,key,dim)
             % get list combo for the specified key
             isprivate = (key==0);

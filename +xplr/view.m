@@ -9,7 +9,6 @@ classdef view < hgsetget
         C               % control of data operation
         D               % main display
         panels          % panels for: display, control, lists, + some buttons
-        context         % object that creates context menus on-the-fly
     end
     properties (SetObservable = true)
         controlvisible = false;  % logical - are the controls visible
@@ -54,9 +53,6 @@ classdef view < hgsetget
             
             % DISPLAY
             V.D = xplr.viewdisplay(V);
-            
-            % CONTEXT MENU FACILITY
-            V.context = xplr.contextmenu(V);
             
 %             % default filters
 %             head = data.header;
