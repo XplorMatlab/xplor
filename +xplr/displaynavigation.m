@@ -23,6 +23,7 @@ classdef displaynavigation < xplr.graphnode
     properties (SetObservable)
         selectiondim            % dimensions to which these selections apply
         selection2Dshape = 'ellipse'; % 'xsegment', 'ysegment', 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
+        selectionround1Dmeasure = true; 
         selectionadvanced = false
     end
     
@@ -175,8 +176,7 @@ classdef displaynavigation < xplr.graphnode
         function Mouse(N, flag)
             pointonly = (nargin==2 && strcmp(flag,'pointonly'));
             point =  get(N.D.ha,'CurrentPoint'); point = point(1,[1 2])';
-            dim = [N.D.activedim.x N.D.activedim.y];
-            if isempty(dim), return, end
+            activedim = [N.D.activedim.x N.D.activedim.y];
             switch get(N.hf,'SelectionType')
                 case 'normal'
                     % zoom in or select point
@@ -190,16 +190,16 @@ classdef displaynavigation < xplr.graphnode
                     end
                     if dozoom
                         ijk = N.graph.graph2slice(rect(:,[1 3]));
-                        zoom = ijk(dim,:)';
-                        for i=1:length(dim), zoom(:,i) = sort(zoom(:,i)); end
-                        N.D.zoomslicer.setZoom(dim,zoom)
+                        zoom = ijk(activedim,:)';
+                        for i=1:length(activedim), zoom(:,i) = sort(zoom(:,i)); end
+                        N.D.zoomslicer.setZoom(activedim,zoom)
                     else
                         N.manualclickmovecross(point);
                     end
                 case 'open'
                     % zoom reset
-                    zoom = repmat(':',1,length(dim));
-                    N.D.zoomslicer.setZoom(dim,zoom)
+                    zoom = repmat(':',1,length(activedim));
+                    N.D.zoomslicer.setZoom(activedim,zoom)
                 case 'alt'
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape
@@ -212,23 +212,27 @@ classdef displaynavigation < xplr.graphnode
                         case 1
                             d = N.selectiondim;
                             dim_location = N.layout.dim_locations{d};
-                            if ~ismember(dim_location, {'x' 'y'})
+                            if ~ismember(dim_location, {'x' 'y' 'xy'})
                                 disp(['selection in location ''' dim_location ''' not handled'])
                                 return
                             end
                             
                             % user interaction
-                            segment = fn_mouse(N.ha,[dim_location 'segment-']);
+                            if isscalar(dim_location)
+                                segment = fn_mouse(N.ha,[dim_location 'segment-']);
+                                switch dim_location
+                                    case 'x'
+                                        segment = [segment; 0 0];
+                                    case 'y'
+                                        segment = [0 0; segment];
+                                end
+                            else
+                                segment = fn_mouse(N.ha,'rectaxp-');
+                            end
                             
                             % convert to slice indices in the selected
                             % dimension
-                            switch dim_location
-                                case 'x'
-                                    xy = [segment; 0 0];
-                                case 'y'
-                                    xy = [0 0; segment];
-                            end
-                            ijk = N.graph.graph2slice(xy);
+                            ijk = N.graph.graph2slice(segment);
                             isegment = sort(ijk(d,:));
                             
                             % create selection in slice indices coordinates
@@ -237,6 +241,8 @@ classdef displaynavigation < xplr.graphnode
                                 oneDselection = xplr.selectionnd('indices',round(isegment(1)):round(isegment(2)),sz);
                             elseif diff(isegment)==0
                                 oneDselection = xplr.selectionnd('point1D',isegment(1));
+                            elseif N.selectionround1Dmeasure
+                                oneDselection = xplr.selectionnd('line1D',round(isegment)+[-.5 .5]);
                             else
                                 oneDselection = xplr.selectionnd('line1D',isegment);
                             end
@@ -582,7 +588,7 @@ classdef displaynavigation < xplr.graphnode
             nd = N.D.slice.nd;
             fn_propcontrol(N,'selectiondim', ...
                 {'menuval' [num2cell(1:nd) {[]}] fn_num2str(1:nd,'cell')}, ...
-                'parent',m,'label','in dimension(s)')
+                'parent',m,'label','in dimension(s)');
             if length(N.selectiondim) == 2
                 fn_propcontrol(N,'selection2Dshape', ...
                     {'menuval' {'ysegment', 'xsegment','poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
@@ -592,9 +598,15 @@ classdef displaynavigation < xplr.graphnode
                 uimenu(m,'label','clear selections','separator','on', ...
                     'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
             end
-            fn_propcontrol(N,'selectionadvanced', ...
-                'menu', ...
-                {'parent',m,'label','advanced selection','separator','on'});
+            if length(N.selectiondim) == 1 && N.D.slice.header(N.selectiondim).ismeasure
+                fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
+                    {'parent',m,'label','round selections to data indices','separator','on'});
+                nextsep = 'off';
+            else
+                nextsep = 'on';
+            end
+            fn_propcontrol(N,'selectionadvanced','menu', ...
+                {'parent',m,'label','advanced selection','separator',nextsep});
         end
         function sel = get.selection(N)
             F = N.selectionfilter;
@@ -656,7 +668,7 @@ classdef displaynavigation < xplr.graphnode
             % dimension in the new slice
             if isempty(N.selectiondim), return, end
             if ~isequal(N.selectionfilter.headerin, N.D.slice.header(N.selectiondim))
-                N.setselectiondim([])
+                N.selectiondim = [];
             end
         end
         function selectionfilterchange(N,e)
