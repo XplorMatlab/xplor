@@ -264,6 +264,7 @@ classdef selectionshape
                         else
                             indices = S(k).special;
                         end
+                        if isempty(indices), continue, end
                         gaps = diff(indices)>1;
                         start = indices([true gaps]);
                         stop = indices([gaps true]);

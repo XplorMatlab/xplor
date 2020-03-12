@@ -89,7 +89,11 @@ classdef filter < xplr.dataoperand
             % compute indices
             if fn_ismemberstr(flag,{'all' 'new' 'chg' 'add' 'chg&new' 'chg&rm'})
                 value = value.ComputeInd([F.headerin.n]);
-                dataind = {value.dataind};
+                % filter definition when data is categorical can only be
+                % indices based (but not shape based)
+                if any([F.headerin.categorical])
+                    value = value.convert('indices',[F.headerin.n]);
+                end
             end
             
             % update selection
@@ -98,7 +102,7 @@ classdef filter < xplr.dataoperand
                     % note that even if value is already equal to
                     % F.selection, we cannot just return, because
                     % addheaderinfo might bear some changes
-                    ind = 1:length(dataind);
+                    ind = 1:length(value);
                     F.selection = row(value); % in particular row(...) transform 0x0 array in 1x0 array
                 case {'new' 'chg'}
                     F.selection(ind) = value;

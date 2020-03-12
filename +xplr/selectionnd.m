@@ -53,7 +53,11 @@ classdef selectionnd < xplr.graphnode
                 return
             elseif isnumeric(type)
                 n = type;
-                sel(n) = xplr.selectionnd;
+                if n == 0
+                    sel = xplr.selectionnd.empty(1,0);
+                else
+                    sel(n) = xplr.selectionnd;
+                end
                 return
             end
             
@@ -303,11 +307,25 @@ classdef selectionnd < xplr.graphnode
             polygon = sel.polygon;
         end
         function sel2 = convert(sel,type,datasizes)
+            % function sel2 = convert(sel,'indices',datasizes)
+            
+            % multiple selections
+            if ~isscalar(sel)
+                sel2 = xplr.selectionnd(length(sel));
+                for i = 1:length(sel)
+                    sel2(i) = convert(sel(i),type,datasizes);
+                end
+                return
+            end
+            
+            % conversion
             switch type
                 case 'indices'
                     if nargin<3, datasizes = sel.datasizes; end
-                    ComputeInd(sel,datasizes)
-                    sel2 = xplr.selectionnd('indices',sel.dataind,datasizes);
+                    sel2 = ComputeInd(sel,datasizes);
+                    if ~strcmp(sel2.type,'indices')
+                        sel2 = xplr.selectionnd('indices',sel.dataind,datasizes);
+                    end
                 otherwise
                     error 'invalid correction type'
             end

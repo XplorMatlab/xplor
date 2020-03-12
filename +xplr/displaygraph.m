@@ -1,5 +1,7 @@
 classdef displaygraph < xplr.graphnode
-    
+    % This class takes care of conversions between slice and graph coordinates,
+	% and of x/y ticks
+
     properties (SetAccess='private')
         D % parent xplr.viewdisplay object
         xyticks % graphic objects
@@ -18,7 +20,7 @@ classdef displaygraph < xplr.graphnode
         zslicesz    % current size of the zoomed slice
         filling     % how much of the space available for each dimension if filled (vector of values <=1)
     end
-    properties (Access='private')
+    properties (SetAccess='private')
         steps
     end
         
@@ -397,7 +399,7 @@ classdef displaygraph < xplr.graphnode
             % - 'ijk0'      [required if subdim is set] default values for
             %               dimensions where no conversion is requested
             % - 'mode'      value is 'point' or 'vector' [default]
-            
+
             p = inputParser;
             p.addParameter('subdim',[],@isnumeric)
             p.addParameter('ijk0',[],@isnumeric)
@@ -416,7 +418,7 @@ classdef displaygraph < xplr.graphnode
                     ijk0 = repmat(ijk0,[1 np]);
                 end
             end
-            
+
         end
     end
     methods
@@ -426,12 +428,15 @@ classdef displaygraph < xplr.graphnode
             %---
             % Get zoom value for specified dimensions. 
             % Different modes affect the returned value:
-            % - 'value' [default]   returns the zooming value specified to
+            % - 'value' [default]   returns the zooming value specified in
             %               the zoom filter
             % - 'effective' zooming value, after taking into account the
             %               extra space due to not completely filling the
             %               available space (to preserve data aspect ratio)
-            % - 'indices'   returns zoom values of the zoomed data points
+            % - 'indices'   minimal and maximal displayed data indices
+            % - 'displaylimit'   minimal and maximal slice coordinates
+            %               being displayed (same as 'indices' for time
+            %               courses display, otherwise extends by +/- .5)
             % - 'off&bin'   returns offset (i.e. number of data points from
             %               the beginning which are not shown) and binning
             %               value
@@ -456,14 +461,22 @@ classdef displaygraph < xplr.graphnode
                     if strcmp(mode,'effective')
                         zoom = fn_add(mean(zoom), fn_mult([-.5; .5],diff(zoom)./G.filling(dim)));
                     end
-                case 'indices'
+                case {'indices' 'displaylimit'}
                     zoom = zeros(2,length(dim));
                     for i=1:length(dim), zoom(:,i) = zfilters(i).indicesout([1 end]); end
+                    if strcmp(mode,'displaylimit') 
+                        if strcmp(G.D.displaymode,'time courses') && ~isempty(G.layout.x)
+                            idx = dim(dim~=G.layout.x(1));
+                            zoom(idx) = fn_add(zoom(idx),[-.5; .5]);                            
+                        else
+                            zoom = fn_add(zoom,[-.5; .5]);
+                        end
+                    end
                 case 'off&bin'
                     offset = zeros(1,length(dim));
                     for i=1:length(dim), offset(i) = zfilters(i).indicesin(1)-1; end
-                    zoom = offset;
-                    bin = [zfilters.bin];
+                    zoom = offset;          % first output: offset
+                    bin = [zfilters.bin];   % second output: bin
             end
         end
         function xy = zslice2graph(G,ijk,varargin)
@@ -475,7 +488,7 @@ classdef displaygraph < xplr.graphnode
             %
             % Output:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
-            % 
+            %
             % See also xplr.displaygraph.conversionOptions
             st = G.steps;
             
@@ -504,7 +517,13 @@ classdef displaygraph < xplr.graphnode
             x = sum(fn_add(st.xoffset(:), fn_mult(ijk(G.layout.x,:),st.xstep(:))),1);
             y = sum(fn_add(st.yoffset(:), fn_mult(ijk(G.layout.y,:),st.ystep(:))),1);
             xy = [x; y];
-            if ~isempty(st.xydim), xy = xy + st.xyoffsets(:,ijk(st.xydim,:)); end
+            if ~isempty(st.xydim)
+                xyidx = ijk(st.xydim,:);
+                inside = (xyidx>0 & xyidx<=size(st.xyoffsets,2));
+                xy(:,inside) = xy(:,inside) + st.xyoffsets(:,xyidx(inside)); 
+                % points outside of graph
+                xy(:,~inside) = NaN;
+            end
         end
         function ijk = graph2zslice(G,xy,varargin)
             % function ijk = graph2zslice(G,xy,options...)
@@ -515,9 +534,9 @@ classdef displaygraph < xplr.graphnode
             %
             % Output:
             % - ijk         index coordinates in the zslice data
-            % 
+            %
             % See also xplr.displaygraph.conversionOptions
-            
+
             % Input points
             if isvector(xy), xy = xy(:); end
             np = size(xy,2);
@@ -616,9 +635,9 @@ classdef displaygraph < xplr.graphnode
             %
             % Output:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
-            % 
+            %
             % See also xplr.displaygraph.conversionOptions
-            
+
             % Input points
             np = size(ijk,2);
             [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
@@ -655,9 +674,9 @@ classdef displaygraph < xplr.graphnode
             %
             % Output:
             % - ijk         index coordinates in the slice data
-            % 
+            %
             % See also xplr.displaygraph.conversionOptions
-                        
+
             % coordinates in zoomed slice
             np = size(xy,2);
             zijk = graph2zslice(G,xy,varargin{:});
@@ -734,6 +753,10 @@ classdef displaygraph < xplr.graphnode
                 M(1:2,4,:) = M(1:2,4,:) + permute(st.xyoffsets(:,ijk(st.xydim,:)),[1 3 2]); 
             end
         end
+	end
+
+	% Specialized position functions
+	methods
         function pos = labelPosition(G,dim,orgin)
             % function pos = labelPosition(G,d[,orgin])
         
@@ -779,6 +802,98 @@ classdef displaygraph < xplr.graphnode
                 end
             end
         end
+		function [polygon center] = selectionMark(G,dim,sel)
+            % Create the polygon to display corresponding to a given
+            % selection. This is a complex function as it handles many
+            % different cases whether the selection is 1D or 2D, which
+            % dimensions the selection applies to, and where they are
+            % located.
+            
+			% checks
+			nd = length(dim);
+			dim_location = [G.layout.dim_locations{dim}];
+			if sel.nd ~= nd, error 'selection has incorrect number of dimensions', end
+            
+            % default polygon is empty (no display)
+            polygon = nan(2,1); 
+            center = nan(2,1); % out of display
+
+			switch nd
+				case 1
+					lines = sel.polygon; % 2*n array: set of lines
+					nline = size(lines,2);
+                    % remove lines that are completely out of current view
+					zoom = G.getZoom(dim,'displaylimit');
+                    lines(:, lines(1,:)>zoom(2) | lines(2,:)<zoom(1)) = [];
+                    if isempty(lines), return, end
+                    % display selections as rectangles (for 'x' and 'y'
+                    % locations), or as more complex polygon (for 'xy' and
+                    % 'yx')
+					if ismember(dim_location, {'x' 'y'})
+                        % lines spanning beyond the left or right side
+						beyondleft = lines(1,:) < zoom(1);
+						beyondright = lines(2,:) > zoom(2);
+						% clip lines to current view
+						lines(1,beyondleft) = zoom(1);
+						lines(2,beyondright) = zoom(2);
+                        % convert from slice to zslice coordinates
+                        [idxoffset, bin] = G.getZoom(dim, 'off&bin');
+                        lines = (lines+.5)/bin-.5 - idxoffset;
+						% convert from zslice to graph coordinates:
+						% ignore dimensions that are more internal than dim
+						% take value 1 for dimensiont that are more external than dim
+						dim_layout = G.layout.(dim_location);
+						idx_dim = find(dim_layout==dim,1);
+                        st = G.steps;
+						switch dim_location
+							case 'x'
+								lines = sum(st.xoffset(idx_dim:end)) + lines*st.xstep(idx_dim) + sum(st.xstep(idx_dim+1:end));
+							case 'y'
+								lines = sum(st.yoffset(idx_dim:end)) + lines*st.ystep(idx_dim) + sum(st.ystep(idx_dim+1:end));
+						end
+                        if ~isempty(st.xydim)
+                            graphdim = fn_switch(dim_location,'x',1,'y',2);
+                            lines = lines + st.xyoffsets(graphdim,1); 
+                        end
+                        % construct polygon as union of rectangles
+                        polygon = cell(1,2*nline-1);
+                        for i = 1:nline
+                            switch 2*beyondleft(i) + beyondright(i)
+                                case 0
+                                    % segment within view: full rectangle
+                                    polygon{2*i-1} = [lines([1 2 2 1 1],i)'; -.5 -.5 .5 .5 -.5];
+                                case 1
+                                    % 'rectangle' open on the right side
+                                    polygon{2*i-1} = [lines([2 1 1 2],i)'; -.5 -.5 .5 .5];
+                                case 2
+                                    % 'rectangle' open on the left side
+                                    polygon{2*i-1} = [lines([1 2 2 1],i)'; -.5 -.5 .5 .5];
+                                case 3
+                                    % 'rectangle' open on both sides: 2
+                                    % lines
+                                    polygon{2*i-1} = [lines([1 2],:)' NaN lines([2 1],i)'; ...
+                                        -.5 -.5 NaN .5 .5];
+                            end
+                        end
+                        [polygon{2:2:end}] = deal([NaN; NaN]);
+                        polygon = [polygon{:}];
+                        center = [mean(lines(:)); 0];
+                        
+                        % invert coordinates if dim location is 'y'
+                        if strcmp(dim_location,'y')
+                            polygon = polygon([2 1],:);
+                            center = center([2 1]);
+                        end
+                    else
+                        error 'not implemented yet'
+                        center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
+
+					end
+				otherwise
+					error 'case not handled yet'
+			end
+
+		end
     end
 end
 

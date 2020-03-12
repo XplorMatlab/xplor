@@ -250,6 +250,8 @@ classdef viewdisplay < xplr.graphnode
             updateDisplay(D)
             % update slider connections
             connectZoomFilter(D.navigation)
+            % update selection display
+            D.navigation.displayselection()
         end
         function makeDimActive(D,d,flag)
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
@@ -432,7 +434,11 @@ classdef viewdisplay < xplr.graphnode
                     error('flag ''%s'' not handled', flag)
             end
             
-            
+            % Check whether current dimension for selections display is
+            % still valid, i.e. whether the connected filter still fits the
+            % dimension in the new slice (if it is still valid, note that
+            % selection display update will occur in D.zslicechange)
+            D.navigation.checkselectionfilter()
         end
         function updateDisplay(D,flag,dim,ind)
             % function updateDisplay(D[,flag,dim,ind])
@@ -792,7 +798,8 @@ classdef viewdisplay < xplr.graphnode
                       
            % reposition cross
            D.navigation.repositionCross()
-           % display zone selections (ellipse)
+           
+           % update selections display
            D.navigation.displayselection('changereferential')
 
             % Update legend

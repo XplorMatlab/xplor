@@ -15,6 +15,7 @@ classdef displaylayout
     end
     properties (Dependent, SetAccess='private')
         dim_locations
+        griddisplay
     end
     
     % Create
@@ -34,6 +35,13 @@ classdef displaylayout
                 L.x = 1:2:nd;
                 L.y = 2:2:nd;
             end
+        end
+    end
+    
+    % Simple get dependent
+    methods
+        function d = get.griddisplay(L)
+            d = [L.xy L.yx];
         end
     end
     

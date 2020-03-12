@@ -284,7 +284,7 @@ classdef list < xplr.graphnode
                         if ~iscell(val), val = {val}; end
                         newsel = xplr.selectionnd(length(val));
                         for i=1:length(val)
-                            newsel(i) = xplr.selectionnd(L.seltype,val{i});
+                            newsel(i) = xplr.selectionnd(L.seltype,val{i},L.F.headerin.n);
                         end
                     catch
                         errordlg('Command could not be evaluated correctly')
@@ -376,11 +376,17 @@ classdef list < xplr.graphnode
         end
         function sel = buildCurrentSelection(L,domultin)
             val = get(L.hu,'value');
-            if domultin && L.F.headerin.ismeasure && ~isscalar(val) && all(diff(val)==1)
+            if domultin 
+                nsel = length(val);
+                sel = xplr.selectionnd(nsel);
+                for i=1:nsel
+                    sel(i) = xplr.selectionnd(L.seltype,val(i),L.F.headerin.n);
+                end
+            elseif L.F.headerin.ismeasure && ~isscalar(val) && all(diff(val)==1)
                 % selection is a segment rather than a mere list of points
-                sel = xplr.selectionnd('line1D',val([1 end]));
+                sel = xplr.selectionnd('line1D',val([1 end]),L.F.headerin.n);
             else
-                sel = xplr.selectionnd(L.seltype,val);
+                sel = xplr.selectionnd(L.seltype,val,L.F.headerin.n);
             end
         end
     end
