@@ -139,6 +139,7 @@ classdef displaygraph < xplr.graphnode
                     nrow = fn_coerce(round(sqrt(nelem/elemratio/xavail*yavail*axisratio)),[1 nelem]);
                     ncol = ceil(nelem/nrow);
                 end
+                st.xyncol = ncol;
                 
                 % set grid positions
                 st.xyoffsets = zeros(2,nelem);
@@ -826,25 +827,25 @@ classdef displaygraph < xplr.graphnode
 					zoom = G.getZoom(dim,'displaylimit');
                     lines(:, lines(1,:)>zoom(2) | lines(2,:)<zoom(1)) = [];
                     if isempty(lines), return, end
+                    % lines spanning beyond the left or right side
+                    beyondleft = lines(1,:) < zoom(1);
+                    beyondright = lines(2,:) > zoom(2);
+                    % clip lines to current view
+                    lines(1,beyondleft) = zoom(1);
+                    lines(2,beyondright) = zoom(2);
+                    % convert from slice to zslice coordinates
+                    [idxoffset, bin] = G.getZoom(dim, 'off&bin');
+                    lines = (lines+.5)/bin-.5 - idxoffset;
                     % display selections as rectangles (for 'x' and 'y'
                     % locations), or as more complex polygon (for 'xy' and
                     % 'yx')
+                    st = G.steps;
 					if ismember(dim_location, {'x' 'y'})
-                        % lines spanning beyond the left or right side
-						beyondleft = lines(1,:) < zoom(1);
-						beyondright = lines(2,:) > zoom(2);
-						% clip lines to current view
-						lines(1,beyondleft) = zoom(1);
-						lines(2,beyondright) = zoom(2);
-                        % convert from slice to zslice coordinates
-                        [idxoffset, bin] = G.getZoom(dim, 'off&bin');
-                        lines = (lines+.5)/bin-.5 - idxoffset;
 						% convert from zslice to graph coordinates:
 						% ignore dimensions that are more internal than dim
 						% take value 1 for dimensiont that are more external than dim
 						dim_layout = G.layout.(dim_location);
 						idx_dim = find(dim_layout==dim,1);
-                        st = G.steps;
 						switch dim_location
 							case 'x'
 								lines = sum(st.xoffset(idx_dim:end)) + lines*st.xstep(idx_dim) + sum(st.xstep(idx_dim+1:end));
@@ -884,10 +885,43 @@ classdef displaygraph < xplr.graphnode
                             polygon = polygon([2 1],:);
                             center = center([2 1]);
                         end
+                    elseif strcmp(dim_location, 'xy')
+                        % fancy display of selections in grid !
+                        hh = abs(st.xysteps(2)) *.46; % half height of the frame around a single grid element
+                        polygon = cell(1,2*nline-1);
+                        for i = 1:nline
+                            % corners: convert from zslice to graph coordinates
+                            rline = round(lines(:,i)+[1; -1]*.01);
+                            c = st.xyoffsets(:,rline); % 2*2, i.e. x/y * start/stop
+                            c(1,:) = c(1,:) + st.xysteps(1) * (lines(:,i) - rline)';
+                            % sub-polygon
+                            singlerow = (diff(c(2,:)) == 0);
+                            if singlerow
+                                % the easy case: a simple rectangle
+                                % spanning a single line in the grid
+                                polygon{2*i-1} = [c(1,[1 2 2 1 1]); c(2,[1 1 2 2 1])+[-1 -1 1 1 -1]*hh];
+                            elseif diff(rline) < st.xyncol
+                                % two non-intersecting rectangles on two successive lines
+                                polygon{2*i-1} = ...
+                                    [c(1,1) .5*ones(1,2) c(1,[1 1]) NaN -.5 c(1,[2 2]) -.5*ones(1,2); ...
+                                    (c(2,[1 1])+hh) (c(2,[1 1])-hh) (c(2,1)+hh) NaN (c(2,[2 2])+hh) (c(2,[2 2])-hh) (c(2,2)+hh)];
+                            else
+                                % more difficult: spanning multiple lines
+                                hhc = abs(st.xysteps(2)) - hh;
+                                polygon{2*i-1} = ...
+                                    [c(1,1) .5*ones(1,3) c(1,2)*ones(1,2) -.5*ones(1,3) c(1,1)*ones(1,2); ...
+                                    (c(2,[1 1])+hh) (c(2,1)-hhc) (c(2,[2 2])+hhc) (c(2,[2 2])-hh) (c(2,2)+hhc) (c(2,[1 1])-hhc) c(2,1)+hh];
+                            end
+                        end
+                        [polygon{2:2:end}] = deal([NaN; NaN]);
+                        polygon = [polygon{:}];
+                        
+                        % center: will be better position if we average
+                        % after conversion from indices to graph positions
+                        center = mean(G.slice2graph(sel.dataind,'subdim',dim),2);
                     else
                         error 'not implemented yet'
                         center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
-
 					end
 				otherwise
 					error 'case not handled yet'
