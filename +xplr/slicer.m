@@ -11,7 +11,7 @@ classdef slicer < xplr.graphnode
         slice
         filters = struct('active',[],'dim',cell(1,0),'obj',[]);
     end
-    properties (Access='protected')
+    properties (SetAccess='protected')
         slicingchain = struct('res',cell(1,0),'dimdata2slice',[]); % remember the steps of slicing
         % beware that 'dim' are the dimensions of slicing IN THE ORIGINAL
         % DATA, but not any more in the slice (dimdata2slice specifies the
@@ -358,7 +358,8 @@ classdef slicer < xplr.graphnode
                 S.slicingchain(k) = s;
             end
             
-            % update slice (and replace last chain result by updated slice)
+            % update slice (and replace chain elements supposed to be the
+            % same as the slice by this updated slice) 
             switch flag
                 case 'global'
                     S.slice.updateDataDim(flag,[],s.res.data,s.res.header)
@@ -371,7 +372,13 @@ classdef slicer < xplr.graphnode
                 otherwise
                     S.slice.updateData(flag,dim,ind,s.res.data,s.res.header(dim))
             end
-            if ~isempty(S.filters), S.slicingchain(end).res = S.slice; end
+            if ~isempty(S.filters)
+                S.slicingchain(k).res = S.slice; 
+                while ~S.filters(k).active && k>1
+                    k = k-1;
+                    S.slicingchain(k).res = S.slice; 
+                end
+            end
         end
     end
     methods
