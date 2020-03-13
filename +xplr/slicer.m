@@ -213,6 +213,9 @@ classdef slicer < xplr.graphnode
             idx = fn_find(dim,{S.filters.dim});
             F = [S.filters(idx).obj];
         end
+        function idx = getFilterIndex(S,F)
+            idx = fn_find(F,[S.filters.obj],'first');
+        end
     end
     
     % Slicing
@@ -275,7 +278,7 @@ classdef slicer < xplr.graphnode
                     end
                 case 'filter'
                     % filtering in dimension(s) dim has changed
-                    kfilt = fn_find([S.activefilters.obj],filter,'first');
+                    kfilt = fn_find(filter,[S.activefilters.obj],'first');
                     if isempty(kfilt)
                         % filter is not active
                         if ~any(filter == [S.filters.obj]), error programming, end

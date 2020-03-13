@@ -231,9 +231,11 @@ classdef headerEdit < hgsetget
             E.ok = uicontrol('parent',E.hf,'string','ok','pos',[W-80 1 80 30], ...
                 'callback',@(u,e)done(E));
             
-            % "confirm all" button masks ok button, but trigger done(E)
-            E.uconfirm = uicontrol('parent',E.hf,'string','Confirm all','callback',@(u,e)confirmall(E), ...
-                'pos',[W-80 1 80 30]);
+            %             % "confirm all" button masks ok button, but trigger done(E)
+            %             E.uconfirm = uicontrol('parent',E.hf,'string','Confirm all','callback',@(u,e)confirmall(E), ...
+            %                 'pos',[W-80 1 80 30]);
+            
+            % reset button
             uicontrol('parent',E.hf,'string','Reset all','callback',@(u,e)resetall(E), ...
                 'pos',[W-2*80 1 80 30]);
             
@@ -301,11 +303,11 @@ classdef headerEdit < hgsetget
                 set(E.table,'BackgroundColor',col)
             end
             
-            % enabling of 'confirm all' and 'ok' buttons
-            if ishandle(E.uconfirm) && all([E.curhead.confirmed])
-                delete(E.uconfirm)
-            end
-            set(E.ok,'enable',fn_switch(allok))
+            %             % enabling of 'confirm all' and 'ok' buttons
+            %             if ishandle(E.uconfirm) && all([E.curhead.confirmed])
+            %                 delete(E.uconfirm)
+            %             end
+            %             set(E.ok,'enable',fn_switch(allok))
         end
         function celledit(E,e)
             i = e.Indices(1);
@@ -480,7 +482,6 @@ classdef headerEdit < hgsetget
         function confirmall(E)
             [E.curhead.confirmed] = deal(true);
             E.display_header()
-            done(E);
         end
         function resetall(E)
             for i=1:E.nd

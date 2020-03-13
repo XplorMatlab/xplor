@@ -33,7 +33,9 @@ classdef viewcontrol < xplr.graphnode
             % displayable)
             nd = C.V.data.nd;
             active = false(1,nd);
-            for i = nd:-1:1
+            ndimmax = min(4,nd); % no more than 4 dimensions visible
+            active(ndimmax+1:end) = true;
+            for i = ndimmax:-1:1
                 % test displayable
                 sz = C.V.data.sz; sz(active) = 1;
                 displaymode = 'image'; % default display mode
@@ -210,8 +212,7 @@ classdef viewcontrol < xplr.graphnode
                         set(hlab,'enable',fn_switch(active,'inactive','off'))
                         drawnow
                         % toggle filter active in slicer
-                        disp 'very bad way to determine filter index'
-                        filteridx = itemidx-2;
+                        filteridx = C.V.slicer.getFilterIndex(C.items(itemidx).F);
                         C.V.slicer.chgFilterActive(filteridx,active)
                     case 'showFilterWindow'
                         % re-create the filter window if not existing or
@@ -380,10 +381,10 @@ classdef viewcontrol < xplr.graphnode
                 filter = xplr.filterAndPoint(header);
                 % show filter in combo
                 combo = C.getPrivateLists();
-                combo.showList(filter)
+                if active, combo.showList(filter), end
             else
                 % search for the filter in the bank with key and dimension
-                doshow=true;
+                doshow = active;
                 filter = xplr.bank.getFilter(key,header,doshow,C);
             end
             
