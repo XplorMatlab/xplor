@@ -184,8 +184,8 @@ classdef filterAndPoint < xplr.dataoperand
                 slic = slicing(F.P,x.data,dims,F.ndout);
                 % header
                 head = x.header;
-                ndx = length(head);
-                head = [head(1:dims(1)-1) F.headerout head(setdiff(dims(1):ndx,dims))];
+                head(dims) = [];
+                head = [head(1:dims(1)-1) F.headerout head(dims(1):end)];
                 % output
                 slice = xplr.xdata(slic,head);
             end

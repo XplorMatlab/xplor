@@ -128,7 +128,7 @@ classdef viewcontrol < xplr.graphnode
                     'callback',@(u,e)dimaction(C,'filter',keyvalue,dim));
             end
         end
-        function dimaction(C,flag,key,dim)
+        function dimaction(C,flag,key,dim,varargin)
             % get list combo for the specified key
             isprivate = (key==0);
             
@@ -188,13 +188,14 @@ classdef viewcontrol < xplr.graphnode
                         
                          % add the dimension to the slice's filters removal list
                         rmfilters = [rmfilters filteridx]; %#ok<AGROW>
-                    case 'toggleactive'
+                    case 'setactive'
                         itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));
                         hlab = C.items(itemidx).label;
                         % active or inactive?
-                        active = strcmp(get(hlab,'enable'),'off');
-                        % enable/disable label
+                        active = varargin{1};
+                        % show label as enabled/disabled
                         set(hlab,'enable',fn_switch(active,'inactive','off'))
+                        drawnow
                         % toggle filter active in slicer
                         disp 'very bad way to determine filter index'
                         filteridx = itemidx-2;
@@ -282,7 +283,7 @@ classdef viewcontrol < xplr.graphnode
                 'backgroundcolor',backgroundColor, ...
                 'Style','checkbox', 'Value',1, ...
                 'position', [ 6 6 13 12 ], ...
-                'callback',@(u,e)C.dimaction('toggleactive',1,d));
+                'callback',@(u,e)C.dimaction('setactive',1,d,get(u,'value')));
             
         end
         function clickFilterItem(C,d,id)
@@ -315,7 +316,7 @@ classdef viewcontrol < xplr.graphnode
             moved = fn_buttonmotion(@move,hf,'moved?');
             function move
                 p = get(hf,'currentpoint'); p = p(1,2);
-                newidx = fn_coerce( idx0 - round((p-p0)/ystep), 1, nfilter)
+                newidx = fn_coerce( idx0 - round((p-p0)/ystep), 1, nfilter);
                 % set all items position
                 C.items(idxfilter) = filteritems([idxother(1:newidx-1) idx0 idxother(newidx:end)]);
                 C.itemPositions

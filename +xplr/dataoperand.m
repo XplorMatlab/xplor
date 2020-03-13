@@ -63,7 +63,9 @@ classdef dataoperand < xplr.graphnode
         % which new position is it going in the operated data
         
             if length(dims)~=O.ndin, error 'number of dimensions does not match filter input header', end
-            [otherdim1 otherdim2] = deal(1:dims(1)-1,setdiff(dims(1):ndbef,dims));
+            otherdim = 1:ndbef; otherdim(dims) = [];
+            otherdim1 = 1:dims(1)-1;
+            otherdim2 = otherdim(dims(1):end);
             dimbef2aft = zeros(1,ndbef);
             dimbef2aft(otherdim1) = otherdim1;
             switch O.ndout

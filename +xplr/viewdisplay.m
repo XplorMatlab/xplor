@@ -560,9 +560,9 @@ classdef viewdisplay < xplr.graphnode
             doreset = strcmp(flag,'global');
             donew = strcmp(flag,'new');
             doremove = strcmp(flag,'remove');
-            dodispatch = ~fn_ismemberstr(flag,{'chg' 'chgdata' 'clip' 'color'});
-            doselectdata = fn_ismemberstr(flag,{'chg' 'new'});
-            doalldata = fn_ismemberstr(flag,{'global' 'chgdata' 'chgdata&blocksize' 'perm' 'clip' 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
+            doposition = ~fn_ismemberstr(flag,{'chg' 'chgdata' 'clip' 'color'});
+            dodataall = fn_ismemberstr(flag,{'clip' 'global' 'chgdata' 'chgdata&blocksize' 'perm' 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
+            dodataselect = fn_ismemberstr(flag,{'new' 'chg'});
             dochgx = strcmp(flag,'chgdata&blocksize');
             docolor = dotimecourses && ~fn_ismemberstr(flag,{'chgdata' 'chgdata&blocksize' 'clip'});
             
@@ -607,8 +607,8 @@ classdef viewdisplay < xplr.graphnode
             if ~isempty(dim), sz1prev(dim) = sz1prev(dim)+(doremove-donew)*length(ind); end
             if ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))...
                     || ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))
-                [doreset dodispatch doalldata] = deal(true);
-                doselectdata = false;
+                [doreset doposition dodataall] = deal(true);
+                dodataselect = false;
             end
             
             % Prepare color
@@ -632,8 +632,8 @@ classdef viewdisplay < xplr.graphnode
             sz1 = sz; sz1([xlayout0 ylayout0]) = 1;
             if doreset          % reset display and grid elements
                 deleteValid(D.htransform) % this will also delete children D.hdisplay
-                [D.htransform D.hdisplay] = deal(gobjects([sz1 1]));
-                [dodispatch doalldata] = deal(true);
+                [D.htransform, D.hdisplay] = deal(gobjects([sz1 1]));
+                [doposition, dodataall] = deal(true);
             elseif donew      	% new grid elements
                 subs = substruct('()',repmat({':'},1,D.zslice.nd));
                 subs.subs{dim} = ind;
@@ -655,7 +655,7 @@ classdef viewdisplay < xplr.graphnode
             % Prepare several list of indices beforehand to avoid repeated
             % calls to functions such as ind2sub
             idxlist = 1:prod(sz1);
-            if doselectdata && ~dodispatch
+            if dodataselect && ~doposition
                 % not all grid elements need to be visited ('chg' flag)
                 idxlist = reshape(idxlist,sz1);
                 subs = substruct('()',repmat({':'},1,D.zslice.nd));
@@ -670,7 +670,7 @@ classdef viewdisplay < xplr.graphnode
             end
             
             % Prepare dispatch
-            if dodispatch
+            if doposition
                 if dotimecourses
                     M = D.graph.gettransform(ijklist,[0 1]);
                 else
@@ -682,19 +682,18 @@ classdef viewdisplay < xplr.graphnode
             for u = 1:length(idxlist)
                 idx = idxlist(u);
                 ijk = ijklist(:,u);
-                docurdata = doalldata || (doselectdata && any(ind==ijk(dim)));
-                docreatecur = doreset || (donew && docurdata);
+                dodatacur = dodataall || (dodataselect && any(ind==ijk(dim)));
+                docreatecur = doreset || (donew && dodatacur);
                 % container
-                if dodispatch
+                if doposition
                     if docreatecur
                         D.htransform(idx) = hgtransform('parent',D.ha,'matrix',M(:,:,idx),'HitTest','off');
-                        uistack(D.htransform(idx), 'bottom')
                     else
                         set(D.htransform(idx),'matrix',M(:,:,idx))
                     end
                 end
                 % line/image
-                if docreatecur || docurdata
+                if docreatecur || dodatacur
                     % get the data and adjust clipping if requested
                     if dotimecourses
                         xi = x(ibeflist(u),:,iaftlist(u));
@@ -753,6 +752,14 @@ classdef viewdisplay < xplr.graphnode
                     end
                 end
             end
+            
+            % make sur containers are below labels, selections, etc.
+            % (fater to have only one call to uistack rather than after
+            % creating each element)
+            if doreset || donew
+                uistack(D.htransform(:), 'bottom')
+            end
+
         end
         function checkzslicesize(D)
             sztest = D.zslice.sz;
