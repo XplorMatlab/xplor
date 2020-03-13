@@ -29,6 +29,7 @@ classdef xdata < xplr.graphnode
         ChangedData % sent with info xplr.eventinfo('data',chghead)
     end
     
+    % Constructor and simple access
     methods
         function x = xdata(dat,head,name)
             % Contructor
@@ -65,6 +66,11 @@ classdef xdata < xplr.graphnode
         function s = get.sz(x)
             s = [x.header.n];
         end
+    end
+    
+    % Modification of an xdata object and raising of the corresponding
+    % notification
+    methods
         function chgData(x,data)
             if isequal(data,x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
@@ -83,7 +89,7 @@ classdef xdata < xplr.graphnode
             for i=find(chgsz)
                 x.header(i) = updateMeasureHeader(x.header(i),datasz(i));
             end
-            notify(x,'ChangedData',xplr.eventinfo('data','chgdim',find(chgsz)))
+            notify(x,'ChangedData',xplr.eventinfo('data','chgdim',find(chgsz))) %#ok<FNDSB>
         end
         function updateData(x,flag,dim,ind,value,newhead)
             % function updateData(x,flag,dim,ind,value,newhead)

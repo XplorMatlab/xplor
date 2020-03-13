@@ -59,8 +59,10 @@ classdef eventinfo < event.EventData & dynamicprops
                 otherwise
                     error('unknown event type ''%s''',type)
             end
-            for i=1:length(varargin)
+            for i=1:length(F)
                 addprop(obj,F{i});
+            end
+            for i=1:length(varargin)
                 obj.(F{i})=varargin{i};
             end
         end

@@ -10,21 +10,21 @@ classdef slicer < xplr.graphnode
         data
         slice
         filters = struct('active',[],'dim',cell(1,0),'obj',[]);
-    end
-    properties (SetAccess='protected')
-        slicingchain = struct('res',cell(1,0),'dimdata2slice',[]); % remember the steps of slicing
         % beware that 'dim' are the dimensions of slicing IN THE ORIGINAL
         % DATA, but not any more in the slice (dimdata2slice specifies the
         % conversion)
+    end
+    properties (SetAccess='protected')
+        slicingchain = struct('res',cell(1,0),'dimdata2slice',[]); % intermediary and last steps of slicing, length is same as S.activefilters
     end
     properties (Dependent, SetAccess='private')
         nddata
         ndslice
         nactivefilt
-        
+        activefilters
     end
     
-    % Constructor, destructor, basig access and get/set dependent
+    % Constructor, destructor, basic access and get/set dependent
     methods
         function S = slicer(data,dim,filters)
             % set data
@@ -47,7 +47,9 @@ classdef slicer < xplr.graphnode
         function n = get.nactivefilt(S)
             n = sum([S.filters.active]);
         end
-        
+        function filters = get.activefilters(S)
+            filters = S.filters([S.filters.active]);
+        end
         
         
         %         function obj = getfilter(S,dim) % should this function return only active filter? 
@@ -83,14 +85,17 @@ classdef slicer < xplr.graphnode
             % add filters
             if isempty(idx), idx = length(S.filters)+1; end
             S.filters = [S.filters(1:idx-1) struct('active',num2cell(active),'dim',dim,'obj',num2cell(newfilt)) S.filters(idx:end)];
-            S.slicingchain(idx:end) = [];
+            % remove invalid part of the slicing chain
+            nok = sum([S.filters(1:idx-1).active]);
+            S.slicingchain(nok+1:end) = [];
+            % install listeners
             for i=1:nadd
-                S.addListener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,dim{i},e));
+                S.addListener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,newfilt(i),dim{i},e));
             end
             % update slice
             if doslicing
                 if all([newfilt.ndout]==[newfilt.ndin])
-                    doslice(S,'filter','chgdim',dimadd)
+                    doslice(S,'slicer','chgdim',dimadd)
                 else
                     error 'not implemented yet'
                 end
@@ -111,30 +116,19 @@ classdef slicer < xplr.graphnode
             % among the dimensions for which filters will be removed, which
             % are those where the filters were really active
             active = [S.filters(idx).active];
-            idxinactive = idx(~active);
             idxactive = idx(active);
             % remove the filters
             S.filters(idx) = [];
             % remove invalid part of slicing chain
-            % (first remove everything from the first active dim)
-            if any(idxactive)
-                S.slicingchain(idxactive(1):end) = []; 
-            end
-            % (second remove elements of the chain corresponding to removed
-            % inactive filters, but without removing what follows)
-            if isempty(idxactive)
-                idxinactive_before_active = idxinactive;
-            else
-                idxinactive_before_active = idxinactive(idxinactive<idxactive(1));
-            end
-            if any(idxinactive_before_active)
-                S.slicingchain(idxinactive_before_active) = [];
+            if ~isempty(idxactive)
+                nok = sum([S.filters(1:idxactive(1)-1).active]);
+                S.slicingchain(nok+1:end) = [];
             end
             % update slice
             if doslicing && ~isempty(idxactive)
                 if all([filtrm(active).ndout]==[filtrm(active).ndin])
                     activedimrm = dimrm(active);
-                    doslice(S,'filter','chgdim',activedimrm)
+                    doslice(S,'slicer','chgdim',activedimrm)
                 else
                     error 'not implemented yet'
                 end
@@ -163,18 +157,18 @@ classdef slicer < xplr.graphnode
             prevndout = S.filters(idx).obj.ndout;
             S.disconnect(S.filters(idx).obj)
             S.filters(idx).obj = newfilt;
-            S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
+            S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,newfilt,dim,e));
             % no need for update if the filter is not active
             if ~S.filters(idx).active
-                disp 'new filter replaces inactive one, so it will itself be inactive'
                 return
             end
             % remove invalid part of slicing chain
-            S.slicingchain(idx(1):end) = [];
+            nok = sum([S.filters(1:idx(1)-1).active]);
+            S.slicingchain(nok+1:end) = [];
             % update slice
             if doslicing
                 if newfilt.ndout==prevndout
-                    doslice(S,'filter','chgdim',dim)
+                    doslice(S,'slicer','chgdim',dim)
                 else
                     error 'not implemented yet'
                 end
@@ -199,18 +193,20 @@ classdef slicer < xplr.graphnode
             
             % update slice: note that all output header will remain the
             % same, so best is to signal the change as a change in the data
-            S.slicingchain(idxfirst:end) = [];
-            doslice(S,'data','chgdata')
+            nok = sum([S.filters(1:idxfirst-1).active]);
+            S.slicingchain(nok+1:end) = [];
+            doslice(S,'slicer','chgdata')
         end
         function chgFilterActive(S,idx,val)
+            val = logical(val);
             S.filters(idx).active = val;
             S.activateConnection(S.filters(idx).obj,val)
-            S.slicingchain(idx:end) = [];
-            doslice(S,'filter','chgdim',S.filters(idx).dim)
+            nok = sum([S.filters(1:idx-1).active]);
+            S.slicingchain(nok+1:end) = [];
+            doslice(S,'slicer','chgdim',S.filters(idx).dim)
         end
     end
 
-    
     % Get filter
     methods
         function F = getFilter(S,dim)
@@ -221,19 +217,24 @@ classdef slicer < xplr.graphnode
     
     % Slicing
     methods (Access='protected')
-        function doslice(S,chgorigin,flag,dim,ind)
-            % function doslice(S,chgorigin,flag,dim[,ind])
+        function doslice(S,chgorigin,flag,dim,ind,filter)
+            % function doslice(S,chgorigin,flag[,dim[,ind[,filter]]])
             %---
-            % argument chgorigin is 'data' or 'filter', it is usefull in
-            % particular for change flags such as 'new', to determine
-            % whether it is the original data that has become larger in
-            % dimension dim, or whether it is the filtering in dimension
-            % dim which has more selection
+            % Apply filters successively to get a slice out of the data.
+            % "Smart updates" apply when the flag (for example 'new')
+            % indicates that only a part of the data will need to be
+            % re-calculated (for example with 'new', all the existing slice
+            % will be preserved, but some additional part will be added
+            % corresponding to the original increase in data or filter).
+
             if nargin<4, dim = []; end
             if nargin<5, ind = []; end
+            if nargin<6, filter = []; end
             
-            % smart update of the existing part of the slicing chain
-            % (indices of the change)
+            nactivefilters = sum([S.filters.active]);
+            
+            % 1) Smart update of the existing part of the slicing chain
+            % indices of the change
             switch flag
                 case {'new' 'chg'}
                     ind1 = ind;
@@ -244,7 +245,8 @@ classdef slicer < xplr.graphnode
                 otherwise
                     ind1 = [];
             end
-            % (where to start, and get the relevant data)
+            % where to start, and get the relevant sub-part of the data
+            % needed for smart update calculations
             switch chgorigin
                 case 'data'
                     kstart = 1;
@@ -256,11 +258,15 @@ classdef slicer < xplr.graphnode
                         headd = S.data.header(dim);
                         subs = substruct('()',repmat({':'},1,S.data.nd));
                         subs.subs{dim} = ind1;
-                        datasub = subsref(S.data.data,subs);
-                        % 'smart' update will not be possible for filtering in
-                        % dimension dim
+                        % part of the data that will be used for new
+                        % calculations, while preserving some of the
+                        % existing calculations
+                        datasub = subsref(S.data.data,subs); 
+                        % the 'smart' update however will not be possible
+                        % once there will be another filter applied in the
+                        % same dimension dim
                         for k=1:length(S.slicingchain)
-                            filterk = S.filters(k);
+                            filterk = S.activefilters(k);
                             if filterk.active && any(intersect(filterk.dim,dim))
                                 S.slicingchain(k:end) = [];
                                 break
@@ -268,28 +274,26 @@ classdef slicer < xplr.graphnode
                         end
                     end
                 case 'filter'
-                    % filter in dimension dim has changed
-                    kfilt = [];
-                    for k=1:length(S.slicingchain)
-                        filterk = S.filters(k);
-                        if filterk.active && any(intersect(filterk.dim,dim))
-                            if ~filterk.active
-                                xplr.debuginfo('stop', ...
-                                    'change in an inactive filter should not lead to slice update! please check this')
-                            end
-                            kfilt = k; break
-                        end
-                    end
+                    % filtering in dimension(s) dim has changed
+                    kfilt = fn_find([S.activefilters.obj],filter,'first');
                     if isempty(kfilt)
-                        kstart = length(S.slicingchain)+1; 
-                    elseif strcmp(flag,'all')
-                        % no smart update is possible
+                        % filter is not active
+                        if ~any(filter == [S.filters.obj]), error programming, end
+                        return
+                    end
+                    if strcmp(flag,'all')
+                        % no smart update possible: filter has been
+                        % completely replaced
                         S.slicingchain(kfilt:end) = [];
                         kstart = kfilt;
                     else
-                        filtk = S.filters(kfilt).obj;
+                        % smart update is possible: do the smart update for
+                        % this filter here                      
+                        filtk = S.activefilters(kfilt).obj;
                         headd = filtk.headerout;
                         if isempty(ind1)
+                            % no new calculation necessary: only removals
+                            % and permutations
                             datasub = [];
                         else
                             if kfilt==1
@@ -298,70 +302,72 @@ classdef slicer < xplr.graphnode
                                 datasub = filtk.slicing(S.slicingchain(kfilt-1).res.data,dim,ind1);
                             end
                         end
-                        S.slicingchain(kfilt).res.updateData(flag,dim,ind,datasub,headd) % last element is the slice
-                        if kfilt==length(S.filters), return, end % the slice has been updated, we can stop here!
+                        S.slicingchain(kfilt).res.updateData(flag,dim,ind,datasub,headd)
+                        if kfilt == nactivefilters
+                            % S.slicingchain(kfilt) is S.slice, we are done
+                        	return
+                        end
                         kstart = kfilt+1;
                     end
+                case 'slicer'
+                    % normally the invalid part of the slicing chain has
+                    % already been removed, continue from there; no smart
+                    % update is possible because the change is about filter
+                    % addition, removal or replacement
+                    kstart = length(S.slicingchain)+1;
             end
+            % smart updates for successive filters that can allow it
             for k = kstart:length(S.slicingchain)
                 % propagate changes in data along the slicing chain
-                filtk = S.filters(k);
-                if ~filtk.active
-                    % change was already applied, as S.slicingchain(k).res
-                    % is the same as S.slicingchain(k-1).res (or S.data if
-                    % k=1)
-                else
-                    switch flag
-                        case {'remove' 'perm'}
-                            % easy
-                            S.slicingchain(k).res.updateData(flag,dim,ind,[],headd)
-                        case {'new' 'chg' 'chg&new' 'chg&rm'}
-                            % do a new slicing for a subset of the data
-                            dimk = S.filters(k).dim;
-                            filtk = S.filters(k).obj;
-                            if isequal(dimk,dim), error 'this case is not supposed to happen (no smart update possible for filtering in the same dimension where data has changed)', end
-                            datasub = filtk.slicing(datasub,dimk);
-                            S.slicingchain(k).res.updateData(flag,dim,ind,datasub,headd) % last element is the slice
-                        otherwise
-                            error('datachangeSmart cannot be called with flag ''%s''',flag)
-                    end
+                switch flag
+                    case {'remove' 'perm'}
+                        % easy
+                        S.slicingchain(k).res.updateData(flag,dim,ind,[],headd)
+                    case {'new' 'chg' 'chg&new' 'chg&rm'}
+                        % do a new slicing for a subset of the data
+                        dimk = S.activefilters(k).dim;
+                        filtk = S.activefilters(k).obj;
+                        if isequal(dimk,dim), error 'this case is not supposed to happen (no smart update possible for filtering in the same dimension where data has changed)', end
+                        datasub = filtk.slicing(datasub,dimk);
+                        S.slicingchain(k).res.updateData(flag,dim,ind,datasub,headd) % last element is the slice
+                    otherwise
+                        error('datachangeSmart cannot be called with flag ''%s''',flag)
                 end
-                if k==length(S.filters), return, end % the slice has been updated, we can stop here!
+                if k == nactivefilters
+                    % the slice has been updated, we are done
+                    return
+                end 
             end
             
-            % regular slicing for the remaining part of the chain
-            % (starting point)
+            % 2) Regular slicing for the remaining part of the chain
+            % starting point
             if isempty(S.slicingchain)
                 s = struct('res',S.data,'dimdata2slice',1:S.nddata);
             else
                 s = S.slicingchain(end);
-                % if this step in the chain used to be the last one but
-                % will not be the last any more, its result shall no
-                % longer be the slice
-                if length(S.slicingchain)<length(S.filters) && s.res==S.slice
-                    s.res = s.res.copy();
+                if s.res==S.slice 
+                    % s was previously the end of the chain and therefore
+                    % equal to the slice; but now a new filter has been
+                    % inserted after and we need the two xdata object to be
+                    % different otherwise the updateDataDim/chgData calls
+                    % below will lead to awkward results
+                    s.res = S.slice.copy();
                     S.slicingchain(end) = s;
                 end
             end
-            % (apply filters one by one)
-            for k = length(S.slicingchain)+1:length(S.filters)
-                filtk = S.filters(k);
+            % apply active filters one by one
+            for k = length(S.slicingchain)+1:nactivefilters
+                filtk = S.activefilters(k);
                 dimk = filtk.dim;
                 objk = filtk.obj;
-                if ~filtk.active
-                    % no change in data, and therefore in s
-                else
-                    xk = s.res;
-                    s.res = objk.operation(xk,s.dimdata2slice(dimk));
-                    ok = (s.dimdata2slice~=0);
-                    dimbef2aft = objk.followdims(xk.nd,dimk);
-                    s.dimdata2slice(ok) = dimbef2aft(s.dimdata2slice(ok));
-                end
+                resprev = s.res;
+                s.res = objk.operation(resprev,s.dimdata2slice(dimk));
+                ok = (s.dimdata2slice~=0);
+                dimbef2aft = objk.followdims(resprev.nd,dimk);
+                s.dimdata2slice(ok) = dimbef2aft(s.dimdata2slice(ok));
                 S.slicingchain(k) = s;
             end
-            
-            % update slice (and replace chain elements supposed to be the
-            % same as the slice by this updated slice) 
+            % update slice 
             switch flag
                 case 'global'
                     S.slice.updateDataDim(flag,[],s.res.data,s.res.header)
@@ -374,13 +380,14 @@ classdef slicer < xplr.graphnode
                 otherwise
                     S.slice.updateData(flag,dim,ind,s.res.data,s.res.header(dim))
             end
-            if ~isempty(S.filters)
-                S.slicingchain(k).res = S.slice; 
-                while ~S.filters(k).active && k>1
-                    k = k-1;
-                    S.slicingchain(k).res = S.slice; 
-                end
+            % replace last chain element by slice (except if chain is
+            % empty), so updateData calls to this last chain element
+            % directly affect the slice (as occurs in the cases above code
+            % blocks ending with 'return')
+            if nactivefilters > 0
+                S.slicingchain(end).res = S.slice;
             end
+            
         end
     end
     methods
@@ -388,18 +395,12 @@ classdef slicer < xplr.graphnode
             switch e.flag
                 case 'global'
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                    if ~isempty(S.filters)
-                        rmFilter(S,1:lengh(S.filters),false) % do not update slicing here
-                    end
                     doslice(S,'data','global',[],[])
                 case {'chgdim' 'all' 'new' 'chg' 'remove' 'chg&new' 'chg&rm' 'perm'}
                     % header in dimension dim has changed (not necessarily,
                     % but potentially also in the case 'chg'), therefore
                     % filter in that dimension is not valid anymore
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                    if any(ismember([S.filters.dim],e.dim))
-                        rmFilterDim(S,e.dim,false) % do not update slicing here
-                    end
                     doslice(S,'data','chgdim',e.dim,[])
                 case 'chgdata'
                     % header was not changed, it is possible therefore to
@@ -410,21 +411,19 @@ classdef slicer < xplr.graphnode
                     error 'not implemented yet'
             end
         end
-        function filterchange(S,dim,e)
+        function filterchange(S,F,dim,e)
             flag = e.flag;
             if strcmp(flag,'point')
                 flag = 'chg'; 
                 ind = 1; 
-            elseif isprop(e,'ind')
-                ind = e.ind;
             else
-                ind = [];
+                ind = e.ind;
             end
-            doslice(S,'filter',flag,dim,ind)
+            doslice(S,'filter',flag,dim,ind,F)
         end
         function reslice(S)
             S.slicingchain(:) = [];
-            doslice(S,'data','chgdim',1:S.nddata)
+            doslice(S,'data','chgdim',1:S.nddata,[])
         end
     end
     
