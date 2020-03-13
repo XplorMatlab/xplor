@@ -55,15 +55,16 @@ classdef bankRegistry < handle
             % Create new entry
             idx = R.n+1;
             if douser
-                R.content(idx) = struct('key',key,'value',value,'users',{{user}});
                 if isobject(user)
-                    addlistener(user,'ObjectBeingDestroyed', ...
-                        @(u,e)R.unregister(key,user));
+                    hld = addlistener(user,'ObjectBeingDestroyed', @(u,e)R.unregister(key,user));
+                else
+                    hld = [];
                 end
+                R.content(idx) = struct('key',key,'value',value,'users',{{user; hld}});
                 xplr.debuginfo('registry', 'key %s 1st user %s (value %s)', ...
                     fn_hash(key,3), user, value)
             else
-                R.content(idx) = struct('key',key,'value',value,'users',{cell(1,0)});
+                R.content(idx) = struct('key',key,'value',value,'users',{cell(2,0)});
                 xplr.debuginfo('registry', 'key %s no user (value %s)', ...
                 	fn_hash(key,3), value)
             end
@@ -105,20 +106,23 @@ classdef bankRegistry < handle
             % Unregister if no more users
             idx = getIndex(R,key);
             if isempty(idx)
+                xplr.debuginfo('registry', 'key %s was not found', fn_hash(key,3))
                 disp 'entry to unregister was not found'
                 if isempty(rm), rm = false; end
                 if nargout, removed = rm; end
                 return
             end
             if douser
-                idxuser = fn_find(user,R.content(idx).users,'first');
+                idxuser = fn_find(user,R.content(idx).users(1,:),'first');
                 if isempty(idxuser)
                     disp 'user to unregister was not found in users list'
                 else
                     c = R.content(idx);
                     xplr.debuginfo('registry', 'key %s rmv user %s', ...
-                        fn_hash(c.key,3), c.users{idxuser})
-                    R.content(idx).users(idxuser) = [];                    
+                        fn_hash(c.key,3), c.users{1,idxuser})
+                    hld = R.content(idx).users{2,idxuser}; % handle of listener listening for object deletion
+                    delete(hld)
+                    R.content(idx).users(:,idxuser) = [];                    
                 end
             end
             if isempty(R.content(idx).users)
@@ -163,15 +167,17 @@ classdef bankRegistry < handle
             value = R.content(idx).value;
             % Add new user
             if douser
-                idxuser = fn_find(newuser,R.content(idx).users,'first');
+                idxuser = fn_find(newuser,R.content(idx).users(1,:),'first');
                 if isempty(idxuser)
                     xplr.debuginfo('registry', 'key %s add user %s', ...
                         fn_hash(R.content(idx).key,3), newuser)
-                    R.content(idx).users{end+1} = newuser;
                     if isobject(newuser)
-                        addlistener(newuser,'ObjectBeingDestroyed', ...
+                        hld = addlistener(newuser,'ObjectBeingDestroyed', ...
                             @(u,e)R.unregister(key,newuser));
+                    else
+                        hld = [];
                     end
+                    R.content(idx).users(:,end+1) = {newuser; hld};
                 else
                     disp 'new user to register was already found in users list'
                 end
