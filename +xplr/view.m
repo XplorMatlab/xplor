@@ -54,41 +54,6 @@ classdef view < hgsetget
             % DISPLAY
             V.D = xplr.viewdisplay(V);
             
-%             % default filters
-%             head = data.header;
-%             F = xplr.xfilter.empty(1,0);
-%             P = xplr.xpoint.empty(1,0);
-%             for i=1:length(head)
-%                 [Fi Pi] = xplr.bank.getFilterAndPoint(head(i));
-% %                 % default selection: all
-% %                 Fi.setSelection(xplr.selectionnd('all1D'))
-%                 F = [F Fi]; %#ok<AGROW>
-%                 P = [P Pi]; %#ok<AGROW>
-%             end
-%             V.slicer.setFilters(1:data.nd,F)
-%             V.slicer.setPoints(1:data.nd,P)
-%             
-%             % settings relevant for the initialization?
-%             opt = struct('in',[]);
-%             Fopt = fieldnames(opt);
-%             F = varargin(1:2:end);
-%             idx = find(ismember(F,Fopt));
-%             for i=idx
-%                 f = F{i};
-%                 opt.(f) = varargin{2*i};
-%             end
-%             varargin([idx idx+1]) = [];
-%             
-%             % init display
-%             init_figure(V,opt.in)
-%             init_axes(V)
-%             init_pointer(V)
-%             
-%             % other settings
-%             for k=1:2:length(varargin)
-%                 set(V,varargin{k},varargin{k+1})
-%             end
-
             % save object in base workspace
             assignin('base','V',V)
         end

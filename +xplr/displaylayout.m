@@ -1,5 +1,6 @@
 classdef displaylayout
-    
+    % function L = displaylayout(D)
+    %---
     % This is a simple class that defines where each dimension is displayed
     % in XPLOR display.
     
@@ -35,6 +36,17 @@ classdef displaylayout
                 L.x = 1:2:nd;
                 L.y = 2:2:nd;
             end
+        end
+    end
+    methods (Static)
+        function L = disconnectedLayout(sz,displaymode)
+            % emulate a viewdisplay object D such that all displaylayout
+            % methods below will work
+            D = struct;
+            D.nd = length(sz);
+            D.slice.sz = sz;
+            D.displaymode = displaymode;
+            L = xplr.displaylayout(D);
         end
     end
     

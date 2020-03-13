@@ -283,7 +283,7 @@ classdef viewdisplay < xplr.graphnode
                     num2str(newkey,'cross selector key %i (new key)')
                     ];
                     curkey = curfilt.linkkey;
-                uimenu(m2, 'label', 'show point selector','callback',@(u,e)dimaction(D.V.C,'showFilterPointWindow',curkey,dim));
+                uimenu(m2, 'label', 'show point selector','callback',@(u,e)xplr.bank.showList(curfilt));
                 for i=1:length(keyvalues)
                     keyvalue = keyvalues(i);
                     uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
@@ -762,17 +762,21 @@ classdef viewdisplay < xplr.graphnode
 
         end
         function checkzslicesize(D)
-            sztest = D.zslice.sz;
-            if ~isempty(D.layout.x), sztest(D.layout.x(1)) = 1; end
-            if strcmp(D.displaymode,'image') && ~isempty(D.layout.y), sztest(D.layout.y(1)) = 1; end
-            if strcmp(D.displaymode,'time courses')
-                ok = (prod(sztest) <= xplr.parameters.get('display.NLineMax')) && ...
-                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NLinePointMax'));
+            D.nodisplay = ~D.testDisplayable(D.zslice.sz,D.displaymode,D.layout);
+        end
+    end
+    methods (Static)
+        function ok = testDisplayable(sz,displaymode,layout)
+            szgrid = sz;
+            if ~isempty(layout.x), szgrid(layout.x(1)) = 1; end
+            if strcmp(displaymode,'image') && ~isempty(layout.y), szgrid(layout.y(1)) = 1; end
+            if strcmp(displaymode,'time courses')
+                ok = (prod(szgrid) <= xplr.parameters.get('display.NLineMax')) && ...
+                    (prod(sz) <= xplr.parameters.get('display.NLinePointMax'));
             else
-                ok = (prod(sztest) <= xplr.parameters.get('display.NImageMax')) && ...
-                    (prod(D.zslice.sz) <= xplr.parameters.get('display.NImagePixelMax'));
+                ok = (prod(szgrid) <= xplr.parameters.get('display.NImageMax')) && ...
+                    (prod(sz) <= xplr.parameters.get('display.NImagePixelMax'));
             end
-            D.nodisplay = ~ok;
         end
     end
     

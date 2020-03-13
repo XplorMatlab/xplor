@@ -58,9 +58,10 @@ classdef slicer < xplr.graphnode
 
     % Changing filters
     methods
-        function insertFilter(S,idx,dim,newfilt,doslicing)
-            % function insertFilter(S,idx,dim,newfilt[,doslicing])
-            if nargin<5, doslicing = true; end
+        function insertFilter(S,idx,dim,newfilt,active,doslicing)
+            % function insertFilter(S,idx,dim,newfilt[active[,doslicing]])
+            if nargin<5, active = true; end
+            if nargin<6, doslicing = true; end
             
             % check filter
             if ~isa(newfilt,'xplr.dataoperand'), error 'filter must be a dataoperand object', end
@@ -81,7 +82,7 @@ classdef slicer < xplr.graphnode
             % check header
             % add filters
             if isempty(idx), idx = length(S.filters)+1; end
-            S.filters = [S.filters(1:idx-1) struct('active',true,'dim',dim,'obj',num2cell(newfilt)) S.filters(idx:end)];
+            S.filters = [S.filters(1:idx-1) struct('active',num2cell(active),'dim',dim,'obj',num2cell(newfilt)) S.filters(idx:end)];
             S.slicingchain(idx:end) = [];
             for i=1:nadd
                 S.addListener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,dim{i},e));
@@ -95,10 +96,11 @@ classdef slicer < xplr.graphnode
                 end
             end
         end
-        function addFilter(S,dim,newfilt,doslicing)
-            % function addFilter(S,dim,newfilt[,doslicing])
-            if nargin<4, doslicing = true; end
-            insertFilter(S,[],dim,newfilt,doslicing)
+        function addFilter(S,dim,newfilt,active,doslicing)
+            % function addFilter(S,dim,newfilt[,active[,doslicing]])
+            if nargin<4, active = true; end
+            if nargin<5, doslicing = true; end
+            insertFilter(S,[],dim,newfilt,active,doslicing)
         end
         function rmFilter(S,idx,doslicing)
             % function rmFilter(S,idx[,doslicing])

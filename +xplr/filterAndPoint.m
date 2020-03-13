@@ -1,4 +1,6 @@
 classdef filterAndPoint < xplr.dataoperand
+    % function F = filter(headerin[,label])
+    %---
     % The class filerAndPoint combines a filter (operating on a
     % n-dimensional space) and a set of n points. 
     
@@ -24,6 +26,19 @@ classdef filterAndPoint < xplr.dataoperand
     % Constructor and destructor
     methods
         function F = filterAndPoint(varargin)
+            % init array of filters?
+            if nargin==0
+                return
+            elseif isscalar(varargin) && isnumeric(varargin{1})
+                n = varargin{1};
+                if n == 0
+                    F = xplr.filterAndPoint.empty(1,0);
+                else
+                    F(n) = xplr.filterAndPoint();
+                end
+                return
+            end
+            
             % set filter
             F.F = xplr.filter(varargin{:});
             F.headerin = F.F.headerin;
