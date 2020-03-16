@@ -97,7 +97,8 @@ classdef slicer < xplr.graphnode
                 if all([newfilt.ndout]==[newfilt.ndin])
                     doslice(S,'slicer','chgdim',dimadd)
                 else
-                    error 'not implemented yet'
+                    disp 'probably can be improved'
+                    doslice(S,'slicer','global')
                 end
             end
         end

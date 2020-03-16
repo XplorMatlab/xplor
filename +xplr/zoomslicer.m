@@ -60,7 +60,7 @@ classdef zoomslicer < xplr.slicer
             switch e.flag
                 case 'global'
                     % remove all existing filters and create new ones
-                    S.rmFilter(1:length(S.filters))
+                    S.rmFilter(1:length(S.filters),false) % no need to reslice at this stage, there will be a reslice below
                     Z = autoZoomFilter(S,S.defaultlinkkey);
                     dim = 1:length(S.data.header);
                     S.addFilter(dim,Z)
@@ -137,6 +137,15 @@ classdef zoomslicer < xplr.slicer
     % Automatic unregistration from the bank upon disconnection
     methods
         function disconnect(S,F)
+            % Multiple filters
+            if ~isscalar(F)
+                for i = 1:length(F)
+                    disconnect(S,F(i))
+                end
+                return
+            end
+            
+            % Disconnect one filter
             disconnect@xplr.graphnode(S,F)
             if isa(F,'xplr.zoomfilter') && F.linkkey ~= 0
                 xplr.bank.unregisterZoomFilter(F,S)

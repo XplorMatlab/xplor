@@ -151,77 +151,118 @@ classdef viewcontrol < xplr.graphnode
             % function dimaction(C,'rmfilter|showFilterWindow',dim)
             % function dimaction(C,'setactive',dim,value)
             
-            % loop on selected dimensions
             newfilters = struct('d',cell(1,0),'F',[],'active',[]);
             rmfilters = [];
-            for i = 1:length(dim)
-                d = dim(i);
+
+            % Add multi-dimensional filter
+            if strcmp(flag,'addNDfilter')
+                if length(varargin)>=1, key = varargin{1}; else key = 1; end
+                if length(varargin)>=2, active = varargin{2}; else active = true; end
                 % any filter already?
                 slicefilters = C.V.slicer.filters;
-                filteridx = find([slicefilters.dim]==d);
+                filteridx = fn_find(dim,{slicefilters.dim},'first');
                 if ~isempty(filteridx)
                     F = slicefilters(filteridx).obj;
                 else
                     filteridx = 0; 
                 end
+                % check wheter filter already exists, check which filters
+                % should be removed
+                disp 'missing code here'
                 
-                % create/replace/remove filter
-                switch flag
-                    case 'addfilter'
-                        if length(varargin)>=1, key = varargin{1}; else key = 1; end
-                        if length(varargin)>=2, active = varargin{2}(i); else active = true; end
-                        % create/replace filter
-                        if filteridx
-                            % a filter is already present in slicer, does
-                            % it have the requested key?
-                            if F.linkkey == key
-                                % if the existing filter has already the
-                                % key of the requested new filter then
-                                % nothing to do
-                                continue
-                            else
-                                % the filter has to be remove before
-                                % creating a new one with the new key
-                                filterToRemove = C.V.slicer.filters(filteridx);
-                                C.removefilter(filterToRemove);
-                                % add the dimension to the slice's filters removal list
-                                rmfilters = [rmfilters filteridx]; %#ok<AGROW>
+                %                 if filteridx
+                %                     % a filter is already present in slicer, does
+                %                     % it have the requested key?
+                %                     if F.linkkey == key
+                %                         % if the existing filter has already the
+                %                         % key of the requested new filter then
+                %                         % nothing to do
+                %                         ok = true;
+                %                     else
+                %                         % the filter has to be remove before
+                %                         % creating a new one with the new key
+                %                         filterToRemove = C.V.slicer.filters(filteridx);
+                %                         C.removefilter(filterToRemove);
+                %                         % add the dimension to the slice's filters removal list
+                %                         rmfilters = [rmfilters filteridx]; %#ok<AGROW>
+                %                     end
+                %                 end
+                
+                % create the new filter
+                filterCreated = C.createFilterAndItem(dim,key,active);
+                % add to the list of new filters
+                newfilters(end+1) = struct('d',dim,'F',filterCreated,'active',active); %#ok<AGROW>
+            else
+                % Or repeat same action on possibly multiple dimensions
+                for i = 1:length(dim)
+                    d = dim(i);
+                    % any filter already?
+                    slicefilters = C.V.slicer.filters;
+                    filteridx = find([slicefilters.dim]==d);
+                    if ~isempty(filteridx)
+                        F = slicefilters(filteridx).obj;
+                    else
+                        filteridx = 0; 
+                    end
+
+                    % create/replace/remove filter
+                    switch flag
+                        case 'addfilter'
+                            if length(varargin)>=1, key = varargin{1}; else key = 1; end
+                            if length(varargin)>=2, active = varargin{2}(i); else active = true; end
+                            % create/replace filter
+                            if filteridx
+                                % a filter is already present in slicer, does
+                                % it have the requested key?
+                                if F.linkkey == key
+                                    % if the existing filter has already the
+                                    % key of the requested new filter then
+                                    % nothing to do
+                                    continue
+                                else
+                                    % the filter has to be remove before
+                                    % creating a new one with the new key
+                                    filterToRemove = C.V.slicer.filters(filteridx);
+                                    C.removefilter(filterToRemove);
+                                    % add the dimension to the slice's filters removal list
+                                    rmfilters = [rmfilters filteridx]; %#ok<AGROW>
+                                end
                             end
-                        end
-                        % create the new filter
-                        filterCreated = C.createFilterAndItem(d,key,active);
-                        % add to the list of new filters
-                        newfilters(end+1) = struct('d',d,'F',filterCreated,'active',active); %#ok<AGROW>
-                    case 'rmfilter'
-                        if filteridx == 0
-                            % no filter found for this dimension
-                            continue
-                        end
-                        % remove filter from the viewcontrol and the bank
-                        filter = C.V.slicer.filters(filteridx);
-                        C.removefilter(filter);
-                        
-                         % add the dimension to the slice's filters removal list
-                        rmfilters = [rmfilters filteridx]; %#ok<AGROW>
-                    case 'setactive'
-                        itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));
-                        hlab = C.items(itemidx).label;
-                        % active or inactive?
-                        active = varargin{1};
-                        % show label as enabled/disabled
-                        set(hlab,'enable',fn_switch(active,'inactive','off'))
-                        drawnow
-                        % toggle filter active in slicer
-                        filteridx = C.V.slicer.getFilterIndex(C.items(itemidx).F);
-                        C.V.slicer.chgFilterActive(filteridx,active)
-                    case 'showFilterWindow'
-                        % re-create the filter window if not existing or
-                        % put it in the front
-                        
-                        % if the filter is not private
-                        if F.linkkey ~= 0
-                            xplr.bank.showList(F);
-                        end
+                            % create the new filter
+                            filterCreated = C.createFilterAndItem(d,key,active);
+                            % add to the list of new filters
+                            newfilters(end+1) = struct('d',d,'F',filterCreated,'active',active); %#ok<AGROW>
+                        case 'rmfilter'
+                            if filteridx == 0
+                                % no filter found for this dimension
+                                continue
+                            end
+                            % remove filter from the viewcontrol and the bank
+                            filter = C.V.slicer.filters(filteridx);
+                            C.removefilter(filter);
+
+                             % add the dimension to the slice's filters removal list
+                            rmfilters = [rmfilters filteridx]; %#ok<AGROW>
+                        case 'setactive'
+                            itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));
+                            hlab = C.items(itemidx).label;
+                            % active or inactive?
+                            active = varargin{1};
+                            % show label as enabled/disabled
+                            set(hlab,'enable',fn_switch(active,'inactive','off'))
+                            drawnow
+                            % toggle filter active in slicer
+                            filteridx = C.V.slicer.getFilterIndex(C.items(itemidx).F);
+                            C.V.slicer.chgFilterActive(filteridx,active)
+                        case 'showFilterWindow'
+                            % re-create the filter window if not existing or
+                            % put it in the front
+
+                            % if the filter is not private
+                            if F.linkkey ~= 0
+                                xplr.bank.showList(F);
+                            end
+                    end
                 end
             end
             
