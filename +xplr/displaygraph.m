@@ -468,7 +468,7 @@ classdef displaygraph < xplr.graphnode
                     if strcmp(mode,'displaylimit') 
                         if strcmp(G.D.displaymode,'time courses') && ~isempty(G.layout.x)
                             idx = dim(dim~=G.layout.x(1));
-                            zoom(idx) = fn_add(zoom(idx),[-.5; .5]);                            
+                            zoom(:,idx) = fn_add(zoom(:,idx),[-.5; .5]);                            
                         else
                             zoom = fn_add(zoom,[-.5; .5]);
                         end

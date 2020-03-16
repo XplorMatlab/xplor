@@ -225,6 +225,7 @@ classdef viewdisplay < xplr.graphnode
             % This function populates the context menu that appears when
             % right-clicking on a label
             
+            head = D.slice.header(dim);
             delete(get(m,'children'))
             
             % Line properties

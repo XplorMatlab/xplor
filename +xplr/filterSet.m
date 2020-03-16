@@ -106,9 +106,11 @@ classdef filterSet < hgsetget
                 connectlistener(FS.combo,FS,'Empty',@(u,e)set(FS,'combo',[])); 
             end
             
-            % Display filter
-            FS.combo.showList(F)
-            figure(FS.combo.container.hobj)
+            % Display filter if it is 1D
+            if F.ndin == 1
+                FS.combo.showList(F)
+                figure(FS.combo.container.hobj)
+            end
         end
     end
     

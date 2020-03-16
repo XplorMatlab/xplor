@@ -384,7 +384,7 @@ classdef list < xplr.graphnode
                 end
             elseif L.F.headerin.ismeasure && ~isscalar(val) && all(diff(val)==1)
                 % selection is a segment rather than a mere list of points
-                sel = xplr.selectionnd('line1D',val([1 end]),L.F.headerin.n);
+                sel = xplr.selectionnd('line1D',val([1 end]) + [-.5 .5],L.F.headerin.n);
             else
                 sel = xplr.selectionnd(L.seltype,val,L.F.headerin.n);
             end
