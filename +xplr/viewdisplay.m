@@ -166,19 +166,21 @@ classdef viewdisplay < xplr.graphnode
             % dims if there aren't
             if nargin<2, doImmediateUpdate = true; end
             org = D.layout;
-            sz = D.slice.sz; okdim = (sz>1);
+            sz = D.slice.sz; 
+            n_d = length(sz);
+            okdim = (sz>1);
             if ~isempty(org.x), okdim(org.x(1)) = true; end
             if strcmp(D.displaymode,'image') && ~isempty(org.y), okdim(org.y(1)) = true; end
             
             % invalid dimensions
             % (x)
             dx = D.activedim.x;
-            if ~isempty(dx) && ~(okdim(dx) && any(dx==[org.x org.yx]))
+            if ~isempty(dx) && ~(dx<=n_d && okdim(dx) && any(dx==[org.x org.yx]))
                 dx = [];
             end
             % (y)
             dy = D.activedim.y;
-            if ~isempty(dy) && ~(okdim(dy) && any(dy==[org.y org.xy]))
+            if ~isempty(dy) && ~(dy<n_d && okdim(dy) && any(dy==[org.y org.xy]))
                 dy = [];
             end
             
@@ -473,18 +475,14 @@ classdef viewdisplay < xplr.graphnode
                     % default organization: 1st and 4th dimension in x, 2nd
                     % and all other dimensions in y
                     newlayout = xplr.displaylayout(D);
-                    if ~isequal(newlayout,D.layout), D.layout0 = newlayout; end
-                case 'insertdim'
-                    error 'not implemented yet'
-                case 'rmdim'
-                    error 'not implemented yet'
+                    if ~isequal(newlayout,D.layout0), D.layout0 = newlayout; end
                 otherwise
                     % no change in organization, including in the 'chgdim'
                     % case!
             end
             
             % Update active dim and slider connections
-            if fn_ismemberstr(flag,{'global' 'insertdim' 'rmdim' 'permdim'})
+            if fn_ismemberstr(flag,{'global'})
                 D.checkActiveDim(false)
                 D.navigation.connectZoomFilter()
             elseif fn_ismemberstr(flag,{'chgdata' 'chg'})
@@ -504,11 +502,10 @@ classdef viewdisplay < xplr.graphnode
             switch flag
                 case 'chgdata'
                     % nothing to do: only the data has changed
-                case {'global' 'insertdim' 'rmdim'}
+                case 'global'
                     D.navigation.connectPointFilter()
                 case {'all' 'chgdim' 'new' 'remove' 'chg' 'chg&new' 'chg&rm' 'perm'}
                     D.navigation.connectPointFilter(e.dim)
-                    
                 otherwise
                     error('flag ''%s'' not handled', flag)
             end
@@ -804,11 +801,11 @@ classdef viewdisplay < xplr.graphnode
             if ~(strcmp(flag,'chgdata') || (strcmp(flag,'chg') && ~any(e.dim==[D.activedim.x D.activedim.y])))
                 D.graph.setTicks()
             end
-            if fn_ismemberstr(flag,{'all' 'new' 'remove' 'chg&new' 'chg&rm' 'global' 'chgdim' 'insertdim' 'rmdim' 'permdim'})
+            if fn_ismemberstr(flag,{'all' 'new' 'remove' 'chg&new' 'chg&rm' 'global' 'chgdim'})
                 switch flag
                     case 'global'
                         D.labels.updateLabels('global')
-                    case {'chgdim' 'insertdim' 'rmdim' 'permdim'}
+                    case 'chgdim'
                         D.labels.updateLabels(flag,e.dim)
                     otherwise
                         D.labels.updateLabels()
@@ -822,7 +819,7 @@ classdef viewdisplay < xplr.graphnode
             if chgclip, autoClip(D,false), end
             
             % Update display
-            if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
+            if fn_ismemberstr(flag,{'global' 'chgdim'})
                 % Reset display
                 updateDisplay(D,'global')
             elseif strcmp(flag,'chgdata')
@@ -893,7 +890,7 @@ classdef viewdisplay < xplr.graphnode
            D.navigation.displayselection('changereferential')
 
             % Update legend
-            if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
+            if strcmp(flag,'global')
                 D.colordim = [];
             elseif ~strcmp(flag,'chgdata') && isequal(e.dim,D.colordim)
                 displayColorLegend(D)

@@ -63,16 +63,6 @@ classdef displaylabels < xplr.graphnode
                 case 'global'
                     deleteValid(L.h)
                     L.h = gobjects(1,L.D.nd);
-                case 'insertdim'
-                    if ~all(diff(dim)==1), error 'not implemented yet', end
-                    L.h = [L.h(1:dim(1)-1) gobjects(1,length(dim)) L.h(dim(1):end)];
-                case 'rmdim'
-                    deleteValid(L.h(dim))
-                    L.h(dim) = [];
-                    return
-                case 'permdim'
-                    L.h = L.h(dim);
-                    return
                 otherwise
                     error('invalid flag ''%s''',flag)
             end
@@ -205,8 +195,6 @@ classdef displaylabels < xplr.graphnode
             switch flag
                 case 'global'
                     createLabels(L,'global')
-                case {'insertdim' 'rmdim' 'permdim'}
-                    createLabels(L,flag,dim)
                 case 'chgdim'
                     % some specific properties need to be updated
                     for d=dim, changeLabel(L,d), end

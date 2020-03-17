@@ -261,7 +261,7 @@ classdef headerEdit < hgsetget
         end
         function display_header(E,idx)
             if nargin<2, idx = 1:E.nd; end
-            tdata = get(E.table,'Data');
+            tdata = get(E.table,'Data'); curdata = tdata;
             [iL iU iV iA iC] = columnIndices;
             for i = idx
                 head = E.curhead(i);
@@ -281,7 +281,7 @@ classdef headerEdit < hgsetget
                         tdata{i,iA} = 'Reset';
                 end            
             end
-            set(E.table,'Data',tdata)
+            if ~isequal(tdata, curdata), set(E.table,'Data',tdata), end
             % which values are guessed and need being confirmed
             color_table(E)
         end

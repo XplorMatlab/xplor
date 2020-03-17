@@ -169,38 +169,16 @@ classdef xdata < xplr.graphnode
                 case 'chgdim'
                     if length(dim)~=length(newhead), error 'length of new header does not match number of new dimensions', end
                     x.header(dim) = newhead;
-                case 'insertdim'
-                    if length(dim)~=length(newhead), error 'length of new header does not match number of new dimensions', end
-                    ndnew = x.nd + length(dim);
-                    newhead = [x.header newhead];
-                    perm = zeros(1,ndnew);
-                    perm(setdiff(1:x.nd,dim)) = 1:x.nd;
-                    perm(dim) = x.nd + (1:length(dim));
-                    x.nd = ndnew;
-                    x.header = newhead(perm);
-                case 'rmdim'
-                    x.header(dim) = [];
-                case 'permdim'
-                    perm = dim;
-                    if ~isequal(unique(perm),1:x.nd), error 'permutation does not match number of dimensions', end
-                    x.header = x.header(perm);
-                    if nargin>=5 && ~isequal(newhead,x.header), error 'new header does not match dim permutation', end
                 otherwise
                     error('invalid flag ''%s'' for xdata updateDataDim method')
             end
             % update data
             if ~isreal(newdata), error 'data cannot be complex', end
-            switch flag
-                case 'permdim'
-                    x.data = permute(x.data,perm);
-                    if nargin>=4 && ~isequal(newdata,x.data), error 'new data does not match dim permutation', end
-                otherwise
-                    if x.nd==1 && isvector(newdata), newdata = newdata(:); end % don't generate an error for a row vector input
-                    if ~isequal(strictsize(newdata,x.nd),x.sz)
-                        error 'new data size does not match new header'
-                    end
-                    x.data = newdata;
+            if x.nd==1 && isvector(newdata), newdata = newdata(:); end % don't generate an error for a row vector input
+            if ~isequal(strictsize(newdata,x.nd),x.sz)
+                error 'new data size does not match new header'
             end
+            x.data = newdata;
             % notification
             notify(x,'ChangedData',xplr.eventinfo('data',flag,dim))
         end

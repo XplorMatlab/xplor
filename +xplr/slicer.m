@@ -97,7 +97,6 @@ classdef slicer < xplr.graphnode
                 if all([newfilt.ndout]==[newfilt.ndin])
                     doslice(S,'slicer','chgdim',dimadd)
                 else
-                    disp 'probably can be improved'
                     doslice(S,'slicer','global')
                 end
             end
@@ -118,20 +117,20 @@ classdef slicer < xplr.graphnode
             % are those where the filters were really active
             active = [S.filters(idx).active];
             idxactive = idx(active);
-            % remove the filters
-            S.filters(idx) = [];
             % remove invalid part of slicing chain
             if ~isempty(idxactive)
                 nok = sum([S.filters(1:idxactive(1)-1).active]);
                 S.slicingchain(nok+1:end) = [];
             end
+            % remove the filters
+            S.filters(idx) = [];
             % update slice
             if doslicing && ~isempty(idxactive)
                 if all([filtrm(active).ndout]==[filtrm(active).ndin])
                     activedimrm = dimrm(active);
                     doslice(S,'slicer','chgdim',activedimrm)
                 else
-                    error 'not implemented yet'
+                    doslice(S,'slicer','global')
                 end
             end
         end
@@ -199,12 +198,15 @@ classdef slicer < xplr.graphnode
             doslice(S,'slicer','chgdata')
         end
         function chgFilterActive(S,idx,val)
+            % function chgFilterActive(S,idx,val)
             val = logical(val);
-            S.filters(idx).active = val;
-            S.activateConnection(S.filters(idx).obj,val)
-            nok = sum([S.filters(1:idx-1).active]);
+            for i = idx
+                S.filters(i).active = val;
+                S.activateConnection(S.filters(i).obj,val)
+            end
+            nok = sum([S.filters(1:min(idx)-1).active]);
             S.slicingchain(nok+1:end) = [];
-            doslice(S,'slicer','chgdim',S.filters(idx).dim)
+            doslice(S,'slicer','global')
         end
     end
 
@@ -254,7 +256,7 @@ classdef slicer < xplr.graphnode
             switch chgorigin
                 case 'data'
                     kstart = 1;
-                    if fn_ismemberstr(flag,{'all' 'chgdata' 'global' 'chgdim' 'insertdim' 'rmdim' 'permdim'})
+                    if fn_ismemberstr(flag,{'all' 'chgdata' 'global' 'chgdim'})
                         % smart update is not possible
                         S.slicingchain(:) = [];
                     else
@@ -367,22 +369,21 @@ classdef slicer < xplr.graphnode
                 resprev = s.res;
                 s.res = objk.operation(resprev,s.dimdata2slice(dimk));
                 ok = (s.dimdata2slice~=0);
-                dimbef2aft = objk.followdims(resprev.nd,dimk);
+                dimbef2aft = objk.followdims(resprev.nd,s.dimdata2slice(dimk));
                 s.dimdata2slice(ok) = dimbef2aft(s.dimdata2slice(ok));
                 S.slicingchain(k) = s;
             end
             % update slice 
+            slicedim = s.dimdata2slice(dim);
             switch flag
                 case 'global'
                     S.slice.updateDataDim(flag,[],s.res.data,s.res.header)
-                case {'chgdim' 'insertdim'}
-                    S.slice.updateDataDim(flag,dim,s.res.data,s.res.header(dim))
-                case {'rmdim' 'permdim'}
-                    S.slice.updateDataDim(flag,dim,s.res.data)
+                case 'chgdim'
+                    S.slice.updateDataDim(flag,slicedim,s.res.data,s.res.header(slicedim))
                 case 'chgdata'
                     S.slice.chgData(s.res.data)
                 otherwise
-                    S.slice.updateData(flag,dim,ind,s.res.data,s.res.header(dim))
+                    S.slice.updateData(flag,slicedim,ind,s.res.data,s.res.header(slicedim))
             end
             % replace last chain element by slice (except if chain is
             % empty), so updateData calls to this last chain element
