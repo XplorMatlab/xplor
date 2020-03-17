@@ -63,15 +63,11 @@ classdef zoomslicer < xplr.slicer
                     S.rmFilter(1:length(S.filters),false) % no need to reslice at this stage, there will be a reslice below
                     Z = autoZoomFilter(S,S.defaultlinkkey);
                     dim = 1:length(S.data.header);
-                    S.addFilter(dim,Z,true,false)
-                    S.doslice('slicer','global')
+                    S.addFilter(dim,Z)
                 case 'chgdim'
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
                     newfilt = autoZoomFilter(S,S.defaultlinkkey,e.dim);
-                    for i=1:length(e.dim)
-                        S.replaceFilterDim(e.dim(i),newfilt(i),false)
-                    end
-                    doslice(S,'data','chgdim',e.dim)
+                    S.replaceFilterDim(num2cell(e.dim),newfilt)
                 case {'all' 'new' 'remove' 'chg&new' 'chg&rm' 'perm' 'chg'}
                     % In this case we do not use methods of the parent
                     % 'slicer' class, but do all the update here in a

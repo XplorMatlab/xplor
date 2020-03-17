@@ -797,10 +797,10 @@ classdef viewdisplay < xplr.graphnode
             prevsz = D.graph.zslicesz;
             D.graph.computeSteps()
             
-            % Update ticks and labels
-            if ~(strcmp(flag,'chgdata') || (strcmp(flag,'chg') && ~any(e.dim==[D.activedim.x D.activedim.y])))
-                D.graph.setTicks()
-            end
+            % Update labels and ticks (do the labels first because ticks
+            % update can change the size of the axes, and therefore trigger
+            % labels re-positionning, which can cause error if the number
+            % of labels has decreased)
             if fn_ismemberstr(flag,{'all' 'new' 'remove' 'chg&new' 'chg&rm' 'global' 'chgdim'})
                 switch flag
                     case 'global'
@@ -811,8 +811,9 @@ classdef viewdisplay < xplr.graphnode
                         D.labels.updateLabels()
                 end
             end
-            
-
+            if ~(strcmp(flag,'chgdata') || (strcmp(flag,'chg') && ~any(e.dim==[D.activedim.x D.activedim.y])))
+                D.graph.setTicks()
+            end
             
             % Update clipping
             chgclip = strcmp(flag,'global') || strcmp(D.clipping.span,'curview');
