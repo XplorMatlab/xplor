@@ -21,7 +21,7 @@ classdef filter < xplr.dataoperand
             F.headerin = headerin;
             
             % header of the output space
-            if nargin<2, label = headerin.label; end
+            if nargin<2, label = fn_strcat({headerin.label},','); end
 
             % output header is categorical
             if ~isscalar(headerin)
@@ -252,7 +252,7 @@ classdef filter < xplr.dataoperand
             % final reshape
             sfinal = s;
             sfinal(dims(1)) = nselslice;
-            sfinal(dims(2:end)) = 1;
+            sfinal(dims(2:end)) = [];
             slic = reshape(slic,sfinal);            
         end
         function slice = operation(F,x,dims)

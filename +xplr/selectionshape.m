@@ -233,12 +233,11 @@ classdef selectionshape
                         jend   = min(sizes(2),max(floor(points(2)+vects(2)),round(points(2))));
                         mask(istart:iend,jstart:jend) = true;
                     case 'ellipse2D'
-                        tmp = ConvertPoly2D(S(k));
-                        points = tmp.points;
+                        points = ConvertPoly2D(S(k));
                         mask = mask | fn_poly2mask(points,sizes);
                     case 'ring2D'
-                        tmp = ConvertPoly2D(S(k));
-                        pp = mypolysplit(tmp.points);
+                        points = ConvertPoly2D(S(k));
+                        pp = mypolysplit(points);
                         mask = mask | xor(fn_poly2mask(pp{1},sizes),fn_poly2mask(pp{2},sizes));
                     case 'indices'
                         mask(indices) = true;
@@ -309,7 +308,7 @@ classdef selectionshape
                         c = Sk.points;
                         u = Sk.vectors;
                         e = Sk.logic(1);
-                        phi = linspace(0,2*pi,20);
+                        phi = linspace(0,2*pi,50);
                         udata = cos(phi);
                         vdata = e*sin(phi);
                         if strcmp(Sk.type,'ring2D')
@@ -337,12 +336,13 @@ classdef selectionshape
 
     % Affinity
     methods
-        function S = applyaffinity(S,mat)
+        function S = applyaffinity(S,affinity)
+            if ~isa(affinity,'xplr.affinitynd')
+                error('argument ''afinity'' is expected to be an affinitynd instance')
+            end
             for k=1:length(S)
                 Sk = S(k);
-                xpoints = [ones(1,size(Sk.points,2)); Sk.points];
-                ypoints = mat*xpoints;
-                S(k).points = ypoints(2:end,:);
+                S(k).points = affinity.move_points(Sk.points);
                 switch Sk.type
                     case 'indices'
                         error 'affinity cannot be performed on selection of type ''indices'''
@@ -351,10 +351,10 @@ classdef selectionshape
                         % and eccentricity cannot be dealt like usual
                         % vectors and logic
                         [S(k).vectors S(k).logic S(k).special] = ...
-                            EllipseAffinity(Sk.vectors,Sk.logic(1),Sk.special,mat(2:3,2:3));
+                            EllipseAffinity(Sk.vectors,Sk.logic(1),Sk.special,affinity.linearpart);
                         if strcmp(Sk.type,'ring2D'), S(k).logic(2) = Sk.logic(2); end
                     otherwise
-                        S(k).vectors = mat(2:end,2:end)*Sk.vectors;
+                        S(k).vectors = affinity.move_vectors(Sk.vectors);
                         % 'logic' remains unchanged
                 end
             end

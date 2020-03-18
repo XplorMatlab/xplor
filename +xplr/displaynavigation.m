@@ -207,185 +207,8 @@ classdef displaynavigation < xplr.graphnode
                 case 'alt'
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape
-                    
-                    % TODO: the code below is work in progress, very
-                    % specific. It has to be generalized.
-                    
-                    d = N.selectiondim;
-                    switch length(d)
-                        
-                        case 1
-                            
-                            dim_location = N.layout.dim_locations{d};
-                            if ~ismember(dim_location, {'x' 'y' 'xy'})
-                                disp(['selection in location ''' dim_location ''' not handled'])
-                                return
-                            end
-                            
-                            % user interaction
-                            if isscalar(dim_location)
-                                segment = fn_mouse(N.ha,[dim_location 'segment-']);
-                                switch dim_location
-                                    case 'x'
-                                        segment = [segment; 0 0];
-                                    case 'y'
-                                        segment = [0 0; segment];
-                                end
-                            else
-                                segment = fn_mouse(N.ha,'rectaxp-');
-                            end
-                            
-                            % convert to slice indices in the selected
-                            % dimension
-                            ijk = N.graph.graph2slice(segment);
-                            isegment = sort(ijk(d,:));
-                            
-                            % create selection in slice indices coordinates
-                            sz = N.D.slice.sz(d); % size of data in the dimension where selection is made
-                            if N.D.slice.header(d).categorical
-                                oneDselection = xplr.selectionnd('indices',round(isegment(1)):round(isegment(2)),sz);
-                            elseif diff(isegment)==0
-                                oneDselection = xplr.selectionnd('point1D',isegment(1));
-                            elseif N.selectionround1Dmeasure
-                                oneDselection = xplr.selectionnd('line1D',round(isegment)+[-.5 .5]);
-                            else
-                                oneDselection = xplr.selectionnd('line1D',isegment);
-                            end
-                            
-%                             % update selection
-%                             if isempty(N.selection)
-%                                N.selection=oneDselection; 
-%                             else
-%                                N.selection(end+1)=oneDselection;
-%                             end
-                                                        
-                            % update filter
-                            N.selectionfilter.updateSelection('new',oneDselection)
-                            
-                            % update display
-                            N.displayselection('new',length(N.selection))
-                        case 'poly'
-                            poly = fn_mouse(N.ha,'poly');
-                            ijk = N.graph.graph2slice(poly,...
-                                'mode','point', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-                            
-                            polySelection = xplr.selectionnd('poly2D',ijk(d,:));
-                             if isempty(N.selection)
-                               N.selection=polySelection; 
-                            else
-                                N.selection(end+1)=polySelection;
-                            end
-                            N.displayselection('new',length(N.selection))
-                        case 'free'
-                            poly = fn_mouse(N.ha,'free');
-                            ijk = N.graph.graph2slice(poly,...
-                                'mode','point', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-                            
-                            polySelection = xplr.selectionnd('poly2D',ijk(d,:));
-                             if isempty(N.selection)
-                               N.selection=polySelection; 
-                            else
-                                N.selection(end+1)=polySelection;
-                            end
-                            N.displayselection('new',length(N.selection))
-                        case 'rect'
-                            rectangle = fn_mouse(N.ha,'rectangle-');
-                            
-                            ijk1 = N.graph.graph2slice(rectangle(:,1),...
-                                'mode','point', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-                            ijk2 = N.graph.graph2slice(rectangle(:,3),...
-                                'mode','point', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-                            vector=ijk1-ijk2;
-                            width = abs(vector(d(1),1));
-                            height= abs(vector(d(2),1));
-                            x = min(ijk1(d(1),1),ijk2(d(1),1));
-                            y = min(ijk1(d(2),1),ijk2(d(2),1));
-                            rectangleSelection = xplr.selectionnd('rect2D',[x,y,width,height]);
-                            if isempty(N.selection)
-                               N.selection=rectangleSelection; 
-                            else
-                                N.selection(end+1)=rectangleSelection;
-                            end
-                            N.displayselection('new',length(N.selection))
-                        case 'ellipse'
-                            ellipse = fn_mouse(N.ha,'ellipse-*');
-        %                     disp("ellipse");
-        %                     ellipse{2} = ellipse{1} + ellipse{2};
-        %                     ellipse{1}
-        %                     ellipse{2}
-        %                     ellipse{3}
-        %                     disp("end ellipse");
-                            ijk1 = N.graph.graph2slice(ellipse{1},...
-                                'mode','point', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-                            ijk2 = N.graph.graph2slice(ellipse{2},...
-                                'mode','vector', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-
-                            ijk = {ijk1(d),ijk2(d), ellipse{3}};
-                            ellipseSelection = xplr.selectionnd('ellipse2D',ijk);
-
-                            if isempty(N.selection)
-                               N.selection=ellipseSelection; 
-                            else
-                                N.selection(end+1)=ellipseSelection;
-                            end
-
-                            N.displayselection('new',length(N.selection))
-                        case 'ring'
-                            ring = fn_mouse(N.ha,'ring*');
-        %                     disp("ellipse");
-        %                     ellipse{2} = ellipse{1} + ellipse{2};
-        %                     ellipse{1}
-        %                     ellipse{2}
-        %                     ellipse{3}
-        %                     disp("end ellipse");
-                            ijk1 = N.graph.graph2slice(ring{1},...
-                                'mode','point', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-                            ijk2 = N.graph.graph2slice(ring{2},...
-                                'mode','vector', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-
-                            ijk = {ijk1(d),ijk2(d), [ring{3},ring{4}]};
-                            ellipseSelection = xplr.selectionnd('ring2D',ijk);
-
-                            if isempty(N.selection)
-                               N.selection=ellipseSelection; 
-                            else
-                                N.selection(end+1)=ellipseSelection;
-                            end
-
-                            N.displayselection('new',length(N.selection))
-                        case 'segment'
-                            poly = fn_mouse(N.ha,'segment');
-                            ijk = N.graph.graph2slice(poly,...
-                                'mode','point', ...
-                                'subdim',d', ...
-                                'ijk0',ones(N.D.nd,1));
-                            
-                            polySelection = xplr.selectionnd('poly2D',ijk(d,:));
-                             if isempty(N.selection)
-                               N.selection=polySelection; 
-                            else
-                                N.selection(end+1)=polySelection;
-                            end
-                            N.displayselection('new',length(N.selection))
-                        otherwise
-                            % don't exist yet
-                        
+                    if ~isempty(N.selectiondimID)
+                        N.selectionMouse()
                     end
             end
         end
@@ -585,28 +408,144 @@ classdef displaynavigation < xplr.graphnode
             % Selection menu is populated when being activated
             delete(get(m,'children'))
             
-            slice = N.D.slice;
+            header = N.D.slice.header;
+            seldim = N.selectiondim;
+            sellabels = {header(seldim).label};
+            
+            % Set selection dimension
+            % (info)
+            info = 'selection control in dimension: ';
+            switch length(N.selectiondimID)
+                case 0
+                    info = 'selection control in dimension: (none)';
+                case 1
+                    info = ['selection control in dimension: ' sellabels{1}];
+                case 2
+                    info = ['selection control in dimensions: ' fn_strcat(sellabels,',')];
+            end
+            m2 = uimenu(m,'label',info);
+            % (1D: dimension location must be x, y or xy)
+            dimok = sort([N.layout.x N.layout.y N.layout.xy]);
             fn_propcontrol(N,'selectiondimID', ...
-                {'menuval' {slice.header.dimID []} {slice.header.label}}, ...
-                'parent',m,'label','in dimension(s)');
+                {'menugroup' {header(dimok).dimID} {header(dimok).label}}, ...
+                {'parent',m2});
+            % (2D: dimension locations must be respectively x and y)
+            available = cell(2, length(N.layout.x), length(N.layout.y));
+            if ~isempty(available)
+                for i = 1:length(N.layout.x)
+                    for j = 1:length(N.layout.y)
+                        d = [N.layout.x(i) N.layout.y(j)];
+                        available{1,i,j} = [header(d).dimID];
+                        available{2,i,j} = fn_strcat({header(d).label},',');
+                    end
+                end
+                fn_propcontrol(N,'selectiondimID', ...
+                    {'menugroup' available(1,:) available(2,:)}, ...
+                    {'parent',m2});
+            end
+            
+            %             uimenu(m2,'label','ND selection...','separator','on', ...
+            %                 'callback',@(u,e)set(N,'selectiondimID','prompt'))
+            % (stop)
+            if ~isempty(N.selectiondimID)
+                uimenu(m2,'label','(none)','separator','on', ...
+                    'callback',@(u,e)set(N,'selectiondimID',[]))
+            end
+            
+            % Selection options
+            if isempty(N.selectiondimID), return, end
+            uimenu(m,'label','clear selections','separator','on', ...
+                'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
             if length(N.selectiondimID) == 2
                 fn_propcontrol(N,'selection2Dshape', ...
                     {'menuval' {'ysegment', 'xsegment','poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
                     'parent',m,'label','shape');
             end
-            if ~isempty(N.selectiondimID)
-                uimenu(m,'label','clear selections','separator','on', ...
-                    'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
-            end
-            if length(N.selectiondimID) == 1 && N.D.slice.header(N.selectiondim).ismeasure
+            if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
                 fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
                     {'parent',m,'label','round selections to data indices','separator','on'});
-                nextsep = 'off';
-            else
-                nextsep = 'on';
+                %                 nextsep = 'off';
+                %             else
+                %                 nextsep = 'on';
             end
-            fn_propcontrol(N,'selectionadvanced','menu', ...
-                {'parent',m,'label','advanced selection','separator',nextsep});
+            %             fn_propcontrol(N,'selectionadvanced','menu', ...
+            %                 {'parent',m,'label','advanced selection','separator',nextsep});
+        end
+        function selectionMouse(N)
+            seldim = N.selectiondim;
+            selnd = length(seldim);
+            
+            % check dimension location
+            dim_location = [N.layout.dim_locations{seldim}];
+            switch selnd
+                case 1
+                    if ~ismember(dim_location, {'x' 'y' 'xy'})
+                        disp(['selection in location ''' dim_location ''' not handled'])
+                        return
+                    end
+                case 2
+                    if ~ismember(dim_location, {'xy' 'yx'})
+                        disp(['selection in location ''' dim_location ''' not handled'])
+                        return
+                    end
+                    invertxy = strcmp(dim_location,'yx');
+            end
+            
+            % define selection
+            if selnd == 1
+                % user interaction
+                if isscalar(dim_location)
+                    polyax = fn_mouse(N.ha,[dim_location 'segment-']);
+                    switch dim_location
+                        case 'x'
+                            polyax = [polyax; 0 0];
+                        case 'y'
+                            polyax = [0 0; polyax];
+                    end
+                else
+                    polyax = fn_mouse(N.ha,'rectaxp-');
+                end
+            
+                % convert to slice indices in the selected
+                % dimension
+                polyslice = N.graph.graph2slice(polyax);
+                polyslice = sort(polyslice(seldim,:));
+                
+                % create selection in slice indices coordinates
+                sz = N.D.slice.sz(seldim); % size of data in the dimension where selection is made
+                if N.D.slice.header(seldim).categorical
+                    selslice = xplr.selectionnd('indices',round(polyslice(1)):round(polyslice(2)),sz);
+                elseif diff(polyslice)==0
+                    selslice = xplr.selectionnd('point1D',polyslice(1));
+                elseif N.selectionround1Dmeasure
+                    selslice = xplr.selectionnd('line1D',round(polyslice)+[-.5 .5]);
+                else
+                    selslice = xplr.selectionnd('line1D',polyslice);
+                end
+            elseif selnd == 2
+                % user interaction
+                mouseselmode = fn_switch(N.selection2Dshape, ...
+                    'openpoly','poly','freeline','free', ...
+                    'ellipse','ellipse*','ring','ring*', ...
+                    N.selection2Dshape);
+                seltype = fn_switch(N.selection2Dshape, ...
+                    {'poly','free'},'poly2D','rect','rect2D', ...
+                    'ellipse','ellipse2D','ring','ring2D', ...
+                    'segment','line2D',{'openpoly','freeline'},'openpoly2D');
+                polyax = fn_mouse(N.D.ha,[mouseselmode '-']);
+                
+                % create selection in graph coordinates
+                selax = xplr.selectionnd(seltype,polyax);
+                
+                % convert to slice coordinates
+                selslice = N.graph.selection2slice(seldim,selax);
+            end
+                
+            % update filter
+            N.selectionfilter.updateSelection('new',selslice)
+
+            % update display
+            N.displayselection('new',length(N.selection))
         end
         function sel = get.selection(N)
             F = N.selectionfilter;
@@ -621,6 +560,15 @@ classdef displaynavigation < xplr.graphnode
             %---
             % Select the dimension(s) for which selections are displayed and
             % made in the display
+            
+            % special: prompt user for selecting dimensions
+            if ischar(dimID) && strcmp(dimID,'prompt')
+                header = N.D.slice.header;
+                seldim = listdlg( ...
+                    'PromptString', 'Select up to 2 dimensions', ...
+                    'ListString', {header.label});
+                dimID = [header(seldim(1:min(2,end))).dimID];
+            end                    
             
             % check dimension(s)
             nd = length(dimID);
@@ -646,6 +594,7 @@ classdef displaynavigation < xplr.graphnode
             % no selection?
             if isempty(dimID)
                 N.selectionfilter = [];
+                N.displayselection()
                 return
             end
             
