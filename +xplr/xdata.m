@@ -69,6 +69,32 @@ classdef xdata < xplr.graphnode
         function s = get.sz(x)
             s = [x.header.n];
         end
+        function d = dimensionByID(x,dimID,flag)
+            % function d = dimensionByID(dimID[,'cell'])
+            %---
+            % Retrieves the number of the data dimension identified by the
+            % identifier dimID.
+            
+            % locate IDs
+            IDs = cat(1,x.header.dimID);
+            [ii, jj] = find(fn_eq(IDs,row(dimID)));
+            
+            % output
+            if nargin>=3 && strcmp(flag,'cell')
+                % output a cell array, so for each ID corresponding dim can
+                % be scalar or empty
+                d = cell(1,length(dimID));
+                [d{jj}] = dealc(ii);
+            else
+                % output array of same size as input if all IDs were found,
+                % otherwise empty array
+                if length(ii) < length(dimID)
+                    d = [];
+                else
+                    d = ii;
+                end
+            end
+        end
     end
     
     % Modification of an xdata object and raising of the corresponding
