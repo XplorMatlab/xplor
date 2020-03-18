@@ -322,7 +322,7 @@ classdef slicer < xplr.graphnode
                             slicedim = dim;
                         else
                             datastart = S.slicingchain(kfilt-1).res.data;
-                            slicedim = S.activefilters(kfilt-1).dimdata2slice(dim);
+                            slicedim = S.slicingchain(kfilt-1).dimdata2slice(dim);
                         end
                         if isempty(ind1)
                             % no new calculation necessary: only removals
@@ -360,13 +360,14 @@ classdef slicer < xplr.graphnode
                         % dimension on which to operate on the slice might
                         % not be the same as on the original data
                         if k == 1
-                            slicedimk = dimk;
+                            resdimk = dimk;
                         else
-                            slicedimk = S.activefilters(k-1).dimdata2slice(dimk);
+                            resdimk = S.slicingchain(k-1).dimdata2slice(dimk);
                         end
+                        resdim = S.slicingchain(k).dimdata2slice(dim);
                         % slice and update
-                        datasub = filtk.slicing(datasub,slicedimk);
-                        S.slicingchain(k).res.updateData(flag,slicedimk(1),ind,datasub,headd) % last element is the slice
+                        datasub = filtk.slicing(datasub,resdimk);
+                        S.slicingchain(k).res.updateData(flag,resdim(1),ind,datasub,headd) % last element is the slice
                     otherwise
                         error('datachangeSmart cannot be called with flag ''%s''',flag)
                 end
