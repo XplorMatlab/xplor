@@ -68,6 +68,11 @@ classdef header < hgsetget
                     H(n) = xplr.header();
                 end
                 return
+            elseif nargin==1 && isa(varargin{1},'xplr.header')
+                H1 = varargin{1};
+                H = xplr.header(length(H1));
+                H.copyin(H1)
+                return
             end
             
             % multiple header definitions?
