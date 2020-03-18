@@ -314,7 +314,7 @@ classdef slicer < xplr.graphnode
                         % smart update is possible: do the smart update for
                         % this filter here                      
                         filtk = S.activefilters(kfilt).obj;
-                        headd = filtk.headerout;
+                        headd = xplr.dimheader(filtk.headerout);
                         % starting point data, and on which dimensions to
                         % operate
                         if kfilt == 1

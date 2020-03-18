@@ -16,7 +16,7 @@ classdef xdata < xplr.graphnode
     
     properties (SetAccess='private')
         data        % ND array
-        header = xplr.header.empty(1,0);
+        header = xplr.dimheader.empty(1,0);
         name = '';
     end
     
@@ -36,21 +36,24 @@ classdef xdata < xplr.graphnode
             if nargin==0, return, end % default empty data
             if nargin<2 || isempty(head)
                 % open user edition window to edit headers
-                head = xplr.editHeader(dat);
+                head = xplr.dimheader(xplr.editHeader(dat));
             elseif ischar(head)
                 head = {head};
             end
             if iscell(head)
                 % create xplr.header objects from labels
                 labels = head;
-                head = xplr.header.empty(1,0);
+                head = xplr.dimheader.empty(1,0);
                 for i=1:length(labels)
                     if iscell(labels{i})
-                        head(i) = xplr.header(labels{i}{:});
+                        head(i) = xplr.dimheader(labels{i}{:});
                     else
-                        head(i) = xplr.header(labels{i},size(dat,i));
+                        head(i) = xplr.dimheader(labels{i},size(dat,i));
                     end
                 end
+            end
+            if ~isa(head,'xplr.dimheader')
+                head = xplr.dimheader(head);
             end
             x.updateDataDim('global',[],dat,head)
             if nargin>=3
@@ -104,6 +107,9 @@ classdef xdata < xplr.graphnode
             
             % check that value is real
             if nargin>=5 && ~isreal(value), error 'data cannot be complex', end
+            
+            % check that header is a dimheader
+            if ~isa(newhead,'xplr.dimheader'), error 'new header must be a dimheader object', end
             
             % update header
             if nargin>=6
@@ -163,6 +169,7 @@ classdef xdata < xplr.graphnode
         end
         function updateDataDim(x,flag,dim,newdata,newhead)
             % update header
+            if ~isa(newhead,'xplr.dimheader'), error 'new header must be a dimheader object', end
             switch flag
                 case 'global'
                     x.header = newhead;

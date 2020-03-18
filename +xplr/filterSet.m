@@ -23,7 +23,6 @@ classdef filterSet < hgsetget
     % Filter registration
     methods
         function F = getFilter(FS,header, doshow, varargin)
-            
             % function F = getFilter(FS,header, doshow [,user])
             hID = getID(header);
             F = FS.registry.getValue(hID,varargin{:});

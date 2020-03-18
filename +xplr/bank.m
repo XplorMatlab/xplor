@@ -57,7 +57,6 @@ classdef bank < hgsetget
     % Load/save field
     methods (Access='private')
         function loadprop(B,prop)
-            
             % loadprop
             fsave = fn_userconfig('configfolder','xplr.bank');
             warning('off','MATLAB:load:variableNotFound')

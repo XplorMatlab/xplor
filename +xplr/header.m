@@ -60,12 +60,13 @@ classdef header < hgsetget
         function H = header(varargin)
             % special cases
             if nargin==0        
-                % empty input -> empty header (nd=0)
-                H = xplr.header.empty(1,0);
+                % empty input -> empty header (nd=1 !)
                 return
-            elseif nargin==1 && strcmp(varargin{1},'empty')
-                % return the object without any initialization - for
-                % internal usage only (i.e. in the copy method)
+            elseif nargin==1 && isnumeric(varargin{1})
+                n = varargin{1};
+                if n>1
+                    H(n) = xplr.header();
+                end
                 return
             end
             
@@ -182,7 +183,12 @@ classdef header < hgsetget
             end
         end
         function disp(H)
-            str = 'xplr.header object with following info:';
+            valid = ~isempty(H(1).n);
+            if ~valid
+                disp@hgsetget(H)
+                return
+            end
+            str = [class(H) ' object with following info:'];
             if ~isscalar(H)
                 sz = size(H);
                 str = [fn_strcat(sz,'x') ' ' str];
@@ -233,16 +239,19 @@ classdef header < hgsetget
             fprintf('\n')
         end
     end
-    methods (Access='private')
+    methods (Access='protected')
         function H1 = copy(H)
-            H1 = xplr.header('empty');
-            H1.sublabels = H.sublabels;
-            H1.label = H.label;
-            H1.n = H.n;
-            H1.categorical = H.categorical;
-            H1.start = H.start;
-            H1.scale = H.scale;
-            H1.values = H.values;
+            H1 = xplr.header;
+            H1.copyin(H);
+        end
+        function copyin(H1,H)
+            [H1.sublabels] = deal(H.sublabels);
+            [H1.label] = deal(H.label);
+            [H1.n] = deal(H.n);
+            [H1.categorical] = deal(H.categorical);
+            [H1.start] = deal(H.start);
+            [H1.scale] = deal(H.scale);
+            [H1.values] = deal(H.values);
             % the copy is intended to be followed by some modifications,
             % therefore, do not copy ID and itemnames, which will become
             % invalid when these modifications will occur

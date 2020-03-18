@@ -125,7 +125,7 @@ classdef point < xplr.dataoperand
                 otherwise
                     error 'point slicing output can only occupy zero or one dimension'
             end
-            slic = reshape(slic,rsh);
+            slic = reshape(slic,[rsh 1]);
         end
         function slice = operation(P,x,dims)
             % here again P can be non-scalar...
