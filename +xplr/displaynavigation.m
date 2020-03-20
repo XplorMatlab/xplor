@@ -102,7 +102,7 @@ classdef displaynavigation < xplr.graphnode
             layout = N.D.layout;
         end
         function d = get.selectiondim(N)
-            d = N.D.slice.dimensionByID(N.selectiondimID);
+            d = N.D.slice.dimensionNumber(N.selectiondimID);
         end
     end
     
@@ -187,13 +187,11 @@ classdef displaynavigation < xplr.graphnode
                     if pointonly                        
                         dozoom = false;
                     else
-                        % rect = fn_mouse(N.ha,'rectangle-');
-                        rect = fn_mouse(N.ha,'rectangle-');
-                       % rect=[-0.3911,-0.3911,-0.2189,-0.2189;0.2391,0.0468,0.0468,0.2391];
+                        rect = fn_mouse(N.ha,'rectaxp-');
                         dozoom = any(any(abs(diff(rect,1,2))>1e-2));
                     end
                     if dozoom
-                        ijk = N.graph.graph2slice(rect(:,[1 3]));
+                        ijk = N.graph.graph2slice(rect);
                         zoom = ijk(activedim,:)';
                         for i=1:length(activedim), zoom(:,i) = sort(zoom(:,i)); end
                         N.D.zoomslicer.setZoom(activedim,zoom)
@@ -217,10 +215,9 @@ classdef displaynavigation < xplr.graphnode
     % Cross point selection
     methods
         function connectPointFilter(N,dim,key)
-            if nargin < 3
-               key = 1; 
-            end
+            if nargin < 3, key = 1; end
 
+            % Disconnect current point filters
             if nargin < 2
                 disconnectPointFilter(N)
                 dim = 1:N.D.slice.nd;
@@ -228,6 +225,7 @@ classdef displaynavigation < xplr.graphnode
                 disconnectPointFilter(N,dim)
             end
             
+            % Connect new point filters: loop on dimensions
             for d = dim
                 linkkey = key;
                 head = N.D.slice.header(d);
@@ -575,7 +573,7 @@ classdef displaynavigation < xplr.graphnode
             if ~ismember(nd,[0 1 2])
                 error 'number of dimension for selection display must be 1 or 2'
             end
-            dim = N.D.slice.dimensionByID(dimID);
+            dim = N.D.slice.dimensionNumber(dimID);
             if iscell(dim), error 'some dimension is not present in the slice data', end
             singleton = (N.D.slice.sz(dim)==1);
             dimID(singleton) = []; % no selection in singleton dimension(s)
@@ -620,7 +618,7 @@ classdef displaynavigation < xplr.graphnode
             % still valid, i.e. whether the connected filter still fits a
             % dimension in the new slice
             if isempty(N.selectiondimID), return, end
-            if isempty(N.D.slice.dimensionByID(N.selectiondimID))
+            if ~all(ismember(N.selectiondimID,[N.D.slice.header.dimID]))
                 N.selectiondimID = [];
             end
         end

@@ -127,20 +127,16 @@ classdef point < xplr.dataoperand
             end
             slic = reshape(slic,[rsh 1]);
         end
-        function slice = operation(P,x,dims)
+    end
+    methods (Access='protected')
+        function slic = operation_(P,dat,dims)
+            % function slic = operation_(P,dat,dims)
+            %---
+            % dat and slic are simple Matlab arrays
             % here again P can be non-scalar...
-
-            % check input
-            checkdata(P,x,dims)
-            % slice
-            nd = length(x.header);
-            slic = slicing(P,x.data,dims);
-            otherdims = setdiff(1:nd,dims);
-            head = x.header(otherdims);
-            slice = xplr.xdata(slic,head);
+            slic = slicing(P,dat,dims);
         end
-        function updateOperation(P,x,dims,slice)
-            checkdata(P,x,dims)
+        function updateOperation_(P,x,dims,slice)
             slic = slicing(P,x.data,dims);
             slice.chgData(slic); % this will trigger automatic notifications
         end

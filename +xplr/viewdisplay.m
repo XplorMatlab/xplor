@@ -505,7 +505,8 @@ classdef viewdisplay < xplr.graphnode
                 case 'global'
                     D.navigation.connectPointFilter()
                 case {'all' 'chgdim' 'new' 'remove' 'chg' 'chg&new' 'chg&rm' 'perm'}
-                    D.navigation.connectPointFilter(e.dim)
+                    dim = D.slice.dimensionNumber(e.dim);
+                    D.navigation.connectPointFilter(dim)
                 otherwise
                     error('flag ''%s'' not handled', flag)
             end
@@ -790,6 +791,11 @@ classdef viewdisplay < xplr.graphnode
                 D.sliceChangeEvent = [];
             end
             
+            % Dimension(s) where change occured
+            if nargin>=2
+                chgdim = D.zslice.dimensionNumber(e.dim);
+            end
+            
             % Is zslice too large for being displayed
             D.checkzslicesize()
             
@@ -806,12 +812,12 @@ classdef viewdisplay < xplr.graphnode
                     case 'global'
                         D.labels.updateLabels('global')
                     case 'chgdim'
-                        D.labels.updateLabels(flag,e.dim)
+                        D.labels.updateLabels(flag,chgdim)
                     otherwise
                         D.labels.updateLabels()
                 end
             end
-            if ~(strcmp(flag,'chgdata') || (strcmp(flag,'chg') && ~any(e.dim==[D.activedim.x D.activedim.y])))
+            if ~(strcmp(flag,'chgdata') || (strcmp(flag,'chg') && ~any(chgdim==[D.activedim.x D.activedim.y])))
                 D.graph.setTicks()
             end
             
@@ -828,13 +834,12 @@ classdef viewdisplay < xplr.graphnode
                 updateDisplay(D,'chgdata')
             else
                 % Smart display update
-                dim = e.dim;
-                if (~isempty(D.layout.x) && D.layout.x(1)==dim) ...
-                        || (strcmp(D.displaymode,'image') && ~isempty(D.layout.y) && D.layout.y(1)==dim)
+                if (~isempty(D.layout.x) && D.layout.x(1)==chgdim) ...
+                        || (strcmp(D.displaymode,'image') && ~isempty(D.layout.y) && D.layout.y(1)==chgdim)
                     % changes are within elements (the grid arrangement
                     % remains the same)
                     if fn_ismemberstr(flag,{'perm' 'chg'}) ...
-                            || (strcmp(flag,'all') && D.zslice.header(dim).n==prevsz(dim))
+                            || (strcmp(flag,'all') && D.zslice.header(chgdim).n==prevsz(chgdim))
                         flag = 'chgdata'; % no change in size
                     else
                         flag = 'chgdata&blocksize';
@@ -844,41 +849,41 @@ classdef viewdisplay < xplr.graphnode
                     % the grid arrangement changes
                     switch flag
                         case 'chg'  % check this case first because it is this one that occurs when going fast through a list
-                            updateDisplay(D,'chg',e.dim,e.ind)
+                            updateDisplay(D,'chg',chgdim,e.ind)
                         case {'new' 'remove' 'perm'}
-                            updateDisplay(D,flag,dim,e.ind)
+                            updateDisplay(D,flag,chgdim,e.ind)
                         case 'all'
-                            ncur = size(D.htransform,dim);
-                            n = D.zslice.sz(dim);
+                            ncur = size(D.htransform,chgdim);
+                            n = D.zslice.sz(chgdim);
                             if n==ncur
                                 updateDisplay(D,'chgdata')
                             elseif n>ncur
-                                updateDisplay(D,'new',dim,ncur+1:n)
-                                updateDisplay(D,'chg',dim,1:ncur)
+                                updateDisplay(D,'new',chgdim,ncur+1:n)
+                                updateDisplay(D,'chg',chgdim,1:ncur)
                             else
-                                updateDisplay(D,'remove',dim,n+1:ncur)
-                                updateDisplay(D,'chg',dim,1:n)
+                                updateDisplay(D,'remove',chgdim,n+1:ncur)
+                                updateDisplay(D,'chg',chgdim,1:n)
                             end
                         case 'chg&new'
-                            updateDisplay(D,'new',e.dim,e.ind{2})
-                            updateDisplay(D,'chg',e.dim,e.ind{1})
+                            updateDisplay(D,'new',chgdim,e.ind{2})
+                            updateDisplay(D,'chg',chgdim,e.ind{1})
                         case 'chg&rm'
-                            updateDisplay(D,'remove',e.dim,e.ind{2})
-                            updateDisplay(D,'chg',e.dim,e.ind{1})
+                            updateDisplay(D,'remove',chgdim,e.ind{2})
+                            updateDisplay(D,'chg',chgdim,e.ind{1})
                         otherwise
                             error('flag ''%s'' is not handled','flag')
                     end
                 elseif chgclip
                     % all grid elements need to be updated
-                    ncur = size(D.htransform,dim);
-                    n = D.zslice.sz(dim);
+                    ncur = size(D.htransform,chgdim);
+                    n = D.zslice.sz(chgdim);
                     if n==ncur
                         updateDisplay(D,'chgdata')
                     elseif n>ncur
                         updateDisplay(D,'chgdata')
-                        updateDisplay(D,'new',dim,ncur+1:n)
+                        updateDisplay(D,'new',chgdim,ncur+1:n)
                     else
-                        updateDisplay(D,'remove',dim,n+1:ncur)
+                        updateDisplay(D,'remove',chgdim,n+1:ncur)
                         updateDisplay(D,'chgdata')
                     end
                 end
@@ -893,7 +898,7 @@ classdef viewdisplay < xplr.graphnode
             % Update legend
             if strcmp(flag,'global')
                 D.colordim = [];
-            elseif ~strcmp(flag,'chgdata') && isequal(e.dim,D.colordim)
+            elseif ~strcmp(flag,'chgdata') && isequal(chgdim,D.colordim)
                 displayColorLegend(D)
             end
             

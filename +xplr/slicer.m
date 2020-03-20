@@ -6,16 +6,20 @@ classdef slicer < xplr.graphnode
     % data in some dimensions in the event where there is no filter in this
     % dimension, or the filter is empty.
     
+    % In general, data dimensions are identified by their unique identifier
+    % (dimID) rather than by their number, but some methods accept both
+    % identification methods (dimension numbers can easily be distinguished
+    % from dimension identifiers because the former are >=1, the latter are
+    % <1 ; conversion of either number, identifier or label to identifier
+    % is performed by the xplr.xdata.dimensionID method).
+    
     properties 
         data
         slice
-        filters = struct('active',[],'dim',cell(1,0),'obj',[]);
-        % beware that 'dim' are the dimensions of slicing IN THE ORIGINAL
-        % DATA, but not any more in the slice (dimdata2slice specifies the
-        % conversion)
+        filters = struct('active',[],'dimID',cell(1,0),'obj',[]);
     end
     properties (SetAccess='protected')
-        slicingchain = struct('res',cell(1,0),'dimdata2slice',[]); % intermediary and last steps of slicing, length is same as S.activefilters
+        slicingchain = xplr.xdata.empty(1,0); % intermediary and last steps of slicing, length is same as S.activefilters
         pendingrmfilter = false; % remember when some dimensions were removed but reslice did not occur yet
     end
     properties (Dependent, SetAccess='private')
@@ -27,7 +31,7 @@ classdef slicer < xplr.graphnode
     
     % Constructor, destructor, basic access and get/set dependent
     methods
-        function S = slicer(data,dim,filters)
+        function S = slicer(data,dimID,filters)
             % set data
             S.data = data;
             S.addListener(data,'ChangedData',@(u,e)datachange(S,e));
@@ -36,7 +40,7 @@ classdef slicer < xplr.graphnode
 
             % set filters
             if nargin>=2 && ~isempty(filters)
-                addFilter(S,dim,filters)
+                addFilter(S,dimID,filters)
             end
         end
         function n = get.nddata(S)
@@ -51,70 +55,65 @@ classdef slicer < xplr.graphnode
         function filters = get.activefilters(S)
             filters = S.filters([S.filters.active]);
         end
-        
-        
-        %         function obj = getfilter(S,dim) % should this function return only active filter? 
-        %             idx = fn_find(dim,{S.filters.dim});
-        %             obj = [S.filters(idx).obj];
-        %         end
     end
 
     % Changing filters
     methods
-        function insertFilter(S,idx,dim,newfilt,active)
-            % function insertFilter(S,idx,dim,newfilt[active])
+        function insertFilter(S,idx,dimID,newfilt,active)
+            % function insertFilter(S,idx,dimID,newfilt[active])
+            dimID = S.data.dimensionID(dimID);
             if nargin<5, active = true; end
             
             % check filter
             if ~isa(newfilt,'xplr.dataoperand'), error 'filter must be a dataoperand object', end
             
             % check dimensions and headers
-            if ~iscell(dim)
-                if isscalar(newfilt), dim = {dim}; else dim = num2cell(dim); end
+            if ~iscell(dimID)
+                if isscalar(newfilt), dimID = {dimID}; else dimID = num2cell(dimID); end
             end
-            nadd = length(dim);
-            dimadd = [dim{:}];
-            if length(unique(dimadd))<length(dimadd)
+            nadd = length(dimID);
+            dimIDadd = [dimID{:}];
+            if length(unique(dimIDadd))<length(dimIDadd)
                 error 'same dimension appears in multiple filters'
-            elseif any(ismember(dimadd,[S.filters.dim]))
+            elseif any(ismember(dimIDadd,[S.filters.dimID]))
                 error 'some filter is already applied in at least one of the specified dimensions'
-            elseif ~isequal([newfilt.headerin],S.data.header(dimadd))
+            elseif ~isequal([newfilt.headerin],S.data.headerByID(dimIDadd))
                 error 'some filter header does not match data'
             end
             % check header
             % add filters
             if isempty(idx), idx = length(S.filters)+1; end
-            S.filters = [S.filters(1:idx-1) struct('active',num2cell(active),'dim',dim,'obj',num2cell(newfilt)) S.filters(idx:end)];
+            S.filters = [S.filters(1:idx-1) struct('active',num2cell(active),'dimID',dimID,'obj',num2cell(newfilt)) S.filters(idx:end)];
             % remove invalid part of the slicing chain
             nok = sum([S.filters(1:idx-1).active]);
             S.slicingchain(nok+1:end) = [];
             % install listeners
             for i=1:nadd
-                S.addListener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,newfilt(i),dim{i},e));
+                S.addListener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,newfilt(i),dimID{i},e));
             end
             % update slice
-            if ~S.pendingrmfilter && all([newfilt.ndout]==[newfilt.ndin])
-                doslice(S,'slicer','chgdim',dimadd)
+            if ~S.pendingrmfilter && isscalar(newfilt) && newfilt.ndout==newfilt.ndin
+                doslice(S,'slicer','chgdim',dimIDadd)
             else
                 doslice(S,'slicer','global')
                 S.pendingrmfilter = false;
             end
         end
-        function addFilter(S,dim,newfilt,active)
-            % function addFilter(S,dim,newfilt[,active])
+        function addFilter(S,dimID,newfilt,active)
+            % function addFilter(S,dimID,newfilt[,active])
             if nargin<4, active = true; end
-            insertFilter(S,[],dim,newfilt,active)
+            insertFilter(S,[],dimID,newfilt,active)
         end
         function rmFilter(S,idx,doslicing)
             % function rmFilter(S,idx[,doslicing])
             if nargin<3, doslicing = true; end
             filtrm = [S.filters(idx).obj];
             S.disconnect(filtrm)
-            dimrm = [S.filters(idx).dim];
             % among the dimensions for which filters will be removed, which
             % are those where the filters were really active
             active = [S.filters(idx).active];
             idxactive = idx(active);
+            chgdimID = [S.filters(idxactive).dimID];
             % remove invalid part of slicing chain
             if ~isempty(idxactive)
                 nok = sum([S.filters(1:idxactive(1)-1).active]);
@@ -126,8 +125,7 @@ classdef slicer < xplr.graphnode
             if isempty(idxactive), return, end
             if doslicing
                 if all([filtrm(active).ndout]==[filtrm(active).ndin])
-                    activedimrm = dimrm(active);
-                    doslice(S,'slicer','chgdim',activedimrm)
+                    doslice(S,'slicer','chgdim',chgdimID)
                 else
                     doslice(S,'slicer','global')
                 end
@@ -136,47 +134,89 @@ classdef slicer < xplr.graphnode
                 S.pendingrmfilter = true;
             end
         end
-        function rmFilterDim(S,dim,doslicing)
-            % function rmFilterDim(S,dim[,doslicing])
+        function rmFilterDim(S,dimID,doslicing)
+            % function rmFilterDim(S,dimID[,doslicing])
+            dimID = S.data.dimensionID(dimID);
             if nargin<3, doslicing = true; end
             % remove filters
             idxrm = false(1,length(S.filters));
             for i=1:length(S.filters)
-                idxrm(i) = any(ismember(S.filters(i).dim,dim));
+                idxrm(i) = any(ismember(S.filters(i).dimID,dimID));
             end
             if ~any(idxrm)
-                fprintf('there is already no filter in dimension %i! aborting rmFilterDim\n',dim)
+                fprintf('there is already no filter in dimension %i! aborting rmFilterDim\n',dimID)
                 return
             end
             rmFilter(S,idxrm,doslicing)
         end
-        function replaceFilterDim(S,dims,newfilt)
+        function replaceFilter(S,idxs,dimIDs,newfilt)
+            % function replaceFilter(S,idxs,dimIDs,newfilt)
+            
+            % there can be several filters: dimIDs must be a cell array
+            dimIDs = S.data.dimensionID(dimIDs);
+            if ~iscell(dimIDs)
+                if ~isscalar(newfilt), dimIDs = num2cell(dimIDs); else, dimIDs = {dimIDs}; end
+            end    
+            if any(diff([length(idxs), length(dimIDs), length(newfilt)])), error 'length mismatch', end
+
+            % replace filter(s)
+            ndout_changed = false;
+            chgdim = zeros(1,0);
+            for i = 1:length(dimIDs)
+                dimID = dimIDs{i};
+                F = newfilt(i);
+                idx = idxs(i);
+                % replace filter
+                prevndout = S.filters(idx).obj.ndout;
+                S.disconnect(S.filters(idx).obj)
+                S.filters(idx).obj = F;
+                S.filters(idx).dimID = dimID;
+                S.addListener(F,'ChangedOperation',@(u,e)filterchange(S,F,dimID,e));
+                % no need for update if the filter is not active
+                if S.filters(idx).active
+                    if F.ndout~=prevndout, ndout_changed = true; end
+                    chgdim = [chgdim dimID]; %#ok<AGROW>
+                else
+                    S.activateConnection(F,false)
+                end
+                % remove invalid part of slicing chain
+                nok = sum([S.filters(1:idx(1)-1).active]);
+                S.slicingchain(nok+1:end) = [];
+            end
+            
+            % update slice
+            if ndout_changed
+                doslice(S,'slicer','global')
+            else
+                doslice(S,'slicer','chgdim',chgdim)
+            end
+        end
+        function replaceFilterDim(S,dimIDs,newfilt)
             % function replaceFilterDim(S,dims,newfilt)
             
-            % there can be several filters
-            if ~isscalar(newfilt)
-                if ~iscell(dims), dims = num2cell(dims); end
-            else
-                if ~iscell(dims), dims = {dims}; end
+            % there can be several filters: dimIDs must be a cell array
+            dimIDs = S.data.dimensionID(dimIDs);
+            if ~iscell(dimIDs)
+                if ~isscalar(newfilt), dimIDs = num2cell(dimIDs); else, dimIDs = {dimIDs}; end
             end               
 
             % replace filter(s)
             ndout_changed = false;
             chgdim = zeros(1,0);
-            for i = 1:length(dims)
-                dim = dims{i};
+            for i = 1:length(dimIDs)
+                dimID = dimIDs{i};
                 F = newfilt(i);
                 % replace filter
-                idx = fn_find(dim,{S.filters.dim});
+                idx = fn_find(dimID,{S.filters.dimID});
                 if isempty(idx), error 'there is no filter in the specified dimension', end
                 prevndout = S.filters(idx).obj.ndout;
                 S.disconnect(S.filters(idx).obj)
                 S.filters(idx).obj = F;
-                S.addListener(F,'ChangedOperation',@(u,e)filterchange(S,F,dim,e));
+                S.addListener(F,'ChangedOperation',@(u,e)filterchange(S,F,dimID,e));
                 % no need for update if the filter is not active
                 if S.filters(idx).active
                     if F.ndout~=prevndout, ndout_changed = true; end
-                    chgdim = [chgdim dim]; %#ok<AGROW>
+                    chgdim = [chgdim dimID]; %#ok<AGROW>
                 else
                     S.activateConnection(F,false)
                 end
@@ -230,8 +270,9 @@ classdef slicer < xplr.graphnode
 
     % Get filter
     methods
-        function F = getFilter(S,dim)
-            idx = fn_find(dim,{S.filters.dim});
+        function F = getFilterByDim(S,dimID)
+            dimID = S.data.dimensionID(dimID);
+            idx = fn_find(dimID,{S.filters.dimID});
             F = [S.filters(idx).obj];
         end
         function idx = getFilterIndex(S,F)
@@ -241,8 +282,8 @@ classdef slicer < xplr.graphnode
     
     % Slicing
     methods (Access='protected')
-        function doslice(S,chgorigin,flag,dim,ind,filter)
-            % function doslice(S,chgorigin,flag[,dim[,ind[,filter]]])
+        function doslice(S,chgorigin,chgflag,chgdim,chgind,chgfilter)
+            % function doslice(S,chgorigin,flag[,chgdim[,ind[,filter]]])
             %---
             % Apply filters successively to get a slice out of the data.
             % "Smart updates" apply when the flag (for example 'new')
@@ -251,21 +292,23 @@ classdef slicer < xplr.graphnode
             % will be preserved, but some additional part will be added
             % corresponding to the original increase in data or filter).
 
-            if nargin<4, dim = []; end
-            if nargin<5, ind = []; end
-            if nargin<6, filter = []; end
+            if nargin<4, chgdim = []; end
+            if nargin<5, chgind = []; end
+            if nargin<6, chgfilter = []; end
             
             nactivefilters = sum([S.filters.active]);
             
             % 1) Smart update of the existing part of the slicing chain
+            % dimension number
+            [chgdim, chgdimID] = S.data.dimensionNumberAndID(chgdim);
             % indices of the change
-            switch flag
+            switch chgflag
                 case {'new' 'chg'}
-                    ind1 = ind;
+                    ind1 = chgind;
                 case 'chg&new'
-                    ind1 = [ind{:}];
+                    ind1 = [chgind{:}];
                 case 'chg&rm'
-                    ind1 = ind{1};
+                    ind1 = chgind{1};
                 otherwise
                     ind1 = [];
             end
@@ -274,14 +317,15 @@ classdef slicer < xplr.graphnode
             switch chgorigin
                 case 'data'
                     kstart = 1;
-                    if fn_ismemberstr(flag,{'all' 'chgdata' 'global' 'chgdim'})
+                    if fn_ismemberstr(chgflag,{'all' 'chgdata' 'global' 'chgdim'})
                         % smart update is not possible
                         S.slicingchain(:) = [];
                     else
-                        % original data has changed in dimension dim
-                        headd = S.data.header(dim);
+                        if ~isscalar(chgdim), error 'programming', end
+                        % original data has changed in dimension dimID
+                        headdim = S.data.header(chgdim);
                         subs = substruct('()',repmat({':'},1,S.data.nd));
-                        subs.subs{dim} = ind1;
+                        subs.subs{chgdim} = ind1;
                         % part of the data that will be used for new
                         % calculations, while preserving some of the
                         % existing calculations
@@ -291,21 +335,21 @@ classdef slicer < xplr.graphnode
                         % same dimension dim
                         for k=1:length(S.slicingchain)
                             filterk = S.activefilters(k);
-                            if filterk.active && any(intersect(filterk.dim,dim))
+                            if filterk.active && any(intersect(filterk.dimID,chgdimID))
                                 S.slicingchain(k:end) = [];
                                 break
                             end
                         end
                     end
                 case 'filter'
-                    % filtering in dimension(s) dim has changed
-                    kfilt = fn_find(filter,[S.activefilters.obj],'first');
+                    % filtering in dimension(s) dimID has changed
+                    kfilt = fn_find(chgfilter,[S.activefilters.obj],'first');
                     if isempty(kfilt)
                         % filter is not active
-                        if ~any(filter == [S.filters.obj]), error programming, end
+                        if ~any(chgfilter == [S.filters.obj]), error programming, end
                         return
                     end
-                    if strcmp(flag,'all')
+                    if strcmp(chgflag,'all')
                         % no smart update possible: filter has been
                         % completely replaced
                         S.slicingchain(kfilt:end) = [];
@@ -314,26 +358,28 @@ classdef slicer < xplr.graphnode
                         % smart update is possible: do the smart update for
                         % this filter here                      
                         filtk = S.activefilters(kfilt).obj;
-                        headd = xplr.dimheader(filtk.headerout);
                         % starting point data, and on which dimensions to
                         % operate
                         if kfilt == 1
                             datastart = S.data.data;
-                            slicedim = dim;
                         else
-                            datastart = S.slicingchain(kfilt-1).res.data;
-                            slicedim = S.slicingchain(kfilt-1).dimdata2slice(dim);
+                            datastart = S.slicingchain(kfilt-1).data;
                         end
+                        % perform operation to obtain only the new part of
+                        % the data that needed to be calculated
                         if isempty(ind1)
                             % no new calculation necessary: only removals
                             % and permutations
                             datasub = [];
                         else
-                            datasub = filtk.slicing(datastart,slicedim,ind1);
+                            datasub = filtk.slicing(datastart,chgdim,ind1);
                         end
-                        S.slicingchain(kfilt).res.updateData(flag,slicedim(1),ind,datasub,headd)
+                        % update the xdata object
+                        chgdimID = filtk.getdimIDout(chgdimID); % dimension identifier in the data -> in the slice
+                        headdim = xplr.dimheader(filtk.headerout,chgdimID);                        
+                        S.slicingchain(kfilt).updateData(chgflag,chgdimID,chgind,datasub,headdim)
+                        % if S.slicingchain(kfilt) is S.slice, we are done
                         if kfilt == nactivefilters
-                            % S.slicingchain(kfilt) is S.slice, we are done
                         	return
                         end
                         kstart = kfilt+1;
@@ -345,84 +391,82 @@ classdef slicer < xplr.graphnode
                     % addition, removal or replacement
                     kstart = length(S.slicingchain)+1;
             end
+            % starting point
+            if kstart == 1
+                res = S.data;
+            else
+                res = S.slicingchain(kstart-1);
+            end
             % smart updates for successive filters that can allow it
             for k = kstart:length(S.slicingchain)
                 % propagate changes in data along the slicing chain
-                switch flag
+                switch chgflag
                     case {'remove' 'perm'}
                         % easy
-                        S.slicingchain(k).res.updateData(flag,dim,ind,[],headd)
+                        S.slicingchain(k).updateData(chgflag,chgdimID,chgind,[],headdim)
                     case {'new' 'chg' 'chg&new' 'chg&rm'}
                         % do a new slicing for a subset of the data
-                        dimk = S.activefilters(k).dim;
+                        dimIDk = S.activefilters(k).dimID;
                         filtk = S.activefilters(k).obj;
-                        if isequal(dimk,dim), error 'this case is not supposed to happen (no smart update possible for filtering in the same dimension where data has changed)', end
-                        % dimension on which to operate on the slice might
-                        % not be the same as on the original data
-                        if k == 1
-                            resdimk = dimk;
-                        else
-                            resdimk = S.slicingchain(k-1).dimdata2slice(dimk);
-                        end
-                        resdim = S.slicingchain(k).dimdata2slice(dim);
                         % slice and update
-                        datasub = filtk.slicing(datasub,resdimk);
-                        S.slicingchain(k).res.updateData(flag,resdim(1),ind,datasub,headd) % last element is the slice
+                        dimk = res.dimensionNumber(dimIDk);
+                        datasub = filtk.slicing(datasub,dimk);
+                        S.slicingchain(k).updateData(chgflag,chgdimID,chgind,datasub,headdim) % last element is the slice
                     otherwise
-                        error('datachangeSmart cannot be called with flag ''%s''',flag)
+                        error('datachangeSmart cannot be called with flag ''%s''',chgflag)
                 end
                 if k == nactivefilters
                     % the slice has been updated, we are done
                     return
                 end 
+                res = S.slicingchain(k);
             end
             
             % 2) Regular slicing for the remaining part of the chain
-            % starting point
-            if isempty(S.slicingchain)
-                s = struct('res',S.data,'dimdata2slice',1:S.nddata);
-            else
-                s = S.slicingchain(end);
-                if s.res==S.slice 
-                    % s was previously the end of the chain and therefore
-                    % equal to the slice; but now a new filter has been
-                    % inserted after and we need the two xdata object to be
-                    % different otherwise the updateDataDim/chgData calls
-                    % below will lead to awkward results
-                    s.res = S.slice.copy();
-                    S.slicingchain(end) = s;
-                end
+            % separate end 
+            if ~isempty(S.slicingchain) && res==S.slice
+                % res was previously the end of the chain and therefore
+                % equal to the slice; but now a new filter has been
+                % inserted after and we need the two xdata objects to be
+                % different, otherwise the updateDataDim/chgData calls
+                % applied to the slice below will also apply to this chain
+                % element and this will lead to awkward results
+                res = S.slice.copy();
+                S.slicingchain(end) = res;
             end
             % apply active filters one by one
             for k = length(S.slicingchain)+1:nactivefilters
                 filtk = S.activefilters(k);
-                dimk = filtk.dim;
+                dimIDk = filtk.dimID;
                 objk = filtk.obj;
-                resprev = s.res;
-                s.res = objk.operation(resprev,s.dimdata2slice(dimk));
-                ok = (s.dimdata2slice~=0);
-                dimbef2aft = objk.followdims(resprev.nd,s.dimdata2slice(dimk));
-                s.dimdata2slice(ok) = dimbef2aft(s.dimdata2slice(ok));
-                S.slicingchain(k) = s;
+                if ~isempty(chgdimID) && any(dimIDk==chgdimID)
+                    % dimension identified by chgdimID in the data
+                    % disappears in the slice; get the identifier of the
+                    % corresponding dimension in the slice
+                    chgdimID = objk.getdimIDout(dimIDk);
+                end
+                res = objk.operation(res,dimIDk);
+                S.slicingchain(k) = res;
             end
             % update slice 
-            slicedim = unique(s.dimdata2slice(dim));
-            switch flag
+            switch chgflag
                 case 'global'
-                    S.slice.updateDataDim(flag,[],s.res.data,s.res.header)
+                    S.slice.updateDataDim(chgflag,[],res.data,res.header)
                 case 'chgdim'
-                    S.slice.updateDataDim(flag,slicedim,s.res.data,s.res.header(slicedim))
+                    chgdimout = res.dimensionNumber(chgdimID);
+                    S.slice.updateDataDim(chgflag,chgdimout,res.data,res.header(chgdimout))
                 case 'chgdata'
-                    S.slice.chgData(s.res.data)
+                    S.slice.chgData(res.data)
                 otherwise
-                    S.slice.updateData(flag,slicedim,ind,s.res.data,s.res.header(slicedim))
+                    chgdimout = res.dimensionNumber(chgdimID);
+                    S.slice.updateData(chgflag,chgdimout,chgind,res.data,res.header(chgdimout))
             end
             % replace last chain element by slice (except if chain is
             % empty), so updateData calls to this last chain element
             % directly affect the slice (as occurs in the cases above code
             % blocks ending with 'return')
             if nactivefilters > 0
-                S.slicingchain(end).res = S.slice;
+                S.slicingchain(end) = S.slice;
             end
             
         end
@@ -434,7 +478,7 @@ classdef slicer < xplr.graphnode
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
                     doslice(S,'data','global',[],[])
                 case {'chgdim' 'all' 'new' 'chg' 'remove' 'chg&new' 'chg&rm' 'perm'}
-                    % header in dimension dim has changed (not necessarily,
+                    % header in dimension dimID has changed (not necessarily,
                     % but potentially also in the case 'chg'), therefore
                     % filter in that dimension is not valid anymore
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
@@ -448,7 +492,7 @@ classdef slicer < xplr.graphnode
                     error 'not implemented yet'
             end
         end
-        function filterchange(S,F,dim,e)
+        function filterchange(S,F,dimID,e)
             flag = e.flag;
             if strcmp(flag,'point')
                 flag = 'chg'; 
@@ -456,7 +500,7 @@ classdef slicer < xplr.graphnode
             else
                 ind = e.ind;
             end
-            doslice(S,'filter',flag,dim,ind,F)
+            doslice(S,'filter',flag,dimID,ind,F)
         end
         function reslice(S)
             S.slicingchain(:) = [];

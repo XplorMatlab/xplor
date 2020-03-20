@@ -1,6 +1,6 @@
 classdef dimheader < xplr.header
     % function H = dimheader(header arguments...)
-    % function H = dimheader(header object)
+    % function H = dimheader(header object[, dimID])
     %---
     % The DIMHEADER class inherits from HEADER and adds the 'dimID'
     % property, which is a random number serving to uniquely identify
@@ -16,7 +16,7 @@ classdef dimheader < xplr.header
     methods
         function H = dimheader(varargin)
             % header part
-            docopy = (nargin==1 && isa(varargin{1},'xplr.header'));
+            docopy = (nargin>=1 && isa(varargin{1},'xplr.header'));
             if docopy
                 arg = {};
             else
@@ -34,8 +34,13 @@ classdef dimheader < xplr.header
                 end
                 H.copyin(H1);
             end
+            
             % generate a unique dimension ID
-            H.changeDimID()
+            if docopy && nargin>=2
+                [H.dimID] = dealc(varargin{2});
+            else
+                H.changeDimID()
+            end
         end
         function changeDimID(H)
             % generate a new, unique dimension ID; this method will be
