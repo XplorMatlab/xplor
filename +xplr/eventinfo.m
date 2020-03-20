@@ -17,6 +17,7 @@ classdef eventinfo < event.EventData & dynamicprops
     % type: 'data'
     % arguments:
     % * 'global'                    data is potentially completely different
+    % * 'name'                      data name has changed
     % * 'chgdata'                   data has changed but sizes and all header information remain the same
     % * 'chgdim',dim                data has changed, header and size in dimension dim have changed (dim can be non-scalar here, but not in
     %                               the other options below; here and below dim can be either a dimension number or a dimension identifier!)

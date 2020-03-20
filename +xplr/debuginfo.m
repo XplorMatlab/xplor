@@ -52,6 +52,7 @@ if isempty(memstate)
     memstate = fn_userconfig('xplr.debuginfo');
     if isempty(memstate)
         memstate = struct('active', false, 'categories', struct());
+        save_state(memstate)
     end
 end
 

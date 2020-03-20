@@ -488,6 +488,8 @@ classdef slicer < xplr.graphnode
                     % keep all existing filters
                     S.slicingchain(:) = [];
                     doslice(S,'data','chgdata',[],[])
+                case 'name'
+                    % name is not passed to the slice, so nothing to do
                 otherwise
                     error 'not implemented yet'
             end

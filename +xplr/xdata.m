@@ -145,6 +145,11 @@ classdef xdata < xplr.graphnode
     % Modification of an xdata object and raising of the corresponding
     % notification
     methods
+        function setName(x,name)
+            if strcmp(name,x.name), return, end
+            x.name = name;
+            notify(x,'ChangedData',xplr.eventinfo('data','name'))             
+        end
         function chgData(x,data)
             if isequal(data,x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
@@ -165,7 +170,7 @@ classdef xdata < xplr.graphnode
             end
             notify(x,'ChangedData',xplr.eventinfo('data','chgdim',find(chgsz))) %#ok<FNDSB>
         end
-        function updateData(x,flag,dimID,ind,value,newhead)
+        function updateData(x,flag,dim,ind,value,newhead)
             % function updateData(x,flag,dim,ind,value,newhead)
             %---
             % arguments value and newhead are supposed to be only the
@@ -176,7 +181,7 @@ classdef xdata < xplr.graphnode
             % however giving the full updated data for value, or the full
             % header for newhead, is tolerated
             
-            dim = x.dimensionNumber(dimID);
+            dim = x.dimensionNumber(dim);
             
             % check that value is real
             if nargin>=5 && ~isreal(value), error 'data cannot be complex', end

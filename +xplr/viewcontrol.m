@@ -7,7 +7,7 @@ classdef viewcontrol < xplr.graphnode
         items           % dimcontrols % uicontrols
         dimlist         % list of dimensions
         privatelists    % listcombo object
-        dimmenu         % context menu
+        contextmenu         % context menu
     end
     
     % Constructor
@@ -22,13 +22,15 @@ classdef viewcontrol < xplr.graphnode
             % items
             init_items(C)
             % (data)
-            C.newItem('data',1,{'string',V.data.name,'backgroundcolor',xplr.colors('gui.controls.dataname'), ...
-                'callback',@(u,e)editHeader(C)})
+            C.newItem('data',1, ...
+                {'style','text','string',V.data.name, ...
+                'backgroundcolor',xplr.colors('gui.controls.dataname'), ...
+                'enable','inactive','buttondownfcn',@(u,e)C.dataContextMenu()})
             % (list of data dimensions)
             C.dimlist = C.newItem('dimlist',4, ...
                 {'style','listbox','string',{V.data.header.label},'max',2, ...
                 'callback',@(u,e)C.dimensionContextMenu()});
-            C.dimmenu = uicontextmenu(V.hf);
+            C.contextmenu = uicontextmenu(V.hf);
             
             % create initial list of filters
             % (determine which filters should be active for the slice to be
@@ -80,10 +82,11 @@ classdef viewcontrol < xplr.graphnode
                 set(C.items(i).obj,'units','pixel','pos',[x0 H-(ystarts(i)+yspan)*(h+dy) w yspan*h+(yspan-1)*dy])
             end
         end
-        function [obj idx] = newItem(C,id,span,controlprop)
+        function [obj, idx] = newItem(C,id,span,controlprop)
             % function [obj idx] = newItem(C,id,span[,{uicontrol properties}])
             % function [obj idx] = newItem(C,id,span,'panel')
             if nargin<4 || iscell(controlprop)
+                if nargin<4, controlprop = {}; end
                 obj = uicontrol('parent',C.hp, ...
                     'backgroundcolor',xplr.colors('gui.controls.item'), ...
                     controlprop{:});
@@ -117,17 +120,32 @@ classdef viewcontrol < xplr.graphnode
             for i=1:data.nd, dimchg(i) = ~isequal(newhead(i),curhead(i)); end
             if any(dimchg)
                 dim = find(dimchg);
-                dimID = [newhead(dim).dimID];
-                C.V.data.updateData('chgdim',dimID,[],data.data,newhead(dim))
+                newheaddim = xplr.dimheader(newhead(dim));
+                C.V.data.updateData('chgdim',dim,[],data.data,newheaddim)
             end
         end
     end
     
     % Dimensions menu
     methods
+        function dataContextMenu(C)
+            % init context menu
+            m = C.contextmenu;
+            delete(get(m,'children'))
+            
+            % create entries
+            uimenu(m,'label','Edit header information', ...
+                'callback',@(u,e)C.editHeader())
+            uimenu(m,'label','Open data in a new xplor window', ...
+                'callback',@(u,e)xplor(C.V.data))
+            
+            % make menu visible
+            p = get(C.V.hf,'currentpoint'); p = p(1,1:2);
+            set(m,'pos',p,'visible','on')
+        end
         function dimensionContextMenu(C)
-            % populate context menu
-            m = C.dimmenu;
+            % init context menu
+            m = C.contextmenu;
             delete(get(m,'children'))
             
             % selected dimension(s)

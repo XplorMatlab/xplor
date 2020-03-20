@@ -41,6 +41,7 @@ if ~isa(data,'xplr.xdata')
         V = [];
     end
 else
+    if isempty(data.name), data.setName(name); end
     V = launch_view(data, varargin{:});
 end
 if nargout == 0, clear V, end
