@@ -26,24 +26,15 @@ classdef dataoperand < xplr.graphnode
         ChangedOperation
     end
     
-    methods (Abstract)
-        dataop = operation(O,data,dims) % code should start with 'O.checkdata(data,dims)'
-        updateOperation(O,data,dims,olddataop,evnt)
+    % Constructor
+    methods
+        
     end
     
-    % Get/Set Dependent
+    % Size
     methods
         function x = get.reductionfactor(O)
             x = prod([O.headerin.n])/prod([O.headerout.n]);
-        end
-    end
-    
-    methods
-        function checkdata(O,data,dims)
-            % input header must match O.headerin! 
-            if ~isequal(data.header(dims),O.headerin) % works also with non-scalar O
-                error 'data header does not match operation specification'
-            end
         end
         function sz = get.szin(O)
             sz = [O.headerin.n];
@@ -57,29 +48,56 @@ classdef dataoperand < xplr.graphnode
         function nd = get.ndout(O)
             nd = length(O.headerout);
         end
-        function dimbef2aft = followdims(O,ndbef,dims)
-        % function dimbef2aft = followdims(O,nd,dims)
-        % for each dimension of an original nd-dimensional data, at
-        % which new position is it going in the operated data
-        
-            if length(dims)~=O.ndin, error 'number of dimensions does not match filter input header', end
-            otherdim = 1:ndbef; otherdim(dims) = [];
-            otherdim1 = 1:dims(1)-1;
-            otherdim2 = otherdim(dims(1):end);
-            dimbef2aft = zeros(1,ndbef);
-            dimbef2aft(otherdim1) = otherdim1;
-            switch O.ndout
-                case 0
-                    dimbef2aft(dims) = 0;
-                case 1
-                    dimbef2aft(dims) = dims(1);
-                otherwise
-                    error 'case not handled'
+    end
+    
+    % Operation
+    methods (Abstract, Access='protected')
+        dat = operation_(F,dat,dims)                        % dat is a simple Matlab ND array
+        updateOperation_(O,data,dims,olddataop,varargin)    % data is an xplr.xdata object
+    end
+    methods (Access='protected')
+        function checkdata(O,data,dims)
+            % input header must match O.headerin! 
+            if ~isequal(data.header(dims),O.headerin) % works also with non-scalar O
+                error 'data header does not match operation specification'
             end
-            ndaft = ndbef + (O.ndout-O.ndin);
-            dimbef2aft(otherdim2) = dims(1)+O.ndout:ndaft;
         end
     end
+    methods
+        function dimIDout = getdimIDout(O,dimIDin)
+            % function dimIDout = getdimIDout(O,dimIDin)
+            %---
+            % generate an identifier for the replacing dimension(s) that
+            % will be created when applying the operation to some
+            % dimensions (identified by dimIDin) of an xdata object.
+            dimIDout = mod(sum(dimIDin) + O.idGraphNode + (0:O.ndout-1)*pi, 1);
+        end
+        function data = operation(O,data,dimIDs)
+            % dimension number
+            dims = data.dimensionNumber(dimIDs);
+            % check input
+            checkdata(O,data,dims)            
+            % actual code of operation will be in child class
+            dat = data.data;                 % Matlab ND array
+            dat = O.operation_(dat,dims);    % Matlab ND array
+            % output header
+            dimIDout = O.getdimIDout(dimIDs);
+            head = data.header;
+            head(dims) = [];
+            head = [head(1:dims(1)-1) xplr.dimheader(O.headerout,dimIDout) head(dims(1):end)];
+            % build output xdata object
+            data = xplr.xdata(dat,head);
+        end
+        function updateOperation(O,data,dimIDs,olddataop,varargin)
+            % dimension number
+            dims = x.dimensionNumber(dimIDs);
+            % check input
+            checkdata(F,x,dims)            
+            % actual code of operation will be in child class
+            updateOperation_(O,data,olddataop,varargin{:});
+        end
+    end
+    
     
     % Additional information in output header
     methods

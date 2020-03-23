@@ -3,7 +3,15 @@ classdef zoomslicer < xplr.slicer
     % ---
     % The zoomslicer class is a specialized version of the slicer class:
     % filters are not set by the user, but zoom filters are automatically
-    % assigned to every dimension.
+    % assigned to every dimension. So there is always as many filters as
+    % dimension (even singleton ones).
+
+    % A difficulty in the code of the zoomslicer is that dimensions are
+    % sometimes identified by their number (dim), or by their identifier
+    % (dimID): developpers should not get confused between the two of them!
+    % Some methods accept both identification methods (dimension numbers
+    % can easily be distinguished from dimension identifiers because the
+    % former are >=1, the latter are <1).
     
     properties (SetAccess='private')
         D           % parent 'display' object
@@ -57,55 +65,52 @@ classdef zoomslicer < xplr.slicer
     % Action upon data change differ from the parent slicer class
     methods
         function datachange(S,e)
+            dimID = e.dim;
+            dim = S.data.dimensionNumber(dimID);
             switch e.flag
                 case 'global'
                     % remove all existing filters and create new ones
+                    S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
                     S.rmFilter(1:length(S.filters),false) % no need to reslice at this stage, there will be a reslice below
                     Z = autoZoomFilter(S,S.defaultlinkkey);
                     dim = 1:length(S.data.header);
                     S.addFilter(dim,Z)
-                case 'chgdim'
-                    S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                    newfilt = autoZoomFilter(S,S.defaultlinkkey,e.dim);
-                    for i=1:length(e.dim)
-                        replaceFilterDim(S,e.dim(i),newfilt(i),false)
-                    end
-                    doslice(S,'data','chgdim',e.dim)
-                case {'all' 'new' 'remove' 'chg&new' 'chg&rm' 'perm' 'chg'}
+                case {'chgdim' 'all'}
+                    % replace filters in modified dimensions
+                    S.slicingchain(:) = []; % data and dimensions have changed, all previous slicing steps became invalid
+                    Z = autoZoomFilter(S,S.defaultlinkkey,dim);
+                    S.replaceFilter(dim,dim,Z)
+                case {'new' 'remove' 'chg&new' 'chg&rm' 'perm' 'chg'}
                     % In this case we do not use methods of the parent
                     % 'slicer' class, but do all the update here in a
                     % smarter way...
-                    dim = e.dim;
-                    idx = ([S.filters.dim]==dim);
-                    curfilt = S.filters(idx).obj;
-                    if strcmp(e.flag,'chg') || (strcmp(curfilt.zoom,':') && curfilt.bin==1)
-                        % 'smart' filter replacement: partial update will
-                        % be possible
+                    curfilt = S.filters(dim).obj;
+                    if strcmp(curfilt.zoom,':') && curfilt.bin==1
+                        % the current filter has no effect (no zooming, no
+                        % binning), so we can propagate the smart update
+                        % information from the slice to the zslice, where
+                        % the concerned dimension will share the same dimID
+                        % (because filters without effect do not modify
+                        % dimID, see xplr.dataoperand)
                         
                         % replace filter (as in slicer.replaceFilterDim)
                         S.disconnect(curfilt)
                         newfilt = autoZoomFilter(S,curfilt.linkkey,dim);
-                        % TODO: really create a new filter when flag is only 'chg'??
-                        % (to which slider needs to be reconnected, etc.)
-                        if strcmp(e.flag,'chg')
-                            % keep current zoom
-                            setZoom(newfilt,curfilt.zoom,curfilt.bin)
-                        end
-                        S.filters(idx).obj = newfilt;
-                        S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,dim,e));
+                        S.filters(dim).obj = newfilt;
+                        S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,e.dim,e));
 
-                        % smart update
-                        if strcmp(e.flag,'all'), ind = []; else ind = e.ind; end
-                        doslice(S,'data',e.flag,e.dim,ind)
+                        % smart update: note that this will call
+                        % maybe we need: S.slicingchain(dim:end) = [];
+                        if strcmp(e.flag,'all'), ind = []; else, ind = e.ind; end
+                        doslice(S,'data',e.flag,dim,ind)
                     else
                         % full update
                         S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                        newfilt = autoZoomFilter(S,curfilt.linkkey,e.dim);
-                        replaceFilterDim(S,e.dim,newfilt)
+                        newfilt = autoZoomFilter(S,curfilt.linkkey,dim);
+                        replaceFilterDim(S,dim,newfilt)
                     end
                 case 'chgdata'
                     % no change in the input header
-                    S.slicingchain(:) = [];
                     doslice(S,'data','chgdata')
                 otherwise
                     error 'not implemented yet'

@@ -1,42 +1,61 @@
 classdef affinitynd < handle
-    % function mov = affinitynd('type',data)
-    %---
-    % Type can be 'translate2D', 'scale2D'.
+    % function mov = affinitynd(linearpart,offset)
+    % function mov = affinitynd('translate1D|2D',offset)
+    % function mov = affinitynd('scale1D|2D',scale)
    
     properties (SetAccess='private')
         nd
+    end
+    properties (Access='private')
         mat
+    end
+    properties (Dependent)
+        linearpart
+        offset
     end
     
     % Constructor + Load + Display
     methods
-        function mov = affinitynd(type,data)
-            % number of dimensions
-            switch type
-                case {'translate1D','scale1D'}
-                    mov.nd = 1;
-                case {'translate2D','scale2D'}
-                    mov.nd = 2;
-                otherwise
-                    error('unknown affinity type ''%s''',type)
+        function mov = affinitynd(varargin)
+            if isnumeric(varargin{1})
+                [linearpart, offset] = deal(varargin{:});
+                mov.nd = length(offset);
+                mov.mat = [1 zeros(1,mov.nd); offset(:) linearpart];
+            else
+                [type, data] = deal(varargin{:});
+                % number of dimensions
+                switch type
+                    case {'translate1D','scale1D'}
+                        mov.nd = 1;
+                    case {'translate2D','scale2D'}
+                        mov.nd = 2;
+                    otherwise
+                        error('unknown affinity type ''%s''',type)
+                end
+                
+                % affinity matrix
+                switch type
+                    case 'translate1D'
+                        if ~isscalar(data), error('wrong translation data'), end
+                        mov.mat = [1 0 ; data 1];
+                    case 'scale1D'
+                        if ~isscalar(data), error('wrong scaling factor'), end
+                        mov.mat = diag([1 data]);
+                    case 'translate2D'
+                        if ~isvector(data) || length(data)~=2, error('wrong translation data'), end
+                        mov.mat = [1 0 0; data(:) eye(2)];
+                    case 'scale2D'
+                        if isscalar(data), data = [data data]; end
+                        if ~isvector(data) || length(data)~=2, error('wrong scaling data'), end
+                        mov.mat = diag([1 data(:)']);
+                end
             end
-            
-            % affinity matrix
-            switch type
-                case 'translate1D'
-                    if ~isscalar(data), error('wrong translation data'), end
-                    mov.mat = [1 0 ; data 1];
-                case 'scale1D'
-                    if ~isscalar(data), error('wrong scaling factor'), end
-                    mov.mat = diag([1 data]);
-                case 'translate2D'
-                    if ~isvector(data) || length(data)~=2, error('wrong translation data'), end
-                    mov.mat = [1 0 0; data(:) eye(2)];
-                case 'scale2D'
-                    if isscalar(data), data = [data data]; end
-                    if ~isvector(data) || length(data)~=2, error('wrong scaling data'), end
-                    mov.mat = diag([1 data(:)']);
-            end
+        end
+        function x = get.linearpart(mov)
+            x = mov.mat(2:end,2:end);
+        end
+        function x = get.offset(mov)
+            x = mov.mat(2:end,1);
         end
         function disp(impossible_name__) %#ok<MANU>
             warning('off','MATLAB:structOnObject')

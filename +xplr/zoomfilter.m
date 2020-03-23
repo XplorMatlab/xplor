@@ -23,6 +23,9 @@ classdef zoomfilter < xplr.dataoperand
     % Setting and updating filter
     methods
         function Z = zoomfilter(headerin,zoom,bin)
+            % invalid zoomfilter
+            if nargout==0, return, end
+
             % input
             if nargin<3, zoom = ':'; end
             if nargin<4, bin = 1; end
@@ -189,27 +192,17 @@ classdef zoomfilter < xplr.dataoperand
             end
             slic = reshape(slic,sout);
         end
-        function slice = operation(Z,x,dims)
-            % here 'data' and 'slice' are xplr.xdata objects!
-            
-            % check input
-            checkdata(Z,x,dims)
-            % slice
-            slic = Z.slicing(x.data,dims);
-            % header
-            head = x.header;
-            head(dims) = [Z.headerout];
-            % output
-            slice = xplr.xdata(slic,head);
+    end
+    methods (Access='protected')
+        function slic = operation_(Z,dat,dims)
+            % function slic = operation_(Z,dat,dims)
+            %---
+            % dat and slic are simple Matlab arrays
+            slic = Z.slicing(dat,dims);
         end
-        function updateOperation(Z,x,dims,slice,flag,ind) 
+        function updateOperation_(Z,x,dims,slice,flag,ind) 
             % there is no 'smart' way of updating operation: just do the
             % slicing
-            
-            % check input
-            checkdata(Z,x,dims)
-            
-            % slice
             slic = Z.slicing(x.data,dims);
             slice.updateData(flag,dims,ind,slic,Z.headerout); % this will trigger automatic notifications
         end

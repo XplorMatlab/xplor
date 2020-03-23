@@ -21,7 +21,7 @@ classdef filter < xplr.dataoperand
             F.headerin = headerin;
             
             % header of the output space
-            if nargin<2, label = headerin.label; end
+            if nargin<2, label = fn_strcat({headerin.label},','); end
 
             % output header is categorical
             if ~isscalar(headerin)
@@ -221,8 +221,10 @@ classdef filter < xplr.dataoperand
     end
     methods
         function slic = slicing(F,dat,dims,selsubidx)
+            % function slic = slicing(F,dat,dims,selsubidx)
+            %---
             % slice data in dimension dim according to filter F
-            % here 'dat' and 'slic' are simple Matlab arrays
+            % dat and slic are simple Matlab arrays
             
             % input
             if nargin<4, selsubidx = 1:F.nsel; end
@@ -252,28 +254,21 @@ classdef filter < xplr.dataoperand
             % final reshape
             sfinal = s;
             sfinal(dims(1)) = nselslice;
-            sfinal(dims(2:end)) = 1;
+            sfinal(dims(2:end)) = [];
             slic = reshape(slic,sfinal);            
         end
-        function slice = operation(F,x,dims)
-            % here 'data' and 'slice' are xplr.xdata objects!
-            
-            % check input
-            checkdata(F,x,dims)
-            % slice
-            slic = F.slicing(x.data,dims);
-            % header
-            head = x.header;
-            ndx = length(head);
-            head = [head(1:dims(1)-1) F.headerout head(setdiff(dims(1):ndx,dims))];
-            % output
-            slice = xplr.xdata(slic,head);
+    end
+    methods (Access='protected')
+        function slic = operation_(F,dat,dims)
+            % function slic = operation_(F,dat,dims)
+            %---
+            % dat and slic are simple Matlab arrays
+            slic = F.slicing(dat,dims);
         end
-        function updateOperation(F,x,dims,slice,flag,ind)
-            % here 'data' and 'slice' are xplr.xdata objects!
-            
-            % check input
-            checkdata(F,x,dims)
+        function updateOperation_(F,x,dims,slice,flag,ind)
+            % function updateOperation_(F,x,dims,slice,flag,ind)
+            %---
+            % x and slice are xplr.xdata objects
             
             % slice
             switch flag

@@ -235,7 +235,7 @@ classdef selectionnd < xplr.graphnode
             if ~isa(affinity,'xplr.affinitynd')
                 error('argument ''afinity'' is expected to be an affinitynd instance')
             end
-            sel2.shapes = applyaffinity(sel2.shapes,affinity);
+            sel2.shapes = applyaffinity(sel1.shapes,affinity);
             
             % compute indices
             if ~isempty(datasizesnew)

@@ -23,7 +23,6 @@ classdef filterSet < hgsetget
     % Filter registration
     methods
         function F = getFilter(FS,header, doshow, varargin)
-            
             % function F = getFilter(FS,header, doshow [,user])
             hID = getID(header);
             F = FS.registry.getValue(hID,varargin{:});
@@ -64,8 +63,12 @@ classdef filterSet < hgsetget
             hID = getID(F.headerin);
             F.linkkey = FS.linkkey;
             FS.registry.register(hID,F,varargin{:})
-            if doshow
-                FS.showList(F)
+            if doshow 
+                if F.ndin > 1
+                    disp 'cannot display list for ND filter'
+                else
+                    FS.showList(F)
+                end
             end
         end
         function addZoomFilter(FS,F,varargin)
@@ -78,7 +81,7 @@ classdef filterSet < hgsetget
             % function removeFilter(FS,F[,user])
             hID = getID(F.headerin);
             removed = FS.registry.unregister(hID,varargin{:});
-            if removed && ~isempty(FS.combo)
+            if removed && ~isempty(FS.combo) && isvalid(FS.combo)
                 FS.combo.removeList(F)
             end
         end
@@ -100,7 +103,7 @@ classdef filterSet < hgsetget
     methods
         function showList(FS,F)
             % Create list combo?
-            if isempty(FS.combo)
+            if isempty(FS.combo) || ~isvalid(FS.combo)
                 FS.combo = xplr.listcombo([],FS.linkkey);
                 % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
                 connectlistener(FS.combo,FS,'Empty',@(u,e)set(FS,'combo',[])); 

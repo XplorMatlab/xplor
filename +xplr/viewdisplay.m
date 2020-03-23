@@ -166,19 +166,21 @@ classdef viewdisplay < xplr.graphnode
             % dims if there aren't
             if nargin<2, doImmediateUpdate = true; end
             org = D.layout;
-            sz = D.slice.sz; okdim = (sz>1);
+            sz = D.slice.sz; 
+            n_d = length(sz);
+            okdim = (sz>1);
             if ~isempty(org.x), okdim(org.x(1)) = true; end
             if strcmp(D.displaymode,'image') && ~isempty(org.y), okdim(org.y(1)) = true; end
             
             % invalid dimensions
             % (x)
             dx = D.activedim.x;
-            if ~isempty(dx) && ~(okdim(dx) && any(dx==[org.x org.yx]))
+            if ~isempty(dx) && ~(dx<=n_d && okdim(dx) && any(dx==[org.x org.yx]))
                 dx = [];
             end
             % (y)
             dy = D.activedim.y;
-            if ~isempty(dy) && ~(okdim(dy) && any(dy==[org.y org.xy]))
+            if ~isempty(dy) && ~(dy<n_d && okdim(dy) && any(dy==[org.y org.xy]))
                 dy = [];
             end
             
@@ -473,18 +475,14 @@ classdef viewdisplay < xplr.graphnode
                     % default organization: 1st and 4th dimension in x, 2nd
                     % and all other dimensions in y
                     newlayout = xplr.displaylayout(D);
-                    if ~isequal(newlayout,D.layout), D.layout0 = newlayout; end
-                case 'insertdim'
-                    error 'not implemented yet'
-                case 'rmdim'
-                    error 'not implemented yet'
+                    if ~isequal(newlayout,D.layout0), D.layout0 = newlayout; end
                 otherwise
                     % no change in organization, including in the 'chgdim'
                     % case!
             end
             
             % Update active dim and slider connections
-            if fn_ismemberstr(flag,{'global' 'insertdim' 'rmdim' 'permdim'})
+            if fn_ismemberstr(flag,{'global'})
                 D.checkActiveDim(false)
                 D.navigation.connectZoomFilter()
             elseif fn_ismemberstr(flag,{'chgdata' 'chg'})
@@ -504,11 +502,11 @@ classdef viewdisplay < xplr.graphnode
             switch flag
                 case 'chgdata'
                     % nothing to do: only the data has changed
-                case {'global' 'insertdim' 'rmdim'}
+                case 'global'
                     D.navigation.connectPointFilter()
                 case {'all' 'chgdim' 'new' 'remove' 'chg' 'chg&new' 'chg&rm' 'perm'}
-                    D.navigation.connectPointFilter(e.dim)
-                    
+                    dim = D.slice.dimensionNumber(e.dim);
+                    D.navigation.connectPointFilter(dim)
                 otherwise
                     error('flag ''%s'' not handled', flag)
             end
@@ -793,6 +791,11 @@ classdef viewdisplay < xplr.graphnode
                 D.sliceChangeEvent = [];
             end
             
+            % Dimension(s) where change occured
+            if nargin>=2
+                chgdim = D.zslice.dimensionNumber(e.dim);
+            end
+            
             % Is zslice too large for being displayed
             D.checkzslicesize()
             
@@ -800,29 +803,30 @@ classdef viewdisplay < xplr.graphnode
             prevsz = D.graph.zslicesz;
             D.graph.computeSteps()
             
-            % Update ticks and labels
-            if ~(strcmp(flag,'chgdata') || (strcmp(flag,'chg') && ~any(e.dim==[D.activedim.x D.activedim.y])))
-                D.graph.setTicks()
-            end
-            if fn_ismemberstr(flag,{'all' 'new' 'remove' 'chg&new' 'chg&rm' 'global' 'chgdim' 'insertdim' 'rmdim' 'permdim'})
+            % Update labels and ticks (do the labels first because ticks
+            % update can change the size of the axes, and therefore trigger
+            % labels re-positionning, which can cause error if the number
+            % of labels has decreased)
+            if fn_ismemberstr(flag,{'all' 'new' 'remove' 'chg&new' 'chg&rm' 'global' 'chgdim'})
                 switch flag
                     case 'global'
                         D.labels.updateLabels('global')
-                    case {'chgdim' 'insertdim' 'rmdim' 'permdim'}
-                        D.labels.updateLabels(flag,e.dim)
+                    case 'chgdim'
+                        D.labels.updateLabels(flag,chgdim)
                     otherwise
                         D.labels.updateLabels()
                 end
             end
-            
-
+            if ~(strcmp(flag,'chgdata') || (strcmp(flag,'chg') && ~any(chgdim==[D.activedim.x D.activedim.y])))
+                D.graph.setTicks()
+            end
             
             % Update clipping
             chgclip = strcmp(flag,'global') || strcmp(D.clipping.span,'curview');
             if chgclip, autoClip(D,false), end
             
             % Update display
-            if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
+            if fn_ismemberstr(flag,{'global' 'chgdim'})
                 % Reset display
                 updateDisplay(D,'global')
             elseif strcmp(flag,'chgdata')
@@ -830,13 +834,12 @@ classdef viewdisplay < xplr.graphnode
                 updateDisplay(D,'chgdata')
             else
                 % Smart display update
-                dim = e.dim;
-                if (~isempty(D.layout.x) && D.layout.x(1)==dim) ...
-                        || (strcmp(D.displaymode,'image') && ~isempty(D.layout.y) && D.layout.y(1)==dim)
+                if (~isempty(D.layout.x) && D.layout.x(1)==chgdim) ...
+                        || (strcmp(D.displaymode,'image') && ~isempty(D.layout.y) && D.layout.y(1)==chgdim)
                     % changes are within elements (the grid arrangement
                     % remains the same)
                     if fn_ismemberstr(flag,{'perm' 'chg'}) ...
-                            || (strcmp(flag,'all') && D.zslice.header(dim).n==prevsz(dim))
+                            || (strcmp(flag,'all') && D.zslice.header(chgdim).n==prevsz(chgdim))
                         flag = 'chgdata'; % no change in size
                     else
                         flag = 'chgdata&blocksize';
@@ -846,41 +849,41 @@ classdef viewdisplay < xplr.graphnode
                     % the grid arrangement changes
                     switch flag
                         case 'chg'  % check this case first because it is this one that occurs when going fast through a list
-                            updateDisplay(D,'chg',e.dim,e.ind)
+                            updateDisplay(D,'chg',chgdim,e.ind)
                         case {'new' 'remove' 'perm'}
-                            updateDisplay(D,flag,dim,e.ind)
+                            updateDisplay(D,flag,chgdim,e.ind)
                         case 'all'
-                            ncur = size(D.htransform,dim);
-                            n = D.zslice.sz(dim);
+                            ncur = size(D.htransform,chgdim);
+                            n = D.zslice.sz(chgdim);
                             if n==ncur
                                 updateDisplay(D,'chgdata')
                             elseif n>ncur
-                                updateDisplay(D,'new',dim,ncur+1:n)
-                                updateDisplay(D,'chg',dim,1:ncur)
+                                updateDisplay(D,'new',chgdim,ncur+1:n)
+                                updateDisplay(D,'chg',chgdim,1:ncur)
                             else
-                                updateDisplay(D,'remove',dim,n+1:ncur)
-                                updateDisplay(D,'chg',dim,1:n)
+                                updateDisplay(D,'remove',chgdim,n+1:ncur)
+                                updateDisplay(D,'chg',chgdim,1:n)
                             end
                         case 'chg&new'
-                            updateDisplay(D,'new',e.dim,e.ind{2})
-                            updateDisplay(D,'chg',e.dim,e.ind{1})
+                            updateDisplay(D,'new',chgdim,e.ind{2})
+                            updateDisplay(D,'chg',chgdim,e.ind{1})
                         case 'chg&rm'
-                            updateDisplay(D,'remove',e.dim,e.ind{2})
-                            updateDisplay(D,'chg',e.dim,e.ind{1})
+                            updateDisplay(D,'remove',chgdim,e.ind{2})
+                            updateDisplay(D,'chg',chgdim,e.ind{1})
                         otherwise
                             error('flag ''%s'' is not handled','flag')
                     end
                 elseif chgclip
                     % all grid elements need to be updated
-                    ncur = size(D.htransform,dim);
-                    n = D.zslice.sz(dim);
+                    ncur = size(D.htransform,chgdim);
+                    n = D.zslice.sz(chgdim);
                     if n==ncur
                         updateDisplay(D,'chgdata')
                     elseif n>ncur
                         updateDisplay(D,'chgdata')
-                        updateDisplay(D,'new',dim,ncur+1:n)
+                        updateDisplay(D,'new',chgdim,ncur+1:n)
                     else
-                        updateDisplay(D,'remove',dim,n+1:ncur)
+                        updateDisplay(D,'remove',chgdim,n+1:ncur)
                         updateDisplay(D,'chgdata')
                     end
                 end
@@ -893,9 +896,9 @@ classdef viewdisplay < xplr.graphnode
            D.navigation.displayselection('changereferential')
 
             % Update legend
-            if fn_ismemberstr(flag,{'global' 'chgdim' 'insertdim' 'rmdir'})
+            if strcmp(flag,'global')
                 D.colordim = [];
-            elseif ~strcmp(flag,'chgdata') && isequal(e.dim,D.colordim)
+            elseif ~strcmp(flag,'chgdata') && isequal(chgdim,D.colordim)
                 displayColorLegend(D)
             end
             

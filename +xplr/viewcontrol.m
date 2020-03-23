@@ -7,6 +7,7 @@ classdef viewcontrol < xplr.graphnode
         items           % dimcontrols % uicontrols
         dimlist         % list of dimensions
         privatelists    % listcombo object
+        contextmenu         % context menu
     end
     
     % Constructor
@@ -21,12 +22,15 @@ classdef viewcontrol < xplr.graphnode
             % items
             init_items(C)
             % (data)
-            C.newItem('data',1,{'string',V.data.name,'backgroundcolor',xplr.colors('gui.controls.dataname'), ...
-                'callback',@(u,e)editHeader(C)})
+            C.newItem('data',1, ...
+                {'style','text','string',V.data.name, ...
+                'backgroundcolor',xplr.colors('gui.controls.dataname'), ...
+                'enable','inactive','buttondownfcn',@(u,e)C.dataContextMenu()})
             % (list of data dimensions)
             C.dimlist = C.newItem('dimlist',4, ...
                 {'style','listbox','string',{V.data.header.label},'max',2, ...
-                'uicontextmenu',uicontextmenu(V.hf,'callback',@C.dimensionContextMenu)}); %, ...
+                'callback',@(u,e)C.dimensionContextMenu()});
+            C.contextmenu = uicontextmenu(V.hf);
             
             % create initial list of filters
             % (determine which filters should be active for the slice to be
@@ -49,7 +53,9 @@ classdef viewcontrol < xplr.graphnode
             end
             % (add filters)
             key = 1;
-            C.dimaction('addfilter',1:nd,key,active)
+            if any(active)
+                C.dimaction('addfilter',num2cell(find(active)),key) 
+            end
         end
     end
     
@@ -76,10 +82,11 @@ classdef viewcontrol < xplr.graphnode
                 set(C.items(i).obj,'units','pixel','pos',[x0 H-(ystarts(i)+yspan)*(h+dy) w yspan*h+(yspan-1)*dy])
             end
         end
-        function [obj idx] = newItem(C,id,span,controlprop)
+        function [obj, idx] = newItem(C,id,span,controlprop)
             % function [obj idx] = newItem(C,id,span[,{uicontrol properties}])
             % function [obj idx] = newItem(C,id,span,'panel')
             if nargin<4 || iscell(controlprop)
+                if nargin<4, controlprop = {}; end
                 obj = uicontrol('parent',C.hp, ...
                     'backgroundcolor',xplr.colors('gui.controls.item'), ...
                     controlprop{:});
@@ -95,7 +102,7 @@ classdef viewcontrol < xplr.graphnode
             if nargout==0, clear obj, end
         end
         function rmItem(C,id)
-            idx = strcmp({C.items.id},id);
+            idx = fn_find(id,{C.items.id});
             deleteValid([C.items(idx).obj])
             C.items(idx) = [];
             itemPositions(C)
@@ -113,174 +120,184 @@ classdef viewcontrol < xplr.graphnode
             for i=1:data.nd, dimchg(i) = ~isequal(newhead(i),curhead(i)); end
             if any(dimchg)
                 dim = find(dimchg);
-                C.V.data.updateData('chgdim',dim,[],data.data,newhead(dim))
+                newheaddim = xplr.dimheader(newhead(dim));
+                C.V.data.updateData('chgdim',dim,[],data.data,newheaddim)
             end
         end
     end
     
     % Dimensions menu
     methods
-        function dimensionContextMenu(C,m,~)
-            % populate context menu
+        function dataContextMenu(C)
+            % init context menu
+            m = C.contextmenu;
             delete(get(m,'children'))
             
-            % selected dimension
-            dim = get(C.dimlist,'value');
+            % create entries
+            uimenu(m,'label','Edit header information', ...
+                'callback',@(u,e)C.editHeader())
+            uimenu(m,'label','Open data in a new xplor window', ...
+                'callback',@(u,e)xplor(C.V.data))
             
-            % display the available keys to apply a new or existing
-            % filter. 
-            m2 = uimenu(m,'label','Add/Change filter');
-            uimenu(m,'label','Remove Filters','callback',@(u,e)dimaction(C,'rmfilter',dim))
+            % make menu visible
+            p = get(C.V.hf,'currentpoint'); p = p(1,1:2);
+            set(m,'pos',p,'visible','on')
+        end
+        function dimensionContextMenu(C)
+            % init context menu
+            m = C.contextmenu;
+            delete(get(m,'children'))
+            
+            % selected dimension(s)
+            dim = get(C.dimlist,'value');
+            dimID = [C.V.data.header(dim).dimID];
+            
+            % add or change 1D shared filter (using key 1)
+            label = fn_switch(isscalar(dimID),'Add/Change shared filter','Add/Change shared 1D filters');
+            uimenu(m,'label',label, ...
+                'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),1))
+            
+            % add or change 2D shared filter (using key 1)
+            if length(dimID)==2
+                uimenu(m,'label','Add/Change shared 2D filter', ...
+                    'callback',@(u,e)dimaction(C,'addfilter',{dimID},1))
+            end
+            
+            % available keys
             availablekeys = xplr.bank.availableFilterKeys();
             newkey = max(availablekeys)+1;
-            keyvalues = [0 availablekeys newkey];
-            fn_num2str(availablekeys, 'shared zoom %i', 'cell');
+            keyvalues = [0 setdiff(availablekeys,1) newkey];
             keydisplays = [ ...
                 'private filter' ...
-                fn_num2str(availablekeys, 'shared filter %i', 'cell') ...
-                num2str(newkey,'shared filter %i (new key)')
+                fn_num2str(keyvalues(2:end), 'shared filter %i', 'cell') ...
                 ];
+            
+            % add or change 1D filter (more options: select among available keys)
+            label = fn_switch(isscalar(dimID),'Add/Change filter','Add/Change 1D filters');
+            m2 = uimenu(m,'label',label);
             for i=1:length(keyvalues)
-                keyvalue = keyvalues(i);      
                 uimenu(m2,'label',keydisplays{i}, ...
-                    'callback',@(u,e)dimaction(C,'addfilter',dim,keyvalue));
+                    'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),keyvalues(i)));
             end
+            
+            % add or change 2D filter (more options: select among available keys)
+            if length(dimID)==2
+                m2 = uimenu(m,'label','Add/Change 2D filter');
+                for i=1:length(keyvalues)  
+                    uimenu(m2,'label',keydisplays{i}, ...
+                        'callback',@(u,e)dimaction(C,'addfilter',{dimID},keyvalues(i)));
+                end
+            end
+            
+            % remove filters in these dimensions
+            uimenu(m,'label','Remove Filters','separator','on', ...
+                'callback',@(u,e)dimaction(C,'rmfilter',dimID))
+            
+            % make menu visible
+            p = get(C.V.hf,'currentpoint'); p = p(1,1:2);
+            set(m,'pos',p,'visible','on')
         end
-        function dimaction(C,flag,dim,varargin)
-            % function dimaction(C,'addfilter',dim[,key[,active]])
-            % function dimaction(C,'rmfilter|showFilterWindow',dim)
-            % function dimaction(C,'setactive',dim,value)
+        function dimaction(C,flag,dimID,varargin)
+            % function dimaction(C,'addfilter',dimIDs[,key[,active]])
+            % function dimaction(C,'rmfilter|showfilter',dimID)
+            % function dimaction(C,'setactive',dimID,value)
+            %---
+            % if flag is 'addfilter', dims can be a cell array, to defined
+            % several filters at once for example
+            % dimaction(C,'addfilter',{[1 2] 3}) will add two filters,
+            % first a 2D filter in dimensions [1 2], second a 1D filter in
+            % dimension 3
+            %
+            % dimID is supposed to be the unique identifier of some
+            % dimension(s), but for commodity it can also be the dimension
+            % number, or the dimension label
             
-            newfilters = struct('d',cell(1,0),'F',[],'active',[]);
-            rmfilters = [];
-
-            % Add multi-dimensional filter
-            if strcmp(flag,'addNDfilter')
-                if length(varargin)>=1, key = varargin{1}; else key = 1; end
-                if length(varargin)>=2, active = varargin{2}; else active = true; end
-                % any filter already?
-                slicefilters = C.V.slicer.filters;
-                filteridx = fn_find(dim,{slicefilters.dim},'first');
-                if ~isempty(filteridx)
-                    F = slicefilters(filteridx).obj;
+            % commodity: convert dimension numbers or labels to dimension
+            % identifiers
+            dimID = C.V.data.dimensionID(dimID);
+            
+            % 'addfilter' flag -> several filters at once
+            if strcmp(flag,'addfilter')
+                % dims will be a cell array: list of dimensions, per filter
+                % dimID will be an array: list of all affected dimensions
+                if ~iscell(dimID)
+                    if ~isscalar(dimID), error 'array of dimID values is ambiguous, use a cell array instead', end
+                    dimIDs = {dimID};
                 else
-                    filteridx = 0; 
+                    dimIDs = dimID; % several set of one or several dimensions
+                    dimID = unique([dimIDs{:}]);
                 end
-                % check wheter filter already exists, check which filters
-                % should be removed
-                disp 'missing code here'
-                
-                %                 if filteridx
-                %                     % a filter is already present in slicer, does
-                %                     % it have the requested key?
-                %                     if F.linkkey == key
-                %                         % if the existing filter has already the
-                %                         % key of the requested new filter then
-                %                         % nothing to do
-                %                         ok = true;
-                %                     else
-                %                         % the filter has to be remove before
-                %                         % creating a new one with the new key
-                %                         filterToRemove = C.V.slicer.filters(filteridx);
-                %                         C.removefilter(filterToRemove);
-                %                         % add the dimension to the slice's filters removal list
-                %                         rmfilters = [rmfilters filteridx]; %#ok<AGROW>
-                %                     end
-                %                 end
-                
-                % create the new filter
-                filterCreated = C.createFilterAndItem(dim,key,active);
-                % add to the list of new filters
-                newfilters(end+1) = struct('d',dim,'F',filterCreated,'active',active); %#ok<AGROW>
-            else
-                % Or repeat same action on possibly multiple dimensions
-                for i = 1:length(dim)
-                    d = dim(i);
-                    % any filter already?
-                    slicefilters = C.V.slicer.filters;
-                    filteridx = find([slicefilters.dim]==d);
-                    if ~isempty(filteridx)
-                        F = slicefilters(filteridx).obj;
-                    else
-                        filteridx = 0; 
-                    end
-
-                    % create/replace/remove filter
-                    switch flag
-                        case 'addfilter'
-                            if length(varargin)>=1, key = varargin{1}; else key = 1; end
-                            if length(varargin)>=2, active = varargin{2}(i); else active = true; end
-                            % create/replace filter
-                            if filteridx
-                                % a filter is already present in slicer, does
-                                % it have the requested key?
-                                if F.linkkey == key
-                                    % if the existing filter has already the
-                                    % key of the requested new filter then
-                                    % nothing to do
-                                    continue
-                                else
-                                    % the filter has to be remove before
-                                    % creating a new one with the new key
-                                    filterToRemove = C.V.slicer.filters(filteridx);
-                                    C.removefilter(filterToRemove);
-                                    % add the dimension to the slice's filters removal list
-                                    rmfilters = [rmfilters filteridx]; %#ok<AGROW>
-                                end
-                            end
-                            % create the new filter
-                            filterCreated = C.createFilterAndItem(d,key,active);
-                            % add to the list of new filters
-                            newfilters(end+1) = struct('d',d,'F',filterCreated,'active',active); %#ok<AGROW>
-                        case 'rmfilter'
-                            if filteridx == 0
-                                % no filter found for this dimension
-                                continue
-                            end
-                            % remove filter from the viewcontrol and the bank
-                            filter = C.V.slicer.filters(filteridx);
-                            C.removefilter(filter);
-
-                             % add the dimension to the slice's filters removal list
-                            rmfilters = [rmfilters filteridx]; %#ok<AGROW>
-                        case 'setactive'
-                            itemidx = find(strcmp(['filter ' num2str(d)],{C.items.id}));
-                            hlab = C.items(itemidx).label;
-                            % active or inactive?
-                            active = varargin{1};
-                            % show label as enabled/disabled
-                            set(hlab,'enable',fn_switch(active,'inactive','off'))
-                            drawnow
-                            % toggle filter active in slicer
-                            filteridx = C.V.slicer.getFilterIndex(C.items(itemidx).F);
-                            C.V.slicer.chgFilterActive(filteridx,active)
-                        case 'showFilterWindow'
-                            % re-create the filter window if not existing or
-                            % put it in the front
-
-                            % if the filter is not private
-                            if F.linkkey ~= 0
-                                xplr.bank.showList(F);
-                            end
-                    end
+                if length(dimID) < length([dimIDs{:}])
+                    error 'some dimension is repeated in filter(s) definition'
                 end
             end
             
-            % Add/remove all filters in the slicer at once (to have a unique
-            % display update)
-            if ~isempty(rmfilters)
-                C.V.slicer.rmFilter(rmfilters)
-            end
-            if ~isempty(newfilters)
-                C.V.slicer.addFilter({newfilters.d},[newfilters.F],[newfilters.active])
+            % list of filters in the selected dimensions
+            filtersidx = find(fn_map({C.V.slicer.filters.dimID},@(dd)any(ismember(dd,dimID)),'array'));
+            currentfiltersdim = C.V.slicer.filters(filtersidx); % current filters acting on dimensions within dd
+
+            % filters to remove
+            if ismember(flag,{'addfilter' 'rmfilter'})
+                % remove filter from the viewcontrol and the bank
+                for filter = currentfiltersdim
+                    C.removefilter(filter);
+                end
+                
+                % remove filters from the slicer
+                doslicing = strcmp(flag,'rmfilter'); % no need to reslice yet for 'addfilter', reslice will occur when adding the new filter(s)
+                C.V.slicer.rmFilter(filtersidx, doslicing); %#ok<FNDSB>
             end
             
+            % filters to add
+            if strcmp(flag,'addfilter')
+                if nargin>=4, key = varargin{1}; else, key = 1; end
+                if nargin>=5, active = varargin{2}; else, active = true; end
+                nadd = length(dimIDs);
+                if nadd>1 && isscalar(key), key = repmat(key,1,nadd); end
+                if nadd>1 && isscalar(active), active = repmat(active,1,nadd); end
+                % loop on dimension sets
+                newfilters = struct('dimID',cell(1,0),'F',[],'active',[]);
+                for i = 1:length(dimIDs)
+                    F = C.createFilterAndItem(dimIDs{i},key(i),active(i));
+                    newfilters(end+1) = struct('dimID',dimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
+                end
+                C.V.slicer.addFilter({newfilters.dimID},[newfilters.F],[newfilters.active]) % slicing will occur now
+            end
+            
+            % show filter, set filter active
+            switch flag
+                case 'setactive'
+                    active = varargin{1};
+                    % show label(s) as enabled/disabled
+                    for filter = currentfiltersdim
+                        itemidx = fn_find({'filter' filter.dimID},{C.items.id});
+                        hlab = C.items(itemidx).label;
+                        set(hlab,'enable',fn_switch(active,'inactive','off'))
+                        drawnow
+                    end
+                    % toggle filter active in slicer
+                    C.V.slicer.chgFilterActive(filtersidx,active)
+                case 'showfilter'
+                    for filter = currentfiltersdim
+                        F = filter.obj;
+                        if ~isscalar(filter.dimID)
+                            disp('cannot display list for ND filter')
+                        elseif F.linkkey == 0
+                            % private filter
+                            combo = C.getPrivateLists();
+                            combo.showList(F)
+                        else
+                            xplr.bank.showList(F);
+                        end
+                    end
+            end
+
             % Empty the dimension selection
             set(C.dimlist,'value',[])
         end
-        function addFilterItem(C,d,label,F,active)            
+        function addFilterItem(C,dimID,label,F,active)            
             % panel
-            id = ['filter ' num2str(d)];
+            id = {'filter' dimID};
             [panel, itemidx] = C.newItem(id,1,'panel');
             backgroundColor = xplr.colors('linkkey',F.linkkey);
             panel.BackgroundColor = backgroundColor;
@@ -294,7 +311,7 @@ classdef viewcontrol < xplr.graphnode
                 'style','text','string',label,'horizontalalignment','left', ...
                 'backgroundcolor',backgroundColor, ...
                 'enable', fn_switch(active,'inactive','off'), ...
-                'buttondownfcn',@(u,e)clickFilterItem(C,d,id));
+                'buttondownfcn',@(u,e)clickFilterItem(C,dimID,id));
             C.items(itemidx).label = hlab;
             
             % buttons
@@ -306,7 +323,7 @@ classdef viewcontrol < xplr.graphnode
             rmFilterButton = uicontrol('parent',panel,'cdata',x, ...
                 'unit', 'normalized', ...
                 'position', [ 0.95 0.5 0.05 0.5 ], ...
-                'callback',@(u,e)C.dimaction('rmfilter',d));
+                'callback',@(u,e)C.dimaction('rmfilter',dimID));
             fn_controlpositions(rmFilterButton, panel, [1 .5 0 .5], [-11 0 11 0]);
             
             % checkbox to disable and enable the filter
@@ -314,7 +331,7 @@ classdef viewcontrol < xplr.graphnode
                 'backgroundcolor',backgroundColor, ...
                 'Style','checkbox', 'Value',active, ...
                 'position', [ 6 6 13 12 ], ...
-                'callback',@(u,e)C.dimaction('setactive',d,get(u,'value')));
+                'callback',@(u,e)C.dimaction('setactive',dimID,get(u,'value')));
             
         end
         function clickFilterItem(C,d,id)
@@ -334,7 +351,7 @@ classdef viewcontrol < xplr.graphnode
             nfilter = length(idxfilter);
             
             % index and position of selected filter
-            idxitem = find(strcmp({C.items.id},id));
+            idxitem = fn_find(id, {C.items.id});
             idx0 = idxitem-(idxfilter(1)-1);
             idxother = setdiff(1:nfilter,idx0);
             obj = C.items(idxitem).obj;
@@ -364,7 +381,7 @@ classdef viewcontrol < xplr.graphnode
             end
             
             % show filter if there was no move
-            if ~moved, dimaction(C,'showFilterWindow',d), end
+            if ~moved, dimaction(C,'showfilter',d), end
         end
     end
     
@@ -397,7 +414,7 @@ classdef viewcontrol < xplr.graphnode
             % if filter is empty, does nothing and leave the function
             if isempty(filter), return, end
             % remove filter from the items
-            C.rmItem(['filter ' num2str(filter.dim)])
+            C.rmItem({'filter' filter.dimID})
             % remove filter from the lists display
             % if the filter is private
             if filter.obj.linkkey == 0
@@ -411,29 +428,31 @@ classdef viewcontrol < xplr.graphnode
                 xplr.bank.unregisterFilter(filter.obj,C) 
             end
         end
-        function filter = createFilterAndItem(C,dimension,key,active)
+        function F = createFilterAndItem(C,dimID,key,active)
             % create filter or get existing one from the
             % related public filters set
             
-            header = C.V.data.header(dimension);
+            header = C.V.data.headerByID(dimID);
             % if the filter has to be private
             if key == 0
                 % create private filter
-                filter = xplr.filterAndPoint(header);
+                F = xplr.filterAndPoint(header);
                 % show filter in combo
-                combo = C.getPrivateLists();
-                if active, combo.showList(filter), end
+                if isscalar(dimID)
+                    combo = C.getPrivateLists();
+                    if active, combo.showList(F), end
+                end
             else
                 % search for the filter in the bank with key and dimension
-                doshow = active;
-                filter = xplr.bank.getFilter(key,header,doshow,C);
+                doshow = false;
+                F = xplr.bank.getFilter(key,header,doshow,C);
             end
             
             % add the filter to the items, it is important that
             % filter.linkkey is set before using addFilterItem
             % TODO: change how the string filter is shifted
-            str = ['filter ' header.label ' (' char(filter.F.slicefun) ')'];
-            C.addFilterItem(dimension,str,filter,active)
+            str = ['filter ' header.label ' (' char(F.F.slicefun) ')'];
+            C.addFilterItem(dimID,str,F,active)
         end
     end
     

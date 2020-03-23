@@ -188,60 +188,58 @@ classdef filterAndPoint < xplr.dataoperand
                 slic = slicing(F.P,dat,dims,F.ndout);
             end
         end
-        function slice = operation(F,x,dims)
+    end
+    methods (Access='protected')
+        function slic = operation_(F,dat,dims)
+            % function slic = operation_(F,dat,dims)
+            %---
+            % dat and slic are simple Matlab arrays
             if F.F.nsel>0
-                slice = operation(F.F,x,dims);
+                slic = F.F.operation_(dat,dims);
             else
-                % need to do by hand to set the accurate header
-                % check input
-                checkdata(F,x,dims)
-                % slice
-                slic = slicing(F.P,x.data,dims,F.ndout);
-                % header
-                head = x.header;
-                head(dims) = [];
-                head = [head(1:dims(1)-1) F.headerout head(dims(1):end)];
-                % output
-                slice = xplr.xdata(slic,head);
+                ndout = 1; % specify that slicing dimension should not be removed
+                slic = F.P.slicing(dat,dims,ndout);
             end
         end
-        function updateOperation(F,x,dims,slice,flag,ind)
-            % check input
-            checkdata(F,x,dims)
-            
-            % slice
-            switch flag
-                case 'all'
-                    if F.F.nsel>0
-                        slic = slicing(F.F,x.data,dims);
-                    else
-                        if F.ndout~=1, error 'output header should be scalar', end
-                        slic = slicing(F.P,x.data,dims,F.ndout);
-                    end
-                case {'new' 'chg'}
-                    slic = slicing(F.F,x.data,dims,ind);
-                case 'chg&new'
-                    slic = slicing(F.F,x.data,dims,[ind{:}]);
-                case 'chg&rm'
-                    slic = slicing(F.F,x.data,dims,ind{1});
-                case 'remove'
-                    if F.F.nsel>0
-                        slic = [];
-                    else
-                        flag = 'all';
-                        if F.ndout~=1, error 'output header should be scalar', end
-                        slic = slicing(F.P,x.data,dims,F.ndout);
-                    end
-                case 'perm'
-                    slic = [];
-                case 'point'
-                    if F.ndout~=1, error 'output header should be scalar', end
-                    flag = 'chg'; ind = 1;
-                    slic = slicing(F.P,x.data,dims,F.ndout);
-                otherwise
-                    error('flag ''%s'' not handled',flag)
+        function updateOperation_(F,x,dims,slice,flag,ind)
+            if F.F.nsel>0
+                F.F.updateOperation_(F,x,dims,slice,flag,ind)
+            else
+                F.P.updateOperation_(F,x,dims,slice)
             end
-            slice.updateData(flag,dims,ind,slic,F.headerout); % this will trigger automatic notifications
+            %             % slice
+            %             switch flag
+            %                 case 'all'
+            %                     if F.F.nsel>0
+            %                         slic = slicing(F.F,x.data,dims);
+            %                     else
+            %                         if F.ndout~=1, error 'output header should be scalar', end
+            %                         slic = slicing(F.P,x.data,dims,F.ndout);
+            %                     end
+            %                 case {'new' 'chg'}
+            %                     slic = slicing(F.F,x.data,dims,ind);
+            %                 case 'chg&new'
+            %                     slic = slicing(F.F,x.data,dims,[ind{:}]);
+            %                 case 'chg&rm'
+            %                     slic = slicing(F.F,x.data,dims,ind{1});
+            %                 case 'remove'
+            %                     if F.F.nsel>0
+            %                         slic = [];
+            %                     else
+            %                         flag = 'all';
+            %                         if F.ndout~=1, error 'output header should be scalar', end
+            %                         slic = slicing(F.P,x.data,dims,F.ndout);
+            %                     end
+            %                 case 'perm'
+            %                     slic = [];
+            %                 case 'point'
+            %                     if F.ndout~=1, error 'output header should be scalar', end
+            %                     flag = 'chg'; ind = 1;
+            %                     slic = slicing(F.P,x.data,dims,F.ndout);
+            %                 otherwise
+            %                     error('flag ''%s'' not handled',flag)
+            %             end
+            %             slice.updateData(flag,dims,ind,slic,F.headerout); % this will trigger automatic notifications
         end
     end
     

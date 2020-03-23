@@ -691,6 +691,10 @@ classdef displaygraph < xplr.graphnode
                 ijk = fn_add(idxoffset(:), .5+fn_mult(zijk-.5,bin(:)));
             end
         end
+	end
+
+	% Specialized position functions
+	methods
         function M = gettransform(G,ijk,ylim_or_ybase,yextent)
             % function M = gettransform(G,ijk,ybase)
             %---
@@ -754,10 +758,6 @@ classdef displaygraph < xplr.graphnode
                 M(1:2,4,:) = M(1:2,4,:) + permute(st.xyoffsets(:,ijk(st.xydim,:)),[1 3 2]); 
             end
         end
-	end
-
-	% Specialized position functions
-	methods
         function pos = labelPosition(G,dim,orgin)
             % function pos = labelPosition(G,d[,orgin])
         
@@ -922,12 +922,43 @@ classdef displaygraph < xplr.graphnode
                     else
                         error 'not implemented yet'
                         center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
-					end
+                    end
+                case 2
+                    % somehow simpler because only the xy configuration is
+                    % allowed
+                    polyslice = sel.polygon;
+                    polygon = G.slice2graph(polyslice,'subdim',dim);
+                    center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
 				otherwise
 					error 'case not handled yet'
 			end
 
-		end
+        end
+        function selslice = selection2slice(G,dim,selax)
+            % More or less the symmetric of the previous function: convert
+            % selection definition in graph coordinates to slice
+            % coordinates in the dimensions dim
+            % selectionnd object -> use appropriate method for affinity.
+            % Works currently only with 2D selections.
+            
+            if length(dim)~=2, error 'number of dimensions must be 2', end
+            
+            % use the first point as the origin
+            xy0 = selax.shapes(1).points(:,1);
+            ijk0 = G.graph2slice(xy0);
+
+            % infer the affinity matrix
+            % (first the linear part)
+            linearpart = [G.graph2slice(xy0 + [1;0])-ijk0 G.graph2slice(xy0 + [0;1])-ijk0];
+            linearpart = linearpart(dim,:);
+            % (then the offset)
+            offset = ijk0(dim) - linearpart * xy0;
+            % (affinitynd object)
+            affinity = xplr.affinitynd(linearpart,offset);
+            
+            % use the selectionnd method
+            selslice = selax.applyaffinity(affinity,G.D.slice.sz(dim));
+        end
     end
 end
 

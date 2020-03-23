@@ -50,14 +50,14 @@ classdef bank < hgsetget
             hl = addlistener(V,'ObjectBeingDestroyed',@(u,e)xplr.bank.unregisterView(V));
             B.currentviews(end+1) = struct('obj',V,'hl',hl);
             % update list of recent headers
-            xplr.bank.registerheaders(V.data.header)
+            dimheader = V.data.header; % xplr.dimheader class, need to convert to xplr.header!
+            xplr.bank.registerheaders(xplr.header(dimheader))
         end
     end
     
     % Load/save field
     methods (Access='private')
         function loadprop(B,prop)
-            
             % loadprop
             fsave = fn_userconfig('configfolder','xplr.bank');
             warning('off','MATLAB:load:variableNotFound')
