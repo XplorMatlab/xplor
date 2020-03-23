@@ -299,15 +299,7 @@ classdef headerEdit < hgsetget
                     col(i,:) = [1 1 1]*.94;
                 end
             end
-            if fn_matlabversion('newgraphics')
-                set(E.table,'BackgroundColor',col)
-            end
-            
-            %             % enabling of 'confirm all' and 'ok' buttons
-            %             if ishandle(E.uconfirm) && all([E.curhead.confirmed])
-            %                 delete(E.uconfirm)
-            %             end
-            %             set(E.ok,'enable',fn_switch(allok))
+            set(E.table,'BackgroundColor',col)
         end
         function celledit(E,e)
             i = e.Indices(1);

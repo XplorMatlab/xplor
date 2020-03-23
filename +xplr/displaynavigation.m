@@ -3,11 +3,11 @@ classdef displaynavigation < xplr.graphnode
 
     properties (SetAccess='private')
         D                                       % parent xplr.viewdisplay
-        ha
-        hf
+        ha = gobjects
+        hf = gobjects
         graph
         crossCenter
-        cross                                   % display cross selector
+        cross = gobjects                        % display cross selector
         sliders = struct('x',[],'y',[]);        % slider objects
         zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
         dimfilters = {};
@@ -556,7 +556,7 @@ classdef displaynavigation < xplr.graphnode
             
             % Hide the vertical if all dimensions on x are singletons or if
             % crossCenter is out of display on one dimension on x
-            set(N.cross(1),'Visible',fn_switch(~(x_singleton|x_isOutOfDisplay)));
+            N.cross(1).Visible = ~(x_singleton|x_isOutOfDisplay);
             
             % same things for horizontal bar
             y_singleton = true;
@@ -573,7 +573,7 @@ classdef displaynavigation < xplr.graphnode
                 y_singleton = false;
             end
 
-            set(N.cross(2),'Visible',fn_switch(~(y_singleton|y_isOutOfDisplay)));
+            N.cross(2).Visible = ~(y_singleton|y_isOutOfDisplay);
             
             updateCrossCenterVisibility(N);
         end
@@ -1117,11 +1117,7 @@ classdef displaynavigation < xplr.graphnode
         %  if one of the dimension of the cross is hidden, hide the
         % cross center as well
         function updateCrossCenterVisibility(N)
-            if fn_switch(get(N.cross(1), 'Visible')) && fn_switch(get(N.cross(2), 'Visible'))
-                set(N.cross(3), 'Visible', 'on')
-            else
-                set(N.cross(3), 'Visible', 'off')
-            end
+            N.cross(3).Visible = N.cross(1).Visible && N.cross(2).Visible;
         end
         
         

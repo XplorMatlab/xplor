@@ -104,7 +104,7 @@ classdef graphnode < matlab.mixin.SetGet
             for i = 1:n
                 s = self.listening(i);
                 if s.object == other
-                    enableListener(s.listener, val)
+                    s.listener = val;
                 end
             end
             % scan list of objects that other is listening
@@ -113,7 +113,7 @@ classdef graphnode < matlab.mixin.SetGet
             for i = 1:n
                 s = other.listening(i);
                 if s.object == self
-                    enableListener(s.listener, val)
+                    s.listener = val;
                 end
             end
         end
