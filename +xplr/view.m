@@ -114,7 +114,7 @@ classdef view < hgsetget
             if strcmp(b,'toggle')
                 b = ~V.controlvisible;
             else
-                b = fn_switch(b,'logical');
+                b = logical(b);
                 if b==V.controlvisible, return, end
             end
             % set property

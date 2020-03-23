@@ -1066,7 +1066,7 @@ classdef displaynavigation < xplr.graphnode
         %  if one of the dimension of the cross is hidden, hide the
         % cross center as well
         function updateCrossCenterVisibility(N)
-            N.cross(3).Visible = N.cross(1).Visible && N.cross(2).Visible;
+            N.cross(3).Visible = onoff(logical(N.cross(1).Visible) && logical(N.cross(2).Visible));
         end
         
         
