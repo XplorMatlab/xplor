@@ -10,7 +10,7 @@ classdef displaynavigation < xplr.graphnode
         cross = gobjects                        % display cross selector
         sliders = struct('x',[],'y',[]);        % slider objects
         zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
-        dimfilters = {};
+        pointfilters = {};
     end
     properties
         selectionfilter         % filter being modified by the selections
@@ -18,7 +18,7 @@ classdef displaynavigation < xplr.graphnode
     end
     properties (SetObservable)
         selectiondimID          % dimensions to which these selections apply, identified by its id
-        selection2Dshape = 'ellipse'; % 'xsegment', 'ysegment', 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
+        selection2Dshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selectionround1Dmeasure = true; 
         selectionadvanced = false
     end
@@ -232,28 +232,26 @@ classdef displaynavigation < xplr.graphnode
                 % no interest in creating and controling a filter for a
                 % dimension with only 1 value
                 if head.n ==1 
-                    N.dimfilters{d} = [];
+                    N.pointfilters{d} = [];
                     continue
                 end
                 % get filter from bank or create one for the header in this
                 % dimension
-                doshow=false;
-                F = xplr.bank.getFilter(linkkey,head,doshow,N); % FilterAndPoint filter
-                N.dimfilters{d} = F;
+                P = xplr.bank.getPointFilter(linkkey,head,N); % FilterAndPoint filter
+                N.pointfilters{d} = P;
                 % listen to the point filter event
-                P = F.P; % Point filter
                 N.addListener(P,'ChangedPoint',@(u,e)movedPoint(N))
             end
         end
         function disconnectPointFilter(N,dim)
             if nargin < 2
-                dim = 1:length(N.dimfilters);
+                dim = 1:length(N.pointfilters);
             end
             for d = dim
-                F = N.dimfilters{d};
-                if isempty(F), continue, end
-                xplr.bank.unregisterFilter(F,N)
-                N.disconnect(F.P)  % this is the same as F.disconnect(N)!
+                P = N.pointfilters{d};
+                if isempty(P), continue, end
+                xplr.bank.unregisterFilter(P,N)
+                N.disconnect(P)  % this is the same as F.disconnect(N)!
             end
         end
         function movedPoint(N)
@@ -265,9 +263,9 @@ classdef displaynavigation < xplr.graphnode
             nd = N.D.slice.nd;
             ijk = ones(nd, 1);
             for d = 1:nd
-                F = N.dimfilters{d};
-                if isempty(F), continue, end
-                ijk(d) = F.P.index0;
+                P = N.pointfilters{d};
+                if isempty(P), continue, end
+                ijk(d) = P.index0;
             end
         end
         function repositionCross(N)
@@ -341,9 +339,9 @@ classdef displaynavigation < xplr.graphnode
             % update the point filters (only for dimensions where the point
             % remains within the slice)
             for d = find(~isOutOfDisplay(N,point,true))
-                F = N.dimfilters{d};
-                if ~isempty(F)
-                    F.P.index = ijk(d);
+                P = N.pointfilters{d};
+                if ~isempty(P)
+                    P.index = ijk(d);
                 end
             end
         end
@@ -446,7 +444,7 @@ classdef displaynavigation < xplr.graphnode
             %                 'callback',@(u,e)set(N,'selectiondimID','prompt'))
             % (stop)
             if ~isempty(N.selectiondimID)
-                uimenu(m2,'label','(none)','separator','on', ...
+                uimenu(m,'label','stop selection control', ...
                     'callback',@(u,e)set(N,'selectiondimID',[]))
             end
 
@@ -456,7 +454,7 @@ classdef displaynavigation < xplr.graphnode
                 'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
             if length(N.selectiondimID) == 2
                 fn_propcontrol(N,'selection2Dshape', ...
-                    {'menuval' {'ysegment', 'xsegment','poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'}}, ...
+                    {'menuval' {'poly', 'free', 'rect', 'ellipse', 'ring', 'line', 'openpoly', 'freeline'}}, ...
                     'parent',m,'label','shape');
             end
             if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
@@ -523,13 +521,13 @@ classdef displaynavigation < xplr.graphnode
             elseif selnd == 2
                 % user interaction
                 mouseselmode = fn_switch(N.selection2Dshape, ...
-                    'openpoly','poly','freeline','free', ...
+                    'line','segment','openpoly','poly','freeline','free', ...
                     'ellipse','ellipse*','ring','ring*', ...
                     N.selection2Dshape);
                 seltype = fn_switch(N.selection2Dshape, ...
                     {'poly','free'},'poly2D','rect','rect2D', ...
                     'ellipse','ellipse2D','ring','ring2D', ...
-                    'segment','line2D',{'openpoly','freeline'},'openpoly2D');
+                    {'line','openpoly','freeline'},'openpoly2D');
                 polyax = fn_mouse(N.D.ha,[mouseselmode '-']);
 
                 % create selection in graph coordinates
@@ -586,6 +584,7 @@ classdef displaynavigation < xplr.graphnode
             % disconnect from previous filter
             F = N.selectionfilter;
             if ~isempty(F)
+                xplr.bank.unregisterFilter(F,N)
                 N.disconnect(F)
             end
             
@@ -598,12 +597,11 @@ classdef displaynavigation < xplr.graphnode
             
             % find filter to connect to
             headerin = N.D.slice.header(dim); 
-            F = xplr.bank.getFilter(1, headerin); % xplr.filterAndPoint object
+            F = xplr.bank.getFilterFilter(1, headerin, N); % xplr.filter object
             if isempty(F)
                 % filter needs to be created
                 error 'not implemented yet'
             end
-            F = F.F; % xplr.filter object
             N.selectionfilter = F;
             
             % watch changes in filter to update display!

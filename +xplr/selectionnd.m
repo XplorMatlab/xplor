@@ -75,8 +75,16 @@ classdef selectionnd < xplr.graphnode
             elseif strfind(type,'2D')
                 sel.nd = 2;
             elseif strcmp(type, 'indices')
-                if nargin<3
-                    error 'Data sizes must be provided for ''indices'' selectionnd type'
+                % two syntaxes are accepted:
+                % xplr.selectionnd('indices',indices,datasize)
+                % xplr.selectionnd('indices',{datasize indices})
+                if nargin==2 && iscell(data)
+                    sizes = data{1};
+                elseif nargin==3 && ~iscell(data)
+                    indices = data;
+                    data = {sizes indices};
+                else
+                    error argument
                 end
                 sel.nd = length(sizes);
             else
@@ -283,7 +291,8 @@ classdef selectionnd < xplr.graphnode
             
             % indices
             if all(strcmp(sel2.type,'indices'))
-                sel2.dataind = unique([sel2.shapes.special]);
+                data = cat(1,sel2.shapes.special); % first column: sizes, second column: indices
+                sel2.dataind = unique([data{:,2}]);
             else
                 switch sel.nd
                     case 1
@@ -294,7 +303,7 @@ classdef selectionnd < xplr.graphnode
             end
         end     
         function polygon = get.polygon(sel)
-            if isempty(sel.polygon)
+            if 1 %isempty(sel.polygon)
                 switch sel.nd
                     case 1
                         sel.polygon = ConvertLine1D(sel.shapes);
@@ -324,7 +333,7 @@ classdef selectionnd < xplr.graphnode
                     if nargin<3, datasizes = sel.datasizes; end
                     sel2 = ComputeInd(sel,datasizes);
                     if ~strcmp(sel2.type,'indices')
-                        sel2 = xplr.selectionnd('indices',sel.dataind,datasizes);
+                        sel2 = xplr.selectionnd('indices',{datasizes sel.dataind});
                     end
                 otherwise
                     error 'invalid correction type'

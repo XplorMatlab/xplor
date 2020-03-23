@@ -255,7 +255,7 @@ classdef viewdisplay < xplr.graphnode
             % select ZoomFilter key (check the created menu item
             % that corresponds to the current key)
             m2 = uimenu(m,'label','zoom filter','Separator',fn_switch(docolor));
-            availablekeys = xplr.bank.availableFilterKeys();
+            availablekeys = xplr.bank.availableFilterKeys('zoomfilter');
             newkey = max(availablekeys)+1;
             keyvalues = [0 availablekeys newkey];
             fn_num2str(availablekeys, 'shared zoom %i', 'cell');
@@ -276,7 +276,7 @@ classdef viewdisplay < xplr.graphnode
             if ~isempty(curfilt)
                 m2 = uimenu(m,'label','cross selector key','Separator',fn_switch(docolor));
 
-                availablekeys = xplr.bank.availableFilterKeys();
+                availablekeys = xplr.bank.availableFilterKeys('point');
                 newkey = max(availablekeys)+1;
                 keyvalues = [0 availablekeys newkey];
                 fn_num2str(availablekeys, 'cross selector key %i', 'cell');

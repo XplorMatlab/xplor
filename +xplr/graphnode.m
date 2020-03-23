@@ -80,7 +80,7 @@ classdef graphnode < matlab.mixin.SetGet
             self.listening(rm) = [];
             % scan list of objects that other is listening, remove items
             % where other listens to self
-            if ~isa(other,'xplr.graphnode'), return, end
+            if ~isa(other,'xplr.graphnode') || ~isvalid(other), return, end
             n = length(other.listening);
             rm = false(1,n);
             for i = 1:n

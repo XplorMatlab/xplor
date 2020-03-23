@@ -124,7 +124,7 @@ classdef slicer < xplr.graphnode
             % update slice
             if isempty(idxactive), return, end
             if doslicing
-                if all([filtrm(active).ndout]==[filtrm(active).ndin])
+                if all(isvalid(filtrm)) && all([filtrm(active).ndout]==[filtrm(active).ndin])
                     doslice(S,'slicer','chgdim',chgdimID)
                 else
                     doslice(S,'slicer','global')
@@ -439,7 +439,7 @@ classdef slicer < xplr.graphnode
                 filtk = S.activefilters(k);
                 dimIDk = filtk.dimID;
                 objk = filtk.obj;
-                if ~isempty(chgdimID) && any(dimIDk==chgdimID)
+                if ~isempty(chgdimID) && any(ismember(dimIDk,chgdimID))
                     % dimension identified by chgdimID in the data
                     % disappears in the slice; get the identifier of the
                     % corresponding dimension in the slice
@@ -451,7 +451,7 @@ classdef slicer < xplr.graphnode
             % update slice 
             switch chgflag
                 case 'global'
-                    S.slice.updateDataDim(chgflag,[],res.data,res.header)
+                    S.slice.updateDataDim('global',[],res.data,res.header)
                 case 'chgdim'
                     chgdimout = res.dimensionNumber(chgdimID);
                     S.slice.updateDataDim(chgflag,chgdimout,res.data,res.header(chgdimout))

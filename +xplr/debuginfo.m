@@ -125,7 +125,7 @@ function select_categories()
 
 state = get_state();
 names = fieldnames(state.categories);
-selected = struct2array(state.categories);
+selected = cell2mat(struct2cell(state.categories));
 if isempty(names)
     disp('xplr.debuginfo: no message category met yet')
     return

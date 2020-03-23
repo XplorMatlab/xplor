@@ -1,11 +1,10 @@
 classdef listcombo < hgsetget
-    % function C = listcombo(container,linkkey,filters)
+    % function C = listcombo(container,filters)
     % if container is empty, a new figure will be created; this
     % figure will auto-delete once all filters will be removed
     
     properties
         container
-        linkkey
         lists = xplr.list.empty(1,0);
         filters = xplr.filterAndPoint.empty(1,0);
     end
@@ -16,27 +15,21 @@ classdef listcombo < hgsetget
     
     % Constructor, add and remove lists
     methods
-        function C = listcombo(container,linkkey,filters)
+        function C = listcombo(container,filters)
             
             % input
             if nargin<1, container = []; end
-            if nargin<2, linkkey = 1; end
-            if nargin<3, filters = []; end
-            C.linkkey = linkkey;
+            if nargin<2, filters = []; end
                 
             % create new containing figure? (in this case, set auto-delete)
             if isempty(container)
                 screensize = get(0,'ScreenSize');
                 container = figure('integerhandle','off','handlevisibility','off', ...
                     'numbertitle','off','menubar','none', ...
-                    'name',sprintf('Shared Filters [key=%i]',linkkey), ...
+                    'name','Shared Filters', ...
                     'pos',[min(80,screensize(3)/20) max(screensize(4)*.6-275,45) 150 550]);
-                %                 if linkkey>0
-                %                     col = xplr.colors('linkkey',linkkey)*.5 + get(container,'color')*.5;
-                %                     set(container,'color',col)
-                %                 end
                 delete(findall(container,'parent',container))
-                addlistener(C,'Empty',@(u,e)delete(container));
+%                 addlistener(C,'Empty',@(u,e)delete(container));
             end
             if ~isa(container,'panelorganizer')
                 container = panelorganizer(container,'H');
@@ -67,10 +60,8 @@ classdef listcombo < hgsetget
             hlist = uicontrol('parent',hp,'style','listbox');
             fn_controlpositions(hlist,hp,[0 0 1 1],[8 5 -16 -5-21-2])
             % (label)
-            hlabel = uicontrol('parent',hp,'style','text');
-            if C.linkkey>0
-                set(hlabel,'backgroundcolor',xplr.colors('linkkey',C.linkkey))
-            end
+            hlabel = uicontrol('parent',hp,'style','text', ...
+                'backgroundcolor',xplr.colors('linkkey',filter.linkkey));
             fn_controlpositions(hlabel,hp,[0 1 1 0],[8 -21 -8-18 18])
             % (close button)
             x = fn_printnumber(ones(18),'x','pos','center')'; 
@@ -124,7 +115,7 @@ classdef listcombo < hgsetget
                 Filters(i) = xplr.filterAndPoint(head(i)); %#ok<AGROW>
             end
             key = 2;
-            C = xplr.listcombo([],key,Filters);
+            C = xplr.listcombo([],Filters);
             % repeat the 2d list
             C.addList(Filters(2))
         end

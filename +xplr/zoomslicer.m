@@ -67,6 +67,10 @@ classdef zoomslicer < xplr.slicer
         function datachange(S,e)
             dimID = e.dim;
             dim = S.data.dimensionNumber(dimID);
+            if length(S.filters) ~= S.data.nd || ~all(isvalid([S.filters.obj]))
+                % something is wrong, use 'global' flag
+                e.flag = 'global';
+            end
             switch e.flag
                 case 'global'
                     % remove all existing filters and create new ones
@@ -94,8 +98,9 @@ classdef zoomslicer < xplr.slicer
                         % dimID, see xplr.dataoperand)
                         
                         % replace filter (as in slicer.replaceFilterDim)
-                        S.disconnect(curfilt)
-                        newfilt = autoZoomFilter(S,curfilt.linkkey,dim);
+                        curkey = curfilt.linkkey;
+                        S.disconnect(curfilt) % curfilt will be deleted if it is not used elsewhere
+                        newfilt = autoZoomFilter(S,curkey,dim);
                         S.filters(dim).obj = newfilt;
                         S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,e.dim,e));
 
@@ -152,8 +157,8 @@ classdef zoomslicer < xplr.slicer
             
             % Disconnect one filter
             disconnect@xplr.graphnode(S,F)
-            if isa(F,'xplr.zoomfilter') && F.linkkey ~= 0
-                xplr.bank.unregisterZoomFilter(F,S)
+            if isa(F,'xplr.zoomfilter') && isvalid(F) && F.linkkey ~= 0
+                xplr.bank.unregisterFilter(F,S)
             end
         end
     end

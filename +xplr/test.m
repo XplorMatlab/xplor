@@ -73,8 +73,8 @@ V2 = xplor(x2);
 
 
 % % connect the 2 zoom filters in the y coordinate
-% ZF1 = V1.D.zoomslicer.getFilter(2);
-% ZF2 = V2.D.zoomslicer.getFilter(2);
+% ZF1 = V1.D.zoomslicer.getFilterAndPoint(2);
+% ZF2 = V2.D.zoomslicer.getFilterAndPoint(2);
 % 
 % %%
 % ZC = xplr.zoomcentral('y', 'px');

@@ -2,29 +2,30 @@ classdef bank < hgsetget
 % xplr.bank The bank is unique and store several elements :
 %
 %  * currentviews: not used yet but it will be used for multiview
-%  * recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored
 %  * measures: units for measures conversion
-%  * filterssets: filters and zoomfilters stored by linkkey
-%   * linkey
-%   * registry
-%   * combo
-%   * zregistry
-%   * zcregistry
-%
+%  * recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored
+%  * filters_registry: registry of all existing filters, indexed by filter type, link key and input header
+%  * list_combo: xplr.listcombo object for displaying 1D filters as lists
 
     properties (SetAccess='private')
         currentviews = struct('obj',cell(1,0),'hl',cell(1,0));                                  % all current views are registered here
         measures = struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}));   % units
-        recentheaders = xplr.header.empty(1,0);                                                 % headers will be ordered according to their appearance date 
-        filtersets = xplr.filterSet.empty(1,0);                                                 % filter sets
+        recentheaders = xplr.header.empty(1,0);                                                 % headers will be ordered according to their appearance date         
+        filters_registry
+        list_combo
     end
     
+    % Constructor
     methods (Access='private')
         function B = bank()
             % bank constructor
-
+            
+            % filters filters_registry
+            B.filters_registry = xplr.bankRegistry;
+            
             % load saved measures
             B.loadprop('measures')
+            
             % load saved recent headers
             B.loadprop('recentheaders')
         end
@@ -176,77 +177,144 @@ classdef bank < hgsetget
     
     % Filter sets
     methods (Static, Access='private')
-        function FS = getFilterSet(linkkey)
+        % This method is static because there will be one specialized
+        % method by filter type.
+        function F = getExistingFilter(filtertype, linkkey, header, user)
+            % function F = getRegistryValue(filtertype, linkkey, header[, newuser])
             B = xplr.bank.getbank();
-            if linkkey<=length(B.filtersets)
-                FS = B.filtersets(linkkey);
-            elseif linkkey==length(B.filtersets)+1
-                FS = xplr.filterSet(linkkey);
-                B.filtersets(end+1) = FS;
-            else
-                error('New filter set key should be %i, encountered %i instead.',length(B.filtersets)+1,linkkey)
+            hID = getID(header);
+            F = B.filters_registry.getValue({filtertype, linkkey, hID},user);
+            % F was in fact deleted? -> unregister
+            if ~isempty(F) && ~isvalid(F)
+                B.filters_registry.unregister({filtertype, linkkey, hID});
             end
         end
     end
     methods (Static)
-        function n = nfilterset()
+        function keys = availableFilterKeys(filtertype)
             B = xplr.bank.getbank();
-            n = length(B.filtersets);
+            % We recall the nested structure of filters registry: filters
+            % are indexed first by filter type, then by link key, then by
+            % header ID. 
+            % First get the sub-registry corresponding to filter type.
+            sub_registry = B.filters_registry.getValue(filtertype);
+            % This sub-registry is indexed by link keys.
+            if isempty(sub_registry)
+                keys = zeros(1,0);
+            else
+                keys = [sub_registry.content.key];
+            end
         end
-        function F = getFilter(linkkey, head, doshow, varargin)
-            % function F = getFilter(linkkey, header ,doshow [,user])
-            if nargin<3, doshow = false; end
-            FS = xplr.bank.getFilterSet(linkkey);
-            F = FS.getFilter(head, doshow, varargin{:});
-        end
-        function registerFilter(linkkey, F, varargin)
-            % function registerFilter(linkkey, F[,user])
-            FS = xplr.bank.getFilterSet(linkkey);
-            doshow=true;
-            FS.addFilter(F, doshow, varargin{:})
+        function registerFilter(linkkey, F, user)
+            % function registerFilter(linkkey, F, user)
+            B = xplr.bank.getbank();
+            for Fi = row(F)
+                filtertype = strrep(class(Fi),'xplr.','');
+                hID = getID(Fi.headerin);
+                Fi.linkkey = linkkey;   % memorize linkkey inside filter
+                B.filters_registry.register({filtertype, linkkey, hID}, Fi, user)
+            end
         end
         function unregisterFilter(F, user)
             % function unregisterFilter(F, user)
-            if F.linkkey == 0
-                disp 'attempt to unregister a private filter from the bank!'
-                return
-            end            
-            FS = xplr.bank.getFilterSet(F.linkkey);
-            FS.removeFilter(F, user)
-        end            
-        function showList(F)
-            % function showList(F)
-            if F.linkkey == 0
-                disp 'attempt to show the list display from the bank for a private filter!'
-                return
-            end            
-            FS = xplr.bank.getFilterSet(F.linkkey);
-            FS.showList(F)
-        end
-        function F = getZoomFilter(linkkey, head, varargin)
-            % function F = getZoomFilter(linkkey, header[,user])
-            FS = xplr.bank.getFilterSet(linkkey);
-            F = FS.getZoomFilter(head, varargin{:});
-        end
-        function registerZoomFilter(linkkey, F, varargin)
-            % function registerZoomFilter(linkkey, F[,user])
-            for i=F
-                FS = xplr.bank.getFilterSet(linkkey);
-                FS.addZoomFilter(i, varargin{:})
+            B = xplr.bank.getbank();
+            for Fi = row(F)
+                filtertype = strrep(class(Fi),'xplr.','');
+                if ~isvalid(Fi), continue, end
+                linkkey = Fi.linkkey;
+                hID = getID(Fi.headerin);
+                B.filters_registry.unregister({filtertype, linkkey, hID}, user);
             end
         end
-        function unregisterZoomFilter(F, user)
-            % function unregisterZoomFilter(F, user)
-            if F.linkkey == 0
-                disp 'attempt to unregister a private zoom filter from the bank!'
-                return
+        % Below are the specialized methods for getting filters,
+        % specialized by filter type. They create the filter if it does not
+        % exist. This creation sometimes relies on accessing/creating
+        % filters of another type (for example filterAndPoint filters
+        % use/create a filter and a point filter; zoomfilter filters
+        % use/create a zoomcentral object)
+        function F = getFilterAndPoint(linkkey, header, user, doshow)
+            % function F = getFilterAndPoint(linkkey, header, newuser[, doshow])
+            % function F = getFilterAndPoint([linkkey_filter linkkey_point], header[, doshow[, newuser]])
+            if nargin<4, doshow = false; end
+            F = xplr.bank.getExistingFilter('filterAndPoint', linkkey, header, user);
+            if isempty(F)
+                FF = xplr.bank.getFilterFilter(linkkey, header, user);
+                FP = xplr.bank.getPointFilter(linkkey, header, user);
+                F = xplr.filterAndPoint(FF, FP);
+                xplr.bank.registerFilter(linkkey, F, user);
+                if doshow 
+                    if F.ndin > 1
+                        disp 'cannot display list for ND filter'
+                    else
+                        xplr.bank.showList(F)
+                    end
+                end
             end            
-            FS = xplr.bank.getFilterSet(F.linkkey);
-            FS.removeZoomFilter(F, user)
-        end       
-        function keys = availableFilterKeys()
+        end
+        function F = getFilterFilter(linkkey, header, user)
+            % function F = getFilterFilter(linkkey, header[, newuser]])
+            F = xplr.bank.getExistingFilter('filter', linkkey, header, user);
+            if isempty(F)
+                F = xplr.filter(header);
+                xplr.bank.registerFilter(linkkey, F, user);
+            end            
+        end
+        function P = getPointFilter(linkkey, header, user)
+            % function F = getPointFilter(linkkey, header[, newuser]])
+            for i = 1:length(header)
+                Pi = xplr.bank.getExistingFilter('point', linkkey, header(i), user);
+                if isempty(Pi)
+                    Pi = xplr.point(header(i));
+                    xplr.bank.registerFilter(linkkey, Pi, user);
+                end      
+                P(i) = Pi;
+            end
+        end
+        function F = getZoomFilter(linkkey, header, user)
+            % function F = getZoomFilter(B,header, user)
+            F = xplr.bank.getExistingFilter('zoomfilter', linkkey, header, user);
+            if isempty(F)
+                % if the filter does not exist then create it and register it
+                F = xplr.zoomfilter(header);
+                xplr.bank.registerFilter(linkkey,F,user);
+                % if input space is measurable, connect with a
+                % 'zoomcentral' filter that will synchronize several filters
+                % corresponding to different referentials in this space
+                type = header.get.type();
+                if strcmp(type, 'measure')
+                   key = fn_hash({ header.label, header.get.unit }, 'num');
+                   % search a corresponding zoomCentral in the filterSet
+                   % return existing zoomCentral if exist; F will be a new
+                   % user of this zoomcentral
+                   B = xplr.bank.getbank();
+                   zoomCentral = B.filters_registry.getValue({'zoomcentral', linkkey, key}, F);
+                   if isempty(zoomCentral)
+                       % create new zoomcentral
+                       zoomCentral = xplr.zoomcentral(header.label, header.unit);
+                       B.filters_registry.register({'zoomcentral', linkkey, key}, zoomCentral, F);
+                   end
+                   zoomCentral.connectZoomFilter(F);
+                end
+            end
+        end
+        function showList(F)
+            if ~isa(F,'xplr.filterAndPoint')
+                error 'only filterAndPoint object can be shown'
+            elseif F.ndin > 1
+                % not possible to show list if filter is not 1D, ignore
+                return
+            end
+            
             B = xplr.bank.getbank();
-            keys = [B.filtersets.linkkey];
+            % Create list combo?
+            if isempty(B.list_combo) || ~isvalid(B.list_combo)
+                B.list_combo = xplr.listcombo();
+%                 % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
+%                 connectlistener(B.list_combo,B,'Empty',@(u,e)set(B,'list_combo',[])); 
+            end
+            
+            B.list_combo.showList(F)
+            figure(B.list_combo.container.hobj)
         end
     end
 end

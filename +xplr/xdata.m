@@ -100,10 +100,9 @@ classdef xdata < xplr.graphnode
                 if ~iscell(d), d = {d}; end
                 n = length(d);
                 dim = zeros(1,n);
-                labels = {C.V.data.header.label};
+                labels = {x.header.label};
                 for i = 1:n
-                    tmp = fn_find(d{i},labels,'first');
-                    dim(i) = tmp.dimID;
+                    dim(i) = fn_find(d{i},labels,'first');
                 end
                 d = dim;
             elseif iscell(d)

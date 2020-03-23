@@ -72,7 +72,7 @@ classdef list < xplr.graphnode
             set(L.hu,'style','listbox','min',0,'max',2, ...
                 'callback',@(hu,evnt)event(L,'select'), ...
             	'keypressfcn',@(hu,evnt)keypress(L,evnt))
-            if fn_switch(L.scrollwheel)
+            if boolean(L.scrollwheel)
                 L.scrollwheel = 'on'; % this will automaticall register scroll wheel
             end
             if isempty(get(L.hf,'WindowButtonMotionFcn'))
@@ -86,7 +86,8 @@ classdef list < xplr.graphnode
             connectlistener(F,L,'ChangedPoint',@(u,e)displaycross(L));
             
             % auto-delete
-            set(L.hu,'deletefcn',@(u,evnt)delete(L))
+            set(L.hu,'deletefcn',@(u,e)delete(L))
+            addlistener(head,'ObjectBeingDeleted',@(u,e)delete(L))
 
             % update display (here, just sets the correct value)
             preformatvalues(L)
@@ -124,7 +125,7 @@ classdef list < xplr.graphnode
             uimenu(m,'label','remove highlighted selections','callback',@(u,e)event(L,'rm'))
             uimenu(m,'label','remove all selections','callback',@(u,e)event(L,'rmall'))
 
-            L.menuitems.selmultin = uimenu(m,'separator','on','checked',fn_switch(L.selmultin), ...
+            L.menuitems.selmultin = uimenu(m,'separator','on','checked',onoff(L.selmultin), ...
                 'label','temporary selection: individuals','callback',@(u,e)set(L,'selmultin',~L.selmultin));
             uimenu(m,'label','select all','callback',@(u,e)event(L,'selectall'))
             

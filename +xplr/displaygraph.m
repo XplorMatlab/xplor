@@ -637,7 +637,7 @@ classdef displaygraph < xplr.graphnode
             % Output:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
             %
-            % See also xplr.displaygraph.conversionOptions
+            % See also xplr.displaygraph.codnversionOptions
 
             % Input points
             np = size(ijk,2);

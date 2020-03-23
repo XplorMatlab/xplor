@@ -1,14 +1,14 @@
 classdef selectionshape
     % selectionshape('point1D',[x1 x2 ...])
     % selectionshape('line1D',[a1 b1 a2 b2 ...])
-    % selectionshape('point2D|line2D|poly2D',[x1 x2 ...; y1 y2 ...])
+    % selectionshape('point2D|poly2D|openpoly2D',[x1 x2 ...; y1 y2 ...])
     % selectionshape('rect2D',[x y w h])
     % selectionshape('ellipse2D',{[xc yc],r})            (circle) coordinates of center + radius
     % selectionshape('ellipse2D',{[xc yc],[xu yu],e})    (ellipse) center + principal verctor + eccentricity
     % selectionshape('ring2D',{[xc yc],[xu yu],e,r})     + relative radius
     % selectionshape('ring2D',{[xc yc],[xu yu],[e r]})
     % selectionshape('empty1D|all2D|...')
-    % selectionshape('indices',[idx1 idx2 ...],sizes)
+    % selectionshape('indices',{sizes,[idx1 idx2 ...]})
     % selectionshape('product',[sel1 sel2 ...])          sel1, sel2, ... are selectionND themselves
     properties
         type
@@ -43,22 +43,11 @@ classdef selectionshape
                         S(i).points = lines(:,:,i);
                         S(i).vectors = zeros(1,0);
                     end
-                case 'point2D'
+                case {'point2D' 'openpoly2D'}
                     if size(data,1)==1; data = data'; end
                     if size(data,1)~=2, error('data should have 2 rows'), end
                     S.points = data;
                     S.vectors = zeros(2,0);
-                case 'line2D'
-                    if size(data,1)==1; data = data'; end
-                    if size(data,1)~=2, error('data should have 2 rows'), end
-                    if mod(size(data,2),2), error('set of lines improperly defined'), end
-                    nline = size(data,2)/2;
-                    lines = reshape(data,[2 2 nline]);
-                    S(nline).points = []; % pre-allocate
-                    for i=1:nline
-                        S(i).points = lines(:,:,i);
-                        S(i).vectors = zeros(2,0);
-                    end
                 case 'poly2D'
                     if size(data,1)~=2, error('data should have 2 rows'), end
                     if ~all(data(:,1)==data(:,end)), data = data(:,[1:end 1]); end
@@ -123,7 +112,7 @@ classdef selectionshape
             end
             
             % Shapes that cannot be merged
-            idx = fn_ismemberstr({S.type},{'line2D' 'rect2D' 'ellipse2D' 'ring2D'});
+            idx = fn_ismemberstr({S.type},{'openpoly2D' 'rect2D' 'ellipse2D' 'ring2D'});
             S2 = S(idx);
             S(idx) = [];
             
@@ -134,18 +123,30 @@ classdef selectionshape
             end
             S(idx) = [];
             idx = strcmp({S.type},'point2D');
-            if ~isempty(points2D)
+            if ~isempty(idx)
                 S2 = [S2 xplr.selectionshape('point2D',unique([S(idx).points]))]; 
             end
             S(idx) = [];
             idx = strcmp({S.type},'line1D');
-            if ~isempty(lines1D)
+            if ~isempty(idx)
                 S2 = [S2 xplr.selectionshape('line1D',ConvertLine1D(S(idx)))];
             end
             S(idx) = [];
             idx = strcmp({S.type},'indices');
-            if ~isempty(lines1D)
-                S2 = [S2 xplr.selectionshape('indices',unique([S(idx).special]))];
+            if ~isempty(idx)
+                data = cat(1,S(idx).special); % 2 x n
+                n = size(data,2);
+                if n == 1
+                    S2 = [S2 S(idx)];
+                else
+                    % check size compatibility
+                    sz = data{1,1}; 
+                    for i = 2:n
+                        if ~isequal(data{1,i},sz), error 'indices shape to combine do not have the same size', end
+                    end
+                    % merge
+                    S2 = [S2 xplr.selectionshape('indices',{sz unique([data{2,:}])})];
+                end
             end
             S(idx) = [];
             
@@ -209,7 +210,7 @@ classdef selectionshape
                         bad = any(ij<1 | ij>repmat(sizes(:),1,np));
                         ij(:,bad) = [];
                         mask(ij(1,:)+sizes(1)*(ij(2,:)-1)) = true;
-                    case 'line2D'
+                    case 'openpoly2D'
                         line = points;
                         longueur = [0 cumsum(sqrt(sum(diff(line,1,2).^2)))];
                         [longueur f] = unique(longueur);
@@ -261,7 +262,7 @@ classdef selectionshape
                         if strcmp(S(k).type,'point1D')
                             indices = sort(round(S(k).points));
                         else
-                            indices = S(k).special;
+                            indices = S(k).special{2};
                         end
                         if isempty(indices), continue, end
                         gaps = diff(indices)>1;
@@ -317,8 +318,15 @@ classdef selectionshape
                             vdata = [vdata NaN r*vdata];
                         end
                         polyk = fn_add(c,fn_mult(u,udata)+fn_mult([u(2);-u(1)],vdata));
-                    case 'line2D'
+                    case 'openpoly2D'
                         polyk = Sk.points;
+                    case 'indices'
+                        [sz, indices] = deal(Sk.special{:});
+                        % first make a mask
+                        mask = false([sz 1]);
+                        mask(indices) = true;
+                        % then convert to polygon
+                        polyk = fn_mask2poly(mask);
                     case 'all'
                         disp 'converting ''all2D'' selection by a [-1e30 1e30] square'
                         polyk = [-1 -1 1 1 -1; -1 1 1 -1 -1]*1e30;
@@ -365,7 +373,7 @@ classdef selectionshape
     methods
         function b = ispoint(S,tol)
             switch S.type
-                case {'point1D','point2D','line1D','line2D','poly2D'}
+                case {'point1D','point2D','line1D','openpoly2D','poly2D'}
                     b = all(all(abs(diff(S.points,1,2))<=tol));
                 case 'rect2D'
                     b = all(abs(S.vectors)<=tol);

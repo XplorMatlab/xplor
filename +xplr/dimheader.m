@@ -50,6 +50,10 @@ classdef dimheader < xplr.header
                 H(i).dimID = rand;
             end
         end
+        function disp(H)
+            disp@xplr.header(H)
+            fprintf('\b    dimID: %.4f\n\n', H.dimID);
+        end
     end
     
 end

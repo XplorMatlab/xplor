@@ -1,5 +1,6 @@
 classdef filterAndPoint < xplr.dataoperand
     % function F = filter(headerin[,label])
+    % function F = filter(F,P)
     %---
     % The class filerAndPoint combines a filter (operating on a
     % n-dimensional space) and a set of n points. 
@@ -40,13 +41,28 @@ classdef filterAndPoint < xplr.dataoperand
             end
             
             % set filter
-            F.F = xplr.filter(varargin{:});
+            create_members = ~isa(varargin{1},'xplr.filter');
+            if create_members
+                F.F = xplr.filter(varargin{:});
+            else
+                F.F = varargin{1};
+            end
             F.headerin = F.F.headerin;
             connectlistener(F.F,F,'ChangedOperation',@(u,e)transitNotification(F,'filter',e))
             
             % set P
-            for i=1:F.ndin
-                F.P(i) = xplr.point(F.headerin(i));
+            if create_members
+                for i=1:F.ndin
+                    F.P(i) = xplr.point(F.headerin(i));
+                end
+            else
+                F.P = varargin{2};
+                if length(F.P) ~= F.ndin, error 'number of point filters does not match number of input dimensions', end
+                for i=1:F.ndin
+                    if F.P(i).headerin ~= F.headerin(i)
+                        error 'headers of filter and point filter(s) do not match'
+                    end
+                end
             end
             for i=1:F.ndin
                 connectlistener(F.P(i),F,'ChangedPoint',@(u,e)transitNotification(F,'point',e))

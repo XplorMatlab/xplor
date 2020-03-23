@@ -164,7 +164,7 @@ classdef viewcontrol < xplr.graphnode
             end
             
             % available keys
-            availablekeys = xplr.bank.availableFilterKeys();
+            availablekeys = xplr.bank.availableFilterKeys('filterAndPoint');
             newkey = max(availablekeys)+1;
             keyvalues = [0 setdiff(availablekeys,1) newkey];
             keydisplays = [ ...
@@ -445,7 +445,7 @@ classdef viewcontrol < xplr.graphnode
             else
                 % search for the filter in the bank with key and dimension
                 doshow = false;
-                F = xplr.bank.getFilter(key,header,doshow,C);
+                F = xplr.bank.getFilterAndPoint(key,header,C,doshow);
             end
             
             % add the filter to the items, it is important that
