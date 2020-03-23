@@ -257,7 +257,7 @@ classdef slicer < xplr.graphnode
         end
         function chgFilterActive(S,idx,val)
             % function chgFilterActive(S,idx,val)
-            val = logical(val);
+            val = boolean(val);
             for i = idx
                 S.filters(i).active = val;
                 S.activateConnection(S.filters(i).obj,val)

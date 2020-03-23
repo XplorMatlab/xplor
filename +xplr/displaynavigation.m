@@ -377,7 +377,7 @@ classdef displaynavigation < xplr.graphnode
             
             % Hide the vertical if all dimensions on x are singletons or if
             % crossCenter is out of display on one dimension on x
-            N.cross(1).Visible = ~(x_singleton|x_isOutOfDisplay);
+            N.cross(1).Visible = onoff(~(x_singleton|x_isOutOfDisplay));
             
             % same things for horizontal bar
             y_singleton = true;
@@ -394,7 +394,7 @@ classdef displaynavigation < xplr.graphnode
                 y_singleton = false;
             end
 
-            N.cross(2).Visible = ~(y_singleton|y_isOutOfDisplay);
+            N.cross(2).Visible = onoff(~(y_singleton|y_isOutOfDisplay));
             
             updateCrossCenterVisibility(N);
         end
@@ -1066,7 +1066,7 @@ classdef displaynavigation < xplr.graphnode
         %  if one of the dimension of the cross is hidden, hide the
         % cross center as well
         function updateCrossCenterVisibility(N)
-            N.cross(3).Visible = onoff(logical(N.cross(1).Visible) && logical(N.cross(2).Visible));
+            N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
         end
         
         

@@ -102,7 +102,8 @@ classdef xdata < xplr.graphnode
                 dim = zeros(1,n);
                 labels = {C.V.data.header.label};
                 for i = 1:n
-                    dim(i) = fn_find(d{i},labels,'first').dimID;
+                    tmp = fn_find(d{i},labels,'first');
+                    dim(i) = tmp.dimID;
                 end
                 d = dim;
             elseif iscell(d)

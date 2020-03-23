@@ -70,9 +70,9 @@ classdef selectionnd < xplr.graphnode
             elseif regexp(type, '^(empty|all)\d+D$')
                 [type, nd] = fn_regexptokens(type, '^(empty|all)(\d+)D$');
                 sel.nd = str2double(nd);
-            elseif contains(type,'1D')
+            elseif strfind(type,'1D')
                 sel.nd = 1;
-            elseif contains(type,'2D')
+            elseif strfind(type,'2D')
                 sel.nd = 2;
             elseif strcmp(type, 'indices')
                 if nargin<3
