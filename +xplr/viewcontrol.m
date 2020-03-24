@@ -152,17 +152,6 @@ classdef viewcontrol < xplr.graphnode
             dim = get(C.dimlist,'value');
             dimID = [C.V.data.header(dim).dimID];
             
-            % add or change 1D shared filter (using key 1)
-            label = fn_switch(isscalar(dimID),'Add/Change shared filter','Add/Change shared 1D filters');
-            uimenu(m,'label',label, ...
-                'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),1))
-            
-            % add or change 2D shared filter (using key 1)
-            if length(dimID)==2
-                uimenu(m,'label','Add/Change shared 2D filter', ...
-                    'callback',@(u,e)dimaction(C,'addfilter',{dimID},1))
-            end
-            
             % available keys
             availablekeys = xplr.bank.availableFilterKeys('filterAndPoint');
             newkey = max(availablekeys)+1;
@@ -172,12 +161,10 @@ classdef viewcontrol < xplr.graphnode
                 fn_num2str(keyvalues(2:end), 'shared filter %i', 'cell') ...
                 ];
             
-            % add or change 1D filter (more options: select among available keys)
-            label = fn_switch(isscalar(dimID),'Add/Change filter','Add/Change 1D filters');
-            m2 = uimenu(m,'label',label);
-            for i=1:length(keyvalues)
-                uimenu(m2,'label',keydisplays{i}, ...
-                    'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),keyvalues(i)));
+            % add or change 2D shared filter (using key 1)
+            if length(dimID)==2
+                uimenu(m,'label','Add/Change shared 2D filter', ...
+                    'callback',@(u,e)dimaction(C,'addfilter',{dimID},1))
             end
             
             % add or change 2D filter (more options: select among available keys)
@@ -187,6 +174,19 @@ classdef viewcontrol < xplr.graphnode
                     uimenu(m2,'label',keydisplays{i}, ...
                         'callback',@(u,e)dimaction(C,'addfilter',{dimID},keyvalues(i)));
                 end
+            end
+            
+            % add or change 1D shared filter (using key 1)
+            label = fn_switch(isscalar(dimID),'Add/Change shared filter','Add/Change shared 1D filters');
+            uimenu(m,'label',label, ...
+                'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),1))
+            
+            % add or change 1D filter (more options: select among available keys)
+            label = fn_switch(isscalar(dimID),'Add/Change filter','Add/Change 1D filters');
+            m2 = uimenu(m,'label',label);
+            for i=1:length(keyvalues)
+                uimenu(m2,'label',keydisplays{i}, ...
+                    'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),keyvalues(i)));
             end
             
             % remove filters in these dimensions

@@ -21,7 +21,13 @@ classdef filter < xplr.dataoperand
             F.headerin = headerin;
             
             % header of the output space
-            if nargin<2, label = fn_strcat({headerin.label},','); end
+            if nargin<2
+                if isscalar(headerin)
+                    label = headerin.label;
+                else
+                    label = fn_strcat({headerin.label},'(',',',')');
+                end
+            end
 
             % output header is categorical
             if ~isscalar(headerin)

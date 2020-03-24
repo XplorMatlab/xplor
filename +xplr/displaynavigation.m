@@ -281,12 +281,10 @@ classdef displaynavigation < xplr.graphnode
             N.cross(3) = line('Parent',N.D.ha,'xdata',0,'ydata',0,'marker','.','linestyle','none'); % a single point
             set(N.cross,'Color','k')
             
-            %fn4D_dbstack
-            %ij2 = D.SI.ij2;
-            % scaling and translation
-            %pt = IJ2AX(D.SI,ij2);
+            % position
             N.crossCenter = [0 0];
             
+            % callbacks
             for i=1:3
                 set(N.cross(i),'buttondownfcn',@(u,e)manualmovecross(N,i))
             end

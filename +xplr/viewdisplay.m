@@ -272,7 +272,7 @@ classdef viewdisplay < xplr.graphnode
             end
 
             % select crossSelector key 
-            curfilt = D.navigation.dimfilters{dim};
+            curfilt = D.navigation.pointfilters{dim};
             if ~isempty(curfilt)
                 m2 = uimenu(m,'label','cross selector key','Separator',fn_switch(docolor));
 
@@ -649,7 +649,7 @@ classdef viewdisplay < xplr.graphnode
             % Prepare clipping
             clip0 = D.clip;
             clipextent = diff(clip0);
-            if ~strcmp(clipadjust,'none'), clip0 = clip0-mean(clip0); end
+
             
             % Prepare several list of indices beforehand to avoid repeated
             % calls to functions such as ind2sub
@@ -704,7 +704,7 @@ classdef viewdisplay < xplr.graphnode
                             clipi = clip0;
                         case 'mean'
                             % adjustment by the mean
-                            clipi = clip0 + nmean(xi(:));
+                            clipi = nmean(xi(:)) + [-.5 +.5] * clipextent;
                         otherwise
                             error('unknown clipping adjustment flag ''%s''',clipadjust)
                     end
