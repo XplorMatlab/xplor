@@ -28,7 +28,11 @@ classdef graphnode < matlab.mixin.SetGet
             end
         end
         function str = char(self)
-            str = [class(self) num2str(floor(self.idGraphNode*1000),'%.3i')];
+            if isvalid(self)
+                str = [class(self) num2str(floor(self.idGraphNode*1000),'%.3i')];
+            else
+                str = ['deleted ' class(self)];
+            end
         end
         function addListener(self,other,varargin)
             % function addListener(self,other,addlistener arguments...)

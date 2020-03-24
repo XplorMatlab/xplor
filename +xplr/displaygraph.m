@@ -292,7 +292,7 @@ classdef displaygraph < xplr.graphnode
                         domeasure = false;
                     else
                         jf = find(d==G.layout.(f),1);
-                        if isempty(jf), error('%s activedim must have either ''%s'' or ''%s'' organization!',f,f,ff), end
+                        if isempty(jf), error('%s activedim must be either at ''%s'' or ''%s'' location!',f,f,ff), end
                         switch f
                             case 'x'
                                 f_off = st.xyoffsets(k,1) + st.xoffset(jf) + sum(st.xoffset(jf+1:end)+st.xstep(jf+1:end));
@@ -771,7 +771,7 @@ classdef displaygraph < xplr.graphnode
             % (set transform matrix)
             M(1,1,:) = xscale;
             M(2,2,:) = yscale; 
-            M(1:2,4,:) = xyoffset
+            M(1:2,4,:) = xyoffset;
         end
         function pos = labelPosition(G,dim,orgin)
             % function pos = labelPosition(G,d[,orgin])

@@ -85,56 +85,18 @@ classdef xdata < xplr.graphnode
             % function [dim, dimID] = dimensionNumberAndID(x,d)
             %---
             % Convert any of dimension numbers, identifiers or labels
-            % to both dimension numbers and identifiers
-            
-            % Special cases
-            if isempty(d)
-                if iscell(d)
-                    [dim, dimID] = deal(cell(1,0));
-                else
-                    [dim, dimID] = deal(zeros(1,0));
-                end
-                return
-            elseif ischar(d) || (iscell(d) && ischar(d{1}))
-                % First convert labels to dimension numbers
-                if ~iscell(d), d = {d}; end
-                n = length(d);
-                dim = zeros(1,n);
-                labels = {x.header.label};
-                for i = 1:n
-                    dim(i) = fn_find(d{i},labels,'first');
-                end
-                d = dim;
-            elseif iscell(d)
-                % Multiple outputs
-                n = length(d);
-                [dim, dimID] = deal(cell(1,n));
-                for i = 1:n
-                    [dim{i}, dimID{i}] = x.dimensionNumberAndID(d{i}); 
-                end
-                return
-            end
-            
-            % Convert between dimension numbers and identifiers
-            if d(1)<1
-                % identifier -> number
-                dimID = d;
-                n = length(dimID);
-                dim = zeros(1,n);
-                for i =1:n
-                    dim(i) = find([x.header.dimID]==dimID(i),1,'first');
-                end
-            else
-                % number -> identifier
-                dim = d;
-                dimID = [x.header(dim).dimID];
-            end
+            % to both dimension numbers and identifiers.
+            % Returns [] if some dimension was not found.
+            [dim, dimID] = dimensionNumberAndID(x.header,d);
         end
         function dimID = dimensionID(x,d)
             [~, dimID] = x.dimensionNumberAndID(d);
         end
         function dim = dimensionNumber(x,d)
             [dim, ~] = x.dimensionNumberAndID(d);
+        end
+        function label = dimensionLabel(x,d)
+            label = x.header.dimensionLabel(d);
         end
         function head = headerByID(x,dimID)
             d = x.dimensionNumber(dimID);

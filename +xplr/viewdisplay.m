@@ -6,6 +6,7 @@ classdef viewdisplay < xplr.graphnode
         % data
         V           % parent 'view' object
         zoomslicer
+        previousheaders = xplr.header.empty(1,0);
         % graphics
         hp          % display panel
         ha          % main axes
@@ -34,10 +35,10 @@ classdef viewdisplay < xplr.graphnode
     end
     
     properties (SetAccess='private')
-        layout0                             % set with function setLayout
-        activedim = struct('x',[],'y',[])   % change with function makeDimActive(D,d)
-        colordim = [];                      % set with setColorDim
-        clip = [0 1]                        % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
+        layout0                             % layout, i.e. which data dimension appear on which location; set with function setLayout
+        activedimID = struct('x',[],'y',[])   % dimensions on which zooming mouse actions and sliders apply; change with function makeDimActive(D,d)
+        colordim = [];                        % set with setColorDim
+        clip = [0 1]                          % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
     end
     
     % Fast access (dependent)
@@ -46,6 +47,8 @@ classdef viewdisplay < xplr.graphnode
         slice
         zslice
         zoomfilters
+        activedim
+        layoutID
         layout
     end
     
@@ -129,11 +132,25 @@ classdef viewdisplay < xplr.graphnode
         function zoomfilters = get.zoomfilters(D)
             zoomfilters = [D.zoomslicer.filters.obj];
         end
+        function activedim = get.activedim(D)
+            activedim = struct( ...
+                'x', D.slice.dimensionNumber(D.activedimID.x), ...
+                'y', D.slice.dimensionNumber(D.activedimID.y));                
+        end
         function layout = get.layout(D)
             if isempty(D.layout0)
                 layout = [];
             else
                 layout = D.layout0.strip_singleton();
+            end
+        end
+        function layoutID = get.layoutID(D)
+            layout_ = D.layout;
+            layoutID = layout_;
+            F = {'x' 'y' 'ystatic' 'xy' 'yx'};
+            for i = 1:length(F)
+                f = F{i};
+                layoutID.(f) = D.slice.dimensionID(layout_.(f));
             end
         end
     end
@@ -165,52 +182,87 @@ classdef viewdisplay < xplr.graphnode
             % check that current active dims are ok, but also set active
             % dims if there aren't
             if nargin<2, doImmediateUpdate = true; end
-            org = D.layout;
+            orgID = D.layoutID;
             sz = D.slice.sz; 
-            n_d = length(sz);
-            okdim = (sz>1);
-            if ~isempty(org.x), okdim(org.x(1)) = true; end
-            if strcmp(D.displaymode,'image') && ~isempty(org.y), okdim(org.y(1)) = true; end
             
-            % invalid dimensions
-            % (x)
-            dx = D.activedim.x;
-            if ~isempty(dx) && ~(dx<=n_d && okdim(dx) && any(dx==[org.x org.yx]))
-                dx = [];
+            % try to keep same active dims
+            dx = D.activedimID.x;
+            if ~ismember(dx, [D.slice.header.dimID])
+                % try to find identifier for the same label in the new slice
+                label = D.previousheaders.dimensionLabel(dx);
+                dx = D.slice.dimensionID(label); 
             end
-            % (y)
-            dy = D.activedim.y;
-            if ~isempty(dy) && ~(dy<n_d && okdim(dy) && any(dy==[org.y org.xy]))
-                dy = [];
+            dy = D.activedimID.y;
+            if ~ismember(dy, [D.slice.header.dimID])
+                % try to find identifier for the same label in the new slice
+                label = D.previousheaders.dimensionLabel(dy);
+                dy = D.slice.dimensionID(label); 
             end
             
-            % set new values
-            if isempty([dx dy]) && ~isempty([org.xy org.yx])
-                % (xy/yx)
-                if ~isempty(org.xy)
-                    dy = org.xy;
+            % check position of active dims
+            if isempty([dx dy]) 
+                % no valid active dim: set some
+                if ~isempty(orgID.xy)
+                    dy = orgID.xy;
+                elseif ~isempty(orgID.yx)
+                    dx = orgID.yx;
                 else
-                    dx = org.yx;
+                    % (x)
+                    if isempty(dx) && ~isempty(orgID.x)
+                        dx = orgID.x(end);
+                    end
+                    % (y)
+                    if isempty(dy) && ~isempty(orgID.y)
+                        dy = orgID.y(end);
+                    end
+                end
+            end
+            if ismember(dx, orgID.x)
+                % ok, we can keep dx as the active x dimension
+                if ismember(dy, orgID.y)
+                    % we can also keep dy as the active y dimension
+                    [dx, dy] = deal(dx, dy);
+                else
+                    [dx, dy] = deal(dx, []);
+                end
+            elseif ismember(dx, orgID.y)
+                % dimension dx moved to y location
+                if ismember(dy, orgID.x)
+                    % and dimension dy moved to x location: switch the 2
+                    % active dims!
+                    [dx, dy] = deal(dy, dx);
+                elseif ismember(dy, orgID.y)
+                    % keep dy as the active y dimension, remove dx from
+                    % active x
+                    [dx, dy] = deal([], dy);
+                else
+                    % replace active y dimension with dx
+                    [dx, dy] = deal([], dx);
                 end
             else
-                % (x)
-                if isempty(dx)
-                    xorgok = org.x; xorgok(~okdim(xorgok)) = [];
-                    if ~isempty(xorgok), dx = xorgok(end); end
-                end
-                % (y)
-                if isempty(dy)
-                    yorgok = org.y; yorgok(~okdim(yorgok)) = [];
-                    if ~isempty(yorgok), dy = yorgok(end); end
+                if ismember(dy, orgID.x)
+                    [dx, dy] = deal(dy, []);
+                elseif ismember(dy, orgID.y)
+                    [dx, dy] = deal([], dy);
+                elseif dx == orgID.xy
+                    [dx, dy] = deal([], dx);
+                elseif dx == orgID.yx
+                    [dx, dy] = deal(dx, []);
+                elseif dy == orgID.xy
+                    [dx, dy] = deal([], dy);
+                elseif dy == orgID.yx
+                    [dx, dy] = deal(dy, []);
+                else
+                    [dx, dy] = deal([], []);
                 end
             end
-            
+                               
             % update property
-            newactd = struct('x',dx,'y',dy);
-            anychg = ~isequal(newactd,D.activedim);
+            newvalue = struct('x',dx,'y',dy);
+            anychg = ~isequal(newvalue, D.activedimID);
             if nargout>0, out = anychg; end
             if ~anychg, return, end
-            D.activedim = newactd;
+            D.activedimID = newvalue;
             
             % update display
             if doImmediateUpdate
@@ -337,27 +389,28 @@ classdef viewdisplay < xplr.graphnode
             D.navigation.displayselection()
         end
         function makeDimActive(D,d,flag)
+            dimID = D.slice.dimensionID(d);
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             dotoggle = nargin>=3 && strcmp(flag,'toggle');
             % update active dim and connect slider
             if ismember(d,[D.layout.x D.layout.yx])
-                if dotoggle && any(d==D.activedim.x)
-                    D.activedim.x = [];
+                if dotoggle && any(dimID==D.activedimID.x)
+                    D.activedimID.x = [];
                 else
-                    D.activedim.x = d;
+                    D.activedimID.x = dimID;
                     if ismember(d,D.layout.yx) || any(ismember(D.activedim.y,[D.layout.xy D.layout.yx]))
-                        D.activedim.y = [];
+                        D.activedimID.y = [];
                         D.navigation.connectZoomFilter('y')
                     end
                 end
                 D.navigation.connectZoomFilter('x')
             elseif ismember(d,[D.layout.y D.layout.xy])
-                if dotoggle && any(d==D.activedim.y)
-                    D.activedim.y = [];
+                if dotoggle && any(dimID==D.activedimID.y)
+                    D.activedimID.y = [];
                 else
-                    D.activedim.y = d;
+                    D.activedimID.y = dimID;
                     if ismember(d,D.layout.xy) || any(ismember(D.activedim.x,[D.layout.xy D.layout.yx]))
-                        D.activedim.x = [];
+                        D.activedimID.x = [];
                         D.navigation.connectZoomFilter('x')
                     end
                 end
@@ -471,7 +524,7 @@ classdef viewdisplay < xplr.graphnode
             if nargin<2, flag = 'global'; else, flag = e.flag; end
             xplr.debuginfo('viewdisplay','slicechange %s', flag)
             
-            % Update organization
+            % Update layout
             switch flag
                 case 'global'
                     % default organization: 1st and 4th dimension in x, 2nd
@@ -479,7 +532,7 @@ classdef viewdisplay < xplr.graphnode
                     newlayout = xplr.displaylayout(D);
                     if ~isequal(newlayout,D.layout0), D.layout0 = newlayout; end
                 otherwise
-                    % no change in organization, including in the 'chgdim'
+                    % no change in layout, including in the 'chgdim'
                     % case!
             end
             
@@ -493,9 +546,6 @@ classdef viewdisplay < xplr.graphnode
                 D.checkActiveDim(false)
                 D.navigation.connectZoomFilter()
             end
-            
-            % Update cross visibility
-            % D.navigation.update_cross_visibility()
             
             % Update color dim
             D.checkColorDim(false)
@@ -518,6 +568,9 @@ classdef viewdisplay < xplr.graphnode
             % dimension in the new slice (if it is still valid, note that
             % selection display update will occur in D.zslicechange)
             D.navigation.checkselectionfilter()
+            
+            % Se previous headers to current headers
+            D.previousheaders = D.slice.header;
         end
         function updateDisplay(D,flag,dim,ind)
             % function updateDisplay(D[,flag,dim,ind])

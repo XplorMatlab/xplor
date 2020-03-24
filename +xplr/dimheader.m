@@ -54,6 +54,88 @@ classdef dimheader < xplr.header
             disp@xplr.header(H)
             fprintf('\b    dimID: %.4f\n\n', H.dimID);
         end
+        function [dim, dimID] = dimensionNumberAndID(H,d)
+            % function [dim, dimID] = dimensionNumberAndID(H,d)
+            %---
+            % Convert any of dimension numbers, identifiers or labels
+            % to both dimension numbers and identifiers.
+            % Returns [] if some dimension was not found.
+            
+            % Special cases
+            if isempty(d)
+                if iscell(d)
+                    [dim, dimID] = deal(cell(1,0));
+                else
+                    [dim, dimID] = deal(zeros(1,0));
+                end
+                return
+            elseif ischar(d) || (iscell(d) && ischar(d{1}))
+                % First convert labels to dimension numbers
+                if ~iscell(d), d = {d}; end
+                n = length(d);
+                dim = zeros(1,n);
+                labels = {H.label};
+                for i = 1:n
+                    dim_i = fn_find(d{i},labels,'first');
+                    if isempty(dim_i)
+                        [dim, dimID] = deal([]);
+                        return
+                    end
+                    dim(i) = dim_i;
+                end
+                d = dim;
+            elseif iscell(d)
+                % Multiple outputs
+                n = length(d);
+                [dim, dimID] = deal(cell(1,n));
+                for i = 1:n
+                    [dim{i}, dimID{i}] = H.dimensionNumberAndID(d{i}); 
+                end
+                return
+            end
+            
+            % Convert between dimension numbers and identifiers
+            if d(1)<1
+                % identifier -> number
+                dimID = d;
+                n = length(dimID);
+                dim = zeros(1,n);
+                for i =1:n
+                    dim_i = find([H.dimID]==dimID(i),1,'first');
+                    if isempty(dim_i)
+                        [dim, dimID] = deal([]);
+                        return
+                    end
+                    dim(i) = dim_i;
+                end
+            else
+                % number -> identifier
+                dim = d;
+                dimID = [H(dim).dimID];
+                if length(dimID) < length(d)
+                    [dim, dimID] = deal([]);
+                    return
+                end
+            end
+        end
+        function dimID = dimensionID(H,d)
+            [~, dimID] = H.dimensionNumberAndID(d);
+        end
+        function dim = dimensionNumber(H,d)
+            [dim, ~] = H.dimensionNumberAndID(d);
+        end
+        function label = dimensionLabel(H,d)
+            [dim, ~] = H.dimensionNumberAndID(d);
+            if isempty(dim)
+                label = [];
+            else
+                label = H(dim).label;
+            end
+        end
+        function head = headerByID(H,dimID)
+            d = H.dimensionNumber(dimID);
+            head = H(d);
+        end
     end
     
 end
