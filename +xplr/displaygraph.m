@@ -8,7 +8,6 @@ classdef displaygraph < xplr.graphnode
     end
     properties (Dependent, SetAccess='private')
         ha
-        layout
     end
     % parameters
     properties (SetAccess='private')
@@ -17,10 +16,9 @@ classdef displaygraph < xplr.graphnode
     end
     % pre-computations
     properties (SetAccess='private')
+        layout
         zslicesz    % current size of the zoomed slice
         filling     % how much of the space available for each dimension if filled (vector of values <=1)
-    end
-    properties (SetAccess='private')
         steps
     end
         
@@ -238,7 +236,8 @@ classdef displaygraph < xplr.graphnode
             
             % compute steps
             if nargout>0, prevsteps = G.steps; end
-            [G.steps G.zslicesz G.filling xpair] = computeStepsPrivate(G,G.layout); %#ok<ASGLU>
+            G.layout = G.D.layout;
+            [G.steps, G.zslicesz, G.filling, xpair] = computeStepsPrivate(G,G.layout); %#ok<ASGLU>
             
             % any change
             if nargout>0
@@ -818,7 +817,7 @@ classdef displaygraph < xplr.graphnode
                 end
             end
         end
-		function [polygon center] = selectionMark(G,dim,sel)
+		function [polygon, center] = selectionMark(G,dim,sel)
             % Create the polygon to display corresponding to a given
             % selection. This is a complex function as it handles many
             % different cases whether the selection is 1D or 2D, which
@@ -827,7 +826,8 @@ classdef displaygraph < xplr.graphnode
             
 			% checks
 			nd = length(dim);
-			dim_location = [G.layout.dim_locations{dim}];
+            dim = G.D.slice.dimensionNumber(dim);
+			dim_location = [G.D.layoutID.dim_locations{dim}];
 			if sel.nd ~= nd, error 'selection has incorrect number of dimensions', end
             
             % default polygon is empty (no display)

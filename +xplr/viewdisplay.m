@@ -35,9 +35,10 @@ classdef viewdisplay < xplr.graphnode
     end
     
     properties (SetAccess='private')
-        layout0                             % layout, i.e. which data dimension appear on which location; set with function setLayout
+        layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayout
+        layoutIDmemory                        % remembers position of all dimension ID encountered so far (i.e. even if not present in the current data)
         activedimID = struct('x',[],'y',[])   % dimensions on which zooming mouse actions and sliders apply; change with function makeDimActive(D,d)
-        colordim = [];                        % set with setColorDim
+        colordimID = [];                      % set with setColorDim
         clip = [0 1]                          % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
     end
     
@@ -48,7 +49,7 @@ classdef viewdisplay < xplr.graphnode
         zslice
         zoomfilters
         activedim
-        layoutID
+        colordim
         layout
     end
     
@@ -137,21 +138,11 @@ classdef viewdisplay < xplr.graphnode
                 'x', D.slice.dimensionNumber(D.activedimID.x), ...
                 'y', D.slice.dimensionNumber(D.activedimID.y));                
         end
-        function layout = get.layout(D)
-            if isempty(D.layout0)
-                layout = [];
-            else
-                layout = D.layout0.strip_singleton();
-            end
+        function colordim = get.colordim(D)
+            colordim = D.slice.dimensionNumber(D.colordimID);
         end
-        function layoutID = get.layoutID(D)
-            layout_ = D.layout;
-            layoutID = layout_;
-            F = {'x' 'y' 'ystatic' 'xy' 'yx'};
-            for i = 1:length(F)
-                f = F{i};
-                layoutID.(f) = D.slice.dimensionID(layout_.(f));
-            end
+        function layout = get.layout(D)
+            layout = D.layoutID.dimensionNumber();
         end
     end
     
@@ -185,19 +176,12 @@ classdef viewdisplay < xplr.graphnode
             orgID = D.layoutID;
             sz = D.slice.sz; 
             
-            % try to keep same active dims
+            % try to keep same active dims if they still exist in the new
+            % data
             dx = D.activedimID.x;
-            if ~ismember(dx, [D.slice.header.dimID])
-                % try to find identifier for the same label in the new slice
-                label = D.previousheaders.dimensionLabel(dx);
-                dx = D.slice.dimensionID(label); 
-            end
+            if ~ismember(dx, [D.slice.header.dimID]), dx = []; end
             dy = D.activedimID.y;
-            if ~ismember(dy, [D.slice.header.dimID])
-                % try to find identifier for the same label in the new slice
-                label = D.previousheaders.dimensionLabel(dy);
-                dy = D.slice.dimensionID(label); 
-            end
+            if ~ismember(dy, [D.slice.header.dimID]), dy = []; end
             
             % check position of active dims
             if isempty([dx dy]) 
@@ -216,8 +200,7 @@ classdef viewdisplay < xplr.graphnode
                         dy = orgID.y(end);
                     end
                 end
-            end
-            if ismember(dx, orgID.x)
+            elseif ismember(dx, orgID.x)
                 % ok, we can keep dx as the active x dimension
                 if ismember(dy, orgID.y)
                     % we can also keep dy as the active y dimension
@@ -244,15 +227,16 @@ classdef viewdisplay < xplr.graphnode
                     [dx, dy] = deal(dy, []);
                 elseif ismember(dy, orgID.y)
                     [dx, dy] = deal([], dy);
-                elseif dx == orgID.xy
+                elseif ismember(dx, orgID.xy)
                     [dx, dy] = deal([], dx);
-                elseif dx == orgID.yx
+                elseif ismember(dx, orgID.yx)
                     [dx, dy] = deal(dx, []);
-                elseif dy == orgID.xy
+                elseif ismember(dy, orgID.xy)
                     [dx, dy] = deal([], dy);
-                elseif dy == orgID.yx
+                elseif ismember(dy, orgID.yx)
                     [dx, dy] = deal(dy, []);
                 else
+                    % should not happen
                     [dx, dy] = deal([], []);
                 end
             end
@@ -279,6 +263,7 @@ classdef viewdisplay < xplr.graphnode
             % This function populates the context menu that appears when
             % right-clicking on a label
             
+            [dim, dimID] = D.slice.dimensionNumberAndID(dim);
             head = D.slice.header(dim);
             delete(get(m,'children'))
             
@@ -286,10 +271,10 @@ classdef viewdisplay < xplr.graphnode
             % (color)
             docolor = strcmp(D.displaymode,'time courses');
             if docolor
-                uimenu(m,'label',['Color according to ' head.label],'checked',fn_switch(isequal(D.colordim,dim)), ...
-                    'callback',@(u,e)D.setColorDim(fn_switch(isequal(D.colordim,dim),[],dim)))
+                uimenu(m,'label',['Color according to ' head.label],'checked',fn_switch(isequal(D.colordimID,dimID)), ...
+                    'callback',@(u,e)D.setColorDim(fn_switch(isequal(D.colordimID,dimID),[],dimID)))
                 uimenu(m,'label','Display color legend', ...
-                    'enable',fn_switch(isequal(D.colordim,dim)),'checked',fn_switch(D.showcolorlegend), ...
+                    'enable',fn_switch(isequal(D.colordimID,dimID)),'checked',fn_switch(D.showcolorlegend), ...
                     'callback',@(u,e)set(D,'showcolorlegend',~D.showcolorlegend))
             end
 
@@ -353,8 +338,8 @@ classdef viewdisplay < xplr.graphnode
             end
             D.zoomfilters(d).setBin(bin)
         end
-        function setLayout(D,newlayout,doImmediateDisplay)
-            % function setLayout(D,newlayout[,doImmediateDisplay])
+        function setLayoutMemory(D,newlayoutID,doImmediateDisplay)
+            % function setLayoutMemory(D,newlayoutID[,doImmediateDisplay])
             %---
             % if doImmediateDisplay is set to false, only labels are
             % updated; if it is set to true, update happens regardless of
@@ -363,10 +348,11 @@ classdef viewdisplay < xplr.graphnode
             % false)
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             if nargin<3
-                if isequal(newlayout,D.layout), return, end
+                if isequal(newlayoutID,D.layoutIDmem), return, end
                 doImmediateDisplay = true;
             end
-            D.layout0 = newlayout;
+            D.layoutIDmemory = newlayoutID;
+            D.layoutID = newlayoutID.currentlayout(); % keep only dimensions actually displayed
             % is zslice too large for being displayed
             D.checkzslicesize()
             % first update graph (new positionning will be needed for both
@@ -388,28 +374,28 @@ classdef viewdisplay < xplr.graphnode
             % update selection display
             D.navigation.displayselection()
         end
-        function makeDimActive(D,d,flag)
-            dimID = D.slice.dimensionID(d);
+        function makeDimActive(D,dimID,flag)
+            dimID = D.slice.dimensionID(dimID);
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             dotoggle = nargin>=3 && strcmp(flag,'toggle');
             % update active dim and connect slider
-            if ismember(d,[D.layout.x D.layout.yx])
+            if ismember(dimID,[D.layoutID.x D.layoutID.yx])
                 if dotoggle && any(dimID==D.activedimID.x)
                     D.activedimID.x = [];
                 else
                     D.activedimID.x = dimID;
-                    if ismember(d,D.layout.yx) || any(ismember(D.activedim.y,[D.layout.xy D.layout.yx]))
+                    if ismember(dimID,D.layoutID.yx) || any(ismember(D.activedimID.y,[D.layoutID.xy D.layoutID.yx]))
                         D.activedimID.y = [];
                         D.navigation.connectZoomFilter('y')
                     end
                 end
                 D.navigation.connectZoomFilter('x')
-            elseif ismember(d,[D.layout.y D.layout.xy])
+            elseif ismember(dimID,[D.layoutID.y D.layoutID.xy])
                 if dotoggle && any(dimID==D.activedimID.y)
                     D.activedimID.y = [];
                 else
                     D.activedimID.y = dimID;
-                    if ismember(d,D.layout.xy) || any(ismember(D.activedim.x,[D.layout.xy D.layout.yx]))
+                    if ismember(dimID,D.layoutID.xy) || any(ismember(D.activedimID.x,[D.layoutID.xy D.layoutID.yx]))
                         D.activedimID.x = [];
                         D.navigation.connectZoomFilter('x')
                     end
@@ -424,13 +410,14 @@ classdef viewdisplay < xplr.graphnode
     
     % Color
     methods
-        function setColorDim(D,d,doImmediateDisplay)
-            if ~isnumeric(d) || numel(d)>1, error 'colordim must be empty or scalar', end
-            if isequal(d,D.colordim), return, end
-            if ~isempty(d) && ~isempty(D.layout.x) && d==D.layout.x(1), disp 'first x-dimension cannot be used for colors', return, end
+        function setColorDim(D,dim,doImmediateDisplay)
+            if ~isnumeric(dim) || numel(dim)>1, error 'colordim must be empty or scalar', end
+            dimID = D.slice.dimensionID(dim);
+            if isequal(dimID,D.colordimID), return, end
+            if ~isempty(dimID) && ~isempty(D.layoutID.x) && dimID==D.layoutID.x(1), disp 'first x-dimension cannot be used for colors', return, end
             if nargin<3, doImmediateDisplay = true; end
             % set property
-            D.colordim = d;
+            D.colordimID = dimID;
             % update color legend?
             if D.showcolorlegend
                 displayColorLegend(D)
@@ -441,8 +428,8 @@ classdef viewdisplay < xplr.graphnode
             end
         end
         function checkColorDim(D,doImmediateDisplay)
-            cdim = D.colordim;
-            if ~isempty(cdim) && ~isempty(D.layout.x) && cdim==D.layout.x(1)
+            cdimID = D.colordimID;
+            if ~isempty(cdimID) && ~isempty(D.layoutID.x) && cdimID==D.layoutID.x(1)
                 % cannot color according to the first x-dimension
                 if nargin<2, doImmediateDisplay = false; end
                 D.setColorDim([],doImmediateDisplay)
@@ -524,16 +511,16 @@ classdef viewdisplay < xplr.graphnode
             if nargin<2, flag = 'global'; else, flag = e.flag; end
             xplr.debuginfo('viewdisplay','slicechange %s', flag)
             
-            % Update layout
-            switch flag
-                case 'global'
-                    % default organization: 1st and 4th dimension in x, 2nd
-                    % and all other dimensions in y
-                    newlayout = xplr.displaylayout(D);
-                    if ~isequal(newlayout,D.layout0), D.layout0 = newlayout; end
-                otherwise
-                    % no change in layout, including in the 'chgdim'
-                    % case!
+            % first time?
+            if isempty(D.layoutIDmemory)
+                % some heuristics to choose initial layout
+                D.layoutIDmemory = xplr.displaylayout(D);
+                D.layoutID = D.layoutIDmemory;
+            else
+                % keep locations of dimensions already present in
+                % D.layoutIDmemory, use some heuristic to choose
+                % locations of new dimensions
+                [D.layoutIDmemory, D.layoutID] = D.layoutIDmemory.updateLayout();
             end
             
             % Update active dim and slider connections
@@ -622,9 +609,12 @@ classdef viewdisplay < xplr.graphnode
             
             % Reshape slice data adequately
             sz = D.zslice.sz;
-            if ~isempty(D.layout.x)
+            org = D.layout; % convert from dim ID to dim numbers
+            if ~isempty(org.x)
                 xlayout0 = D.layout.x(1);
             else
+                % no dimension displayed in x; mimick an additional
+                % dimension displayed in x
                 xlayout0 = length(sz)+1;
                 sz(end+1) = 1;
             end
@@ -640,14 +630,14 @@ classdef viewdisplay < xplr.graphnode
                 x = reshape(x,[szo(1) nt szo(2)]);
                 ylayout0 = [];
             else
-                if ~isempty(D.layout.y)
-                    ylayout0 = D.layout.y(1);
+                if ~isempty(org.y)
+                    ylayout0 = org.y(1);
                 else
                     ylayout0 = length(sz)+1;
                     sz(end+1) = 1;
                 end
                 dotranspose = (ylayout0<xlayout0);
-                if dotranspose, [xlayout0 ylayout0] = deal(ylayout0,xlayout0); end
+                if dotranspose, [xlayout0, ylayout0] = deal(ylayout0,xlayout0); end
                 nx = sz(xlayout0);
                 ny = sz(ylayout0);
                 szo = [prod(sz(1:xlayout0-1)) prod(sz(xlayout0+1:ylayout0-1)) prod(sz(ylayout0+1:end))];
@@ -844,7 +834,7 @@ classdef viewdisplay < xplr.graphnode
             
             % Dimension(s) where change occured
             if nargin>=2
-                chgdim = D.zslice.dimensionNumber(e.dim);
+                [chgdim, chgdimID] = D.zslice.dimensionNumberAndID(e.dim);
             end
             
             % Is zslice too large for being displayed
@@ -885,8 +875,8 @@ classdef viewdisplay < xplr.graphnode
                 updateDisplay(D,'chgdata')
             else
                 % Smart display update
-                if (~isempty(D.layout.x) && D.layout.x(1)==chgdim) ...
-                        || (strcmp(D.displaymode,'image') && ~isempty(D.layout.y) && D.layout.y(1)==chgdim)
+                if (~isempty(D.layoutID.x) && D.layoutID.x(1)==chgdimID) ...
+                        || (strcmp(D.displaymode,'image') && ~isempty(D.layoutID.y) && D.layoutID.y(1)==chgdimID)
                     % changes are within elements (the grid arrangement
                     % remains the same)
                     if fn_ismemberstr(flag,{'perm' 'chg'}) ...
@@ -948,7 +938,7 @@ classdef viewdisplay < xplr.graphnode
 
             % Update legend
             if strcmp(flag,'global')
-                D.colordim = [];
+                D.colordimID = [];
             elseif ~strcmp(flag,'chgdata') && isequal(chgdim,D.colordim)
                 displayColorLegend(D)
             end
@@ -981,12 +971,14 @@ classdef viewdisplay < xplr.graphnode
             D.displaymode = mode;
             % for 'image' mode, check that layout is valid, and modify it if
             % necessary
-            if strcmp(mode,'image') && ~isempty(D.layout.ystatic)
-                % it is not possible to superimpose images -> change layout
-                newlayout = D.layout;
-                newlayout.y = [D.layout.y D.layout.ystatic];
-                newlayout.ystatic = [];
-                D.setLayout(newlayout) % this automatically updates display among other things
+            if strcmp(mode,'image') && ~isempty(D.layoutID.ystatic)
+                % it is not possible to superimpose images -> move
+                % dimensions at 'ystatic' location to 'y'
+                newlayoutID = D.layoutIDmem;
+                ystatic = D.layoutID.ystatic;
+                newlayoutID.ystatic = setdiff(newlayoutID.ystatic, ystatic);
+                newlayoutID.y = [newlayoutID.y ystatic];
+                D.setLayout(newlayoutID) % this automatically updates display among other things
             else
                 % update display
                 D.checkzslicesize() % is zslice too large for being displayed

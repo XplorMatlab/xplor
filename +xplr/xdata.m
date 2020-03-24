@@ -132,7 +132,7 @@ classdef xdata < xplr.graphnode
             end
             notify(x,'ChangedData',xplr.eventinfo('data','chgdim',find(chgsz))) %#ok<FNDSB>
         end
-        function updateData(x,flag,dim,ind,value,newhead)
+        function updateData(x,flag,d,ind,value,newhead)
             % function updateData(x,flag,dim,ind,value,newhead)
             %---
             % arguments value and newhead are supposed to be only the
@@ -143,7 +143,8 @@ classdef xdata < xplr.graphnode
             % however giving the full updated data for value, or the full
             % header for newhead, is tolerated
             
-            dim = x.dimensionNumber(dim);
+            dim = x.dimensionNumber(d);
+            if isempty(dim), error('dimension %g absent from data', d); end
             
             % check that value is real
             if nargin>=5 && ~isreal(value), error 'data cannot be complex', end

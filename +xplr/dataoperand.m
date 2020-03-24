@@ -62,6 +62,19 @@ classdef dataoperand < xplr.graphnode
                 error 'data header does not match operation specification'
             end
         end
+        function b = changedimensionID(O)
+            % Whether output dimension header is intrinsically different
+            % from input header, i.e. whether it corresponds to "something
+            % else".
+            % For example 2D ROI filtering is necessarily a dimension
+            % change, but 1D ROI filtering isn't (both input and output
+            % have the same label, lie in the same space, etc.). Performing
+            % an FFT would be a dimension change even though the number of
+            % dimensions is the same.
+            % We consider that there is a dimension change when the number
+            % of dimensions or the label(s) have changed.
+            b = (O.ndout ~= O.ndin) || ~all(strcmp({O.headerout.label}, {O.headerin.label}));
+        end
     end
     methods
         function dimIDout = getdimIDout(O,dimIDin)
@@ -70,7 +83,11 @@ classdef dataoperand < xplr.graphnode
             % generate an identifier for the replacing dimension(s) that
             % will be created when applying the operation to some
             % dimensions (identified by dimIDin) of an xdata object.
-            dimIDout = mod(sum(dimIDin) + O.idGraphNode + (0:O.ndout-1)*pi, 1);
+            if O.changedimensionID()
+                dimIDout = mod(sum(dimIDin) + O.idGraphNode + (0:O.ndout-1)*pi, 1);
+            else
+                dimIDout = dimIDin;
+            end
         end
         function data = operation(O,data,dimIDs)
             % dimension number

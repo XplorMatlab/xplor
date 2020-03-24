@@ -23,7 +23,6 @@ classdef displaynavigation < xplr.graphnode
         selectionadvanced = false
     end
     properties (Dependent, SetAccess='private')
-        layout
         selection               % list of selectionnd object from the filter
         selectiondim            % dimensions to which these selections apply, identified by its number
     end
@@ -98,9 +97,6 @@ classdef displaynavigation < xplr.graphnode
     
     % Get dependent
     methods
-        function layout = get.layout(N)
-            layout = N.D.layout;
-        end
         function d = get.selectiondim(N)
             d = N.D.slice.dimensionNumber(N.selectiondimID);
         end
@@ -348,47 +344,39 @@ classdef displaynavigation < xplr.graphnode
             delete(N.cross)
         end      
         function update_cross_visibility(N)
+            
+            layout = N.D.layout;
            
             % if the slice has only one value in the dimension
             % displayed in abscisse then hide vertical bar
-            x_singleton = true;
+            x_singleton = isempty([layout.x layout.xy layout.yx]);
             x_isOutOfDisplay = false;
-            ijk = getPointIndexPosition(N);
-            zoom = N.graph.getZoom('displaylimit');
-            
-            for dimension = N.D.layout.x
-                dimension_isSingleton = (N.D.V.slice.header(dimension).n == 1);
-                if ~dimension_isSingleton, x_singleton = false; end
-                
-                % for all dimensions in layout.x, check if the crossCenter is
-                % out of the display of this dimension. If the crossCenter
-                % is out of display, the vertical bar will be hidden
-                if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
-                    x_isOutOfDisplay = true;
-                end
-            end
-            if ~isempty(N.layout.griddisplay) && N.D.V.slice.header(N.layout.griddisplay).n > 1
-                x_singleton = false;
-            end
+%             ijk = getPointIndexPosition(N);
+%             zoom = N.graph.getZoom('displaylimit');
+%             for dimension = N.D.layout.x
+%                 % for all dimensions in layout.x, check if the crossCenter is
+%                 % out of the display of this dimension. If the crossCenter
+%                 % is out of display, the vertical bar will be hidden
+%                 if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
+%                     x_isOutOfDisplay = true;
+%                 end
+%             end
             
             % Hide the vertical if all dimensions on x are singletons or if
             % crossCenter is out of display on one dimension on x
             N.cross(1).Visible = onoff(~(x_singleton|x_isOutOfDisplay));
             
             % same things for horizontal bar
-            y_singleton = true;
+            y_singleton = isempty([layout.y layout.xy layout.yx]);
             y_isOutOfDisplay = false;
-            for dimension = N.D.layout.y
-                dimension_isSingleton = (N.D.V.slice.header(dimension).n == 1);
-                if ~dimension_isSingleton, y_singleton = false; end
-
-                if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
-                    y_isOutOfDisplay = true;
-                end
-            end
-            if ~isempty(N.layout.griddisplay) && N.D.V.slice.header(N.layout.griddisplay).n > 1
-                y_singleton = false;
-            end
+%             for dimension = N.D.layout.y
+%                 if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
+%                     y_isOutOfDisplay = true;
+%                 end
+%             end
+%             if ~isempty(N.layout.griddisplay) && N.D.V.slice.header(N.layout.griddisplay).n > 1
+%                 y_singleton = false;
+%             end
 
             N.cross(2).Visible = onoff(~(y_singleton|y_isOutOfDisplay));
             
@@ -405,6 +393,7 @@ classdef displaynavigation < xplr.graphnode
             header = N.D.slice.header;
             seldim = N.selectiondim;
             sellabels = {header(seldim).label};
+            layout = N.D.layout;
 
             % Set selection dimension
             % (info)
@@ -420,16 +409,16 @@ classdef displaynavigation < xplr.graphnode
             end
             m2 = uimenu(m,'label',info);
             % (1D: dimension location must be x, y or xy)
-            dimok = sort([N.layout.x N.layout.y N.layout.xy]);
+            dimok = sort([layout.x layout.y layout.xy]);
             fn_propcontrol(N,'selectiondimID', ...
                 {'menugroup' {header(dimok).dimID} {header(dimok).label}}, ...
                 {'parent',m2});
             % (2D: dimension locations must be respectively x and y)
-            available = cell(2, length(N.layout.x), length(N.layout.y));
+            available = cell(2, length(layout.x), length(layout.y));
             if ~isempty(available)
-                for i = 1:length(N.layout.x)
-                    for j = 1:length(N.layout.y)
-                        d = [N.layout.x(i) N.layout.y(j)];
+                for i = 1:length(layout.x)
+                    for j = 1:length(layout.y)
+                        d = [layout.x(i) layout.y(j)];
                         available{1,i,j} = [header(d).dimID];
                         available{2,i,j} = fn_strcat({header(d).label},',');
                     end
@@ -471,7 +460,7 @@ classdef displaynavigation < xplr.graphnode
             selnd = length(seldim);
 
             % check dimension location
-            dim_location = [N.layout.dim_locations{seldim}];
+            dim_location = [N.D.layoutID.dim_locations{seldim}];
             switch selnd
                 case 1
                     if ~ismember(dim_location, {'x' 'y' 'xy'})
@@ -636,46 +625,14 @@ classdef displaynavigation < xplr.graphnode
                 return
             end
             
-%             disp(['selection in dimensions ' num2str(N.selectiondim) ':'])
-%             disp(N.selection)
-%             disp(' ')
-       
-
-%             %N.selection(1).;
-%             if ~isempty(N.selectiondisplay)
-%                 deleteValid(N.selectiondisplay{:})
-% 
-%             end
-%             
-%             for i = 1:length(N.selection)
-%                 N.displayonesel(i,'new',i);
-%             end
-            
-            % copied from explor:
-            
-%             fn4D_dbstack
-%             if isempty(N.D.selshow)
-%                 delete(findobj(D.ha,'tag','ActDispIm_Sel'))
-%                 return
-%             end
-            
-            % some params
-%             si = N.D.SI;
-%             seldimsnum = N.D.seldims-'w';
-%             selectionmarks = si.selection.getselset(seldimsnum).singleset;
-%             nsel = length(selectionmarks);
-            
-            % display set...
-            
             % before all, check that selections can be displayed
-            selectionaxis = [N.D.layout.dim_locations{N.selectiondim}];
+            selectionaxis = [N.D.layoutID.dim_locations{N.selectiondim}];
             if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
                 disp('selections cannot be displayed')
                 delete([N.D.seldisp{ind}])
                 N.D.seldisp(ind) = [];
                 return
             end
-
             
             if nargin<2, flag = 'all'; end
             if fn_ismemberstr(flag,{'all','reset'})
@@ -740,14 +697,10 @@ classdef displaynavigation < xplr.graphnode
             %selij = selectionmarks(k);
             selij = N.selection(k);
             
-            % TODO: the selection must have the information of the dimension to which
-            % it applies. Maybe this has to be done with the bank to
-            % synchronize filters like the zoomFilters. For now seldimsnum
-            % is equal to the number of dimension information
             seldim = N.selectiondim;
             if flagnew || flagedit || flagpos
                 % convert selection to displayable polygon
-                selectionaxis = [N.D.layout.dim_locations{seldim}];
+                selectionaxis = [N.D.layoutID.dim_locations{seldim}];
                 if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
                     error('selection cannot be displayed')
                 end

@@ -36,7 +36,8 @@ classdef view < hgsetget
                 end
                 data = xplr.xdata(data,head);
             end
-            % create slicer
+            
+            % SLICER
             if ~isa(data,'xplr.xdata'), error 'data argument must be a xplr.xdata object', end
             V.slicer = xplr.slicer(data);
             
@@ -48,11 +49,11 @@ classdef view < hgsetget
             % open figure and create panels
             init_panels(V)
             
-            % CONTROL
-            V.C = xplr.viewcontrol(V);
-            
             % DISPLAY
             V.D = xplr.viewdisplay(V);
+            
+            % CONTROL
+            V.C = xplr.viewcontrol(V);
             
             % save object in base workspace
             assignin('base','V',V)

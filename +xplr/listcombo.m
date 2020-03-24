@@ -29,7 +29,7 @@ classdef listcombo < hgsetget
                     'name','Shared Filters', ...
                     'pos',[min(80,screensize(3)/20) max(screensize(4)*.6-275,45) 150 550]);
                 delete(findall(container,'parent',container))
-%                 addlistener(C,'Empty',@(u,e)delete(container));
+                addlistener(C,'Empty',@(u,e)delete(container));
             end
             if ~isa(container,'panelorganizer')
                 container = panelorganizer(container,'H');
@@ -74,6 +74,9 @@ classdef listcombo < hgsetget
             
             % memorize which filter is at this position
             C.filters(idx) = filter;
+            
+            % watch filter deletion
+            addlistener(filter,'ObjectBeingDestroyed',@(u,e)removeList(C,hp))
         end
         function showList(C,filter)
             % add filter list, only if not already present
@@ -85,6 +88,8 @@ classdef listcombo < hgsetget
         end
         function removeList(C,x)
             % function removeList(C,hp|idx|filter)
+            
+            if ~isvalid(C), return, end
             
             if isa(x,'matlab.ui.container.Panel') || isa(x,'uipanel') || isnumeric(x)
                 hp_or_idx = x;

@@ -42,8 +42,8 @@ classdef viewcontrol < xplr.graphnode
             for i = ndimmax:-1:1
                 % test displayable
                 sz = C.V.data.sz; sz(active) = 1;
-                displaymode = 'image'; % default display mode
-                layout = xplr.displaylayout.disconnectedLayout(sz,displaymode);
+                displaymode = C.V.D.displaymode;
+                layout = xplr.displaylayout(C.V.D).dimensionNumber();
                 if xplr.viewdisplay.testDisplayable(sz,displaymode,layout)
                     break
                 end
