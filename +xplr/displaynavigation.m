@@ -410,14 +410,15 @@ classdef displaynavigation < xplr.graphnode
 
             % Set selection dimension
             % (info)
-            info = 'selection control in dimension: ';
             switch length(N.selectiondimID)
                 case 0
-                    info = 'selection control in dimension: (none)';
+                    info = 'Control selection in dimension: (none)';
                 case 1
-                    info = ['selection control in dimension: ' sellabels{1}];
+                    info = ['Control selection in dimension: ' sellabels{1}];
                 case 2
-                    info = ['selection control in dimensions: ' fn_strcat(sellabels,',')];
+                    info = ['Control selection in dimensions: ' fn_strcat(sellabels,',')];
+                otherwise
+                    error 'programming: selection control in more than 2 dimensions'
             end
             m2 = uimenu(m,'label',info);
             % (1D: dimension location must be x, y or xy)
@@ -444,28 +445,28 @@ classdef displaynavigation < xplr.graphnode
             %                 'callback',@(u,e)set(N,'selectiondimID','prompt'))
             % (stop)
             if ~isempty(N.selectiondimID)
-                uimenu(m,'label','stop selection control', ...
+                uimenu(m,'label','Stop selection control', ...
                     'callback',@(u,e)set(N,'selectiondimID',[]))
             end
 
             % Selection options
             if isempty(N.selectiondimID), return, end
-            uimenu(m,'label','clear selections','separator','on', ...
+            uimenu(m,'label','Clear selections','separator','on', ...
                 'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
             if length(N.selectiondimID) == 2
                 fn_propcontrol(N,'selection2Dshape', ...
                     {'menuval' {'poly', 'free', 'rect', 'ellipse', 'ring', 'line', 'openpoly', 'freeline'}}, ...
-                    'parent',m,'label','shape');
+                    'parent',m,'label','Shape');
             end
             if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
                 fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
-                    {'parent',m,'label','round selections to data indices','separator','on'});
+                    {'parent',m,'label','Round selections to data indices','separator','on'});
                 %                 nextsep = 'off';
                 %             else
                 %                 nextsep = 'on';
             end
             %             fn_propcontrol(N,'selectionadvanced','menu', ...
-            %                 {'parent',m,'label','advanced selection','separator',nextsep});
+            %                 {'parent',m,'label','Advanced selection','separator',nextsep});
         end
         function selectionMouse(N)
             seldim = N.selectiondim;

@@ -141,7 +141,7 @@ classdef viewcontrol < xplr.graphnode
             
             % make menu visible
             p = get(C.V.hf,'currentpoint'); p = p(1,1:2);
-            set(m,'pos',p,'visible','on')
+            set(m,'Position',p,'Visible','on')
         end
         function dimensionContextMenu(C)
             % init context menu
@@ -195,7 +195,7 @@ classdef viewcontrol < xplr.graphnode
             
             % make menu visible
             p = get(C.V.hf,'currentpoint'); p = p(1,1:2);
-            set(m,'pos',p,'visible','on')
+            set(m,'Position',p,'Visible','on')
         end
         function dimaction(C,flag,dimID,varargin)
             % function dimaction(C,'addfilter',dimIDs[,key[,active]])
