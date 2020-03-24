@@ -220,17 +220,13 @@ classdef displaygraph < xplr.graphnode
                 iy = iy-1;
             end
             
-            % case empty
-            if isempty(xlayout)
-                % coordinate 1 should go to the center
-                st.xoffset = -xavail;
-                st.xstep = xavail;
-            end
-            if isempty(ylayout)
-                % coordinate 1 should go to the center
-                st.yoffset = yavail;
-                st.ystep = -yavail; % ystep must be negative
-            end
+            % available space inside the most interior dimensions (this
+            % will be used in two cases: 1) when there are no data
+            % dimensions in the x- or y-axis, i.e. available space is 1;
+            % 2) for time courses display, as "data value" becomes as a new
+            % dimension below the most interior dimension in the y-axis.
+            st.xavailable = xavail;
+            st.yavailable = yavail;
         end
     end
     methods
@@ -695,78 +691,87 @@ classdef displaygraph < xplr.graphnode
 
 	% Specialized position functions
 	methods
-        function M = gettransform(G,ijk,ylim_or_ybase,yextent)
+        function M = gettransform(G,ijk)
             % function M = gettransform(G,ijk,ybase)
             %---
-            % matrix transformation to place curve/image at ijk data
+            % Matrix transformation to place curve/image at ijk data
             % coordinates; note that only coordinates not belonging to the
             % curve/image will be taken into account.
             % 
+            % For 'image' displaymode, M will transform indices
+            % 1:size(im,1) and 1:size(im,2) to accurate pixel positions.
+            % For 'time courses' displaymode, M will transform indices
+            % 1:length(x) to accurate x-ordinates, and data values 0 and 1
+            % respectively to the bottom and top y-ordinates of the
+            % available space.
+            % 
             % Input:
-            % - ijk     must be a vector (coordinates of a single point)
-            % - ylim    (for 'time courses' mode only) 2 data values
-            %           corresponding respectively to the bottom and top
-            %           positions in the space dedicated to displaying this
-            %           curve
-            % - ybase, yextent  alternate way of specifying ylim (ylim =
-            %           ybase + [-.5 .5]*ystep)
+            % - ijk     nd * npoint array
+            
             st = G.steps;
 
             % Initialize matrix
             ntransform = size(ijk,2);
             M = repmat(eye(4),[1 1 ntransform]);
             
-            % Scale: depends only on in-curve/in-image dimension(s)
+            % Scale & offset: depends only on in-curve/in-image dimension(s)
             % (x)
-            xscale = st.xstep(1);
-            M(1,1,:) = xscale;
+            if isempty(G.layout.x)
+                % no data dimension on x-axis: only 1 data point for time
+                % courses or image display, which must be positionned in
+                % the center of the available space
+                xscale = st.xavailable;
+                % index 1 must be positionned at x-ordinate 0, i.e. xoffset + 1*xscale = 0
+                xoffsets = -xscale * ones(1,ntransform); 
+            else
+                xscale = st.xstep(1);
+                xoffsets = fn_add( sum(st.xoffset), sum(fn_mult(column(st.xstep(2:end)),ijk(G.layout.x(2:end),:)),1) );
+            end
             % (y)
             switch G.D.displaymode
                 case 'image'
-                    % not possible to have negative values -> orienting the
-                    % images downward will be achieved by inverting y
-                    % coordinates at the stage of patch creation
-                    yscale = abs(st.ystep(1));
-                case 'time courses'
-                    if nargin==3
-                        ylim = ylim_or_ybase;
-                        ybase = mean(ylim); % this is the value that must go to the center of the y-range
-                        yextent = diff(ylim);
+                    % not possible to have negative scaling in the
+                    % hgtransform matrix
+                    % -> orienting the images downward will be achieved by
+                    % inverting y coordinates at the stage of patch
+                    % creation, i.e. will be -1:-1:-size(im,2)
+                    if isempty(G.layout.y)
+                        % no data dimension on y-axis: similar to above
+                        yscale = st.yavailable;
+                        % index -1 must be positionned at y-ordinate 0, i.e. yoffset + 1*yscale = 0
+                        yoffsets = yscale * ones(1,ntransform);
                     else
-                        ybase = ylim_or_ybase;
+                        yscale = abs(st.ystep(1));
+                        yoffsets = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.layout.y(2:end),:)),1) );
                     end
-                    yscale = abs(st.ystep(1) / yextent); % y-values of time courses should not be oriented downward
+                case 'time courses'
+                    % in this case, the transformation will apply not on
+                    % data indices in some dimension, but on data values
+                    % -> orient these values upward, and transform them
+                    % such that [0 1] fills the available space
+                    yscale = st.yavailable;
+                    if yscale == 1
+                        % occupy full vertical space, because there are no
+                        % data dimensions in y, xy or yx location -> get a
+                        % nicer display by leaving some gaps above and
+                        % below
+                        yscale = 1/(1+G.ysep/2);
+                    end
+                    yoffsets = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(1:end)),ijk(G.layout.y(1:end),:)),1) );
+                    % value .5 must be positionned at y-ordinates yoffsets, i.e. yoffsets + .5*yscale = 0
+                    yoffsets = yoffsets - yscale/2; 
                 otherwise
                     error 'invalid display mode'
             end
-            M(2,2,:) = yscale; 
-            
-            % Offset: handle separately offsets relative to
-            % in-curve/in-image  dimension(s) and to other dimensions
-            % (x)
-            xoffset = fn_add( sum(st.xoffset), sum(fn_mult(column(st.xstep(2:end)),ijk(G.layout.x(2:end),:)),1) );
-            % (y)
-            switch G.D.displaymode
-                case 'image'
-                    yoffset = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.layout.y(2:end),:)),1) );
-                case 'time courses'
-                    % y position of centers for specified indices
-                    if isempty(G.layout.y)
-                        yindex = ones(1,ntransform);
-                    else
-                        yindex = ijk(G.layout.y,:);
-                    end
-                    ycenter = fn_add( sum(st.yoffset), sum(fn_mult(st.ystep(:),yindex),1) );
-                    % we subtract yscale*ybase so that ybase will be
-                    % positionned at the center
-                    yoffset = fn_subtract(ycenter, yscale * ybase);
-            end
-            % (xy)
-            xyoffset = [xoffset; yoffset];
+            % (add offsets for the xy grid)
+            xyoffset = [xoffsets; yoffsets];
             if ~isempty(st.xydim)
                 xyoffset = xyoffset + st.xyoffsets(:,ijk(st.xydim,:)); 
             end
-            M(1:2,4,:) = xyoffset;
+            % (set transform matrix)
+            M(1,1,:) = xscale;
+            M(2,2,:) = yscale; 
+            M(1:2,4,:) = xyoffset
         end
         function pos = labelPosition(G,dim,orgin)
             % function pos = labelPosition(G,d[,orgin])

@@ -330,7 +330,9 @@ classdef viewdisplay < xplr.graphnode
             D.graph.setTicks()
             updateDisplay(D)
             % update slider connections
-            connectZoomFilter(D.navigation)
+            connectZoomFilter(D.navigation)                      
+            % reposition cross
+            D.navigation.repositionCross()
             % update selection display
             D.navigation.displayselection()
         end
@@ -670,11 +672,7 @@ classdef viewdisplay < xplr.graphnode
             
             % Prepare dispatch
             if doposition
-                if dotimecourses
-                    M = D.graph.gettransform(ijklist,[0 1]);
-                else
-                    M = D.graph.gettransform(ijklist);
-                end
+                M = D.graph.gettransform(ijklist);
             end
             
             % Go! Loop on grid elements

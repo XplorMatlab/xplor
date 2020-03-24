@@ -87,7 +87,7 @@ classdef list < xplr.graphnode
             
             % auto-delete
             set(L.hu,'deletefcn',@(u,e)delete(L))
-            addlistener(head,'ObjectBeingDeleted',@(u,e)delete(L))
+            addlistener(F,'ObjectBeingDestroyed',@(u,e)delete(L));
 
             % update display (here, just sets the correct value)
             preformatvalues(L)
