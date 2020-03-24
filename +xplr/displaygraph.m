@@ -713,7 +713,8 @@ classdef displaygraph < xplr.graphnode
             st = G.steps;
 
             % Initialize matrix
-            M = repmat(eye(4),[1 1 size(ijk,2)]);
+            ntransform = size(ijk,2);
+            M = repmat(eye(4),[1 1 ntransform]);
             
             % Scale: depends only on in-curve/in-image dimension(s)
             % (x)
@@ -729,7 +730,7 @@ classdef displaygraph < xplr.graphnode
                 case 'time courses'
                     if nargin==3
                         ylim = ylim_or_ybase;
-                        ybase = mean(ylim);
+                        ybase = mean(ylim); % this is the value that must go to the center of the y-range
                         yextent = diff(ylim);
                     else
                         ybase = ylim_or_ybase;
@@ -743,20 +744,29 @@ classdef displaygraph < xplr.graphnode
             % Offset: handle separately offsets relative to
             % in-curve/in-image  dimension(s) and to other dimensions
             % (x)
-            M(1,4,:) = fn_add( sum(st.xoffset), sum(fn_mult(column(st.xstep(2:end)),ijk(G.layout.x(2:end),:)),1) );
+            xoffset = fn_add( sum(st.xoffset), sum(fn_mult(column(st.xstep(2:end)),ijk(G.layout.x(2:end),:)),1) );
             % (y)
             switch G.D.displaymode
                 case 'image'
-                    M(2,4,:) = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.layout.y(2:end),:)),1) );
+                    yoffset = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(G.layout.y(2:end),:)),1) );
                 case 'time courses'
-                    % we subtract yscale*ybase so that ybase goes to
-                    % the center
-                    M(2,4,:) = fn_add( sum(st.yoffset)-yscale*ybase, sum(fn_mult(st.ystep(:),ijk(G.layout.y,:)),1) );
+                    % y position of centers for specified indices
+                    if isempty(G.layout.y)
+                        yindex = ones(1,ntransform);
+                    else
+                        yindex = ijk(G.layout.y,:);
+                    end
+                    ycenter = fn_add( sum(st.yoffset), sum(fn_mult(st.ystep(:),yindex),1) );
+                    % we subtract yscale*ybase so that ybase will be
+                    % positionned at the center
+                    yoffset = fn_subtract(ycenter, yscale * ybase);
             end
             % (xy)
+            xyoffset = [xoffset; yoffset];
             if ~isempty(st.xydim)
-                M(1:2,4,:) = M(1:2,4,:) + permute(st.xyoffsets(:,ijk(st.xydim,:)),[1 3 2]); 
+                xyoffset = xyoffset + st.xyoffsets(:,ijk(st.xydim,:)); 
             end
+            M(1:2,4,:) = xyoffset;
         end
         function pos = labelPosition(G,dim,orgin)
             % function pos = labelPosition(G,d[,orgin])
