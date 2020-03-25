@@ -328,8 +328,12 @@ classdef displaynavigation < xplr.graphnode
         
         function manualclickmovecross(N,point)
             % move the cross to the selected point
-
             ijk = N.graph.graph2slice(point,'invertible',true);
+            
+            % round indices values in dimensions with categorical headers
+            categorical = [N.D.slice.header.categorical];
+            ijk(categorical) = round(ijk(categorical));
+            
             % update the point filters (only for dimensions where the point
             % remains within the slice)
             for d = find(~isOutOfDisplay(N,point,true))
