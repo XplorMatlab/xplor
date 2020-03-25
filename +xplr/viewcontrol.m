@@ -161,6 +161,12 @@ classdef viewcontrol < xplr.graphnode
                 fn_num2str(keyvalues(2:end), 'shared filter %i', 'cell') ...
                 ];
             
+            % filter all others dimension
+            othersDimId = [C.V.data.header(setdiff(1:end,dim)).dimID];
+            label = 'View these dimensions filter others';
+            uimenu(m,'label',label, ...
+                'callback',@(u,e)dimaction(C,'addfilter',num2cell(othersDimId),1))
+            
             % add or change 2D shared filter (using key 1)
             if length(dimID)==2
                 uimenu(m,'label','Add/Change shared 2D filter', ...
