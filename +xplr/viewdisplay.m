@@ -271,27 +271,27 @@ classdef viewdisplay < xplr.graphnode
             % (color)
             docolor = strcmp(D.displaymode,'time courses');
             if docolor
-                uimenu(m,'label',['Color according to ' head.label],'checked',fn_switch(isequal(D.colordimID,dimID)), ...
+                uimenu(m,'label',['Color according to ' head.label],'checked',onoff(isequal(D.colordimID,dimID)), ...
                     'callback',@(u,e)D.setColorDim(fn_switch(isequal(D.colordimID,dimID),[],dimID)))
                 uimenu(m,'label','Display color legend', ...
-                    'enable',fn_switch(isequal(D.colordimID,dimID)),'checked',fn_switch(D.showcolorlegend), ...
+                    'enable',onoff(isequal(D.colordimID,dimID)),'checked',onoff(D.showcolorlegend), ...
                     'callback',@(u,e)set(D,'showcolorlegend',~D.showcolorlegend))
             end
 
             % Binning
-            m1 = uimenu(m,'label','Binning','Separator',fn_switch(docolor));
+            m1 = uimenu(m,'label','Binning','Separator',onoff(docolor));
             binvalues = {1 2 3 4 'set'};
             bindisplays = {'none' '2' '3' '4' 'other...'};
             curbin = D.zoomfilters(dim).bin;
             for i=1:length(binvalues)
                 bin = binvalues{i};
-                uimenu(m1,'label',bindisplays{i},'checked',fn_switch(isequal(curbin,bin)), ...
+                uimenu(m1,'label',bindisplays{i},'checked',onoff(isequal(curbin,bin)), ...
                     'callback',@(u,e)setbin(D,dim,bin));
             end
 
             % select ZoomFilter key (check the created menu item
             % that corresponds to the current key)
-            m2 = uimenu(m,'label','zoom filter','Separator',fn_switch(docolor));
+            m2 = uimenu(m,'label','zoom filter','Separator',onoff(docolor));
             availablekeys = xplr.bank.availableFilterKeys('zoomfilter');
             newkey = max(availablekeys)+1;
             keyvalues = [0 availablekeys newkey];
@@ -304,14 +304,14 @@ classdef viewdisplay < xplr.graphnode
             curkey = D.zoomfilters(dim).linkkey;
             for i=1:length(keyvalues)
                 keyvalue = keyvalues(i);      
-                uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
+                uimenu(m2,'label',keydisplays{i},'checked',onoff(isequal(curkey,keyvalue)), ...
                     'callback',@(u,e)ZS.changeKey(dim,keyvalue));
             end
 
             % select crossSelector key 
             curfilt = D.navigation.pointfilters{dim};
             if ~isempty(curfilt)
-                m2 = uimenu(m,'label','cross selector key','Separator',fn_switch(docolor));
+                m2 = uimenu(m,'label','cross selector key','Separator',onoff(docolor));
 
                 availablekeys = xplr.bank.availableFilterKeys('point');
                 newkey = max(availablekeys)+1;
@@ -326,7 +326,7 @@ classdef viewdisplay < xplr.graphnode
                 uimenu(m2, 'label', 'show point selector','callback',@(u,e)xplr.bank.showList(curfilt));
                 for i=1:length(keyvalues)
                     keyvalue = keyvalues(i);
-                    uimenu(m2,'label',keydisplays{i},'checked',fn_switch(isequal(curkey,keyvalue)), ...
+                    uimenu(m2,'label',keydisplays{i},'checked',onoff(isequal(curkey,keyvalue)), ...
                         'callback',@(u,e)connectPointFilter(D.navigation,dim,keyvalue));
                 end
             end

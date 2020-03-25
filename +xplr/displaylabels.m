@@ -96,7 +96,7 @@ classdef displaylabels < xplr.graphnode
             persistent prevorg
             
             % current layout
-            org = L.D.layout
+            org = L.D.layout;
             dim_locations = L.D.layoutID.dim_locations;
             
             % visible labels and active dimensions
