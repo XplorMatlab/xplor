@@ -524,6 +524,7 @@ classdef displaynavigation < xplr.graphnode
 
                 % create selection in graph coordinates
                 selax = xplr.selectionnd(seltype,polyax);
+                selax.checkpoint(.005) % if selection is too small, convert it to a single point
 
                 % convert to slice coordinates
                 selslice = N.graph.selection2slice(seldim,selax);

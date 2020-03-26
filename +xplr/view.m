@@ -23,7 +23,8 @@ classdef view < hgsetget
     % Constructor
     methods
         function V = view(data,varargin)
-            % DATA
+            % function V = view(data[,optional slicer arguments...])
+
             % define headers if needed
             if ~isa(data,'xplr.xdata')
                 head = xplr.editHeader(data);
@@ -39,7 +40,7 @@ classdef view < hgsetget
             
             % SLICER
             if ~isa(data,'xplr.xdata'), error 'data argument must be a xplr.xdata object', end
-            V.slicer = xplr.slicer(data);
+            V.slicer = xplr.slicer(data,varargin{:});
             
             % LINKS
             % register view object to the bank

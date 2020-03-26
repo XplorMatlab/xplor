@@ -162,32 +162,32 @@ classdef viewcontrol < xplr.graphnode
                 ];
             
             % filter all others dimension
-            othersDimId = [C.V.data.header(setdiff(1:end,dim)).dimID];
-            label = 'View these dimensions filter others';
-            uimenu(m,'label',label, ...
-                'callback',@(u,e)dimaction(C,'addfilter',num2cell(othersDimId),1))
+            uimenu(m,'label','View these dimensions, filter others', ...
+                'callback',@(u,e)dimaction(C,'viewdim',dimID,1))
+            uimenu(m,'label','View these dimensions in a new window', ...
+                'callback',@(u,e)dimaction(C,'newwindow_viewdim',dimID,1))
             
-            % add or change 2D shared filter (using key 1)
+            % add or change 2D shared filter 
+            newsection = true;
             if length(dimID)==2
-                uimenu(m,'label','Add/Change shared 2D filter', ...
+                % (using key 1)
+                uimenu(m,'label','Add/Change shared 2D filter','separator','on', ...
                     'callback',@(u,e)dimaction(C,'addfilter',{dimID},1))
-            end
-            
-            % add or change 2D filter (more options: select among available keys)
-            if length(dimID)==2
+                % (more options: select among available keys)
                 m2 = uimenu(m,'label','Add/Change 2D filter');
                 for i=1:length(keyvalues)  
                     uimenu(m2,'label',keydisplays{i}, ...
                         'callback',@(u,e)dimaction(C,'addfilter',{dimID},keyvalues(i)));
                 end
+                newsection = false;
             end
             
-            % add or change 1D shared filter (using key 1)
+            % add or change 1D shared filter 
+            % (using key 1)
             label = fn_switch(isscalar(dimID),'Add/Change shared filter','Add/Change shared 1D filters');
-            uimenu(m,'label',label, ...
-                'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),1))
-            
-            % add or change 1D filter (more options: select among available keys)
+            uimenu(m,'label',label,'separator',onoff(newsection), ...
+                'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),1))            
+            % (more options: select among available keys)
             label = fn_switch(isscalar(dimID),'Add/Change filter','Add/Change 1D filters');
             m2 = uimenu(m,'label',label);
             for i=1:length(keyvalues)
@@ -218,6 +218,19 @@ classdef viewcontrol < xplr.graphnode
             % dimension(s), but for commodity it can also be the dimension
             % number, or the dimension label
             
+            % other window
+            if strfind(flag, 'newwindow') %#ok<STRIFCND>
+                % open data in a new window: flag can be either
+                % 'otherwindow' or 'otherwindow_action' where 'action' is
+                % to be executed in this window
+                V2 = xplor(C.V.data);
+                tokens = regexp(flag, 'newwindow_(.*)','tokens');
+                if ~isempty(tokens)
+                    V2.C.dimaction(tokens{1}{1},dimID,varargin{:})
+                end
+                return
+            end
+            
             % commodity: convert dimension numbers or labels to dimension
             % identifiers
             dimID = C.V.data.dimensionID(dimID);
@@ -243,7 +256,7 @@ classdef viewcontrol < xplr.graphnode
             currentfiltersdim = C.V.slicer.filters(filtersidx); % current filters acting on dimensions within dd
 
             % filters to remove
-            if ismember(flag,{'addfilter' 'rmfilter'})
+            if ismember(flag,{'addfilter' 'rmfilter' 'viewdim'})
                 % remove filter from the viewcontrol and the bank
                 for filter = currentfiltersdim
                     C.removefilter(filter);
@@ -251,21 +264,30 @@ classdef viewcontrol < xplr.graphnode
                 
                 % remove filters from the slicer
                 doslicing = strcmp(flag,'rmfilter'); % no need to reslice yet for 'addfilter', reslice will occur when adding the new filter(s)
-                C.V.slicer.rmFilter(filtersidx, doslicing); %#ok<FNDSB>
+                C.V.slicer.rmFilter(filtersidx, doslicing);
             end
             
             % filters to add
-            if strcmp(flag,'addfilter')
+            if ismember(flag,{'addfilter' 'viewdim'})
                 if nargin>=4, key = varargin{1}; else, key = 1; end
                 if nargin>=5, active = varargin{2}; else, active = true; end
-                nadd = length(dimIDs);
+                if strcmp(flag,'addfilter')
+                    adddimIDs = dimIDs; % already a cell array
+                else
+                    % add 1D filters il all dimensions that we do not want
+                    % to view and that are not already filtered
+                    noviewdimID = setdiff([C.V.data.header.dimID], dimID);
+                    curfiltdimID = [C.V.slicer.filters.dimID];
+                    adddimIDs = num2cell(setdiff(noviewdimID, curfiltdimID));
+                end
+                nadd = length(adddimIDs);
                 if nadd>1 && isscalar(key), key = repmat(key,1,nadd); end
                 if nadd>1 && isscalar(active), active = repmat(active,1,nadd); end
                 % loop on dimension sets
                 newfilters = struct('dimID',cell(1,0),'F',[],'active',[]);
-                for i = 1:length(dimIDs)
-                    F = C.createFilterAndItem(dimIDs{i},key(i),active(i));
-                    newfilters(end+1) = struct('dimID',dimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
+                for i = 1:length(adddimIDs)
+                    F = C.createFilterAndItem(adddimIDs{i},key(i),active(i));
+                    newfilters(end+1) = struct('dimID',adddimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
                 end
                 C.V.slicer.addFilter({newfilters.dimID},[newfilters.F],[newfilters.active]) % slicing will occur now
             end

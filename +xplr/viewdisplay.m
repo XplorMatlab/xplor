@@ -167,12 +167,14 @@ classdef viewdisplay < xplr.graphnode
     
     % Change filters, zoomfilters binning, organization and active dim
     methods (Access='private')
-        function out = checkActiveDim(D,doImmediateUpdate)
-            % function anychg = checkActiveDim(D,doImmediateUpdate)
+        function out = checkActiveDim(D,doImmediateUpdate,doAuto)
+            % function anychg = checkActiveDim(D,doImmediateUpdate[,doAuto])
             %---
             % check that current active dims are ok, but also set active
             % dims if there aren't
             if nargin<2, doImmediateUpdate = true; end
+            if nargin<3, doAuto = false; end
+            
             orgID = D.layoutID;
             sz = D.slice.sz; 
             
@@ -185,8 +187,10 @@ classdef viewdisplay < xplr.graphnode
             
             % check position of active dims
             if isempty([dx dy]) 
-                % no valid active dim: set some
-                if ~isempty(orgID.xy)
+                % no valid active dim: set some if doAuto is set to true
+                if ~doAuto
+                    % do not set active dims
+                elseif ~isempty(orgID.xy)
                     dy = orgID.xy;
                 elseif ~isempty(orgID.yx)
                     dx = orgID.yx;
@@ -514,6 +518,7 @@ classdef viewdisplay < xplr.graphnode
             % first time?
             if isempty(D.layoutIDmemory)
                 % some heuristics to choose initial layout
+                D.displaymode = fn_switch(sum(D.slice.sz>1) == 1, 'time courses', 'image');
                 D.layoutIDmemory = xplr.displaylayout(D);
                 D.layoutID = D.layoutIDmemory;
             else
@@ -768,12 +773,12 @@ classdef viewdisplay < xplr.graphnode
                             if docolor, set(hl,'color',cmap(ijk(cdim),:)), end
                         end
                     else
-                        xi = fn_clip(xi,clipi,[0 1]);
                         if dotranspose
-                            im = permute(xi,[2 4 1 3 5]);
+                            im = permute(xi,[2 4 1 3]);
                         else
-                            im = permute(xi,[4 2 1 3 5]);
+                            im = permute(xi,[4 2 1 3]);
                         end
+                        im = fn_clip(im,clipi,D.colormap.cmap,1);
                         if docreatecur
                             % y coordinates are negative to orient the
                             % image downward (see also comment inside of

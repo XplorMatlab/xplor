@@ -300,9 +300,9 @@ classdef selectionshape
                         polyk = Sk.points;
                     case 'point2D'
                         p = round(Sk.points);
-                        np = size(p,1);
+                        np = size(p,2);
                         polyk = kron(p,ones(1,6)) + repmat([-.5 -.5 .5 .5 -.5 NaN; -.5 .5 .5 -.5 -.5 NaN],1,np);
-                        polyk(end,:) = []; % remove last NaN
+                        polyk(:,end) = []; % remove last NaN
                     case 'rect2D'
                         polyk = fn_add(Sk.points,fn_mult(Sk.vectors,[0 0 1 1 0; 0 1 1 0 0]));
                     case {'ellipse2D' 'ring2D'}
@@ -383,6 +383,15 @@ classdef selectionshape
                     b = false;
                 otherwise
                     error programming
+            end
+        end
+        function S2 = topoint(S)
+            if strfind(S.type,'1D')
+                S2 = xplr.selectionshape('point1D',mean(S.points));
+            elseif strfind(S.type,'2D')
+                S2 = xplr.selectionshape('point2D',mean(S.points,2));
+            else
+                error 'not handled yet'
             end
         end
     end

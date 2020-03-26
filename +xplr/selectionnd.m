@@ -152,6 +152,11 @@ classdef selectionnd < xplr.graphnode
             if nargin<2, tol = 0; end
             b = ispoint(sel.shapes,tol);
         end
+        function checkpoint(sel,tol)
+            if sel.ispoint(tol)
+                sel.shapes = sel.shapes.topoint();
+            end
+        end
         function t = get.type(sel)
             if vide(sel)
                 t = '';
