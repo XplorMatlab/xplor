@@ -102,7 +102,7 @@ classdef zoomslicer < xplr.slicer
                         S.disconnect(curfilt) % curfilt will be deleted if it is not used elsewhere
                         newfilt = autoZoomFilter(S,curkey,dim);
                         S.filters(dim).obj = newfilt;
-                        S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,e.dim,e));
+                        S.addListener(newfilt,'ChangedOperation',@(u,e)filterchange(S,newfilt,dim,e));
 
                         % smart update: note that this will call
                         % maybe we need: S.slicingchain(dim:end) = [];
