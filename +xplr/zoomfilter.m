@@ -62,6 +62,17 @@ classdef zoomfilter < xplr.dataOperand
             end
             prepareFilter(Z,chgzoom,chgbin) % this will raise 'ChangedOperation' event
         end
+        function moveZoom(Z,nstep)
+            if strcmp(Z.zoom,':'), return, end
+            d = diff(Z.zoom);
+            if nstep > 0
+                z2 = min(Z.headerin.n+.5,Z.zoom(2)+d*nstep);
+                Z.setZoom([z2-d z2])
+            else
+                z1 = max(.5,Z.zoom(1)+d*nstep);
+                Z.setZoom([z1 z1+d])
+            end
+        end
         function setBin(Z,bin)
             if bin==Z.bin, return, end
             % check

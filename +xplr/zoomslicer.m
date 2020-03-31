@@ -168,7 +168,7 @@ classdef zoomslicer < xplr.slicer
     % Replace a filter by a new one with another linkkey
     methods
         function changeKey(S,dim,key)
-            S.replaceFilterDim(dim,S.autoZoomFilter(key,dim),1);
+            S.replaceFilterDim(dim,S.autoZoomFilter(key,dim));
         end
     end
 end

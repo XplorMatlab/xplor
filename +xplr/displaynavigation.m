@@ -179,6 +179,12 @@ classdef displaynavigation < xplr.graphnode
     % Mouse actions
     methods
         function Mouse(N, flag)
+            % function Mouse(N [,'pointonly'])
+            %---
+            % 'pointonly' flag is set when we have already clicked and
+            % released the mouse button (for example because we clicked on
+            % the cross): in this case do not start drag zooming or
+            % ROI selection
             pointonly = (nargin==2 && strcmp(flag,'pointonly'));
             point =  get(N.D.ha,'CurrentPoint'); point = point(1,[1 2])';
             activedim = [N.D.activedim.x N.D.activedim.y];
@@ -303,19 +309,40 @@ classdef displaynavigation < xplr.graphnode
 
         end
         function manualmovecross(N,il)
-            if ~strcmp(get(N.hf,'selectiontype'),'normal')
+            if ~ismember(get(N.hf,'selectiontype'),{'normal' 'open'})
                 % not a left click: execute callback for axes
                 Mouse(N)
                 return
             end
             set(N.hf,'pointer',fn_switch(il,1,'left',2,'top',3,'cross'))
-            anymove = fn_buttonmotion(@movecrosssub,N.hf,'moved?');
+            
+            % prepare a time to pan zoom while moving the cross!
+            do_drag_zoom = (il == 1) && isequal(N.D.layout.x,1) && isequal(N.D.activedim.x,1);
+            if do_drag_zoom
+                Z = N.D.zoomfilters(1);
+                do_drag_zoom = ~strcmp(Z.zoom,':');
+            end
+            if do_drag_zoom
+                drag_timer = timer('timerfcn',@drag_zoom,'ExecutionMode','fixedSpacing','period',.01);
+                zoom_width = diff(Z.zoom);
+                zoom_min = .5;
+                zoom_max = .5+Z.headerin.n;
+                drag_zone = .15; % width of special zone where zoom dragging occurs
+                drag_speed = 0;
+            end
+            point = [];
+            
+            anymove = fn_buttonmotion(@movecrosssub,N.hf,'moved?');            
             set(N.hf,'pointer','arrow')
+            if do_drag_zoom
+                stop(drag_timer)
+            end
             if ~anymove
                 % execute callback for axes
                 Mouse(N, 'pointonly')
                 return
             end
+            
             function movecrosssub
                 %anymove = true;
                 p = get(N.D.ha,'currentpoint'); p = p(1,1:2);
@@ -327,6 +354,29 @@ classdef displaynavigation < xplr.graphnode
                     case 3
                         point = p;
                 end
+                % move the cross
+                manualclickmovecross(N,point)
+                % pan view if we are close to edge!
+                if do_drag_zoom
+                    if abs(p(1))>.5-drag_zone
+                        drag_speed = sign(p(1)) * ((abs(p(1)) - (.5-drag_zone))/drag_zone)/10;
+                        if ~boolean(drag_timer.Running)
+                            start(drag_timer)
+                        end
+                    else
+                        stop(drag_timer)
+                    end
+                end
+            end
+            
+            function drag_zoom(~,~)
+                zoom = Z.zoom + drag_speed * zoom_width;
+                if zoom(1) < zoom_min
+                    zoom = zoom_min + [0 zoom_width];
+                elseif zoom(2) > zoom_max
+                    zoom = zoom_max - [zoom_width 0];
+                end
+                Z.setZoom(zoom)
                 manualclickmovecross(N,point)
             end
             

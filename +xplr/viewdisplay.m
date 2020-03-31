@@ -309,7 +309,7 @@ classdef viewdisplay < xplr.graphnode
             for i=1:length(keyvalues)
                 keyvalue = keyvalues(i);      
                 uimenu(m2,'label',keydisplays{i},'checked',onoff(isequal(curkey,keyvalue)), ...
-                    'callback',@(u,e)ZS.changeKey(dim,keyvalue));
+                    'callback',@(u,e)D.zoomslicer.changeKey(dim,keyvalue));
             end
 
             % select crossSelector key 
