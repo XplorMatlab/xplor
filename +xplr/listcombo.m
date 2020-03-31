@@ -27,7 +27,7 @@ classdef listcombo < hgsetget
                 container = figure('integerhandle','off','handlevisibility','off', ...
                     'numbertitle','off','menubar','none', ...
                     'name','Shared Filters', ...
-                    'pos',[min(80,screensize(3)/20) max(screensize(4)*.6-275,45) 150 550]);
+                    'position',[min(80,screensize(3)/20) max(screensize(4)*.6-275,45) 150 550]);
                 delete(findall(container,'parent',container))
                 addlistener(C,'Empty',@(u,e)delete(container));
             end
@@ -93,7 +93,7 @@ classdef listcombo < hgsetget
             
             if isa(x,'matlab.ui.container.Panel') || isa(x,'uipanel') || isnumeric(x)
                 hp_or_idx = x;
-            elseif isa(x,'xplr.dataoperand')
+            elseif isa(x,'xplr.dataOperand')
                 hp_or_idx = fn_find(x,C.filters);
                 if isempty(hp_or_idx)
                     return

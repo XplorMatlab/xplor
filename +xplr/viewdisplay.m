@@ -190,10 +190,10 @@ classdef viewdisplay < xplr.graphnode
                 % no valid active dim: set some if doAuto is set to true
                 if ~doAuto
                     % do not set active dims
-                elseif ~isempty(orgID.xy)
-                    dy = orgID.xy;
-                elseif ~isempty(orgID.yx)
-                    dx = orgID.yx;
+                %                 elseif ~isempty(orgID.xy)
+                %                     dy = orgID.xy;
+                %                 elseif ~isempty(orgID.yx)
+                %                     dx = orgID.yx;
                 else
                     % (x)
                     if isempty(dx) && ~isempty(orgID.x)
@@ -530,7 +530,7 @@ classdef viewdisplay < xplr.graphnode
             
             % Update active dim and slider connections
             if fn_ismemberstr(flag,{'global'})
-                D.checkActiveDim(false)
+                D.checkActiveDim(false,true)
                 D.navigation.connectZoomFilter()
             elseif fn_ismemberstr(flag,{'chgdata' 'chg'})
                 % slice size did not change
@@ -947,8 +947,6 @@ classdef viewdisplay < xplr.graphnode
             elseif ~strcmp(flag,'chgdata') && isequal(chgdim,D.colordim)
                 displayColorLegend(D)
             end
-            
-            %notify(D.P,'ChangedPoint')
         end
         function zoomchange(D,e)
             % update graph positions: if data has changed in size,

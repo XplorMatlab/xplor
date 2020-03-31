@@ -50,7 +50,7 @@ classdef list < xplr.graphnode
                 case 'figure'
                     L.hp = opt.in;
                     figure(opt.in), set(L.hp,'menubar','none'), delete(findall(opt.in,'parent',opt.in))
-                    L.hu = uicontrol('units','normalized','pos',[0 0 1 1]);
+                    L.hu = uicontrol('units','normalized','position',[0 0 1 1]);
                 case 'uicontrol'
                     L.hu = opt.in;
                     L.hp = get(opt.in,'parent');
@@ -58,7 +58,7 @@ classdef list < xplr.graphnode
                     % replace axes by an uicontrol
                     ha = opt.in;
                     L.hp = get(ha,'parent');
-                    L.hu = uicontrol('parent',L.hp,'units',get(ha,'units'),'pos',get(ha,'pos'));
+                    L.hu = uicontrol('parent',L.hp,'units',get(ha,'units'),'position',get(ha,'position'));
                     delete(ha)
                 otherwise
                     error('bad handle')
@@ -83,7 +83,6 @@ classdef list < xplr.graphnode
             
             % watch filter
             connectlistener(F,L,'ChangedOperation',@(u,e)displayselection(L));
-            connectlistener(F,L,'ChangedPoint',@(u,e)displaycross(L));
             
             % auto-delete
             set(L.hu,'deletefcn',@(u,e)delete(L))
@@ -92,7 +91,6 @@ classdef list < xplr.graphnode
             % update display (here, just sets the correct value)
             preformatvalues(L)
             displayselection(L)
-            displaycross(L)
             displaylabel(L)
             
             % set more properties
@@ -466,15 +464,12 @@ classdef list < xplr.graphnode
             set(L.hu,'string',str,'ListboxTop',top)
             if nsel==0
                 % if no selection, highlight the point selection
-                displaycross(L)
+                set(L.hu,'value',L.F.index)
             else
                 set(L.hu,'value',[selinds{softsel}])
             %             elseif isfield(L.F.shared,'list')
             %                 set(L.hu,'value',L.F.shared.list.cursel)
             end
-        end
-        function displaycross(L)
-            set(L.hu,'value',L.F.index);
         end
         function displaylabel(L)
             fullfigure = isequal(fn_pixelsize(L.hu),fn_pixelsize(L.hp));

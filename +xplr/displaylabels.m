@@ -161,23 +161,23 @@ classdef displaylabels < xplr.graphnode
                             newpos = [-(length(org.y)+2)*L.rotheight 1];
                     end
                     if doloose
-                        pos = get(L.h(d),'pos');
+                        pos = get(L.h(d),'position');
                         switch f
                             case 'x'
-                                newpos(2) = pos(2); set(L.h(d),'pos',newpos)
+                                newpos(2) = pos(2); set(L.h(d),'position',newpos)
                             case 'y'
-                                newpos(1) = pos(1); set(L.h(d),'pos',newpos)
+                                newpos(1) = pos(1); set(L.h(d),'position',newpos)
                             otherwise
-                                set(L.h(d),'pos',newpos)
+                                set(L.h(d),'position',newpos)
                         end
                     else
                         if any(d==L.movingdim)
-                            set(L.movingclone,'pos',newpos, ...
+                            set(L.movingclone,'position',newpos, ...
                                 'rotation',get(L.h(d),'rotation'), ...
                                 'horizontalalignment',get(L.h(d),'horizontalalignment'), ...
                                 'verticalalignment',get(L.h(d),'verticalalignment'))
                         else
-                            set(L.h(d),'pos',newpos)
+                            set(L.h(d),'position',newpos)
                         end
                     end
                 end
@@ -295,7 +295,7 @@ classdef displaylabels < xplr.graphnode
                 p = get(L.ha,'currentpoint');
                 p = fn_coordinates(L.ha,'a2c',p(1,1:2)','position'); % convert to 'normalized' unit
                 % move object
-                set(obj,'pos',p)
+                set(obj,'position',p)
                 % update organization and object location
                 newlayoutID = layoutID_d;
                 if p(2)<=0 && p(2)<=p(1)

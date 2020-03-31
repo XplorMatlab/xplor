@@ -166,9 +166,9 @@ classdef headerEdit < hgsetget
             % label
             ycur = ycur-dy-h;
             uicontrol('style','text','string','Measure label', ...
-                'pos',[dx ycur (W-2*dx)*.4 h]);
+                'position',[dx ycur (W-2*dx)*.4 h]);
             xlabel = uicontrol('style','edit','string',oldlabel, ...
-                'pos',[dx+(W-2*dx)*.4 ycur (W-2*dx)*.6 h]);
+                'position',[dx+(W-2*dx)*.4 ycur (W-2*dx)*.6 h]);
             if createnew, set(xlabel,'ToolTipString','e.g. time'), end
             
             % data (add an empty line)
@@ -176,7 +176,7 @@ classdef headerEdit < hgsetget
             
             % table
             ycur = ycur-2*dy-htab;
-            t = uitable('pos',[dx ycur W-2*dx htab]);
+            t = uitable('position',[dx ycur W-2*dx htab]);
             set(t,'ColumnName',{'Unit' 'Value'},'ColumnFormat',{'char' 'numeric'},'ColumnEditable',true, ...
                 'RowName','','ColumnWidth',repmat({(W-2*dx)/2-1},1,2),'Data',data)
             if createnew, set(t,'ToolTipString','e.g. unit: ms, value: 1e-3'), end
@@ -192,7 +192,7 @@ classdef headerEdit < hgsetget
             % ok button
             ycur = ycur-2*dy-2*h;
             okmeas = uicontrol('string','ok','callback',@(u,e)delete(u), ...
-                'pos',[W-dx-50 ycur 50 2*h]);
+                'position',[W-dx-50 ycur 50 2*h]);
             
             %             % make units of controls 'normalized' for meaningful figure
             %             % resize behavior
@@ -228,25 +228,25 @@ classdef headerEdit < hgsetget
             fn_setfigsize(E.hf,W,H)
             
             % ok button
-            E.ok = uicontrol('parent',E.hf,'string','ok','pos',[W-80 1 80 30], ...
+            E.ok = uicontrol('parent',E.hf,'string','ok','position',[W-80 1 80 30], ...
                 'callback',@(u,e)done(E));
             
             %             % "confirm all" button masks ok button, but trigger done(E)
             %             E.uconfirm = uicontrol('parent',E.hf,'string','Confirm all','callback',@(u,e)confirmall(E), ...
-            %                 'pos',[W-80 1 80 30]);
+            %                 'position',[W-80 1 80 30]);
             
             % reset button
             uicontrol('parent',E.hf,'string','Reset all','callback',@(u,e)resetall(E), ...
-                'pos',[W-2*80 1 80 30]);
+                'position',[W-2*80 1 80 30]);
             
             % empty table
-            E.table = uitable('parent',E.hf,'pos',[1 31 W H-30], ...
+            E.table = uitable('parent',E.hf,'position',[1 31 W H-30], ...
                 'ColumnName',{'Dim','Size','Label','Unit','Scale/Values','Colors',''}, ...
                 'ColumnFormat',{'numeric' 'numeric' 'char' 'char' 'char' 'char' 'char'}, ...
                 'ColumnEditable',logical([0 0 1 1 1 1 0]));
             set(E.table,'TooltipString','test')
             u = E.table;
-            p = get(u,'pos'); w = p(3);
+            p = get(u,'position'); w = p(3);
             widths = {30 55 70 70 [] 55 55};
             wavail = w - sum([widths{:}]) - 2;
             idxauto = find(fn_isemptyc(widths));
@@ -436,7 +436,7 @@ classdef headerEdit < hgsetget
                             end
                         end
                         uimenu(m,'label','Reset','callback',@(u,e)useguess(E,i,'reset'))
-                        set(m,'pos',get(E.hf,'CurrentPoint'),'visible','on')
+                        set(m,'position',get(E.hf,'CurrentPoint'),'visible','on')
                     case 'reset'
                         E.useguess(i,'reset')
                 end

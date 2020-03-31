@@ -1,4 +1,4 @@
-classdef point < xplr.dataoperand
+classdef point < xplr.dataOperand
    
     properties (SetAccess='private')
         index0 = 1; % real value
@@ -11,10 +11,6 @@ classdef point < xplr.dataoperand
         valuestr    % real-world position, with unit
     end
    
-    events
-        ChangedPoint
-    end
-    
     % Constructor and setting index
     methods
         function P = point(headerin)
@@ -33,11 +29,10 @@ classdef point < xplr.dataoperand
             if x==P.index0, return, end %#ok<*MCSUP>
             P.index0 = x;
             i = max(1,min(P.headerin.n,round(x)));
-            if i~=P.index
-                P.index = i;
-                notify(P,'ChangedOperation')
-            end
-            notify(P,'ChangedPoint')
+            chgij = (i~=P.index);
+            P.index = i;
+            % notification
+            notify(P,'ChangedOperation',xplr.eventinfo('point',chgij))
         end
     end
     
@@ -139,6 +134,20 @@ classdef point < xplr.dataoperand
         function updateOperation_(P,x,dims,slice)
             slic = slicing(P,x.data,dims);
             slice.chgData(slic); % this will trigger automatic notifications
+        end
+    end
+    
+    % Link with point selection in real world coordinates
+    methods
+        function point_world = operationData2Space(P)
+            point_world = P.headerin.start + (P.index-1)*P.headerin.scale;
+        end
+        function updateOperationData2Space(P,WO,~)
+            WO.operation = P.operationData2Space();
+            notify(WO,'ChangedOperation')
+        end
+        function updateOperationSpace2Data(P,point_world,~)
+            P.index = 1 + (point_world - P.headerin.start)/P.headerin.scale;
         end
     end
     

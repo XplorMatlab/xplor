@@ -1,12 +1,12 @@
-classdef filter < xplr.dataoperand
+classdef filter < xplr.dataOperand
     % function F = filter(headerin[,label])
    
     properties (SetAccess='private')
-        % input: headerin is already a property of the dataoperand mother class        
+        % input: headerin is already a property of the dataOperand mother class
         % operation:
         selection = xplr.selectionnd.empty(1,0);
         slicefun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
-        % output: headerout is already a property of the dataoperand mother class
+        % output: headerout is already a property of the dataOperand mother class
     end
     properties(Dependent, SetAccess='private')
         nsel
@@ -47,7 +47,7 @@ classdef filter < xplr.dataoperand
         function updateSelection(F,varargin)
             % function updateSelection(F,value)
             % function updateSelection(F,'new|all',value[,'label1',headervalues1,...])
-            % function updateSelection(F,'new|chg|add',ind,value[,'label1',headervalues1,...])
+            % function updateSelection(F,'new|all|chg|add',ind,value[,'label1',headervalues1,...])
             % function updateSelection(F,'chg|add',ind,value)
             % function updateSelection(F,'remove|perm',ind)
             % function updateSelection(F,'reset')
@@ -70,17 +70,22 @@ classdef filter < xplr.dataoperand
                 flag = varargin{1};
                 varargin(1) = [];
                 switch flag
-                    case 'all'
-                        value = varargin{1};
-                        addheaderinfo = reshape(varargin(2:end),2,[]);
-                    case {'new' 'chg' 'add' 'chg&new' 'chg&rm'}
-                        if strcmp(flag,'new') && mod(nargin,2)==1
-                            % flag 'new', ind not specified
+                    case {'all' 'new' 'chg' 'add' 'chg&new' 'chg&rm'}
+                        if mod(nargin,2)==1
+                            % ind not specified
                             value = varargin{1};
-                            ind = F.nsel+(1:length(value));
+                            switch flag
+                                case 'all'
+                                    ind = 1:length(value);
+                                case 'new'
+                                    ind = F.nsel+(1:length(value));
+                                otherwise
+                                    error 'incorrect number of arguments'
+                            end
                             addheaderinfo = reshape(varargin(2:end),2,[]);
                         else
-                            [ind value] = deal(varargin{1:2});
+                            % ind specified
+                            [ind, value] = deal(varargin{1:2});
                             addheaderinfo = reshape(varargin(3:end),2,[]);
                         end
                     case {'remove' 'perm'}
@@ -90,7 +95,6 @@ classdef filter < xplr.dataoperand
                         error('flag ''%s'' not handled by xplr.filter.updateSelection')
                 end
             end
-            
             
             % compute indices
             if fn_ismemberstr(flag,{'all' 'new' 'chg' 'add' 'chg&new' 'chg&rm'})
@@ -144,7 +148,8 @@ classdef filter < xplr.dataoperand
             end
             
             % notification
-            notify(F,'ChangedOperation',xplr.eventinfo('filter',flag,ind,value))
+            e = xplr.eventinfo('filter',flag,ind,value);
+            notify(F,'ChangedOperation',e)
         end
         function setFun(F,fun)
             % convert char to function handle
@@ -292,6 +297,53 @@ classdef filter < xplr.dataoperand
                     error('flag ''%s'' not handled',flag)
             end
             slice.updateData(flag,dims,ind,slic,F.headerout); % this will trigger automatic notifications
+        end
+    end
+    
+    % Link with selection in real world coordinates
+    methods
+        function selection_world = operationData2Space(F)
+            aff = xplr.affinitynd([F.headerin.scale],[F.headerin.start]-[F.headerin.scale]);
+            selection_world = aff.move_selection(F.selection);
+        end
+        function updateOperationData2Space(F,WO,e)
+            [flag, ind, value] = deal(e.flag, e.ind, e.value);
+            if ~isempty(value)
+                aff = xplr.affinitynd([F.headerin.scale],[F.headerin.start]-[F.headerin.scale]);
+                value = aff.move_selection(value);
+            end
+            switch flag
+                case 'all'
+                    WO.operation = value;
+                case {'new' 'chg'}
+                    WO.operation(ind) = value;
+                case 'remove'
+                    WO.operation(ind) = [];
+                case 'permute'
+                    WO.operation = WO.operation(ind);
+                case 'chg&new'
+                    WO.operation([ind{:}]) = value;
+                case 'chg&rm'
+                    WO.operation(ind{1}) = value;
+                    WO.operation(ind{2}) = [];
+                otherwise
+                    error('flag ''%s'' not handled',flag)
+            end
+            notify(WO,'ChangedOperation',xplr.eventinfo('filter',flag,ind,value))
+        end
+        function updateOperationSpace2Data(F,selection_world,e)
+            if nargin>=3
+                [flag, ind, value] = deal(e.flag, e.ind, e.value);
+            else
+                flag = 'all';
+                value = selection_world;
+                ind = 1:length(value);
+            end
+            if ~isempty(value)
+                aff = xplr.affinitynd(1./[F.headerin.scale],1-[F.headerin.start]./[F.headerin.scale]);
+                value = value.applyaffinity(aff);
+            end
+            F.updateSelection(flag,ind,value)
         end
     end
     

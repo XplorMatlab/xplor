@@ -20,6 +20,9 @@ classdef affinitynd < handle
             if isnumeric(varargin{1})
                 [linearpart, offset] = deal(varargin{:});
                 mov.nd = length(offset);
+                if mov.nd > 1 && isvector(linearpart)
+                    linearpart = diag(linearpart);
+                end
                 mov.mat = [1 zeros(1,mov.nd); offset(:) linearpart];
             else
                 [type, data] = deal(varargin{:});
@@ -90,6 +93,10 @@ classdef affinitynd < handle
             else
                 aff = mov.mat*aff*mov.mat^-1;
             end
+        end
+        function selection = move_selection(mov, selection)
+            if ~isa(selection,'xplr.selectionnd'), error 'input ''selection'' must be an xplr.selectionnd object', end
+            selection = selection.applyaffinity(mov);
         end
     end
 end

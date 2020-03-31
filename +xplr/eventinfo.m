@@ -12,7 +12,7 @@ classdef eventinfo < event.EventData & dynamicprops
     % * 'point'
     %
     % type: 'point'
-    % arguments:    chgij [default false]
+    % arguments:    chgij [warning: if not set, default empty will be interpreted as false by a logical test]
     %
     % type: 'data'
     % arguments:
@@ -32,6 +32,9 @@ classdef eventinfo < event.EventData & dynamicprops
     % type: 'zoom'
     % arguments:    chgnout,dim
     % 
+    % type: 'bin'
+    % no argument
+    % 
     % type: 'clip'
     % arguments:
     % * 'clip',value
@@ -47,13 +50,15 @@ classdef eventinfo < event.EventData & dynamicprops
             obj.type = type;
             switch type
                 case 'point'
-                    F = {'chgij'};
+                    F = {'chgij' 'chgnout'};
                 case 'data'
                     F = {'flag' 'dim' 'ind'};
                 case 'filter'
                     F = {'flag' 'ind' 'value'};
                 case 'zoom'
                     F = {'chgnout' 'dim'};
+                case 'bin'
+                    F = {};
                 case 'clip'
                     F = {'flag' 'value'};
                 otherwise

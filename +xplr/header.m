@@ -50,8 +50,10 @@ classdef header < hgsetget
         iscategoricalwithvalues
         ncolumn
     end
+    % The properties below are computed on the fly and then stored
     properties (Access='private')
         ID              % access with method getID
+        measureSpaceID  % access with metho getMeasureSpaceID
         itemnames       % access with method getItemNames
     end
     
@@ -318,15 +320,35 @@ classdef header < hgsetget
                 && isequal({H1.categorical,H1.start,H1.scale},{H2.categorical,H2.start,H2.scale});
         end
         function ID = getID(H)
+            % Get a unique identifier that identifies the header (we will
+            % have H1 == H2 if and only if H1.getID() == H2.getID())
             if ~isscalar(H)
                 ID = zeros(size(H));
                 for i=1:numel(H), ID(i) = getID(H(i)); end
                 return
             end
             if isempty(H.ID)
-                H.ID = fn_hash({H.n,H.sublabels,H.label,H.categorical,H.start,H.scale,H.values},'num'); %#ok<MCHV2>
+                H.ID = fn_hash({H.n,H.sublabels,H.label,H.categorical,H.start,H.scale,H.values},'num'); 
             end
             ID = H.ID;
+        end
+        function ID = getMeasureSpaceID(H)
+            % Get a unique identifier that identifies the space inside
+            % which the data dimensions described by the header lies: this
+            % is a hash number of the header's label and unit.
+            if ~isscalar(H)
+                ID = zeros(size(H));
+                for i=1:numel(H), ID(i) = getMeasureSpaceID(H(i)); end
+                return
+            end
+            if H.ismeasure
+                if isempty(H.measureSpaceID)
+                    H.measureSpaceID = fn_hash({H.label,H.unit},'num'); 
+                end
+                ID = H.measureSpaceID;
+            else
+                ID = [];
+            end
         end
     end
     

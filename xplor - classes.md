@@ -39,35 +39,35 @@ Contrary to `header`, an `xdata` object is _active_ in the sense it can be modif
 ## Data operation and filtering
 
 
-### `dataoperand (abstract)`
-A `dataoperand` object describes an operation transforming some input data belonging to a given input space into an output data belonging to a possibly different output space.
+### `dataOperand (abstract)`
+A `dataOperand` object describes an operation transforming some input data belonging to a given input space into an output data belonging to a possibly different output space.
 
 Its `headerin` and `headerout` properties characterize these input and output spaces.
 
 The description of its operation can be changed, in which case a particular event is generated.
 
-The `dataoperand` cannot be instantiated (it is an abstract class), only subclasses defining specific operations can (see below).
+The `dataOperand` cannot be instantiated (it is an abstract class), only subclasses defining specific operations can (see below).
 
 
-### `point < dataoperand`
-A `point` object is the simplest possible `dataoperand`, as it simply slices the data at a given position. The number of dimensions of its input and output are respectively 1 and 0 (i.e. output is a scalar).
+### `point < dataOperand`
+A `point` object is the simplest possible `dataOperand`, as it simply slices the data at a given position. The number of dimensions of its input and output are respectively 1 and 0 (i.e. output is a scalar).
 
 
-### `filter < dataoperand`
+### `filter < dataOperand`
 A `filter` object is performing averaging in a given set of dimensions. Its `selections` property describes a set of regions of interets on which to perform this averaging. The number of regions of interest will determine the length of the output.
 
 Filters applying to categorical data ressemble those in classical data visualization software (e.g. Excell, Tableau). Note that even though they apply on a single dimension, this dimension itself can be multi-label, therefore they in fact can filter several variables. [_not implemented yet_]
 
 
-### `filterAndPoint < dataoperand`
+### `filterAndPoint < dataOperand`
 The `filterAndPoint` is a combination of `point` and `filter` which processes data in the following way: if the set of selections is non-empty, it averages data over these ROIs, otherwise it uses the set of points to simply perform slicing.
 
-### `zoomfilter < dataoperand`
+### `zoomfilter < dataOperand`
 
 _to be completed_
 
 ### `slicer`
-A `slicer` object contains an `xdata` object and a set of `dataoperand` objects to be applied to specific dimensions of the data. Its output is stored in the `slice` property. It automatically handles notifications of changes of data or operands, as well as adding/removing operands, by modifying the `slice` accordingly.
+A `slicer` object contains an `xdata` object and a set of `dataOperand` objects to be applied to specific dimensions of the data. Its output is stored in the `slice` property. It automatically handles notifications of changes of data or operands, as well as adding/removing operands, by modifying the `slice` accordingly.
 
 Only operands that consist in averaging in orthogonal dimensions are accepted by the `slicer` object: the order in which such operations are performed does not matter,  therefore the `slicer` chooses the order that is the most efficient.
 
@@ -78,7 +78,7 @@ _to be completed, tell about the very tricky parts_
 ## Bank
 
 ### `bank`
-The `bank` class has only one instantiation, as it repertoriates all allready-created `dimensionlabel`, `header`, and `dataoperand` objects, so as to ease linking of different data together.
+The `bank` class has only one instantiation, as it repertoriates all allready-created `dimensionlabel`, `header`, and `dataOperand` objects, so as to ease linking of different data together.
 
 It also remembers previous definitions from previous Matlab sessions, to avoid re-defining such objects. 
 

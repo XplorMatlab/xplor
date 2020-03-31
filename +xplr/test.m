@@ -71,7 +71,7 @@ x2 = xplr.xdata(X(:,1:2:end),{{'x' 'px' 200} {'y' 'cm' 160 -1+1/160 2/160}});
 V1 = xplor(x1);
 V2 = xplor(x2);
 
-
+error 'much of the code below is not working any more due to changes in code'
 % % connect the 2 zoom filters in the y coordinate
 % ZF1 = V1.D.zoomslicer.getFilterAndPoint(2);
 % ZF2 = V2.D.zoomslicer.getFilterAndPoint(2);
@@ -123,5 +123,5 @@ V2 = xplor(x2);
 % % %%
 % % 
 % % clf
-% % a = axes('pos',[.1 .1 .2 0],'tickdir','out','ticklength',[.02 .1]);
-% % b = axes('pos',[.1 .1 .8 0],'tickdir','out');
+% % a = axes('position',[.1 .1 .2 0],'tickdir','out','ticklength',[.02 .1]);
+% % b = axes('position',[.1 .1 .8 0],'tickdir','out');

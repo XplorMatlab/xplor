@@ -46,19 +46,24 @@ classdef graphnode < matlab.mixin.SetGet
             end
             self.listening(end+1) = struct('object',other,'listener',listener);
         end
-        function addListenerExclusivePair(self,other,arg1,callback1,arg2,callback2)
-            % create two listeners inhibited when called by each other to avoid loop
+        function addListenerExclusivePair(self,other,event1,callback1,event2,callback2)
+            % function addListenerExclusivePair(self,other,self_event,callback1,other_event,callback2)
+            %---
+            % create two listeners inhibited when called by ach other to avoid loop
             % made to synchronize items with one central item
+            % 
+            % Inputs self_event and other_event can be event names, but also
+            % 2-elements cell-array such as {'PostSet', PropertyName}.
             
             % listener self -> other (we cannot fully define it yet because
             % the second listener that will need to be inhibited is not
             % defined yet)
-            if ~iscell(arg1), arg1 = {arg1}; end
-            listener1 = addlistener(self,arg1{:},@disp);
+            if ~iscell(event1), event1 = {event1}; end
+            listener1 = addlistener(self,event1{:},@disp);
             other.listening(end+1) = struct('object',self,'listener',listener1);
             % listener other -> self
-            if ~iscell(arg2), arg2 = {arg2}; end
-            listener2 = addlistener(other,arg2{:},@(u,e)doOneWayCallback(callback2,u,e,listener1));
+            if ~iscell(event2), event2 = {event2}; end
+            listener2 = addlistener(other,event2{:},@(u,e)doOneWayCallback(callback2,u,e,listener1));
             self.listening(end+1) = struct('object',other,'listener',listener2);
             % now we can define the callback of the first listener
             listener1.Callback = @(u,e)doOneWayCallback(callback1,u,e,listener2);

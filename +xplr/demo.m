@@ -21,11 +21,11 @@ load intrinsic
 
 fn_figure('Intrinsic imaging - Main',[1023 598],'color','w')
 
-axes('pos',[.02 .52 .3 .46])
+axes('position',[.02 .52 .3 .46])
 a = fourd(img,'2d','labels',{'x' 'y'},'units',{'um' 'um'},'mat',[20/6 20/6]);
 a.D.dolabels = false;
 
-axes('pos',[.02 .02 .3 .46])
+axes('position',[.02 .02 .3 .46])
 b = fourd(x,'2d', ...
     'labels',{'x' 'y' 'time' 'condition' 'repetition'}, ...
     'units',{'um' 'um' 's' {'stimulation' 'control'} ''}, ...
@@ -33,7 +33,7 @@ b = fourd(x,'2d', ...
 b.D.dolabels = false;
 G = b.G;
 
-axes('pos',[.38 .1 .6 .86])
+axes('position',[.38 .1 .6 .86])
 c = fourd(x,'2dplot',G,'dimsplus',[]);
 
 X = explor(x,G);

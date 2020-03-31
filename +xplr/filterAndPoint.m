@@ -1,4 +1,4 @@
-classdef filterAndPoint < xplr.dataoperand
+classdef filterAndPoint < xplr.dataOperand
     % function F = filter(headerin[,label])
     % function F = filter(F,P)
     %---
@@ -19,11 +19,7 @@ classdef filterAndPoint < xplr.dataoperand
     properties (Dependent)
         index       % current point
     end
-    
-    events
-        ChangedPoint
-    end
-    
+
     % Constructor and destructor
     methods
         function F = filterAndPoint(varargin)
@@ -65,8 +61,7 @@ classdef filterAndPoint < xplr.dataoperand
                 end
             end
             for i=1:F.ndin
-                connectlistener(F.P(i),F,'ChangedPoint',@(u,e)transitNotification(F,'point',e))
-                connectlistener(F.P(i),F,'ChangedOperation',@(u,e)transitNotification(F,'pointselection',e))
+                connectlistener(F.P(i),F,'ChangedOperation',@(u,e)transitNotification(F,'point',e))
             end
             F.dolistenpoint = true;
             
@@ -111,7 +106,7 @@ classdef filterAndPoint < xplr.dataoperand
             augmentHeader(F.F,varargin{:})
             setHeaderout(F)
         end
-        function [headvalue affectedcolumns] = setAddHeaderInfo(F,~,~) %#ok<INUSD,STOUT>
+        function [headvalue, affectedcolumns] = setAddHeaderInfo(F,~,~) %#ok<INUSD,STOUT>
             error 'method ''setAddHeaderInfo'' is not valid for filterAndPoint object; call it rather on the children filter object'
         end
     end
@@ -149,8 +144,9 @@ classdef filterAndPoint < xplr.dataoperand
             setHeaderout(F)
             
             % generation of a single event
-            notify(F,'ChangedPoint')
-            if ~isequal(F.index,curind) && F.F.nsel==0
+            chgij = ~isequal(F.index,curind);
+            notify(F,'ChangedOperation',xplr.eventinfo('point',chgij))
+            if chgij && F.F.nsel==0
                 notify(F,'ChangedOperation',xplr.eventinfo('filter','point'))
             end
         end
@@ -173,21 +169,19 @@ classdef filterAndPoint < xplr.dataoperand
                     if strcmp(e.flag,'remove') && F.F.nsel==0
                         % removal of selection(s) replaces filter selection
                         % by point selection
-                        notify(F,'ChangedOperation',xplr.eventinfo('filter','all'))
+                        e = xplr.eventinfo('filter','all');
                     elseif strcmp(e.flag,'new') && ismember(1,e.ind)
                         % new selection(s) replaces point selection by filter
                         % selection
-                        notify(F,'ChangedOperation',xplr.eventinfo('filter','all'))
-                    else
-                        notify(F,'ChangedOperation',e)
+                        e = xplr.eventinfo('filter','all');
                     end
+                    notify(F,'ChangedOperation',e)
                 case 'point'
-                    if F.dolistenpoint % it is faster to 'disable' the listener by using this variable than by actually disabling it!!
-                        notify(F,'ChangedPoint')
-                    end
-                case 'pointselection'
-                    if F.F.nsel==0 && F.dolistenpoint
-                        notify(F,'ChangedOperation',xplr.eventinfo('filter','point'))
+                    if F.dolistenpoint % 'dolistenpoint' property is manipulated in F.set.index
+                        notify(F,'ChangedOperation',e)
+                        if e.chgij
+                            notify(F,'ChangedOperation',xplr.eventinfo('filter','point'))
+                        end
                     end
             end
         end
@@ -256,6 +250,19 @@ classdef filterAndPoint < xplr.dataoperand
             %                     error('flag ''%s'' not handled',flag)
             %             end
             %             slice.updateData(flag,dims,ind,slic,F.headerout); % this will trigger automatic notifications
+        end
+    end
+    
+    % Link with selection in real world coordinates
+    methods
+        function selection_world = operationData2Space(F)
+            error 'filterAndPoint object should not be directly connected to a wordOperand object: connect rather its child point and filter'
+        end
+        function updateOperationData2Space(F,WO,e)
+            error 'filterAndPoint object should not be directly connected to a wordOperand object: connect rather its child point and filter'
+        end
+        function updateOperationSpace2Data(F,~,e)
+            error 'filterAndPoint object should not be directly connected to a wordOperand object: connect rather its child point and filter'
         end
     end
     

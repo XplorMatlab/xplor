@@ -65,7 +65,7 @@ classdef slicer < xplr.graphnode
             if nargin<5, active = true; end
             
             % check filter
-            if ~isa(newfilt,'xplr.dataoperand'), error 'filter must be a dataoperand object', end
+            if ~isa(newfilt,'xplr.dataOperand'), error 'filter must be a dataOperand object', end
             
             % check dimensions and headers
             if ~iscell(dimID)
@@ -495,6 +495,7 @@ classdef slicer < xplr.graphnode
             end
         end
         function filterchange(S,F,dimID,e)
+            if ~strcmp(e.type,'filter'), return, end
             flag = e.flag;
             if strcmp(flag,'point')
                 flag = 'chg'; 

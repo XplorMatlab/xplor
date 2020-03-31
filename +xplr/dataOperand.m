@@ -1,5 +1,5 @@
-classdef dataoperand < xplr.graphnode
-% dataoperand
+classdef dataOperand < xplr.graphnode
+% dataOperand
 % Abstract class defining an operation on an xdata object
     
     properties (SetAccess='protected')
@@ -15,13 +15,17 @@ classdef dataoperand < xplr.graphnode
     properties (Dependent, SetAccess='private')
         reductionfactor
     end
-    % properties below are not handled by dataoperand class and
+    % properties below are not handled by dataOperand class and
     % sub-classes, but rather by the objects that use them
     properties 
         linkkey = 0
         %shared = struct;
     end
    
+    % There are two events: operation definition can change without the
+    % operation itself being changed, for example when only slightly moving
+    % a time cursor its position (operation definition) has changed, but
+    % not the pixel it selects (underlying slicing operation is unchanged).
     events
         ChangedOperation
     end
@@ -56,9 +60,11 @@ classdef dataoperand < xplr.graphnode
         updateOperation_(O,data,dims,olddataop,varargin)    % data is an xplr.xdata object
     end
     methods (Access='protected')
-        function checkdata(O,data,dims)
-            % input header must match O.headerin! 
-            if ~isequal(data.header(dims),O.headerin) % works also with non-scalar O
+        function accepts_input(O,header)
+            % Input header must match O.headerin for operation to apply.
+            % This method can be overwritten in sub-classes for more
+            % flexible acceptance of some differences.
+            if ~isequal(header,O.headerin) % works also with non-scalar O
                 error 'data header does not match operation specification'
             end
         end
@@ -93,7 +99,7 @@ classdef dataoperand < xplr.graphnode
             % dimension number
             dims = data.dimensionNumber(dimIDs);
             % check input
-            checkdata(O,data,dims)            
+            O.accepts_input(data.header(dims))            
             % actual code of operation will be in child class
             dat = data.data;                 % Matlab ND array
             dat = O.operation_(dat,dims);    % Matlab ND array
@@ -107,9 +113,9 @@ classdef dataoperand < xplr.graphnode
         end
         function updateOperation(O,data,dimIDs,olddataop,varargin)
             % dimension number
-            dims = x.dimensionNumber(dimIDs);
+            dims = data.dimensionNumber(dimIDs);
             % check input
-            checkdata(F,x,dims)            
+            O.accepts_input(data.header(dims))            
             % actual code of operation will be in child class
             updateOperation_(O,data,olddataop,varargin{:});
         end
@@ -146,6 +152,15 @@ classdef dataoperand < xplr.graphnode
             if any(strcmp(newlabel,{F.headerout.sublabels.label})), return, end
             F.headerout = addLabel(F.headerout,xplr.dimensionlabel(newlabel,labeltype));
         end
+    end
+    
+    % Synchronization of operation definition in real world coordinates
+    % system. (world_operation is the 'operation' property of a
+    % worldOperand object)
+    methods (Abstract)
+        world_op = operationData2Space(O)       % get world operation based on opeartion definition in O
+        updateOperationData2Space(O,WO,event)   % updates WO.operation based on operation definition in O and argument event; must take care of launching WO 'ChangedOperation' event
+        updateOperationSpace2Data(O,world_operation,event)   % updates operation definition in O based on world operation and optional argument event
     end
     
 end

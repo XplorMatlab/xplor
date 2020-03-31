@@ -57,7 +57,7 @@ classdef zoomslicer < xplr.slicer
                     Zi = xplr.zoomfilter(S.data.header(dim));
                 end
                 Z(i) = Zi;
-                S.addListener(Z(i),'ChangedZoom',@(u,e)zoomchange(S,d,e));
+                S.addListener(Z(i),'ChangedOperation',@(u,e)zoomfilterchange(S,d,e));
             end
         end       
     end
@@ -95,7 +95,7 @@ classdef zoomslicer < xplr.slicer
                         % information from the slice to the zslice, where
                         % the concerned dimension will share the same dimID
                         % (because filters without effect do not modify
-                        % dimID, see xplr.dataoperand)
+                        % dimID, see xplr.dataOperand)
                         
                         % replace filter (as in slicer.replaceFilterDim)
                         curkey = curfilt.linkkey;
@@ -136,8 +136,10 @@ classdef zoomslicer < xplr.slicer
             end
             notify(S,'ChangedZoom',xplr.eventinfo('zoom',chgnout,dim)) % to do: check whether chgnout is true or false...
         end
-        function zoomchange(S,dim,e)
-            notify(S,'ChangedZoom',xplr.eventinfo('zoom',e.chgnout,dim))
+        function zoomfilterchange(S,dim,e)
+            if strcmp(e.type,'zoom')
+                notify(S,'ChangedZoom',xplr.eventinfo('zoom',e.chgnout,dim))
+            end
         end
     end
     

@@ -1,4 +1,4 @@
-classdef zoomfilter < xplr.dataoperand
+classdef zoomfilter < xplr.dataOperand
     % function Z = zoomfilter(headerin[,zoom[,bin]])
     %---
     % defines zooming, but also binning
@@ -13,11 +13,6 @@ classdef zoomfilter < xplr.dataoperand
     end
     properties (Dependent, SetAccess='private')
         zoomvalue       % [istart istop]
-    end
-    
-    events
-        % new event dedicated to the connection with the slider
-        ChangedZoom
     end
     
     % Setting and updating filter
@@ -45,10 +40,12 @@ classdef zoomfilter < xplr.dataoperand
             Z.bin = bin;
             
             % set indices and output header
-            prepareFilter(Z)
+            prepareFilter(Z,true,true)
         end
         function setZoom(Z,zoom,bin)
-            if isequal(zoom,Z.zoom) && (nargin<3 || bin==Z.bin), return, end
+            chgzoom = ~isequal(zoom,Z.zoom);
+            chgbin = (nargin>=3 && bin~=Z.bin);
+            if ~chgzoom && ~chgbin, return, end
             % check and assign zoom
             if strcmp(zoom,':')
                 Z.zoom = zoom;
@@ -63,7 +60,7 @@ classdef zoomfilter < xplr.dataoperand
                 if bin==0 || mod(bin,1), error 'binning value must be a positive integer', end
                 Z.bin = bin;
             end
-            prepareFilter(Z)
+            prepareFilter(Z,chgzoom,chgbin) % this will raise 'ChangedOperation' event
         end
         function setBin(Z,bin)
             if bin==Z.bin, return, end
@@ -71,13 +68,13 @@ classdef zoomfilter < xplr.dataoperand
             if bin==0 || mod(bin,1), error 'binning value must be a positive integer', end
             % assign and update output
             Z.bin = bin;
-            prepareFilter(Z)
+            prepareFilter(Z,false,true) % this will raise 'ChangedOperation' event
         end
     end
     methods (Access='private')
-        function prepareFilter(Z)
+        function prepareFilter(Z,chgzoom,chgbin)
             nin = Z.headerin.n;
-            [curbin curiout] = deal(Z.bin,Z.indicesout);
+            [curbin, curiout] = deal(Z.bin,Z.indicesout);
             
             % indices
             if strcmp(Z.zoom,':')
@@ -125,7 +122,12 @@ classdef zoomfilter < xplr.dataoperand
             
             % notifications
             chgnout = (nout~=length(curiout));
-            notify(Z,'ChangedZoom',xplr.eventinfo('zoom',chgnout))
+            if chgzoom
+                notify(Z,'ChangedOperation',xplr.eventinfo('zoom',chgnout))
+            end
+            if chgbin
+                notify(Z,'ChangedOperation',xplr.eventinfo('bin'))
+            end
             anychg = chgnout || (Z.indicesout(1)~=curiout(1));
             zoomin = anychg && (isempty(Z.indicesout) ...
                 || ((Z.bin==1) && ~isempty(curiout) && (Z.indicesout(1)>=curiout(1)) && (Z.indicesout(end)<=curiout(end)) && (curbin==1)));
@@ -205,6 +207,30 @@ classdef zoomfilter < xplr.dataoperand
             % slicing
             slic = Z.slicing(x.data,dims);
             slice.updateData(flag,dims,ind,slic,Z.headerout); % this will trigger automatic notifications
+        end
+    end
+    
+    % Link with zoom definition in real world coordinates
+    methods
+        function zoom_world = operationData2Space(Z)
+            if strcmp(Z.zoom,':')
+                zoom_world = ':';
+            else
+                zoom_world = Z.headerin.start + (Z.zoom-1)*Z.headerin.scale;
+            end
+        end
+        function updateOperationData2Space(Z,WO,evnt)
+            if ~strcmp(evnt.type,'zoom'), return, end
+            WO.operation = Z.operationData2Space();
+            notify(WO,'ChangedOperation')
+        end
+        function updateOperationSpace2Data(Z,world_operation,~)
+            if strcmp(world_operation,':')
+                Z.setZoom(':')
+            else
+                zoom_idx = 1 + (world_operation - Z.headerin.start)/Z.headerin.scale;
+                Z.setZoom(zoom_idx)
+            end
         end
     end
     

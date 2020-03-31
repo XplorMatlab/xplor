@@ -231,7 +231,10 @@ classdef selectionnd < xplr.graphnode
             %---
             % affinity is an xplr.affinitynd object
             
-            if nargin<3
+            if isempty(sel1)
+                sel2 = xplr.selectionnd.empty(size(sel1));
+                return
+            elseif nargin<3
                 datasizesnew = sel1.datasizes;
             end
             

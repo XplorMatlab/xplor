@@ -1,4 +1,4 @@
-classdef bank < hgsetget
+classdef bank < handle
 % xplr.bank The bank is unique and store several elements :
 %
 %  * currentviews: not used yet but it will be used for multiview
@@ -189,6 +189,34 @@ classdef bank < hgsetget
                 B.filters_registry.unregister({filtertype, linkkey, hID});
             end
         end
+        function [F, isnew] = getFilter(filtertype, linkkey, header, user)
+            F = xplr.bank.getExistingFilter(filtertype, linkkey, header, user);
+            if isempty(F)
+                isnew = true;
+                F = feval(['xplr.' filtertype],header);
+                xplr.bank.registerFilter(linkkey,F,user);
+                % if input space is measurable, connect with a
+                % 'worldOperand' object that will synchronize several filters
+                % corresponding to different referentials in this space
+                key = header.getMeasureSpaceID;
+                if ~isempty(key) && ~isa(F,'xplr.filterAndPoint')
+                   % search a corresponding worldOperand in the filters
+                   % registry, create if it does not exist
+                   B = xplr.bank.getbank();
+                   worldfiltertype = ['world' filtertype];
+                   worldfilter = B.filters_registry.getValue({worldfiltertype, linkkey, key}, F);
+                   if isempty(worldfilter)
+                       % create new worldOperand object to link to F
+                       worldfilter = xplr.worldOperand(F);
+                       B.filters_registry.register({worldfiltertype, linkkey, key}, worldfilter, F);
+                   else
+                       worldfilter.connectDataOperand(F);
+                   end
+                end
+            else
+                isnew = false;
+            end
+        end
     end
     methods (Static)
         function keys = availableFilterKeys(filtertype)
@@ -236,66 +264,28 @@ classdef bank < hgsetget
             % function F = getFilterAndPoint(linkkey, header, newuser[, doshow])
             % function F = getFilterAndPoint([linkkey_filter linkkey_point], header[, doshow[, newuser]])
             if nargin<4, doshow = false; end
-            F = xplr.bank.getExistingFilter('filterAndPoint', linkkey, header, user);
-            if isempty(F)
-                FF = xplr.bank.getFilterFilter(linkkey, header, user);
-                FP = xplr.bank.getPointFilter(linkkey, header, user);
-                F = xplr.filterAndPoint(FF, FP);
-                xplr.bank.registerFilter(linkkey, F, user);
-                if doshow 
-                    if F.ndin > 1
-                        disp 'cannot display list for ND filter'
-                    else
-                        xplr.bank.showList(F)
-                    end
+            [F, isnew] = xplr.bank.getFilter('filterAndPoint', linkkey, header, user);
+            if isnew && doshow 
+                if F.ndin > 1
+                    disp 'cannot display list for ND filter'
+                else
+                    xplr.bank.showList(F)
                 end
-            end            
+            end     
         end
         function F = getFilterFilter(linkkey, header, user)
             % function F = getFilterFilter(linkkey, header[, newuser]])
-            F = xplr.bank.getExistingFilter('filter', linkkey, header, user);
-            if isempty(F)
-                F = xplr.filter(header);
-                xplr.bank.registerFilter(linkkey, F, user);
-            end            
+            F = xplr.bank.getFilter('filter', linkkey, header, user);
         end
         function P = getPointFilter(linkkey, header, user)
             % function F = getPointFilter(linkkey, header[, newuser]])
             for i = 1:length(header)
-                Pi = xplr.bank.getExistingFilter('point', linkkey, header(i), user);
-                if isempty(Pi)
-                    Pi = xplr.point(header(i));
-                    xplr.bank.registerFilter(linkkey, Pi, user);
-                end      
-                P(i) = Pi;
+                P(i) = xplr.bank.getFilter('point', linkkey, header(i), user);
             end
         end
         function F = getZoomFilter(linkkey, header, user)
             % function F = getZoomFilter(B,header, user)
-            F = xplr.bank.getExistingFilter('zoomfilter', linkkey, header, user);
-            if isempty(F)
-                % if the filter does not exist then create it and register it
-                F = xplr.zoomfilter(header);
-                xplr.bank.registerFilter(linkkey,F,user);
-                % if input space is measurable, connect with a
-                % 'zoomcentral' filter that will synchronize several filters
-                % corresponding to different referentials in this space
-                type = header.get.type();
-                if strcmp(type, 'measure')
-                   key = fn_hash({ header.label, header.get.unit }, 'num');
-                   % search a corresponding zoomCentral in the filterSet
-                   % return existing zoomCentral if exist; F will be a new
-                   % user of this zoomcentral
-                   B = xplr.bank.getbank();
-                   zoomCentral = B.filters_registry.getValue({'zoomcentral', linkkey, key}, F);
-                   if isempty(zoomCentral)
-                       % create new zoomcentral
-                       zoomCentral = xplr.zoomcentral(header.label, header.unit);
-                       B.filters_registry.register({'zoomcentral', linkkey, key}, zoomCentral, F);
-                   end
-                   zoomCentral.connectZoomFilter(F);
-                end
-            end
+            F = xplr.bank.getFilter('zoomfilter', linkkey, header, user);
         end
         function showList(F)
             if ~isa(F,'xplr.filterAndPoint')

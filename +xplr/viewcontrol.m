@@ -79,7 +79,7 @@ classdef viewcontrol < xplr.graphnode
             ystarts = [0 cumsum([C.items.span])];
             for i=row(idx)
                 yspan = C.items(i).span;
-                set(C.items(i).obj,'units','pixel','pos',[x0 H-(ystarts(i)+yspan)*(h+dy) w yspan*h+(yspan-1)*dy])
+                set(C.items(i).obj,'units','pixel','position',[x0 H-(ystarts(i)+yspan)*(h+dy) w yspan*h+(yspan-1)*dy])
             end
         end
         function [obj, idx] = newItem(C,id,span,controlprop)
@@ -152,51 +152,51 @@ classdef viewcontrol < xplr.graphnode
             dim = get(C.dimlist,'value');
             dimID = [C.V.data.header(dim).dimID];
             
-            % available keys
-            availablekeys = xplr.bank.availableFilterKeys('filterAndPoint');
-            newkey = max(availablekeys)+1;
-            keyvalues = [0 setdiff(availablekeys,1) newkey];
-            keydisplays = [ ...
-                'private filter' ...
-                fn_num2str(keyvalues(2:end), 'shared filter %i', 'cell') ...
-                ];
+            % some strings to handle singular vs. plural
+            dimstr = fn_switch(isscalar(dimID),'this dimension','these dimensions');
+            filterstr = fn_switch(isscalar(dimID),'filter','filters');
             
             % filter all others dimension
-            uimenu(m,'label','View these dimensions, filter others', ...
+            uimenu(m, ...
+                'label',['View ' dimstr ', filter others'], ...
                 'callback',@(u,e)dimaction(C,'viewdim',dimID,1))
-            uimenu(m,'label','View these dimensions in a new window', ...
+            uimenu(m,'label',['View ' dimstr ' in a new window'], ...
                 'callback',@(u,e)dimaction(C,'newwindow_viewdim',dimID,1))
             
-            % add or change 2D shared filter 
-            newsection = true;
+            % add or change filter(s)
+            % (2D with key 1)
             if length(dimID)==2
                 % (using key 1)
-                uimenu(m,'label','Add/Change shared 2D filter','separator','on', ...
+                uimenu(m,'label','Filter with shared 2D filter','separator','on', ...
                     'callback',@(u,e)dimaction(C,'addfilter',{dimID},1))
-                % (more options: select among available keys)
-                m2 = uimenu(m,'label','Add/Change 2D filter');
-                for i=1:length(keyvalues)  
-                    uimenu(m2,'label',keydisplays{i}, ...
-                        'callback',@(u,e)dimaction(C,'addfilter',{dimID},keyvalues(i)));
-                end
-                newsection = false;
+                nextseparator = 'off';
+            else
+                nextseparator = 'on';
             end
-            
-            % add or change 1D shared filter 
-            % (using key 1)
-            label = fn_switch(isscalar(dimID),'Add/Change shared filter','Add/Change shared 1D filters');
-            uimenu(m,'label',label,'separator',onoff(newsection), ...
+            % (1D with key 1)
+            uimenu(m, ...
+                'label',['Filter with shared 1D ' filterstr],'separator',nextseparator, ...
                 'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),1))            
             % (more options: select among available keys)
-            label = fn_switch(isscalar(dimID),'Add/Change filter','Add/Change 1D filters');
-            m2 = uimenu(m,'label',label);
-            for i=1:length(keyvalues)
-                uimenu(m2,'label',keydisplays{i}, ...
-                    'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),keyvalues(i)));
+            availablekeys = xplr.bank.availableFilterKeys('filterAndPoint');
+            newkey = max(availablekeys)+1;
+            keyvalues = [setdiff(availablekeys,1) newkey];
+            m2 = uimenu(m,'label','Filter with');
+            if length(dimID)==2
+                for keyvalue=keyvalues
+                    uimenu(m2,'label',['shared 2D filter ' num2str(keyvalue)], ...
+                        'callback',@(u,e)dimaction(C,'addfilter',{dimID},keyvalue));
+                end
             end
+            for keyvalue=keyvalues
+                uimenu(m2,'label',['shared 1D ' filterstr ' ' num2str(keyvalue)], ...
+                    'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),keyvalue));
+            end
+            uimenu(m2,'label',['private 1D ' filterstr], ...
+                'callback',@(u,e)dimaction(C,'addfilter',num2cell(dimID),0))
             
             % remove filters in these dimensions
-            uimenu(m,'label','Remove Filters','separator','on', ...
+            uimenu(m,'label',['Remove ' filterstr],'separator','on', ...
                 'callback',@(u,e)dimaction(C,'rmfilter',dimID))
             
             % make menu visible
@@ -281,15 +281,17 @@ classdef viewcontrol < xplr.graphnode
                     adddimIDs = num2cell(setdiff(noviewdimID, curfiltdimID));
                 end
                 nadd = length(adddimIDs);
-                if nadd>1 && isscalar(key), key = repmat(key,1,nadd); end
-                if nadd>1 && isscalar(active), active = repmat(active,1,nadd); end
-                % loop on dimension sets
-                newfilters = struct('dimID',cell(1,0),'F',[],'active',[]);
-                for i = 1:length(adddimIDs)
-                    F = C.createFilterAndItem(adddimIDs{i},key(i),active(i));
-                    newfilters(end+1) = struct('dimID',adddimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
+                if nadd > 0
+                    if nadd>1 && isscalar(key), key = repmat(key,1,nadd); end
+                    if nadd>1 && isscalar(active), active = repmat(active,1,nadd); end
+                    % loop on dimension sets
+                    newfilters = struct('dimID',cell(1,0),'F',[],'active',[]);
+                    for i = 1:length(adddimIDs)
+                        F = C.createFilterAndItem(adddimIDs{i},key(i),active(i));
+                        newfilters(end+1) = struct('dimID',adddimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
+                    end
+                    C.V.slicer.addFilter({newfilters.dimID},[newfilters.F],[newfilters.active]) % slicing will occur now
                 end
-                C.V.slicer.addFilter({newfilters.dimID},[newfilters.F],[newfilters.active]) % slicing will occur now
             end
             
             % show filter, set filter active
@@ -335,7 +337,7 @@ classdef viewcontrol < xplr.graphnode
             
             % label
             hlab = uicontrol('parent',panel, ...
-                'pos',[20 5 300 15], ...
+                'position',[20 5 300 15], ...
                 'style','text','string',label,'horizontalalignment','left', ...
                 'backgroundcolor',backgroundColor, ...
                 'enable', fn_switch(active,'inactive','off'), ...
@@ -383,7 +385,7 @@ classdef viewcontrol < xplr.graphnode
             idx0 = idxitem-(idxfilter(1)-1);
             idxother = setdiff(1:nfilter,idx0);
             obj = C.items(idxitem).obj;
-            pos0 = get(obj,'pos');
+            pos0 = get(obj,'position');
             ystep = 24;
             
             % move
@@ -398,7 +400,7 @@ classdef viewcontrol < xplr.graphnode
                 C.itemPositions
                 % set selected item position
                 newpos = pos0; newpos(2) = pos0(2) + fn_coerce(p-p0,[idx0-nfilter idx0-1]*ystep);
-                set(obj,'pos',newpos)
+                set(obj,'position',newpos)
             end
             if moved
                 % re-position correctly the selected item

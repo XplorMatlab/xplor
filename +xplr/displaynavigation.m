@@ -22,9 +22,11 @@ classdef displaynavigation < xplr.graphnode
         selectionround1Dmeasure = true; 
         selectionadvanced = false
     end
+    properties (Dependent)
+        selectiondim            % dimension(s) to which selections apply, identified by its(their) number
+    end
     properties (Dependent, SetAccess='private')
         selection               % list of selectionnd object from the filter
-        selectiondim            % dimensions to which these selections apply, identified by its number
     end
 
     % Constructor
@@ -95,10 +97,13 @@ classdef displaynavigation < xplr.graphnode
         end
     end
     
-    % Get dependent
+    % Get/Set dependent
     methods
         function d = get.selectiondim(N)
             d = N.D.slice.dimensionNumber(N.selectiondimID);
+        end
+        function set.selectiondim(N,dim)
+            N.selectiondimID = N.D.slice.dimensionID(dim);
         end
     end
     
@@ -236,7 +241,7 @@ classdef displaynavigation < xplr.graphnode
                 P = xplr.bank.getPointFilter(linkkey,head,N); % FilterAndPoint filter
                 N.pointfilters{d} = P;
                 % listen to the point filter event
-                N.addListener(P,'ChangedPoint',@(u,e)movedPoint(N))
+                N.addListener(P,'ChangedOperation',@(u,e)movedPoint(N,e))
             end
         end
         function disconnectPointFilter(N,dim)
@@ -250,7 +255,8 @@ classdef displaynavigation < xplr.graphnode
                 N.disconnect(P)  % this is the same as F.disconnect(N)!
             end
         end
-        function movedPoint(N)
+        function movedPoint(N,e)
+            if ~strcmp(e.type,'point'), return, end
             ijk = getPointIndexPosition(N);
             N.crossCenter = N.graph.slice2graph(ijk);
             update_cross_visibility(N);
@@ -324,8 +330,7 @@ classdef displaynavigation < xplr.graphnode
                 manualclickmovecross(N,point)
             end
             
-        end
-        
+        end        
         function manualclickmovecross(N,point)
             % move the cross to the selected point
             ijk = N.graph.graph2slice(point,'invertible',true);
@@ -336,55 +341,44 @@ classdef displaynavigation < xplr.graphnode
             
             % update the point filters (only for dimensions where the point
             % remains within the slice)
-            for d = find(~isOutOfDisplay(N,point,true))
+            for d = find(~isPointOutOfDisplay(N,point,true))
                 P = N.pointfilters{d};
                 if ~isempty(P)
                     P.index = ijk(d);
                 end
             end
-        end
-        
+        end        
         function removecross(N)
             delete(N.cross)
         end      
         function update_cross_visibility(N)
             
             layout = N.D.layout;
+            
+            % dims that are out of display
+            ijk = getPointIndexPosition(N);
+            dimOutOfDisplay = N.isIndexOutOfDisplay(ijk,true);
            
-            % if the slice has only one value in the dimension
-            % displayed in abscisse then hide vertical bar
-            x_singleton = isempty([layout.x layout.xy layout.yx]);
-            x_isOutOfDisplay = false;
-%             ijk = getPointIndexPosition(N);
-%             zoom = N.graph.getZoom('displaylimit');
-%             for dimension = N.D.layout.x
-%                 % for all dimensions in layout.x, check if the crossCenter is
-%                 % out of the display of this dimension. If the crossCenter
-%                 % is out of display, the vertical bar will be hidden
-%                 if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
-%                     x_isOutOfDisplay = true;
-%                 end
-%             end
+            % Hide the vertical bar if all dimensions on x are singletons or if
+            % crossCenter is out of display on any dimension on x
+            xdim = [layout.x layout.xy layout.yx];
+            x_singleton = isempty(xdim);
+            x_isOutOfDisplay = any(dimOutOfDisplay(xdim));
+            N.cross(1).Visible = onoff(~x_singleton && ~x_isOutOfDisplay);
             
-            % Hide the vertical if all dimensions on x are singletons or if
-            % crossCenter is out of display on one dimension on x
-            N.cross(1).Visible = onoff(~(x_singleton|x_isOutOfDisplay));
-            
-            % same things for horizontal bar
-            y_singleton = isempty([layout.y layout.xy layout.yx]);
-            y_isOutOfDisplay = false;
-%             for dimension = N.D.layout.y
-%                 if ijk(dimension)<zoom(1,dimension) || ijk(dimension)>zoom(2,dimension)
-%                     y_isOutOfDisplay = true;
-%                 end
-%             end
-%             if ~isempty(N.layout.griddisplay) && N.D.V.slice.header(N.layout.griddisplay).n > 1
-%                 y_singleton = false;
-%             end
-
+            % Same things for horizontal bar
+            ydim = [layout.y layout.xy layout.yx];
+            y_singleton = isempty(ydim);
+            y_isOutOfDisplay = any(dimOutOfDisplay(ydim));
             N.cross(2).Visible = onoff(~(y_singleton|y_isOutOfDisplay));
             
+            % Cross center
             updateCrossCenterVisibility(N);
+        end
+        function updateCrossCenterVisibility(N)
+            %  if one of the dimension of the cross is hidden, hide the
+            % cross center as well
+            N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
         end
     end
     
@@ -1012,19 +1006,17 @@ classdef displaynavigation < xplr.graphnode
             N.zoomfilters.(f) = Z;
             set(obj,'visible','on','minmax',[.5 Z.headerin.n+.5],'value',Z.zoomvalue)
             % watch changes in zoom
-            N.addListener(Z,'ChangedZoom',@(u,e)set(obj,'value',Z.zoomvalue));
+            function zoomchange(u,e)
+                if strcmp(e.type,'zoom')
+                    set(obj,'value',Z.zoomvalue)
+                end
+            end
+            N.addListener(Z,'ChangedOperation',@zoomchange);
         end
     end
     
+    % Tool used by both cross and selection display: is point out of display
     methods
-       
-        %  if one of the dimension of the cross is hidden, hide the
-        % cross center as well
-        function updateCrossCenterVisibility(N)
-            N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
-        end
-        
-        
         % return true if point (graph coordinates) is part of the slice
         % data displayed by converting the point to slice coordinates and
         % test if its between minimal and maximal values for all dimensions
@@ -1034,11 +1026,20 @@ classdef displaynavigation < xplr.graphnode
         %                (point is/isn't inside slice, default behavior)
         %                or a vector (for each dimension, if perdim=true)
         % @return output: 1xn boolean
-        function output = isOutOfDisplay(N, point, perdim)
+        function output = isPointOutOfDisplay(N, point, perdim)
             if nargin<3, perdim = false; end
             
-            % get slice values of the point
+            % get slice indices corresponding to the point
             ijk = N.graph.graph2slice(point,'invertible',true)'; % n x ndim
+            
+            output = isIndexOutOfDisplay(N, ijk, perdim);
+        end
+        function output = isIndexOutOfDisplay(N, ijk, perdim) 
+            % input
+            if nargin<3, perdim = false; end
+            if isvector(ijk) && size(ijk,2) ~= N.D.slice.nd
+                ijk = row(ijk);
+            end
             
             % get the min and max slice values of the data displayed
             zoomSliceValues = N.graph.getZoom('displaylimit'); % 2 x ndim
@@ -1053,7 +1054,6 @@ classdef displaynavigation < xplr.graphnode
                     | max(ijk,1)>zoomSliceValues(2,:); % 1 x ndim
             end
         end
-        
     end
     
     
