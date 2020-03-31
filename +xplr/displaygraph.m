@@ -960,11 +960,12 @@ classdef displaygraph < xplr.graphnode
             
             % use the first point as the origin
             xy0 = selax.shapes(1).points(:,1);
-            ijk0 = G.graph2slice(xy0);
+            ijk0 = G.graph2slice(xy0, 'invertible', true);
 
             % infer the affinity matrix
             % (first the linear part)
-            linearpart = [G.graph2slice(xy0 + [1;0])-ijk0 G.graph2slice(xy0 + [0;1])-ijk0];
+            linearpart = [G.graph2slice(xy0 + [1;0], 'subdim', dim, 'ijk0', ijk0)-ijk0 ...
+                G.graph2slice(xy0 + [0;1], 'subdim', dim, 'ijk0', ijk0)-ijk0];
             linearpart = linearpart(dim,:);
             % (then the offset)
             offset = ijk0(dim) - linearpart * xy0;
