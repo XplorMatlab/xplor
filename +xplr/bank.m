@@ -190,6 +190,9 @@ classdef bank < handle
             end
         end
         function [F, isnew] = getFilter(filtertype, linkkey, header, user)
+            if strcmp(filtertype,'filterAndPoint')
+                error 'getting a filterAndPoint filter necessitates a specialized method, so calling getFilter is not authorized'
+            end
             F = xplr.bank.getExistingFilter(filtertype, linkkey, header, user);
             if isempty(F)
                 isnew = true;
@@ -199,7 +202,7 @@ classdef bank < handle
                 % 'worldOperand' object that will synchronize several filters
                 % corresponding to different referentials in this space
                 key = header.getMeasureSpaceID;
-                if ~isempty(key) && ~isa(F,'xplr.filterAndPoint')
+                if ~isempty(key)
                    % search a corresponding worldOperand in the filters
                    % registry, create if it does not exist
                    B = xplr.bank.getbank();
@@ -264,14 +267,22 @@ classdef bank < handle
             % function F = getFilterAndPoint(linkkey, header, newuser[, doshow])
             % function F = getFilterAndPoint([linkkey_filter linkkey_point], header[, doshow[, newuser]])
             if nargin<4, doshow = false; end
-            [F, isnew] = xplr.bank.getFilter('filterAndPoint', linkkey, header, user);
-            if isnew && doshow 
-                if F.ndin > 1
-                    disp 'cannot display list for ND filter'
-                else
-                    xplr.bank.showList(F)
-                end
-            end     
+            F = xplr.bank.getExistingFilter('filterAndPoint', linkkey, header, user);
+            if isempty(F)
+                % construct filterAndPoint object from filter and point
+                % objects obtained themselves from the bank
+                FF = xplr.bank.getFilter('filter',linkkey,header,user);
+                FP = xplr.bank.getFilter('point',linkkey,header,user);
+                F = xplr.filterAndPoint(FF,FP);
+                xplr.bank.registerFilter(linkkey,F,user);
+                if doshow 
+                    if F.ndin > 1
+                        disp 'cannot display list for ND filter'
+                    else
+                        xplr.bank.showList(F)
+                    end
+                end     
+            end
         end
         function F = getFilterFilter(linkkey, header, user)
             % function F = getFilterFilter(linkkey, header[, newuser]])

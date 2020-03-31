@@ -90,7 +90,7 @@ classdef viewdisplay < xplr.graphnode
             
             % colormap tool
             D.colormap = xplr.colormaptool(D); % creates a menu
-            D.addListener(D.colormap,'ChangedColorMap',@(u,e)colormap(V.hf,D.colormap.cmap)); %#ok<CPROP>
+            D.addListener(D.colormap,'ChangedColorMap',@(u,e)D.updateDisplay('clip')); %#ok<CPROP>
             
             % navigation (sliders, mouse actions)
             D.navigation = xplr.displaynavigation(D); % creates a menu

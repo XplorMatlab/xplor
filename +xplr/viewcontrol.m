@@ -474,7 +474,7 @@ classdef viewcontrol < xplr.graphnode
                 end
             else
                 % search for the filter in the bank with key and dimension
-                doshow = false;
+                doshow = true;
                 F = xplr.bank.getFilterAndPoint(key,header,C,doshow);
             end
             

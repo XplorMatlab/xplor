@@ -36,6 +36,7 @@ methods
         WO.addListenerExclusivePair(DO, ...
             'ChangedOperation',@(u,e)DO.updateOperationSpace2Data(WO.operation,e), ...
             'ChangedOperation',@(u,e)DO.updateOperationData2Space(WO,e));
+        DO.world_operand = WO;
         % obtain world operation by running dataOperand method
         WO.operation = DO.operationData2Space();
     end
@@ -48,6 +49,7 @@ methods
         WO.addListenerExclusivePair(DO, ...
             'ChangedOperation',@(u,e)DO.updateOperationSpace2Data(WO.operation,e), ...
             'ChangedOperation',@(u,e)DO.updateOperationData2Space(WO,e));
+        DO.world_operand = WO;
         % set data operation
         DO.updateOperationSpace2Data(WO.operation)
     end

@@ -16,10 +16,11 @@ classdef dataOperand < xplr.graphnode
         reductionfactor
     end
     % properties below are not handled by dataOperand class and
-    % sub-classes, but rather by the objects that use them
+    % sub-classes, but rather by the objects that use them; they should not
+    % be set by user however!!
     properties 
         linkkey = 0
-        %shared = struct;
+        world_operand
     end
    
     % There are two events: operation definition can change without the
