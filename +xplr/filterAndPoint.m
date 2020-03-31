@@ -182,7 +182,9 @@ classdef filterAndPoint < xplr.dataOperand
                     notify(F,'ChangedOperation',e2)
                 case 'point'
                     if F.dolistenpoint % 'dolistenpoint' property is manipulated in F.set.index
-                        notify(F,'ChangedOperation',e)
+                        % same as above: copy e
+                        e2 = xplr.eventinfo('point',e.chgij);
+                        notify(F,'ChangedOperation',e2)
                         if e.chgij
                             notify(F,'ChangedOperation',xplr.eventinfo('filter','point'))
                         end
