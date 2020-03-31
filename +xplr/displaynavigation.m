@@ -653,7 +653,7 @@ classdef displaynavigation < xplr.graphnode
             % still valid, i.e. whether the connected filter still fits a
             % dimension in the new slice
             if isempty(N.selectiondimID), return, end
-            if ~all(ismember(N.selectiondimID,[N.D.slice.header.dimID]))
+            if ~all(ismember(N.selectiondimID,[N.D.slice.non_singleton_header().dimID]))
                 N.selectiondimID = [];
             end
         end

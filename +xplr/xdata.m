@@ -102,6 +102,9 @@ classdef xdata < xplr.graphnode
             d = x.dimensionNumber(dimID);
             head = x.header(d);
         end
+        function head = non_singleton_header(x)
+            head = x.header(x.sz>1);
+        end
     end
     
     % Modification of an xdata object and raising of the corresponding

@@ -169,13 +169,17 @@ classdef filterAndPoint < xplr.dataOperand
                     if strcmp(e.flag,'remove') && F.F.nsel==0
                         % removal of selection(s) replaces filter selection
                         % by point selection
-                        e = xplr.eventinfo('filter','all');
+                        e2 = xplr.eventinfo('filter','all');
                     elseif strcmp(e.flag,'new') && ismember(1,e.ind)
                         % new selection(s) replaces point selection by filter
                         % selection
-                        e = xplr.eventinfo('filter','all');
+                        e2 = xplr.eventinfo('filter','all');
+                    else
+                        % avoid very weird Matlab bug when simply passing
+                        % e: make a copy of it
+                        e2 = xplr.eventinfo('filter',e.flag,e.ind,e.value);
                     end
-                    notify(F,'ChangedOperation',e)
+                    notify(F,'ChangedOperation',e2)
                 case 'point'
                     if F.dolistenpoint % 'dolistenpoint' property is manipulated in F.set.index
                         notify(F,'ChangedOperation',e)

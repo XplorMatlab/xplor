@@ -271,8 +271,8 @@ classdef bank < handle
             if isempty(F)
                 % construct filterAndPoint object from filter and point
                 % objects obtained themselves from the bank
-                FF = xplr.bank.getFilter('filter',linkkey,header,user);
-                FP = xplr.bank.getFilter('point',linkkey,header,user);
+                FF = xplr.bank.getFilterFilter(linkkey, header, user);
+                FP = xplr.bank.getPointFilter(linkkey, header, user);
                 F = xplr.filterAndPoint(FF,FP);
                 xplr.bank.registerFilter(linkkey,F,user);
                 if doshow 
