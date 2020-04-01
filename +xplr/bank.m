@@ -1,14 +1,12 @@
 classdef bank < handle
 % xplr.bank The bank is unique and store several elements :
 %
-%  * currentviews: not used yet but it will be used for multiview
 %  * measures: units for measures conversion
 %  * recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored
 %  * filters_registry: registry of all existing filters, indexed by filter type, link key and input header
 %  * list_combo: xplr.listcombo object for displaying 1D filters as lists
 
     properties (SetAccess='private')
-        currentviews = struct('obj',cell(1,0),'hl',cell(1,0));                                  % all current views are registered here
         measures = struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}));   % units
         recentheaders = xplr.header.empty(1,0);                                                 % headers will be ordered according to their appearance date         
         filters_registry
@@ -46,10 +44,6 @@ classdef bank < handle
     % Views
     methods (Static)
         function registerView(V)
-            % register view
-            B = xplr.bank.getbank();
-            hl = addlistener(V,'ObjectBeingDestroyed',@(u,e)xplr.bank.unregisterView(V));
-            B.currentviews(end+1) = struct('obj',V,'hl',hl);
             % update list of recent headers
             dimheader = V.data.header; % xplr.dimheader class, need to convert to xplr.header!
             xplr.bank.registerheaders(xplr.header(dimheader))
@@ -99,13 +93,6 @@ classdef bank < handle
                 end
             end
             [measurelabel conversion measure] = deal([]);
-        end
-        function unregisterView(V)
-            % unregister view
-            B = xplr.bank.getbank();
-            idx = ([B.currentviews.obj]==V);
-            delete([B.currentviews(idx).hl])
-            B.currentviews(idx) = [];
         end
         function m = getMeasures()
             m = xplr.bank.getbank().measures;
