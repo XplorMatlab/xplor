@@ -18,13 +18,8 @@ It started as a project for neuroscience at CNRS (French National Center for Sci
 .. toctree::
    :maxdepth: 2
 
-   usage/installation
-
-   usage/quickstart
-
-   usage/xdata
-   usage/bank
-   usage/objectmap
+   usage/user
+   usage/dev
 
 .. module:: xplr
 .. automodule:: +xplr

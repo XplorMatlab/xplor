@@ -9,12 +9,13 @@
     <link rel="stylesheet" href="_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="_static/css/bootstrap.min.css" />
     
-    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
-    <script type="text/javascript" src="_static/jquery.js"></script>
-    <script type="text/javascript" src="_static/underscore.js"></script>
-    <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="_static/language_data.js"></script>
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
     
     <link rel="index" title="Index" href="#" />
     <link rel="search" title="Search" href="search.html" /> 
@@ -47,11 +48,9 @@
  | <a href="#C"><strong>C</strong></a>
  | <a href="#D"><strong>D</strong></a>
  | <a href="#E"><strong>E</strong></a>
- | <a href="#F"><strong>F</strong></a>
  | <a href="#G"><strong>G</strong></a>
  | <a href="#M"><strong>M</strong></a>
  | <a href="#R"><strong>R</strong></a>
- | <a href="#S"><strong>S</strong></a>
  | <a href="#U"><strong>U</strong></a>
  | <a href="#X"><strong>X</strong></a>
  
@@ -94,6 +93,10 @@
       <li><a href="usage/xdata.html#+xplr.xdata.data">data (+xplr.xdata attribute)</a>
 </li>
   </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="usage/xdata.html#+xplr.xdata.dimensionNumberAndID">dimensionNumberAndID() (+xplr.xdata method)</a>
+</li>
+  </ul></td>
 </tr></table>
 
 <h2 id="E">E</h2>
@@ -104,23 +107,19 @@
   </ul></td>
 </tr></table>
 
-<h2 id="F">F</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="usage/bank.html#+xplr.bank.filtersets">filtersets (+xplr.bank attribute)</a>
-</li>
-  </ul></td>
-</tr></table>
-
 <h2 id="G">G</h2>
 <table style="width: 100%" class="indextable genindextable"><tr>
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="usage/bank.html#+xplr.bank.getbank">getbank() (+xplr.bank static method)</a>
 </li>
-      <li><a href="usage/bank.html#+xplr.bank.getFilter">getFilter() (+xplr.bank static method)</a>
+      <li><a href="usage/bank.html#+xplr.bank.getFilterAndPoint">getFilterAndPoint() (+xplr.bank static method)</a>
+</li>
+      <li><a href="usage/bank.html#+xplr.bank.getFilterFilter">getFilterFilter() (+xplr.bank static method)</a>
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="usage/bank.html#+xplr.bank.getPointFilter">getPointFilter() (+xplr.bank static method)</a>
+</li>
       <li><a href="usage/bank.html#+xplr.bank.getunitinfo">getunitinfo() (+xplr.bank static method)</a>
 </li>
       <li><a href="usage/bank.html#+xplr.bank.getZoomFilter">getZoomFilter() (+xplr.bank static method)</a>
@@ -141,21 +140,11 @@
   <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="usage/bank.html#+xplr.bank.recentheaders">recentheaders (+xplr.bank attribute)</a>
 </li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="usage/bank.html#+xplr.bank.registerFilter">registerFilter() (+xplr.bank static method)</a>
 </li>
-  </ul></td>
-  <td style="width: 33%; vertical-align: top;"><ul>
       <li><a href="usage/bank.html#+xplr.bank.registerView">registerView() (+xplr.bank static method)</a>
-</li>
-      <li><a href="usage/bank.html#+xplr.bank.registerZoomFilter">registerZoomFilter() (+xplr.bank static method)</a>
-</li>
-  </ul></td>
-</tr></table>
-
-<h2 id="S">S</h2>
-<table style="width: 100%" class="indextable genindextable"><tr>
-  <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="usage/bank.html#+xplr.bank.showList">showList() (+xplr.bank static method)</a>
 </li>
   </ul></td>
 </tr></table>
@@ -169,8 +158,6 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="usage/bank.html#+xplr.bank.unregisterZoomFilter">unregisterZoomFilter() (+xplr.bank static method)</a>
-</li>
       <li><a href="usage/xdata.html#+xplr.xdata.updateData">updateData() (+xplr.xdata method)</a>
 </li>
       <li><a href="usage/xdata.html#+xplr.xdata.updateDataDim">updateDataDim() (+xplr.xdata method)</a>
@@ -185,8 +172,6 @@
 </li>
   </ul></td>
   <td style="width: 33%; vertical-align: top;"><ul>
-      <li><a href="usage/xdata.html#+xplr.xdata.xdata">xdata() (+xplr.xdata method)</a>
-</li>
       <li><a href="index.html#module-xplr">xplr (module)</a>
 </li>
   </ul></td>
@@ -201,11 +186,8 @@
         <div class="sphinxsidebarwrapper">
 <h3><a href="index.html">Table of Contents</a></h3>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="usage/installation.html">Install via Github</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/quickstart.html">Quick Start</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/xdata.html">Data container: xdata</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/bank.html">The bank</a></li>
-<li class="toctree-l1"><a class="reference internal" href="usage/objectmap.html">Object maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/user.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="usage/dev.html">Developer documentation</a></li>
 </ul>
 
 <div id="searchbox" style="display: none" role="search">
@@ -217,7 +199,7 @@
     </form>
     </div>
 </div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
+<script>$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
@@ -236,7 +218,7 @@
     </div>
     <div class="footer" role="contentinfo">
         &#169; Copyright 2019, remi girard.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.2.0.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 2.4.4.
     </div>
   </body>
 </html>
