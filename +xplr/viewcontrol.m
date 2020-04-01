@@ -156,13 +156,6 @@ classdef viewcontrol < xplr.graphnode
             dimstr = fn_switch(isscalar(dimID),'this dimension','these dimensions');
             filterstr = fn_switch(isscalar(dimID),'filter','filters');
             
-            % filter all others dimension
-            uimenu(m, ...
-                'label',['View ' dimstr ', filter others'], ...
-                'callback',@(u,e)dimaction(C,'viewdim',dimID,1))
-            uimenu(m,'label',['View ' dimstr ' in a new window'], ...
-                'callback',@(u,e)dimaction(C,'newwindow_viewdim',dimID,1))
-            
             % add or change filter(s)
             % (2D with key 1)
             if length(dimID)==2
@@ -171,7 +164,7 @@ classdef viewcontrol < xplr.graphnode
                     'callback',@(u,e)dimaction(C,'addfilter',{dimID},1))
                 nextseparator = 'off';
             else
-                nextseparator = 'on';
+                nextseparator = 'off';
             end
             % (1D with key 1)
             uimenu(m, ...
@@ -198,6 +191,13 @@ classdef viewcontrol < xplr.graphnode
             % remove filters in these dimensions
             uimenu(m,'label',['Remove ' filterstr],'separator','on', ...
                 'callback',@(u,e)dimaction(C,'rmfilter',dimID))
+            
+            % filter all others dimension
+            uimenu(m, ...
+                'label',['View ' dimstr ', filter others'], 'separator', 'on', ...
+                'callback',@(u,e)dimaction(C,'viewdim',dimID,1))
+            uimenu(m,'label',['View ' dimstr ' in a new window'], ...
+                'callback',@(u,e)dimaction(C,'newwindow_viewdim',dimID,1))
             
             % make menu visible
             p = get(C.V.hf,'currentpoint'); p = p(1,1:2);

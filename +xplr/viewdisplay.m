@@ -467,7 +467,7 @@ classdef viewdisplay < xplr.graphnode
     methods
         function setClip(D,clip,doupdatedisplay)
             if ~isnumeric(clip) || length(clip)~=2 || diff(clip)<=0 || any(isnan(clip)|isinf(clip))
-                disp 'clip value is not valid'
+                xplr.debuginfo('stop','clip value is not valid')
                 return
             end
             if all(clip==D.clip), return, end

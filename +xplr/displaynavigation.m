@@ -196,17 +196,40 @@ classdef displaynavigation < xplr.graphnode
                         dozoom = any(any(abs(diff(rect,1,2))>1e-2));
                     end
                     if dozoom
-                        ijk = N.graph.graph2slice(rect);
-                        zoom = ijk(activedim,:)';
-                        for i=1:length(activedim), zoom(:,i) = sort(zoom(:,i)); end
-                        N.D.zoomslicer.setZoom(activedim,zoom)
+                        if isempty(activedim)
+                            % determine in which dimension to zoom as the most
+                            % exterior dimension(s) where at least 2
+                            % elements are selected
+                            ijk = N.graph.graph2slice(rect);
+                            nonsingleton = logical(diff(round(ijk),1,2)); % nd*1 vector
+                            org = N.D.layout;
+                            xydim = [org.xy org.yx];
+                            if nonsingleton(xydim)
+                                zoomdim = xydim;
+                            else
+                                xdim = org.x(find(nonsingleton(org.x),1,'last'));
+                                ydim = org.y(find(nonsingleton(org.y),1,'last'));
+                                zoomdim = [xdim ydim];
+                            end
+                        else
+                            zoomdim = activedim;
+                            ijk = N.graph.graph2slice(rect,'subdim',zoomdim);
+                        end
+                        zoom = ijk(zoomdim,:)';
+                        for i=1:length(zoomdim), zoom(:,i) = sort(zoom(:,i)); end
+                        N.D.zoomslicer.setZoom(zoomdim,zoom)
                     else
                         N.manualclickmovecross(point);
                     end
                 case 'open'
                     % zoom reset
-                    zoom = repmat(':',1,length(activedim));
-                    N.D.zoomslicer.setZoom(activedim,zoom)
+                    if isempty(activedim)
+                        zoomoutdim = 1:N.D.nd;
+                    else
+                        zoomoutdim = activedim;
+                    end
+                    zoom = repmat(':',1,length(zoomoutdim));
+                    N.D.zoomslicer.setZoom(zoomoutdim,zoom)
                 case 'alt'
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape

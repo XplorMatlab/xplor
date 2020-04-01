@@ -76,7 +76,7 @@ classdef listcombo < hgsetget
             C.filters(idx) = filter;
             
             % watch filter deletion
-            addlistener(filter,'ObjectBeingDestroyed',@(u,e)removeList(C,hp))
+            addlistener(filter,'ObjectBeingDestroyed',@(u,e)removeList(C,hp));
         end
         function showList(C,filter)
             % add filter list, only if not already present

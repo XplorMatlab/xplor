@@ -74,7 +74,7 @@ classdef bank < handle
     
     % Units
     methods (Static)
-        function [measurelabel conversion measure] = getunitinfo(unit)
+        function [measurelabel, conversion, measure] = getunitinfo(unit)
             % function [measurelabel conversion measure] = getunitinfo(unit)
             %
             % if 'unit' is a registered unit (e.g. 'ms'), returns the label 

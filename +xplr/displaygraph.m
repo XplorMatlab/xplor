@@ -539,18 +539,14 @@ classdef displaygraph < xplr.graphnode
                 deal(s.subdim, s.ijk0, s.mode, s.invertible);
             if isempty(subdim)
                 subdim = 1:G.D.nd;
-            else
-                if isempty(ijk0)
-                    ijk0 = ones(G.D.nd,np);
-                elseif size(ijk0,2)==1 && np>1
-                    ijk0 = repmat(ijk0,[1 np]);
-                end
+            elseif ~isempty(ijk0) && size(ijk0,2)==1 && np>1
+                ijk0 = repmat(ijk0,[1 np]);
             end
 
         end
     end
     methods
-        function [zoom bin] = getZoom(G,varargin)
+        function [zoom, bin] = getZoom(G,varargin)
             % function zoom = getZoom(G[,dim][,'value|effective|indices'])
             % function [offset bin] = getZoom(G[,dim],'off&bin')
             %---
@@ -623,6 +619,7 @@ classdef displaygraph < xplr.graphnode
             % Input points
             np = size(ijk,2);
             [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
+            if isempty(ijk0), ijk0 = ones(G.D.nd,np); end
             if strcmp(mode,'vector')
                 error 'case not handled yet'
             elseif invertible
@@ -669,11 +666,14 @@ classdef displaygraph < xplr.graphnode
             if isvector(xy), xy = xy(:); end
             np = size(xy,2);
             ijk = zeros(G.D.nd,np);
-            st = G.steps;
-            sz = G.zslicesz;
             
             % Parse options
             [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
+            if length(subdim)<G.D.nd && isempty(ijk0)
+                % Define ijk0 using the first point
+                ijk0 = graph2zslice(G,xy(:,1),'invertible',true);
+                if np==1, ijk = ijk0; return, end
+            end
             
             % If mode is 'vector', we cannot operate in xy/yx dims, and
             % operate at most on one x and one y dims
@@ -688,6 +688,8 @@ classdef displaygraph < xplr.graphnode
             end          
                         
             % xy/yx
+            st = G.steps;
+            sz = G.zslicesz;
             if strcmp(mode,'point') && ~isempty(st.xydim)
                 % take advantage on the fact that the grid spans the full
                 % axis
@@ -769,6 +771,7 @@ classdef displaygraph < xplr.graphnode
             % Input points
             np = size(ijk,2);
             [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
+            if isempty(ijk0), ijk0 = ones(G.D.nd,np); end
             if strcmp(mode,'vector')
                 error 'case not handled yet'
             elseif invertible
