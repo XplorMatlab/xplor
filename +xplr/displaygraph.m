@@ -247,12 +247,28 @@ classdef displaygraph < xplr.graphnode
     end
     
     % Ticks
-    methods
-        function setTicks(G)
+    methods (Access='private')
+        function targetspacing = ticksTargetSpacing(G,k)
+            % k = 1 for 'x', 2 for 'y'
             axsiz = fn_pixelsize(G.ha);
             axsizinch = axsiz/get(0,'ScreenPixelsPerInch');
             targetspacinginch = .5; % optimal space between ticks in inches
-            maxnarrow = 2; % maximal further narrowing of this optimal space
+            
+            % target space between ticks
+            targetspacing = targetspacinginch / axsizinch(k);   % target spacing in axes coordinates
+        end
+        function values = nicevalues(G,valuestart,valuestop,targetstep)
+            % actual step that will be used
+            t10 = log10(targetstep);
+            tests = [1 2 5 10];
+            [~, idx] = min(abs(mod(t10,1)-log10(tests)));
+            step = 10^floor(t10) * tests(idx);
+            % tick values
+            values = step * (ceil(valuestart/step):floor(valuestop/step)); % data coordinates
+        end
+    end
+    methods
+        function setTicks(G)
             st = G.steps;
             
             % remove previous xy ticks
@@ -266,110 +282,121 @@ classdef displaygraph < xplr.graphnode
             for k = 1:2
                 switch k
                     case 1
-                        [f ff] = deal('x','yx');
+                        [f, ff] = deal('x','yx');
                     case 2
-                        [f ff] = deal('y','xy');
+                        [f, ff] = deal('y','xy');
                 end
                 d = G.D.activedim.(f);
+                
+                % no active dimension -> no tick
                 if isempty(d) || G.D.V.slice.header(d).n == 1
-                    tick = [];
-                    ticklabels = {};
-                else
-                    head = G.D.zslice.header(d);
-                    n = head.n;
-                    % conversion between data coordinates and graph
-                    domeasure = head.ismeasure;
-                    dogrid = (d==G.layout.(ff));
-                    if dogrid
-                        % step for ncol (or nrow) data points
-                        ncol = find(diff(st.xyoffsets(k,:)),1);
-                        if isempty(ncol), ncol = size(st.xyoffsets,2); end
-                        f_step = st.xysteps(k); 
-                        % step for one data point
-                        f_step = f_step / ncol;
-                        f_off = st.xyoffsets(k,1) - (ncol+1)/2*f_step;
-                        domeasure = false;
-                    else
-                        jf = find(d==G.layout.(f),1);
-                        if isempty(jf), error('%s activedim must be either at ''%s'' or ''%s'' location!',f,f,ff), end
-                        switch f
-                            case 'x'
-                                f_off = st.xyoffsets(k,1) + st.xoffset(jf) + sum(st.xoffset(jf+1:end)+st.xstep(jf+1:end));
-                                f_step = st.xstep(jf);
-                            case 'y'
-                                f_off = st.xyoffsets(k,1) + st.yoffset(jf) + sum(st.yoffset(jf+1:end)+st.ystep(jf+1:end));
-                                f_step = st.ystep(jf);
-                        end
+                    switch f
+                        case 'x'
+                            set(G.D.ha,'xtick',[])
+                        case 'y'
+                            % note that method setValueTicks, which is
+                            % normally called AFTER setTicks, might set
+                            % yticks later
+                            set(G.D.ha,'ytick',[])
                     end
-                    % measure or labels?
-                    if domeasure
-                        % target space between ticks
-                        targetspacing = targetspacinginch / axsizinch(k);   % target spacing in axes coordinates
-                        fspan = fn_switch(f,'x',st.xspan,'y',st.yspan);
-                        targetspacing = targetspacing/min(1/fspan(jf),maxnarrow); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
-                        % target space in data coordinates
-                        [start scale] = deal(head.start,head.scale);
-                        target = targetspacing / abs(f_step) * scale;
-                        % actual step that will be used
-                        t10 = log10(target);
-                        tests = [1 2 5 10];
-                        [~, idx] = min(abs(mod(t10,1)-log10(tests)));
-                        step = 10^floor(t10) * tests(idx);
-                        % tick values
-                        ticksdata = step * (ceil((start-.5*scale)/step):floor((start+(n-.5)*scale)/step)); % data coordinates
-                        if f=='y', ticksdata = fliplr(ticksdata); end % make it ascending order
-                        ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
-                        % tick labels
-                        ticklabels = fn_num2str(ticksdata,'cell');
-                    else
-                        % ticks for each data point (display only some of
-                        % them if there is not enough space for all)
-                        if dogrid
-                            % display all ticks anyway for grid mode
-                            ntickmax = Inf;
-                        else
-                            % check the available space in centimeters and
-                            % set a maximal number of ticks
-                            axes_size = G.D.getSize('centimeters', f);
-                            ntickmax = axes_size * fn_switch(f, 'x', 1, 'y', 2);
-                        end
-                        ticklabels = row(head.getItemNames());
-                        if n <= ntickmax                           
-                            ticksidx = 1:n;
-                        else
-                            step = fn_smartstep(n / ntickmax);
-                            if strcmp(ticklabels{1}, '1')
-                                % it seems that we have a mere enumeration,
-                                % use a smart step
-                                ticksidx = step:step:n;
-                            else
-                                % make both the first and last appear
-                                ticksidx = 1:step:n;
-                                if ticksidx(end) ~= n
-                                    ticksidx(end) = n;
-                                end
-                            end
-                            ticklabels = ticklabels(ticksidx);
-                        end
-                        % 2D grid: put text rather than using axes ticks
-                        % system
-                        if dogrid
-                            xy = fn_add([0; -st.xysteps(2)/2],st.xyoffsets);
-                            G.xyticks = gobjects(1,n);
-                            for i=1:n
-                                G.xyticks(i) = text(xy(1,i),xy(2,i),ticklabels{i}, ...
-                                    'parent',G.ha,'hittest','off', ...
-                                    'horizontalalignment','center'); %,'verticalalignment','top')
-                            end
-                            ticksidx = []; ticklabels = {};
-                        end
-                        if f=='y'
-                            ticksidx = fliplr(ticksidx); 
-                            ticklabels = fliplr(ticklabels);
-                        end
-                    end
-                    tick = f_off + ticksidx*f_step;
+                    continue
                 end
+                
+                % header
+                head = G.D.zslice.header(d);
+                n = head.n;
+
+                % conversion between data coordinates and graph
+                domeasure = head.ismeasure;
+                dogrid = (d==G.layout.(ff));
+                if dogrid
+                    % step for ncol (or nrow) data points
+                    ncol = find(diff(st.xyoffsets(k,:)),1);
+                    if isempty(ncol), ncol = size(st.xyoffsets,2); end
+                    f_step = st.xysteps(k); 
+                    % step for one data point
+                    f_step = f_step / ncol;
+                    f_off = st.xyoffsets(k,1) - (ncol+1)/2*f_step;
+                    domeasure = false;
+                else
+                    jf = find(d==G.layout.(f),1);
+                    if isempty(jf), error('%s activedim must be either at ''%s'' or ''%s'' location!',f,f,ff), end
+                    switch f
+                        case 'x'
+                            f_off = st.xyoffsets(k,1) + st.xoffset(jf) + sum(st.xoffset(jf+1:end)+st.xstep(jf+1:end));
+                            f_step = st.xstep(jf);
+                        case 'y'
+                            f_off = st.xyoffsets(k,1) + st.yoffset(jf) + sum(st.yoffset(jf+1:end)+st.ystep(jf+1:end));
+                            f_step = st.ystep(jf);
+                    end
+                end
+
+                % different display depending on whether header is
+                % measure or categorical
+                if domeasure
+                    % target space between ticks
+                    targetspacing = G.ticksTargetSpacing(k);
+                    fspan = fn_cast(k,st.xspan,st.yspan);
+                    targetspacing = targetspacing/min(1/fspan(jf),2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
+                    % target space in data coordinates
+                    [start, scale] = deal(head.start,head.scale);
+                    [start, stop] = deal(start-.5*scale, start+(n-.5)*scale);
+                    targetstep = targetspacing / abs(f_step) * scale;
+                    % tick values
+                    ticksdata = G.nicevalues(start,stop,targetstep);
+                    if f=='y', ticksdata = fliplr(ticksdata); end % make it ascending order
+                    ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
+                    % tick labels
+                    ticklabels = fn_num2str(ticksdata,'cell');
+                else
+                    % ticks for each data point (display only some of
+                    % them if there is not enough space for all)
+                    if dogrid
+                        % display all ticks anyway for grid mode
+                        ntickmax = Inf;
+                    else
+                        % check the available space in centimeters and
+                        % set a maximal number of ticks
+                        axes_size = G.D.getSize('centimeters', f);
+                        ntickmax = axes_size * fn_switch(f, 'x', 1, 'y', 2);
+                    end
+                    ticklabels = row(head.getItemNames());
+                    if n <= ntickmax                           
+                        ticksidx = 1:n;
+                    else
+                        step = fn_smartstep(n / ntickmax);
+                        if strcmp(ticklabels{1}, '1')
+                            % it seems that we have a mere enumeration,
+                            % use a smart step
+                            ticksidx = step:step:n;
+                        else
+                            % make both the first and last appear
+                            ticksidx = 1:step:n;
+                            if ticksidx(end) ~= n
+                                ticksidx(end) = n;
+                            end
+                        end
+                        ticklabels = ticklabels(ticksidx);
+                    end
+                    % 2D grid: put text rather than using axes ticks
+                    % system
+                    if dogrid
+                        xy = fn_add([0; -st.xysteps(2)/2],st.xyoffsets);
+                        G.xyticks = gobjects(1,n);
+                        for i=1:n
+                            G.xyticks(i) = text(xy(1,i),xy(2,i),ticklabels{i}, ...
+                                'parent',G.ha,'hittest','off', ...
+                                'horizontalalignment','center'); %,'verticalalignment','top')
+                        end
+                        ticksidx = []; ticklabels = {};
+                    end
+                    if f=='y'
+                        ticksidx = fliplr(ticksidx); 
+                        ticklabels = fliplr(ticklabels);
+                    end
+                end
+                tick = f_off + ticksidx*f_step;
+                
                 % set ticks!
                 if strcmp(f,'x')
                     set(G.ha,'xtick',tick,'xticklabel',ticklabels)
@@ -377,6 +404,111 @@ classdef displaygraph < xplr.graphnode
                     set(G.ha,'ytick',tick,'yticklabel',ticklabels)
                 end
             end
+        end
+        function setValueTicks(G)
+            % do we show value ticks?
+            if ~strcmp(G.D.displaymode,'time courses') || ~isempty(G.D.activedim.y)
+                ylabel(G.D.ha,'')
+                return
+            end
+            
+            % clip values available?
+            gridclip = G.D.gridclip;
+            if isempty(gridclip)
+                error 'programming: setValueTicks should be called after viewdisplay.updateDisplay, so gridclip should be set'
+            end
+            sz = size(gridclip); sz(1) = [];
+            
+            % enough space on y-axis to show values?
+            org = G.D.layout;
+            st = G.steps;
+            targetspacing = G.ticksTargetSpacing(2);
+            if ~isempty([org.y st.xydim]), targetspacing = targetspacing/2; end
+            if st.yavailable < targetspacing
+                set(G.D.ha,'ytick',[])
+                ylabel(G.D.ha,'')
+                return
+            end
+            
+            % replace min/max clip definitions by min/extent
+            gridclip(2,:) = gridclip(2,:) - gridclip(1,:);
+            
+            % check every 'external' dimension: x, y or xy/yx? same clip
+            % values or not?
+            subs0 = substruct('()',repmat({':'},1,G.D.nd));
+            samecliprow = true;     % time courses on the same row have the same clipping range
+            for d = 1:G.D.nd
+                if any(d == [org.ystatic org.x(2:end) G.steps.xydim])
+                    % check whether clip values are the same along this
+                    % dimension
+                    test = diff(gridclip,1,1+d);
+                    samecliprow = samecliprow && ~any(row(test));
+                    if ~samecliprow
+                        sameextentrow = ~any(row(test(2,:)));
+                        if ~sameextentrow
+                            set(G.D.ha,'ytick',[])
+                            ylabel(G.D.ha,'')
+                        end
+                    end
+                    % remove this dimension
+                    subs = subs0; subs.subs{1+d} = 1;
+                    gridclip = subsref(gridclip,subs);
+                elseif any(d == org.y)
+                    % nothing to do, keep this dimension
+                else
+                    % there should be only 1 value in this dimension,
+                    % nothing to do
+                    if size(gridclip,1+d) > 1
+                        error 'programming: dimension is not present in the ''external'' layout but gridclip indicates multiple values!'
+                    end
+                end
+            end
+            
+%             % go back to clip definitions
+%             if samecliprow
+%                 gridclip(2,:) = gridclip(1,:) + gridclip(2,:);
+%             else
+%                 gridclip(:,:) = fn_mult([-.5; .5], gridclip(2,:));
+%             end
+            
+            % now gridclip is nonsingleon only in the org.y dimensions;
+            % permute dimensions
+            gridclip = permute(gridclip,[1 1+org.y 1+setdiff(1:G.D.nd,org.y)]);
+            
+            % build ytick and ytickvalues
+            if st.xydim
+                nxycol = st.xyncol;
+                nxyrow = ceil(sz(st.xydim)/nxycol);
+            else
+                [nxycol, nxyrow] = deal(1);
+            end
+            ny = prod(sz(org.y));
+            [ytick, ytickvalues] = deal(cell([ny nxyrow]));
+            for krow = 1:nxyrow
+                for ky = 1:ny
+                    % middle of the ticks
+                    yidx = ind2sub(sz(org.y),ky);
+                    yoffset = st.xyoffsets(2,1+(krow-1)*nxycol) + sum(st.yoffset) + sum(st.ystep .* yidx);
+                    % tick values
+                    valuestart = gridclip(1,ky);
+                    valueextent = gridclip(2,ky);
+                    targetstep = targetspacing * valueextent/st.yavailable;
+                    values = G.nicevalues(valuestart, valuestart+valueextent, targetstep);
+                    yscale = st.yavailable / valueextent;
+                    valuemiddle = valuestart + valueextent/2;
+                    ytick{ky,krow} = yoffset + (values-valuemiddle)*yscale;
+                    ytickvalues{ky,krow} = values;
+                end
+            end
+            % yoffset are descending, so read ytick in reverse order to
+            % have only increasing values
+            ytick = [ytick{end:-1:1}];
+            yticklabel = fn_num2str([ytickvalues{end:-1:1}],'cell');
+            
+            % set ticks
+            set(G.D.ha,'ytick',ytick,'yticklabel',yticklabel)
+            ylabel(G.D.ha,'values')
+                
             
         end
     end
@@ -977,8 +1109,6 @@ classdef displaygraph < xplr.graphnode
         end
     end
 end
-
-
 
 %---
 function [xpair ypair] = checkpairs(xhead,yhead,dosignal)

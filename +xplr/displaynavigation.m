@@ -118,8 +118,6 @@ classdef displaynavigation < xplr.graphnode
                     switch N.D.clipping.adjust
                         case 'none'
                             % nothing
-                        case 'mean(line)'
-                            if strcmp(N.D.displaymode,'time courses'), clipcenter = 0; end
                         otherwise
                             clipcenter = 0;
                     end
