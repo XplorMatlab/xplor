@@ -786,7 +786,7 @@ classdef viewdisplay < xplr.graphnode
                         else
                             im = permute(xi,[4 2 1 3]);
                         end
-                        im = fn_clip(im,clipi,D.colormap.cmap,1);
+                        im = fn_clip(im,clipi,D.colormap.cmap,.95);
                         if docreatecur
                             % y coordinates are negative to orient the
                             % image downward (see also comment inside of

@@ -37,6 +37,11 @@ classdef graphnode < matlab.mixin.SetGet
         function addListener(self,other,varargin)
             % function addListener(self,other,addlistener arguments...)
             % function addListener(self,other,listener)
+            %---
+            % Adding a listener on object other by using self.addListener
+            % ensures that when self will be deleted, the listener also
+            % will be deleted and therefore not trigger actions on an
+            % invalid object.
             if length(varargin) == 1
                 % listener given in arguments
                 listener = varargin{1};

@@ -909,6 +909,8 @@ classdef displaygraph < xplr.graphnode
         end
         function pos = labelPosition(G,dim,orgin)
             % function pos = labelPosition(G,d[,orgin])
+            
+            dim = G.D.slice.dimensionNumber(dim);
         
             % steps
             if nargin==3

@@ -59,7 +59,7 @@ classdef dimheader < xplr.header
             %---
             % Convert any of dimension numbers, identifiers or labels
             % to both dimension numbers and identifiers.
-            % Returns [] if some dimension was not found.
+            % Returns 0 for unfound dimensions.
             
             % Special cases
             if isempty(d)
@@ -77,11 +77,9 @@ classdef dimheader < xplr.header
                 labels = {H.label};
                 for i = 1:n
                     dim_i = fn_find(d{i},labels,'first');
-                    if isempty(dim_i)
-                        [dim, dimID] = deal([]);
-                        return
+                    if ~isempty(dim_i)
+                        dim(i) = dim_i;
                     end
-                    dim(i) = dim_i;
                 end
                 d = dim;
             elseif iscell(d)
@@ -102,11 +100,9 @@ classdef dimheader < xplr.header
                 dim = zeros(1,n);
                 for i =1:n
                     dim_i = find([H.dimID]==dimID(i),1,'first');
-                    if isempty(dim_i)
-                        [dim, dimID] = deal([]);
-                        return
+                    if ~isempty(dim_i)
+                        dim(i) = dim_i;
                     end
-                    dim(i) = dim_i;
                 end
             else
                 % number -> identifier

@@ -21,6 +21,7 @@ classdef displaynavigation < xplr.graphnode
         selection2Dshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selectionround1Dmeasure = true; 
         selectionadvanced = false
+        selectionpromptname = false
     end
     properties (Dependent)
         selectiondim            % dimension(s) to which selections apply, identified by its(their) number
@@ -517,12 +518,14 @@ classdef displaynavigation < xplr.graphnode
             if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
                 fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
                     {'parent',m,'label','Round selections to data indices','separator','on'});
-                %                 nextsep = 'off';
-                %             else
-                %                 nextsep = 'on';
+                nextsep = 'off';
+            else
+                nextsep = 'on';
             end
             %             fn_propcontrol(N,'selectionadvanced','menu', ...
             %                 {'parent',m,'label','Advanced selection','separator',nextsep});
+            fn_propcontrol(N,'selectionpromptname','menu', ...
+                {'parent',m,'label','Prompt for name of new selections','separator',nextsep});
         end
         function selectionMouse(N)
             seldim = N.selectiondim;
@@ -594,9 +597,17 @@ classdef displaynavigation < xplr.graphnode
                 % convert to slice coordinates
                 selslice = N.graph.selection2slice(seldim,selax);
             end
+            
+            % prompt for selection name
+            if N.selectionpromptname
+                name = inputdlg('Selection name','xplor');
+                options = {'name' name{1}};
+            else
+                options = {};
+            end
 
             % update filter
-            N.selectionfilter.updateSelection('new',selslice)
+            N.selectionfilter.updateSelection('new',selslice,options{:})
 
             % update display
             N.displayselection('new',length(N.selection))
