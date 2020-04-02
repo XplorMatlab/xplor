@@ -489,7 +489,7 @@ classdef headerEdit < hgsetget
                     % set a label if there isn't
                     head.label = ['dim' num2str(i)];
                 end
-                if isempty(head.unit)
+                if isempty(head.scale)
                     % categorical
                     if isempty(head.sublabels), head.sublabels={head.label}; end
                     if ~isempty(head.colors)

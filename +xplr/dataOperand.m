@@ -130,7 +130,9 @@ classdef dataOperand < xplr.graphnode
             for i=1:size(addheaderinfo,2)
                 label = addheaderinfo{1,i};
                 values = addheaderinfo{2,i};
-                if ~iscell(values), values = num2cell(values); end
+                if ~iscell(values)
+                    if ischar(values), values = cellstr(values); else values = num2cell(values); end
+                end
                 if ~isvector(values) || (~isscalar(values) && length(values)~=size(headvalue,1))
                     error 'size of additional header info does not match number of selections'
                 end

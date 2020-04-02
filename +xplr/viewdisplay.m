@@ -14,6 +14,7 @@ classdef viewdisplay < xplr.graphnode
         nodisplay = false   % data is too large, cancel display
         htransform  % containers for line/images that will be translated/scaled
         hdisplay    % handles of line/images
+        gridclip    % clipping for each grid element
         hlegend     % handle of legend axes
         labels      % xplr.displaylabel object
         graph       % xplr.displaygraph object
@@ -256,7 +257,8 @@ classdef viewdisplay < xplr.graphnode
             if doImmediateUpdate
                 D.navigation.connectZoomFilter()
                 D.labels.updateLabels('active')
-                D.graph.setTicks()
+                D.graph.s()
+                D.graph.setValueTicks()
             end
         end
     end    
@@ -284,8 +286,8 @@ classdef viewdisplay < xplr.graphnode
 
             % Binning
             m1 = uimenu(m,'label','Binning','Separator',onoff(docolor));
-            binvalues = {1 2 3 4 'set'};
-            bindisplays = {'none' '2' '3' '4' 'other...'};
+            binvalues = {1 2 3 4 5 10 20 'set'};
+            bindisplays = {'none' '2' '3' '4' '5' '10' '20' 'other...'};
             curbin = D.zoomfilters(dim).bin;
             for i=1:length(binvalues)
                 bin = binvalues{i};
@@ -370,7 +372,7 @@ classdef viewdisplay < xplr.graphnode
             if ~doImmediateDisplay, return, end
             D.checkColorDim(false)
             D.graph.setTicks()
-            updateDisplay(D)
+            updateDisplay(D) % will call setValueTicks if necessary
             % update slider connections
             connectZoomFilter(D.navigation)                      
             % reposition cross
@@ -408,6 +410,7 @@ classdef viewdisplay < xplr.graphnode
             end
             % update ticks and labels
             D.graph.setTicks()
+            D.graph.setValueTicks()
             D.labels.updateLabels('active');
         end
     end
@@ -464,7 +467,7 @@ classdef viewdisplay < xplr.graphnode
     methods
         function setClip(D,clip,doupdatedisplay)
             if ~isnumeric(clip) || length(clip)~=2 || diff(clip)<=0 || any(isnan(clip)|isinf(clip))
-                disp 'clip value is not valid'
+                xplr.debuginfo('stop','clip value is not valid')
                 return
             end
             if all(clip==D.clip), return, end
@@ -478,7 +481,7 @@ classdef viewdisplay < xplr.graphnode
             if nargin<2, doupdatedisplay = true; end
             try
                 val = fn_clip(D.zslice.data(:),D.clipping.autoclipmode,'getrange');
-                setClip(D,val,doupdatedisplay)
+                if ~any(isnan(val)), setClip(D,val,doupdatedisplay), end
             catch ME
                 disp(ME)
             end
@@ -572,6 +575,7 @@ classdef viewdisplay < xplr.graphnode
             if D.nodisplay
                 % too many grid elements: cancel display!
                 deleteValid(D.htransform) % this will also delete children D.hdisplay
+                D.gridclip = [];
                 delete(findall(D.ha,'type','text','tag','xytick'))
                 set(D.ha,'xtick',[],'ytick',[])
                 if isempty(findall(D.ha,'type','text','tag','nodisplay'))
@@ -594,9 +598,6 @@ classdef viewdisplay < xplr.graphnode
             % repeatedly: access them once for all here
             dotimecourses = strcmp(D.displaymode,'time courses');
             clipadjust = D.clipping.adjust;
-            if strcmp(clipadjust,'mean(line)')
-                clipadjust = fn_switch(dotimecourses,'mean','none');
-            end
             
             % What to do
             if nargin<2, flag = 'global'; end
@@ -609,6 +610,7 @@ classdef viewdisplay < xplr.graphnode
             doposition = ~fn_ismemberstr(flag,{'chg' 'chgdata' 'clip' 'color'});
             dodataall = fn_ismemberstr(flag,{'clip' 'global' 'chgdata' 'chgdata&blocksize' 'perm' 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
             dodataselect = fn_ismemberstr(flag,{'new' 'chg'});
+            dodata = dodataall || dodataselect;
             dochgx = strcmp(flag,'chgdata&blocksize');
             docolor = dotimecourses && ~fn_ismemberstr(flag,{'chgdata' 'chgdata&blocksize' 'clip'});
             
@@ -682,24 +684,28 @@ classdef viewdisplay < xplr.graphnode
             if doreset          % reset display and grid elements
                 deleteValid(D.htransform) % this will also delete children D.hdisplay
                 [D.htransform, D.hdisplay] = deal(gobjects([sz1 1]));
+                D.gridclip = zeros([2 sz1 1]);
                 [doposition, dodataall] = deal(true);
             elseif donew      	% new grid elements
                 subs = substruct('()',repmat({':'},1,D.zslice.nd));
                 subs.subs{dim} = ind;
                 D.htransform = subsasgn(D.htransform,subs,gobjects);
                 D.hdisplay = subsasgn(D.hdisplay,subs,gobjects);
+                subs.subs = [{':'} subs.subs];
+                D.gridclip = subsasgn(D.gridclip,subs,0);
             elseif doremove     % remove grid elements
                 subs = substruct('()',repmat({':'},1,D.zslice.nd));
                 subs.subs{dim} = ind;
                 deleteValid(subsref(D.htransform,subs)) % this also deletes the children hdisplay objects
                 D.htransform = subsasgn(D.htransform,subs,[]);
                 D.hdisplay = subsasgn(D.hdisplay,subs,[]);
+                subs.subs = [{':'} subs.subs];
+                D.gridclip = subsasgn(D.gridclip,subs,[]);
             end
             
             % Prepare clipping
             clip0 = D.clip;
             clipextent = diff(clip0);
-
             
             % Prepare several list of indices beforehand to avoid repeated
             % calls to functions such as ind2sub
@@ -756,6 +762,8 @@ classdef viewdisplay < xplr.graphnode
                     end
                     xi = double(xi);
                     clipi = double(clipi);
+                    % store clipping values
+                    D.gridclip(:,idx) = clipi;                    
                     % display it
                     if dotimecourses
                         xi = (xi-clipi(1))/clipextent;
@@ -778,7 +786,7 @@ classdef viewdisplay < xplr.graphnode
                         else
                             im = permute(xi,[4 2 1 3]);
                         end
-                        im = fn_clip(im,clipi,D.colormap.cmap,1);
+                        im = fn_clip(im,clipi,D.colormap.cmap,.95);
                         if docreatecur
                             % y coordinates are negative to orient the
                             % image downward (see also comment inside of
@@ -796,6 +804,11 @@ classdef viewdisplay < xplr.graphnode
                         end
                     end
                 end
+            end
+            
+            % update value y-ticks
+            if dodata
+                D.graph.setValueTicks()
             end
             
             % make sur containers are below labels, selections, etc.
@@ -958,6 +971,7 @@ classdef viewdisplay < xplr.graphnode
                 D.checkzslicesize % is zslice too large for being displayed
                 D.graph.computeSteps()
                 D.graph.setTicks()
+                D.graph.setValueTicks()
                 D.labels.updateLabels()
                 updateDisplay(D,'pos')
             end
@@ -966,6 +980,7 @@ classdef viewdisplay < xplr.graphnode
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             D.graph.computeSteps()
             D.graph.setTicks()
+            D.graph.setValueTicks()
             updateDisplay(D,'pos')
         end
         function set.displaymode(D,mode)
@@ -988,7 +1003,7 @@ classdef viewdisplay < xplr.graphnode
                 D.graph.computeSteps() %#ok<MCSUP>
                 D.graph.setTicks() %#ok<MCSUP>
                 D.labels.updateLabels() %#ok<MCSUP>
-                updateDisplay(D)
+                updateDisplay(D) % will call setValueTicks
             end
             % show/hide color legend
             displayColorLegend(D)

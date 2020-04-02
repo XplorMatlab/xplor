@@ -21,6 +21,7 @@ classdef displaynavigation < xplr.graphnode
         selection2Dshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selectionround1Dmeasure = true; 
         selectionadvanced = false
+        selectionpromptname = false
     end
     properties (Dependent)
         selectiondim            % dimension(s) to which selections apply, identified by its(their) number
@@ -118,8 +119,6 @@ classdef displaynavigation < xplr.graphnode
                     switch N.D.clipping.adjust
                         case 'none'
                             % nothing
-                        case 'mean(line)'
-                            if strcmp(N.D.displaymode,'time courses'), clipcenter = 0; end
                         otherwise
                             clipcenter = 0;
                     end
@@ -198,17 +197,40 @@ classdef displaynavigation < xplr.graphnode
                         dozoom = any(any(abs(diff(rect,1,2))>1e-2));
                     end
                     if dozoom
-                        ijk = N.graph.graph2slice(rect);
-                        zoom = ijk(activedim,:)';
-                        for i=1:length(activedim), zoom(:,i) = sort(zoom(:,i)); end
-                        N.D.zoomslicer.setZoom(activedim,zoom)
+                        if isempty(activedim)
+                            % determine in which dimension to zoom as the most
+                            % exterior dimension(s) where at least 2
+                            % elements are selected
+                            ijk = N.graph.graph2slice(rect);
+                            nonsingleton = logical(diff(round(ijk),1,2)); % nd*1 vector
+                            org = N.D.layout;
+                            xydim = [org.xy org.yx];
+                            if nonsingleton(xydim)
+                                zoomdim = xydim;
+                            else
+                                xdim = org.x(find(nonsingleton(org.x),1,'last'));
+                                ydim = org.y(find(nonsingleton(org.y),1,'last'));
+                                zoomdim = [xdim ydim];
+                            end
+                        else
+                            zoomdim = activedim;
+                            ijk = N.graph.graph2slice(rect,'subdim',zoomdim);
+                        end
+                        zoom = ijk(zoomdim,:)';
+                        for i=1:length(zoomdim), zoom(:,i) = sort(zoom(:,i)); end
+                        N.D.zoomslicer.setZoom(zoomdim,zoom)
                     else
                         N.manualclickmovecross(point);
                     end
                 case 'open'
                     % zoom reset
-                    zoom = repmat(':',1,length(activedim));
-                    N.D.zoomslicer.setZoom(activedim,zoom)
+                    if isempty(activedim)
+                        zoomoutdim = 1:N.D.nd;
+                    else
+                        zoomoutdim = activedim;
+                    end
+                    zoom = repmat(':',1,length(zoomoutdim));
+                    N.D.zoomslicer.setZoom(zoomoutdim,zoom)
                 case 'alt'
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape
@@ -496,12 +518,14 @@ classdef displaynavigation < xplr.graphnode
             if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
                 fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
                     {'parent',m,'label','Round selections to data indices','separator','on'});
-                %                 nextsep = 'off';
-                %             else
-                %                 nextsep = 'on';
+                nextsep = 'off';
+            else
+                nextsep = 'on';
             end
             %             fn_propcontrol(N,'selectionadvanced','menu', ...
             %                 {'parent',m,'label','Advanced selection','separator',nextsep});
+            fn_propcontrol(N,'selectionpromptname','menu', ...
+                {'parent',m,'label','Prompt for name of new selections','separator',nextsep});
         end
         function selectionMouse(N)
             seldim = N.selectiondim;
@@ -573,9 +597,17 @@ classdef displaynavigation < xplr.graphnode
                 % convert to slice coordinates
                 selslice = N.graph.selection2slice(seldim,selax);
             end
+            
+            % prompt for selection name
+            if N.selectionpromptname
+                name = inputdlg('Selection name','xplor');
+                options = {'name' name{1}};
+            else
+                options = {};
+            end
 
             % update filter
-            N.selectionfilter.updateSelection('new',selslice)
+            N.selectionfilter.updateSelection('new',selslice,options{:})
 
             % update display
             N.displayselection('new',length(N.selection))

@@ -8,7 +8,7 @@ classdef cliptool < xplr.graphnode
     properties (SetObservable=true, AbortSet)
         autoclipmodeNocenter = 'minmax'     % 
         center = []                         % [], 0 or 1
-        adjust = 'mean(line)'               % 'none', 'mean' or 'mean(line)'
+        adjust = 'none'                     % 'none', 'mean'
         span = 'local'                      % 'curview', 'local' or 'shared (sharename)'
     end
 
@@ -68,7 +68,7 @@ classdef cliptool < xplr.graphnode
             uimenu(m,'label','Do Auto-Clip','callback',@(u,e)notify(C,'ChangedClip',xplr.eventinfo('clip','automode')))
             % adjust
             fn_propcontrol(C,'adjust', ...
-                {'menuval' {'none' 'mean' 'mean(line)'} {'None' 'Adjust each Element by its Mean Value' 'Auto (Adjust Time Courses but not Images)'} {'None' 'Mean' 'Auto'}}, ...
+                {'menuval' {'none' 'mean'} {'None' 'Adjust each Element by its Mean Value'} {'None' 'Mean'}}, ...
                 m,'label','Adjust','separator','on');
             % span
             fn_propcontrol(C,'span', ...

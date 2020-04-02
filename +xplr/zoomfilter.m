@@ -200,7 +200,7 @@ classdef zoomfilter < xplr.dataOperand
             for i=1:length(Z)
                 if Z(i).bin>1
                     slic = reshape(slic,[prod(sout(1:dims(i)-1)) Z(i).bin sout(dims(i)) prod(scur(dims(i)+1:end))]);
-                    slic = mean(slic,2);
+                    slic = nmean(slic,2);
                 end
             end
             slic = reshape(slic,sout);

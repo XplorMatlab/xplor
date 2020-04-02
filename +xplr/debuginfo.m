@@ -131,19 +131,18 @@ if isempty(names)
     return
 end
     
-state =get_state();
+state = get_state();
 [selection, ok] = listdlg( ...
     'Name', 'xplr.debuginfo', ...
     'PromptString', 'Select which debuginfo categories should be displayed', ...
-    'ListString', names, ...
+    'ListString', names, 'SelectionMode', 'multiple', ...
+    'CancelString', 'None', ...
     'InitialValue', find(selected));
 
-if ok
-    selected(:) = false;
-    selected(selection) = true;
-    state.categories = cell2struct(num2cell(selected), names, 2);
-    save_state(state)
-end
+selected(:) = false;
+if ok, selected(selection) = true; end
+state.categories = cell2struct(num2cell(selected), names);
+save_state(state)
 
         
     

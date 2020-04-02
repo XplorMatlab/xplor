@@ -32,6 +32,9 @@ classdef viewcontrol < xplr.graphnode
                 'callback',@(u,e)C.dimensionContextMenu()});
             C.contextmenu = uicontextmenu(V.hf);
             
+            % some changes needed when data header is changed
+            C.addListener(V.data,'ChangedData',@(u,e)datachange(C,e));            
+            
             % create initial list of filters
             % (determine which filters should be active for the slice to be
             % displayable)
@@ -111,23 +114,6 @@ classdef viewcontrol < xplr.graphnode
     
     % Data (edit headers)
     methods
-        function editHeader(C)
-            data = C.V.data;
-            curhead = data.header;
-            newhead = xplr.editHeader(C.V.data);
-            if isempty(newhead), return, end % user closed window: cancel
-            dimchg = false(1,data.nd);
-            for i=1:data.nd, dimchg(i) = ~isequal(newhead(i),curhead(i)); end
-            if any(dimchg)
-                dim = find(dimchg);
-                newheaddim = xplr.dimheader(newhead(dim));
-                C.V.data.updateData('chgdim',dim,[],data.data,newheaddim)
-            end
-        end
-    end
-    
-    % Dimensions menu
-    methods
         function dataContextMenu(C)
             % init context menu
             m = C.contextmenu;
@@ -143,6 +129,34 @@ classdef viewcontrol < xplr.graphnode
             p = get(C.V.hf,'currentpoint'); p = p(1,1:2);
             set(m,'Position',p,'Visible','on')
         end
+        function editHeader(C)
+            data = C.V.data;
+            curhead = data.header;
+            newhead = xplr.editHeader(C.V.data);
+            if isempty(newhead), return, end % user closed window: cancel
+            dimchg = false(1,data.nd);
+            for i=1:data.nd, dimchg(i) = ~isequal(newhead(i),curhead(i)); end
+            if any(dimchg)
+                dim = find(dimchg);
+                newheaddim = xplr.dimheader(newhead(dim));
+                C.V.data.updateData('chgdim',dim,[],data.data,newheaddim)
+            end
+        end
+        function datachange(C,e)
+            switch e.flag
+                case 'global'
+                    error 'global data change not handled'
+                case 'chgdim'
+                    % update dimension list
+                    set(C.dimlist,'string',{C.V.data.header.label})
+                otherwise
+                    % no change needed
+            end
+        end
+    end
+    
+    % Dimensions menu
+    methods
         function dimensionContextMenu(C)
             % init context menu
             m = C.contextmenu;
@@ -156,13 +170,6 @@ classdef viewcontrol < xplr.graphnode
             dimstr = fn_switch(isscalar(dimID),'this dimension','these dimensions');
             filterstr = fn_switch(isscalar(dimID),'filter','filters');
             
-            % filter all others dimension
-            uimenu(m, ...
-                'label',['View ' dimstr ', filter others'], ...
-                'callback',@(u,e)dimaction(C,'viewdim',dimID,1))
-            uimenu(m,'label',['View ' dimstr ' in a new window'], ...
-                'callback',@(u,e)dimaction(C,'newwindow_viewdim',dimID,1))
-            
             % add or change filter(s)
             % (2D with key 1)
             if length(dimID)==2
@@ -171,7 +178,7 @@ classdef viewcontrol < xplr.graphnode
                     'callback',@(u,e)dimaction(C,'addfilter',{dimID},1))
                 nextseparator = 'off';
             else
-                nextseparator = 'on';
+                nextseparator = 'off';
             end
             % (1D with key 1)
             uimenu(m, ...
@@ -198,6 +205,13 @@ classdef viewcontrol < xplr.graphnode
             % remove filters in these dimensions
             uimenu(m,'label',['Remove ' filterstr],'separator','on', ...
                 'callback',@(u,e)dimaction(C,'rmfilter',dimID))
+            
+            % filter all others dimension
+            uimenu(m, ...
+                'label',['View ' dimstr ', filter others'], 'separator', 'on', ...
+                'callback',@(u,e)dimaction(C,'viewdim',dimID,1))
+            uimenu(m,'label',['View ' dimstr ' in a new window'], ...
+                'callback',@(u,e)dimaction(C,'newwindow_viewdim',dimID,1))
             
             % make menu visible
             p = get(C.V.hf,'currentpoint'); p = p(1,1:2);
@@ -415,27 +429,7 @@ classdef viewcontrol < xplr.graphnode
         end
     end
     
-    % Private lists display
-    methods (Access='private')
-        function combo = getPrivateLists(C)
-            combo = C.privatelists;
-            controlorg = C.V.panels.allcontrols;
-            % Create?
-            if isempty(combo)
-                disp 'warning: usage of private lists display has not been tested yet'
-                combo = xplr.listcombo(C.V.panels.listcombo,0);
-                C.privatelists = combo;
-                connectlistener(combo,controlorg,'Empty',@(u,e)set(controlorg,'extents',[1 0]));
-            end
-            % Need to show it?
-            if controlorg.extents(2) == 0
-                % make combo visible
-                controlorg.extents = [2 1];
-            end
-        end
-    end
-    
-    % private filter management
+    % Filters display
     methods (Access='private')
         function removefilter(C,filter)
             % remove the filter from the viewcontrol and the bank
@@ -483,6 +477,26 @@ classdef viewcontrol < xplr.graphnode
             % TODO: change how the string filter is shifted
             str = ['filter ' header.label ' (' char(F.F.slicefun) ')'];
             C.addFilterItem(dimID,str,F,active)
+        end
+    end
+    
+    % Private lists display
+    methods (Access='private')
+        function combo = getPrivateLists(C)
+            combo = C.privatelists;
+            controlorg = C.V.panels.allcontrols;
+            % Create?
+            if isempty(combo)
+                disp 'warning: usage of private lists display has not been tested yet'
+                combo = xplr.listcombo(C.V.panels.listcombo,0);
+                C.privatelists = combo;
+                connectlistener(combo,controlorg,'Empty',@(u,e)set(controlorg,'extents',[1 0]));
+            end
+            % Need to show it?
+            if controlorg.extents(2) == 0
+                % make combo visible
+                controlorg.extents = [2 1];
+            end
         end
     end
     

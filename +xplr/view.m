@@ -40,7 +40,7 @@ classdef view < hgsetget
             
             % SLICER
             if ~isa(data,'xplr.xdata'), error 'data argument must be a xplr.xdata object', end
-            V.slicer = xplr.slicer(data,varargin{:});
+            V.slicer = xplr.slicer(V,data,varargin{:});
             
             % LINKS
             % register view object to the bank
