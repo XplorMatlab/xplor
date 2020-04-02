@@ -1,7 +1,17 @@
 User documentation
 ****************************
 
+.. raw:: html
+
+    <div class="btn btn-outline-primary disabled" disabled style="cursor:default;border-color:transparent;min-width:250px;text-align:right;">
+
+
 	To install xplor:
+
+.. raw:: html
+
+    </div>
+
 
 .. raw:: html
 
@@ -13,12 +23,21 @@ User documentation
 
     </div><br>
 
+.. raw:: html
+
+    <div class="btn btn-outline-primary disabled" disabled style="cursor:default;border-color:transparent;min-width:250px;text-align:right;">
+
 
 	To load your own dataset see:
 
 .. raw:: html
 
-    <br><div class="btn btn-primary">
+    </div>
+
+
+.. raw:: html
+
+    <div class="btn btn-primary">
 
 :ref:`Quick Start`
 
@@ -26,16 +45,26 @@ User documentation
 
     </div><br>
 
+.. raw:: html
+
+    <div class="btn btn-outline-primary disabled" disabled style="cursor:default;border-color:transparent;min-width:250px;text-align:right;">
+
+
 	Schemas:
 
 .. raw:: html
 
-    <br><div class="btn btn-primary">
+    </div>
+
+
+.. raw:: html
+
+    <div class="btn btn-primary">
 :ref:`Xplor General`
 
 .. raw:: html
 
-    </div><br><div class="btn btn-primary">
+    </div><div class="btn btn-primary">
 :ref:`Slicing chain`
 
 .. raw:: html

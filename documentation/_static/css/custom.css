@@ -5,6 +5,7 @@ svg {
 
 div.body {
     max-width: 1200px;
+    min-height: 500px;
 }
 
 img {
