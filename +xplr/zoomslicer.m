@@ -26,7 +26,7 @@ classdef zoomslicer < xplr.slicer
     methods 
         function S = zoomslicer(data,D)
             % Construct slicer object
-            S = S@xplr.slicer(data);
+            S = S@xplr.slicer([],data);
             S.D = D;
             
             % Automatically create zoom filters for all dimensions

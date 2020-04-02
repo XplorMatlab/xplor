@@ -64,7 +64,7 @@ classdef displaylabels < xplr.graphnode
             for i = 1:length(dims)
                 d = dims(i); dimID = dimIDs(i);
                 str = curheaders(d).label;
-                if curheaders(d).ismeasure, str = [str ' (' curheaders(d).unit ')']; end
+                if ~isempty(curheaders(d).unit), str = [str ' (' curheaders(d).unit ')']; end
                 L.h(d) = text('string',['  ' str '  '],'parent',L.ha, ...
                     'margin',1, ...
                     'backgroundcolor',[1 1 1]*.95,'units','normalized', ...
@@ -79,7 +79,7 @@ classdef displaylabels < xplr.graphnode
             % label
             head = L.D.zslice.header(d);
             str = head.label;
-            if head.ismeasure, str = [str ' (' head.unit ')']; end
+            if ~isempty(head.unit), str = [str ' (' head.unit ')']; end
             set(L.h(d),'string',['  ' str '  '])
         end
         function getHeights(L)

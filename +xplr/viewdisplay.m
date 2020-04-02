@@ -286,8 +286,8 @@ classdef viewdisplay < xplr.graphnode
 
             % Binning
             m1 = uimenu(m,'label','Binning','Separator',onoff(docolor));
-            binvalues = {1 2 3 4 'set'};
-            bindisplays = {'none' '2' '3' '4' 'other...'};
+            binvalues = {1 2 3 4 5 10 20 'set'};
+            bindisplays = {'none' '2' '3' '4' '5' '10' '20' 'other...'};
             curbin = D.zoomfilters(dim).bin;
             for i=1:length(binvalues)
                 bin = binvalues{i};
@@ -481,7 +481,7 @@ classdef viewdisplay < xplr.graphnode
             if nargin<2, doupdatedisplay = true; end
             try
                 val = fn_clip(D.zslice.data(:),D.clipping.autoclipmode,'getrange');
-                setClip(D,val,doupdatedisplay)
+                if ~any(isnan(val)), setClip(D,val,doupdatedisplay), end
             catch ME
                 disp(ME)
             end

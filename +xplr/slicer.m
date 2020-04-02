@@ -14,6 +14,7 @@ classdef slicer < xplr.graphnode
     % is performed by the xplr.xdata.dimensionID method).
     
     properties 
+        V
         data
         slice
         filters = struct('active',[],'dimID',cell(1,0),'obj',[]);
@@ -31,7 +32,10 @@ classdef slicer < xplr.graphnode
     
     % Constructor, destructor, basic access and get/set dependent
     methods
-        function S = slicer(data,dimID,filters)
+        function S = slicer(V,data,dimID,filters)
+            % link to parent view
+            S.V = V;
+            xplr.debuginfo('TODO','can a slicer exist without being aware of its possessing view?')
             % set data
             S.data = data;
             S.addListener(data,'ChangedData',@(u,e)datachange(S,e));
@@ -39,7 +43,7 @@ classdef slicer < xplr.graphnode
             S.slice = data.copy();
 
             % set filters
-            if nargin>=2 && ~isempty(filters)
+            if nargin>=3 && ~isempty(filters)
                 addFilter(S,dimID,filters)
             end
         end
@@ -139,10 +143,7 @@ classdef slicer < xplr.graphnode
             dimID = S.data.dimensionID(dimID);
             if nargin<3, doslicing = true; end
             % remove filters
-            idxrm = false(1,length(S.filters));
-            for i=1:length(S.filters)
-                idxrm(i) = any(ismember(S.filters(i).dimID,dimID));
-            end
+            idxrm = S.getFilterIndex(dimID);
             if ~any(idxrm)
                 fprintf('there is already no filter in dimension %i! aborting rmFilterDim\n',dimID)
                 return
@@ -275,8 +276,20 @@ classdef slicer < xplr.graphnode
             idx = fn_find(dimID,{S.filters.dimID});
             F = [S.filters(idx).obj];
         end
-        function idx = getFilterIndex(S,F)
-            idx = fn_find(F,[S.filters.obj],'first');
+        function idx = getFilterIndex(S,F_or_dim)
+            % function idx = getFilterIndex(S,[F|dim|dimID])
+            if isnumeric(F_or_dim)
+                dimID = S.data.dimensionID(F_or_dim);
+                idx = false(1,length(S.filters));
+                for i=1:length(S.filters)
+                    idx(i) = any(ismember(S.filters(i).dimID,dimID));
+                end
+                idx = find(idx);
+            else
+                F = F_or_dim;
+                if ~isscalar(F), error 'input filter must be scalar', end
+                idx = fn_find(F,[S.filters.obj],'first');
+            end
         end
     end
     
@@ -474,15 +487,38 @@ classdef slicer < xplr.graphnode
     methods
         function datachange(S,e)
             switch e.flag
-                case 'global'
-                    S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                    doslice(S,'data','global',[],[])
-                case {'chgdim' 'all' 'new' 'chg' 'remove' 'chg&new' 'chg&rm' 'perm'}
+                case {'global' 'chgdim' 'all' 'new' 'chg' 'remove' 'chg&new' 'chg&rm' 'perm'}
                     % header in dimension dimID has changed (not necessarily,
                     % but potentially also in the case 'chg'), therefore
                     % filter in that dimension is not valid anymore
                     S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
-                    doslice(S,'data','chgdim',e.dim,[])
+                    % check which filters remain valid
+                    keepfilter = false(1,length(S.filters));
+                    switch e.flag
+                        case 'global'
+                            % remove all filters
+                        case 'chgdim'
+                            % remove filters intersecting with e.dim or
+                            % whose dimension of application is not present
+                            % in the data any more
+                            idxvalid = S.getFilterIndex([S.data.header.dimID]);
+                            keepfilter(idxvalid) = true;
+                            idxdim = S.getFilterIndex(e.dim);                            
+                            keepfilter(idxdim) = false;
+                        otherwise
+                            % remove filters intersecting with e.dim
+                            keepfilter(:) = true;
+                            idxdim = S.getFilterIndex(e.dim);                            
+                            keepfilter(idxdim) = false;
+                    end
+                    % remove invalid filters: we must call viewcontrol
+                    % method so that filter display is updated as well;
+                    % TODO: better way of synchronizing slicer and
+                    % viewcontrol's filters display
+                    rmdim = [S.filters(~keepfilter).dimID];
+                    S.V.C.dimaction('rmfilter',rmdim)
+                    % reslice
+                    doslice(S,'data','global')
                 case 'chgdata'
                     % header was not changed, it is possible therefore to
                     % keep all existing filters
