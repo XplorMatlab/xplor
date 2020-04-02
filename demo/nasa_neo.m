@@ -32,7 +32,7 @@ readme(1:nheader) = [];
 
 % retrieve types and descriptions
 nalltype = length(readme);
-alltypes = cell(1,ntype);
+alltypes = cell(1,nalltype);
 alltypes_descriptions = cell(1,nalltype);
 for i = 1:nalltype
     [alltypes{i}, alltypes_descriptions{i}] = fn_regexptokens(readme{i},'^([^ ]*) +(.*[^ ]) *$');
@@ -189,6 +189,9 @@ if eval('false')
     
     % select types
     types = alltypes(~alltypes_empty);
+    types = {'MOD_LSTD_M'}; % land temperature day
+    types = {'MOD10C1_M_SNOW'}; % snow
+    ntype = length(types);
 
     % types descriptions
     desc = fn_map(@(type)alltypes_descriptions{strcmp(type,alltypes)},types);
@@ -198,14 +201,14 @@ if eval('false')
     years_range = [min(years_range(:,1)) max(years_range(:,2))];
 
     % subselect years range
-    years_range(1) = max(years_range(1),2000);
+    %     years_range(1) = max(years_range(1),2000);
     fprintf('years range: from %i to %i\n',years_range)
     years_range = years_range(1):years_range(2);
     nyear = length(years_range);
 
     % subselect months range or keep the default 1:12
-    % months_range = 1:12;
-    months_range = [1 7]; % January and July
+    months_range = 1:12;
+    %     months_range = [1 7]; % January and July
     nmonth = length(months_range);
 
     % spatial binning

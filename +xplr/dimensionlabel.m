@@ -17,7 +17,7 @@ classdef dimensionlabel
         unit
         allunits
     end
-    properties (Dependent, SetAccess='private')
+    properties (Dependent, SetAccess='private', Transient)
         defaultval
     end
     

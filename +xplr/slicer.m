@@ -374,9 +374,9 @@ classdef slicer < xplr.graphnode
                         % starting point data, and on which dimensions to
                         % operate
                         if kfilt == 1
-                            datastart = S.data.data;
+                            datastart = S.data;
                         else
-                            datastart = S.slicingchain(kfilt-1).data;
+                            datastart = S.slicingchain(kfilt-1);
                         end
                         % perform operation to obtain only the new part of
                         % the data that needed to be calculated
@@ -385,7 +385,7 @@ classdef slicer < xplr.graphnode
                             % and permutations
                             datasub = [];
                         else
-                            datasub = filtk.slicing(datastart,chgdim,ind1);
+                            datasub = filtk.slicing(datastart.data,datastart.dimensionNumber(chgdimID),ind1);
                         end
                         % update the xdata object
                         chgdimID = filtk.getdimIDout(chgdimID); % dimension identifier in the data -> in the slice

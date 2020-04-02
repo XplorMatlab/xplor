@@ -407,17 +407,16 @@ classdef displaygraph < xplr.graphnode
         end
         function setValueTicks(G)
             % do we show value ticks?
-            if ~strcmp(G.D.displaymode,'time courses') || ~isempty(G.D.activedim.y)
+            if ~strcmp(G.D.displaymode,'time courses') || (~isempty(G.D.activedim.y) && ~isequal(G.D.activedim.y,G.steps.xydim))
                 ylabel(G.D.ha,'')
                 return
             end
             
             % clip values available?
-            gridclip = G.D.gridclip;
-            if isempty(gridclip)
+            if isempty(G.D.gridclip)
                 error 'programming: setValueTicks should be called after viewdisplay.updateDisplay, so gridclip should be set'
             end
-            sz = size(gridclip); sz(1) = [];
+            sz = size(G.D.gridclip); sz(1) = [];
             
             % enough space on y-axis to show values?
             org = G.D.layout;
@@ -431,7 +430,8 @@ classdef displaygraph < xplr.graphnode
             end
             
             % replace min/max clip definitions by min/extent
-            gridclip(2,:) = gridclip(2,:) - gridclip(1,:);
+            startextent = G.D.gridclip;
+            startextent(2,:) = startextent(2,:) - startextent(1,:);
             
             % check every 'external' dimension: x, y or xy/yx? same clip
             % values or not?
@@ -441,7 +441,7 @@ classdef displaygraph < xplr.graphnode
                 if any(d == [org.ystatic org.x(2:end) G.steps.xydim])
                     % check whether clip values are the same along this
                     % dimension
-                    test = diff(gridclip,1,1+d);
+                    test = diff(startextent,1,1+d);
                     samecliprow = samecliprow && ~any(row(test));
                     if ~samecliprow
                         sameextentrow = ~any(row(test(2,:)));
@@ -452,13 +452,13 @@ classdef displaygraph < xplr.graphnode
                     end
                     % remove this dimension
                     subs = subs0; subs.subs{1+d} = 1;
-                    gridclip = subsref(gridclip,subs);
+                    startextent = subsref(startextent,subs);
                 elseif any(d == org.y)
                     % nothing to do, keep this dimension
                 else
                     % there should be only 1 value in this dimension,
                     % nothing to do
-                    if size(gridclip,1+d) > 1
+                    if size(startextent,1+d) > 1
                         error 'programming: dimension is not present in the ''external'' layout but gridclip indicates multiple values!'
                     end
                 end
@@ -473,7 +473,12 @@ classdef displaygraph < xplr.graphnode
             
             % now gridclip is nonsingleon only in the org.y dimensions;
             % permute dimensions
-            gridclip = permute(gridclip,[1 1+org.y 1+setdiff(1:G.D.nd,org.y)]);
+            startextent = permute(startextent,[1 1+org.y 1+setdiff(1:G.D.nd,org.y)]);
+            
+            % if not same clip but some extent, clip becomes +/- extent/2
+            if ~samecliprow
+                startextent(1,:) = -startextent(2,:)/2;
+            end
             
             % build ytick and ytickvalues
             if st.xydim
@@ -490,8 +495,9 @@ classdef displaygraph < xplr.graphnode
                     yidx = ind2sub(sz(org.y),ky);
                     yoffset = st.xyoffsets(2,1+(krow-1)*nxycol) + sum(st.yoffset) + sum(st.ystep .* yidx);
                     % tick values
-                    valuestart = gridclip(1,ky);
-                    valueextent = gridclip(2,ky);
+                    if any(isnan(startextent(:,ky))), continue, end % happens when data itself consists only of NaNs
+                    valuestart = startextent(1,ky);
+                    valueextent = startextent(2,ky);
                     targetstep = targetspacing * valueextent/st.yavailable;
                     values = G.nicevalues(valuestart, valuestart+valueextent, targetstep);
                     yscale = st.yavailable / valueextent;
@@ -503,7 +509,14 @@ classdef displaygraph < xplr.graphnode
             % yoffset are descending, so read ytick in reverse order to
             % have only increasing values
             ytick = [ytick{end:-1:1}];
-            yticklabel = fn_num2str([ytickvalues{end:-1:1}],'cell');
+            ytickvalues = [ytickvalues{end:-1:1}];
+            yticklabel = fn_num2str(ytickvalues,'cell');
+            if ~samecliprow
+                % indicate that values are relative to mean
+                [yticklabel{ytickvalues==0}] = deal('(mean)');
+                idxp = (ytickvalues>0);
+                yticklabel(idxp) = fn_map(@(str)['+' str],yticklabel(idxp),'cell');
+            end
             
             % set ticks
             set(G.D.ha,'ytick',ytick,'yticklabel',yticklabel)

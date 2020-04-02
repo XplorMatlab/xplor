@@ -26,6 +26,7 @@ classdef bank < handle
             
             % load saved recent headers
             B.loadprop('recentheaders')
+            B.recentheaders(~isvalid(B.recentheaders)) = [];
         end
     end
     methods (Static)
@@ -169,6 +170,7 @@ classdef bank < handle
         function F = getExistingFilter(filtertype, linkkey, header, user)
             % function F = getRegistryValue(filtertype, linkkey, header[, newuser])
             B = xplr.bank.getbank();
+            header = xplr.header(header); % in case header is a xplr.dimheader
             hID = getID(header);
             F = B.filters_registry.getValue({filtertype, linkkey, hID},user);
             % F was in fact deleted? -> unregister
@@ -180,6 +182,7 @@ classdef bank < handle
             if strcmp(filtertype,'filterAndPoint')
                 error 'getting a filterAndPoint filter necessitates a specialized method, so calling getFilter is not authorized'
             end
+            header = xplr.header(header); % in case header is a xplr.dimheader
             F = xplr.bank.getExistingFilter(filtertype, linkkey, header, user);
             if isempty(F)
                 isnew = true;
@@ -258,10 +261,18 @@ classdef bank < handle
             if isempty(F)
                 % construct filterAndPoint object from filter and point
                 % objects obtained themselves from the bank
-                FF = xplr.bank.getFilterFilter(linkkey, header, user);
-                FP = xplr.bank.getPointFilter(linkkey, header, user);
+                % (get filter and point from the bank, do not register a
+                % user yet)
+                FF = xplr.bank.getFilterFilter(linkkey, header, []);
+                FP = xplr.bank.getPointFilter(linkkey, header, []);
+                % (create filterAndPoint object)
                 F = xplr.filterAndPoint(FF,FP);
+                % (now register F as user of FF and FP)
+                xplr.bank.getFilterFilter(linkkey, header, F);
+                xplr.bank.getPointFilter(linkkey, header, F);
+                % (and register user as a user of F)
                 xplr.bank.registerFilter(linkkey,F,user);
+                % show filter
                 if doshow 
                     if F.ndin > 1
                         disp 'cannot display list for ND filter'

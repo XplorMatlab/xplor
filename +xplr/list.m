@@ -416,7 +416,7 @@ classdef list < xplr.graphnode
             if val==L.selmultin, return, end
             L.selmultin = val;
             % update menu item
-            set(L.menuitems.selmultin,'checked',fn_switch(val)) %#ok<MCSUP>
+            set(L.menuitems.selmultin,'checked',onoff(val)) %#ok<MCSUP>
             % update selection
             event(L,'select')
         end

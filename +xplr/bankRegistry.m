@@ -163,10 +163,17 @@ classdef bankRegistry < handle
             idx = getIndex(R,key);
             if isempty(idx), return, end
             value = R.content(idx).value;
-            % No user: valid only with internal use, for nested
-            % bankRegistry structure
+            % No user, not even empty one: valid only with internal use,
+            % for nested bankRegistry structure
             if nargin<3
                 if ~isa(value,'xplr.bankRegistry'), error programming, end
+                return
+            end
+            % No user to register: this is a dangerous situation as the
+            % registry entry and the value can be deleted at any time, upon
+            % unregistration of another user
+            if isempty(newuser)
+                xplr.debuginfo('registry', 'key %s accessed without user',fn_hash(R.content(idx).key,3))
                 return
             end
             % Add new user

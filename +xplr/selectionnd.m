@@ -122,23 +122,6 @@ classdef selectionnd < xplr.graphnode
             warning('on','MATLAB:structOnObject')
         end
     end
-    methods (Static)
-        function sel = loadobj(sel)
-            % previous version might not have a shapes.special field
-            if ~isfield(sel.shapes,'special')
-                if isempty(sel.shapes)
-                    error('programming: a selection cannot have an empty shapes')
-                end
-                sel.shapes(1).special = [];
-                for k=1:length(sel.shapes)
-                    a = sel.shapes(k);
-                    if strcmp(a.type,'ellipse2D')
-                        sel.shapes(k).special = EllipseVector2Sym(a.vectors,a.logic);
-                    end
-                end
-            end
-        end
-    end
     
     % Info
     methods

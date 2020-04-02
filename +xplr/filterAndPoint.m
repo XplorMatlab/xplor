@@ -9,14 +9,14 @@ classdef filterAndPoint < xplr.dataOperand
         F
         P = xplr.point.empty(1,0);
     end
-    properties (SetAccess='private')
-        dolistenpoint
+    properties (SetAccess='protected', Transient)
+        dolistenpoint = true;
     end
-    properties (Dependent, SetAccess='private')
+    properties (Dependent, SetAccess='protected', Transient)
         indices     % current selection
         index0      % current point
     end
-    properties (Dependent)
+    properties (Dependent, Transient)
         index       % current point
     end
 
@@ -55,7 +55,7 @@ classdef filterAndPoint < xplr.dataOperand
                 F.P = varargin{2};
                 if length(F.P) ~= F.ndin, error 'number of point filters does not match number of input dimensions', end
                 for i=1:F.ndin
-                    if F.P(i).headerin ~= F.headerin(i)
+                    if ~is_equal(F.P(i).headerin,F.headerin(i))
                         error 'headers of filter and point filter(s) do not match'
                     end
                 end
@@ -63,7 +63,6 @@ classdef filterAndPoint < xplr.dataOperand
             for i=1:F.ndin
                 connectlistener(F.P(i),F,'ChangedOperation',@(u,e)transitNotification(F,'point',e))
             end
-            F.dolistenpoint = true;
             
             % set output header (uses filters or P depending on whether
             % filters selection is non-empty)
@@ -271,5 +270,12 @@ classdef filterAndPoint < xplr.dataOperand
             error 'filterAndPoint object should not be directly connected to a wordOperand object: connect rather its child point and filter'
         end
     end
-    
+   
+    % Copy (see xplr.dataOperand.loadfromfile)
+    methods
+        function copyin(F,obj)
+            F.F.copyin(obj.F)
+            F.P.copyin(obj.P)
+        end
+    end
 end

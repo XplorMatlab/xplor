@@ -15,6 +15,7 @@ classdef displaynavigation < xplr.graphnode
     properties
         selectionfilter         % filter being modified by the selections
         selectiondisplay        % displays of selectionnd
+        selectionsavefile       % name of file for saving current selection
     end
     properties (SetObservable)
         selectiondimID          % dimensions to which these selections apply, identified by its id
@@ -506,8 +507,11 @@ classdef displaynavigation < xplr.graphnode
                     'callback',@(u,e)set(N,'selectiondimID',[]))
             end
 
-            % Selection options
+            % Options below should not be displayed if there is no active
+            % selection control
             if isempty(N.selectiondimID), return, end
+
+            % Selection options
             uimenu(m,'label','Clear selections','separator','on', ...
                 'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
             if length(N.selectiondimID) == 2
@@ -526,6 +530,14 @@ classdef displaynavigation < xplr.graphnode
             %                 {'parent',m,'label','Advanced selection','separator',nextsep});
             fn_propcontrol(N,'selectionpromptname','menu', ...
                 {'parent',m,'label','Prompt for name of new selections','separator',nextsep});
+
+            % Load/save selections
+            uimenu(m,'label','Load...','separator','on', ...
+                'callback',@(u,e)N.selectionload())
+            uimenu(m,'label','Save','enable',onoff(~isempty(N.selectionsavefile)), ...
+                'callback',@(u,e)N.selectionsave(N.selectionsavefile))
+            uimenu(m,'label','Save as...', ...
+                'callback',@(u,e)N.selectionsave())
         end
         function selectionMouse(N)
             seldim = N.selectiondim;
@@ -599,11 +611,10 @@ classdef displaynavigation < xplr.graphnode
             end
             
             % prompt for selection name
+            options = {};
             if N.selectionpromptname
                 name = inputdlg('Selection name','xplor');
-                options = {'name' name{1}};
-            else
-                options = {};
+                if ~isempty(name), options = {'name' name{1}}; end
             end
 
             % update filter
@@ -648,6 +659,18 @@ classdef displaynavigation < xplr.graphnode
             if isequal(dimID, N.selectiondimID)
                 return
             end
+            
+            % sort dimensions by header ID: this allows considering an
+            % (x,y) or a (y,x) selection both the same kind of selection
+            % (needed for loading/saving selections)
+            if nd == 2
+                headID = N.D.slice.header(dim).getID();
+                [~, ord] = sort(headID);
+                dimID = dimID(ord);
+                dim = dim(ord);
+            end
+            
+            % set property
             N.selectiondimID = dimID;
             
             % disconnect from previous filter
@@ -767,16 +790,17 @@ classdef displaynavigation < xplr.graphnode
         function displayonesel(N,k,flag,varargin)
             % function displayonesel(D,k,'new')       - selection at index k is new
             % function displayonesel(D,k,'pos')       - has changed
-            % function displayonesel(D,k,'isel',isel) - has its number changed
+            % function displayonesel(D,k,'name')      - has its name changed
             % function displayonesel(D,k,'edit')      - edit mode has been turned on
             
             % flags: what kind of update
-            [flagnew, flagpos, flagisel, flagedit] = ...
-                fn_flags('new','pos','isel','edit',flag);
+            [flagnew, flagpos, flagname, flagedit] = ...
+                fn_flags('new','pos','name','edit',flag);
 
             %selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
             %selij = selectionmarks(k);
             selij = N.selection(k);
+            name = N.selectionfilter.headerout.getItemNames(k);
             
             seldim = N.selectiondim;
             if flagnew || flagedit || flagpos
@@ -790,16 +814,10 @@ classdef displaynavigation < xplr.graphnode
                 %                 % visible part of the polygon
                 %                 polygon = visiblePolygon(N, selij.polygon,[1, 2]);                
             end
-            if flagnew || flagedit || flagisel
+            if flagnew || flagedit || flagname
                 colors = fn_colorset;
                 col = colors(mod(k-1,size(colors,1))+1,:);
                 visible = 'on';
-            end
-            if flagisel
-                isel = varargin{1};
-                str = num2str(isel);
-            elseif flagnew
-                str = num2str(k);
             end
             
             % Create / update objects
@@ -808,7 +826,7 @@ classdef displaynavigation < xplr.graphnode
                 hl = [];
                 %if strfind(D.selshow,'number')
                 if true
-                    hl(end+1) = text(center(1),center(2),str, ...
+                    hl(end+1) = text(center(1),center(2),name, ...
                         'Parent',N.D.ha,'color','w','visible',visible, ...
                         'horizontalalignment','center','verticalalignment','middle', ...
                         'color','w');
@@ -852,7 +870,7 @@ classdef displaynavigation < xplr.graphnode
                     set(ht,'position',center)
                     set(hs,'xdata',polygon(1,:),'ydata',polygon(2,:))
                     set(hc,'xdata',center(1),'ydata',center(2))
-                elseif flagisel
+                elseif flagname
                     set(ht,'string',str)
                     set([hs hc he],'color',col)
                 end
@@ -1019,6 +1037,23 @@ classdef displaynavigation < xplr.graphnode
                     output(selectionDimension,setdiff(1:end,boundariesIndexes)) = points;
                     output(selectionDimension,boundariesIndexes) = boundariesValues;
 
+        end
+        function selectionsave(N,fname)
+            if nargin<2 || isempty(fname)
+                prompt = 'Select file for saving selections';
+                fname = fn_savefile('*.xpls',prompt,N.selectionsavefile);
+                if isequal(fname,0), return, end
+            end
+            N.selectionfilter.savetofile(fname);
+            N.selectionsavefile = fname;
+        end
+        function selectionload(N,fname)
+            if nargin<2
+                fname = fn_getfile('*.xpls','Select selections file'); 
+                if isequal(fname,0), return, end
+            end
+            N.selectionfilter.loadfromfile(fname);
+            N.selectionsavefile = fname;
         end
    end
 

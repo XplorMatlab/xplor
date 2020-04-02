@@ -6,19 +6,17 @@ classdef dataOperand < xplr.graphnode
         headerin
         headerout
     end
-    properties (Dependent, SetAccess='private')
+    properties (Dependent, SetAccess='private', Transient)
         szin
         ndin
         szout
         ndout
-    end
-    properties (Dependent, SetAccess='private')
         reductionfactor
     end
     % properties below are not handled by dataOperand class and
     % sub-classes, but rather by the objects that use them; they should not
     % be set by user however!!
-    properties 
+    properties (Transient)
         linkkey = 0
         world_operand
     end
@@ -164,6 +162,40 @@ classdef dataOperand < xplr.graphnode
         world_op = operationData2Space(O)       % get world operation based on opeartion definition in O
         updateOperationData2Space(O,WO,event)   % updates WO.operation based on operation definition in O and argument event; must take care of launching WO 'ChangedOperation' event
         updateOperationSpace2Data(O,world_operation,event)   % updates operation definition in O based on world operation and optional argument event
+    end
+    
+    % Load/save
+    methods (Abstract)
+        copyin(O,obj)   % copy the operation specification from another objec
+    end
+    methods
+        function savetofile(O,fname)
+            % function savetofile(O,fname)
+            %---
+            % save dataOperand object from file
+            fn_savevar(fname,O);
+        end
+        function loadfromfile(O,fname)
+            % function loadfromfile(O,fname)
+            %---
+            % set current dataOperand object properties from information
+            % saved in file (note that this does not replace object O, nor
+            % affects any of the listener attached to it)
+            
+            % load from file
+            obj = fn_loadvar(fname);
+            
+            % checks
+            if ~isa(obj,class(O))
+                error('attempted to load a %s object, but file content is a %s',class(O),class(obj))
+            end
+            if ~isequal(obj.headerin, O.headerin)
+                error('operand loaded from file does not apply to the same type of input headers as the current object')
+            end
+            
+            % copy property values
+            O.copyin(obj);
+        end
     end
     
 end

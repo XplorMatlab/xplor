@@ -41,7 +41,7 @@ classdef header < hgsetget
         scale           % scalar - for measure only
         values          % cell array (categorical) or vector (measure)
     end
-    properties (Dependent)
+    properties (Dependent, Transient)
         unit
         allunits
         type
@@ -319,6 +319,13 @@ classdef header < hgsetget
                 && isequal(H1.label,H2.label) && isequal(H1.sublabels,H2.sublabels) ...
                 && isequal({H1.categorical,H1.start,H1.scale},{H2.categorical,H2.start,H2.scale});
         end
+        function b = is_equal(H1,H2)
+            % function b = is_equal(H1,H2)
+            %---
+            % alias to isequal, needed when both H1 and H2 are instances of
+            % subclasses of xplr.header
+            b = isequal(H1,H2);
+        end
         function ID = getID(H)
             % Get a unique identifier that identifies the header (we will
             % have H1 == H2 if and only if H1.getID() == H2.getID())
@@ -387,7 +394,11 @@ classdef header < hgsetget
                     for k=1:nval
                         val = itemvalues{idx(k)};
                         if ischar(val)
-                            str{k} = val;
+                            if isempty(val)
+                                str{k} = num2str(idx(k));
+                            else
+                                str{k} = val;
+                            end
                         elseif isnumeric(val) || islogical(val) || iscell(val)
                             val = row(val);
                             if isempty(val)
@@ -634,6 +645,7 @@ classdef header < hgsetget
                             case 'ViewColor'
                                 % average colors
                                 newvalues{i,j} = mean(cat(1,v{:,j}),1);
+                            case 'Name'
                             otherwise
                                 % default behavior: compute union of values
                                 switch H.sublabels(j).type

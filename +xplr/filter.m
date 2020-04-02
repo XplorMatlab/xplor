@@ -1,19 +1,24 @@
 classdef filter < xplr.dataOperand
     % function F = filter(headerin[,label])
    
-    properties (SetAccess='private')
+    properties (SetAccess='protected')
         % input: headerin is already a property of the dataOperand mother class
         % operation:
         selection = xplr.selectionnd.empty(1,0);
         slicefun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
         % output: headerout is already a property of the dataOperand mother class
     end
-    properties(Dependent, SetAccess='private')
+    properties(Dependent, SetAccess='protected', Transient)
         nsel
         indices
     end
     
     % Setting and updating filter
+%     methods (Static)
+%         function s = loadobj(obj)
+%             s = obj;
+%         end
+%     end
     methods
         function F = filter(headerin,label)
             % size and header of the input space
@@ -173,6 +178,16 @@ classdef filter < xplr.dataOperand
             F.slicefun = fun;
             % notification
             notify(F,'ChangedOperation',xplr.eventinfo('filter','chg',1:F.nsel))
+        end
+        function copyin(F,obj)
+            % do not call updateing methods because there might be
+            % additional information in headerout; change manually the
+            % needed properties and raise event
+            F.slicefun = obj.slicefun;
+            F.selection = obj.selection;
+            F.headerout = obj.headerout;
+            e = xplr.eventinfo('filter','all',1:length(F.selection),F.selection);
+            notify(F,'ChangedOperation',e)
         end
     end
     

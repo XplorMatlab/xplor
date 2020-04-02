@@ -488,7 +488,7 @@ classdef viewcontrol < xplr.graphnode
             % Create?
             if isempty(combo)
                 disp 'warning: usage of private lists display has not been tested yet'
-                combo = xplr.listcombo(C.V.panels.listcombo,0);
+                combo = xplr.listcombo(C.V.panels.listcombo);
                 C.privatelists = combo;
                 connectlistener(combo,controlorg,'Empty',@(u,e)set(controlorg,'extents',[1 0]));
             end

@@ -1,10 +1,10 @@
 classdef graphnode < matlab.mixin.SetGet
     
-    properties %(Access='private')
+    properties (Transient) %(Access='private')
         listening = struct('object',{},'listener',{});
     end
     
-    properties
+    properties (Transient)
         idGraphNode
     end
     

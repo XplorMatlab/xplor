@@ -3,7 +3,7 @@ classdef zoomfilter < xplr.dataOperand
     %---
     % defines zooming, but also binning
    
-    properties (SetAccess='private')
+    properties (SetAccess='protected')
         % filter definition
         zoom = ':'      % ':' or [istart istop] with 1 <= istart <= istop <= headerin.n
         bin = 1
@@ -11,7 +11,7 @@ classdef zoomfilter < xplr.dataOperand
         indicesin       % data points that will be extracted
         indicesout      % data positions after zooming AND BINING (is equal to indicesin only if bin=1)
     end
-    properties (Dependent, SetAccess='private')
+    properties (Dependent, SetAccess='protected', Transient)
         zoomvalue       % [istart istop]
     end
     
@@ -80,6 +80,9 @@ classdef zoomfilter < xplr.dataOperand
             % assign and update output
             Z.bin = bin;
             prepareFilter(Z,false,true) % this will raise 'ChangedOperation' event
+        end
+        function copyin(Z,obj)
+            Z.setZoom(obj.zoom,obj.bin);
         end
     end
     methods (Access='private')

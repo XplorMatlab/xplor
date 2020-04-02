@@ -1,12 +1,12 @@
 classdef point < xplr.dataOperand
    
-    properties (SetAccess='private')
+    properties (SetAccess='protected')
         index0 = 1; % real value
     end
     properties
         index = 1;  % integer between 1 and headerin.n
     end
-    properties (Dependent)
+    properties (Dependent, Transient)
         value  % real-world position
         valuestr    % real-world position, with unit
     end
@@ -33,6 +33,9 @@ classdef point < xplr.dataOperand
             P.index = i;
             % notification
             notify(P,'ChangedOperation',xplr.eventinfo('point',chgij))
+        end
+        function copyin(P,obj)
+            P.index = obj.index;
         end
     end
     

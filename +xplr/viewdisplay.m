@@ -972,8 +972,10 @@ classdef viewdisplay < xplr.graphnode
                 D.graph.computeSteps()
                 D.graph.setTicks()
                 D.graph.setValueTicks()
-                D.labels.updateLabels()
+                D.labels.updateLabels()                
                 updateDisplay(D,'pos')
+                D.navigation.repositionCross()
+                D.navigation.displayselection()
             end
         end
         function axisresize(D)
@@ -982,6 +984,8 @@ classdef viewdisplay < xplr.graphnode
             D.graph.setTicks()
             D.graph.setValueTicks()
             updateDisplay(D,'pos')
+            D.navigation.repositionCross()
+            D.navigation.displayselection()
         end
         function set.displaymode(D,mode)
             c = disableListener(D.listeners.axsiz); %#ok<MCSUP,NASGU> % prevent display update following automatic change of axis position
