@@ -102,7 +102,7 @@ classdef displaylabels < xplr.graphnode
             % visible labels and active dimensions
             sz = L.D.slice.sz; % slice size
             okdim = (sz>1);
-            isactive = false(1,length(sz)); 
+            isactive = false(1,length(sz));
             isactive([L.D.activedim.x L.D.activedim.y]) = true;
             
             % do 'loose' update? (i.e. do not adjust position for
@@ -314,7 +314,6 @@ classdef displaylabels < xplr.graphnode
                     else
                         newlayoutID.x = [layoutID_d.x(1:idx-1) dimID layoutID_d.x(idx:end)];
                     end
-                    %while ~okdim(newlayout.x(1)), newlayout.x = newlayout.x([2:end 1]); end % do not let the first dimension become singleton (note that d is non-singleton, so the loop will not be infinite)
                 elseif p(1)<=0 && strcmp(L.D.displaymode,'time courses') && p(2)<=.25
                     % goes in ystatic
                     newlayoutID.ystatic(end+1) = dimID;
@@ -334,7 +333,6 @@ classdef displaylabels < xplr.graphnode
                     else
                         newlayoutID.y = [newlayoutID.y(1:idx-1) dimID newlayoutID.y(idx:end)];
                     end
-                    %while ~okdim(newlayout.y(1)), newlayout.y = newlayout.y([2:end 1]); end % do not let the first dimension become singleton (note that d is non-singleton, so the loop will not be infinite)
                 else
                     % xy or yx
                     if p(1)>=p(2) || p(1)>=(1-p(2))

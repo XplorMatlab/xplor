@@ -81,7 +81,7 @@ classdef selectionnd < xplr.graphnode
                 if nargin==2 && iscell(data)
                     sizes = data{1};
                 elseif nargin==3 && ~iscell(data)
-                    indices = data;
+                    indices = row(data);
                     data = {sizes indices};
                 else
                     error argument

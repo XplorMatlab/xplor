@@ -153,8 +153,10 @@ classdef displaylayout
                     % try to keep L balanced
                     if length(L.y) <= length(L.x)
                         L.y(end+1) = datadimID(d);
+                        L2.y(end+1) = datadimID(d);
                     else
                         L.x(end+1) = datadimID(d);
+                        L2.x(end+1) = datadimID(d);
                     end
                 end
             end

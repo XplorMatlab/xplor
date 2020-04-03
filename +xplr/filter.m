@@ -20,7 +20,7 @@ classdef filter < xplr.dataOperand
 %         end
 %     end
     methods
-        function F = filter(headerin,label)
+        function F = filter(headerin,labelout)
             % size and header of the input space
             if ~isa(headerin,'xplr.header'), error 'first argument must be an xplr.header object', end
             F.headerin = headerin;
@@ -28,25 +28,25 @@ classdef filter < xplr.dataOperand
             % header of the output space
             if nargin<2
                 if isscalar(headerin)
-                    label = headerin.label;
+                    labelout = [headerin.label ' ROI'];
                 else
-                    label = fn_strcat({headerin.label},'(',',',')');
+                    labelout = [fn_strcat({headerin.label},'-') ' ROI'];
                 end
             end
 
             % output header is categorical
             if ~isscalar(headerin)
                 % header output will be a mere enumeration (no values)
-                F.headerout = xplr.header(label,0);
+                F.headerout = xplr.header(labelout,0);
             elseif headerin.ncolumn>0
                 % categorical header: we will keep track of values
-                F.headerout = xplr.header(label,headerin.sublabels,cell(0,headerin.ncolumn));
+                F.headerout = xplr.header(labelout,headerin.sublabels,cell(0,headerin.ncolumn));
             elseif headerin.categorical
                 % categorical header with no values: keep track of indices
-                F.headerout = xplr.header(label,xplr.dimensionlabel('Index','numeric'),cell(0,1));
+                F.headerout = xplr.header(labelout,xplr.dimensionlabel('Index','numeric'),cell(0,1));
             else
                 % measure header: keep track of values
-                F.headerout = xplr.header(label,headerin.sublabels,cell(0,1));
+                F.headerout = xplr.header(labelout,headerin.sublabels,cell(0,1));
             end
         end
         function updateSelection(F,varargin)

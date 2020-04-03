@@ -65,12 +65,17 @@ classdef bankRegistry < handle
             end
             % Create new entry
             idx = R.n+1;
-            if isobject(user)
-                hld = addlistener(user,'ObjectBeingDestroyed', @(u,e)R.unregister(key,user));
+            if isempty(user)
+                users = cell(2,0);
             else
-                hld = [];
+                if isobject(user)
+                    hld = addlistener(user,'ObjectBeingDestroyed', @(u,e)R.unregister(key,user));
+                else
+                    hld = [];
+                end
+                users = {user; hld};
             end
-            R.content(idx) = struct('key',key,'value',value,'users',{{user; hld}});
+            R.content(idx) = struct('key',key,'value',value,'users',{users});
             xplr.debuginfo('registry', 'key %s 1st user %s (value %s)', ...
                 fn_hash(key,3), char(user), char(value))
         end

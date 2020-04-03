@@ -404,12 +404,9 @@ classdef header < hgsetget
                             if isempty(val)
                             elseif isscalar(val)
                                 str{k} = num2str(val);
-                            elseif isnumeric(val) && all(diff(val)==1)
-                                str{k} = [num2str(val(1)) '-' num2str(val(end))];
-                            elseif length(val)<=4
-                                str{k} = fn_strcat(val,',');
-                            else
-                                str{k} = [fn_strcat(val(1:3),',') ',...'];
+                            elseif isnumeric(val)
+                                str{k} = fn_idx2str(val,':,');
+                                if length(str{k})>12, str{k} = [str{k}(1:10) '...']; end
                             end
                         else
                             error 'cannot form string from value'
