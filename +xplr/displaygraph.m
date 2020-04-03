@@ -407,7 +407,9 @@ classdef displaygraph < xplr.graphnode
         end
         function setValueTicks(G)
             % do we show value ticks?
-            if ~strcmp(G.D.displaymode,'time courses') || (~isempty(G.D.activedim.y) && ~isequal(G.D.activedim.y,G.steps.xydim))
+            if ~strcmp(G.D.displaymode,'time courses') ...
+                    || (~isempty(G.D.activedim.y) && ~isequal(G.D.activedim.y,G.steps.xydim)) ...
+                    || G.D.nodisplay
                 ylabel(G.D.ha,'')
                 return
             end
