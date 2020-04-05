@@ -40,8 +40,8 @@ classdef colormaptool < xplr.graphnode
             end
             
             % Menu items
-            mapnames = {'gray' 'jet' 'parula' 'mapgeog' 'mapgeogclip' 'mapclip' 'mapcliphigh' ...
-                'mapcliplow' 'vdaq' 'green' 'red' 'blue-yellow' 'blue-red' 'maporient'};
+            mapnames = {'gray' 'jet' 'parula' 'hot' 'mapgeog' 'mapgeogclip' 'mapclip' 'mapcliphigh' ...
+                'mapcliplow' 'vdaq' 'green' 'red' 'black_red' 'black_green' 'white_red' 'white_green' 'white_black' 'maporient'};
             fn_propcontrol(C,'cmapdef',['menugroup' mapnames 'user...'],m);
             
             % Control visibility depending on dislay mode

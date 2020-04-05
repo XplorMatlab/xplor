@@ -141,6 +141,7 @@ classdef viewdisplay < xplr.graphnode
         end
         function colordim = get.colordim(D)
             colordim = D.slice.dimensionNumber(D.colordimID);
+            if isequal(colordim,0), colordim = []; end
         end
         function layout = get.layout(D)
             layout = D.layoutID.dimensionNumber();
@@ -481,6 +482,8 @@ classdef viewdisplay < xplr.graphnode
             if nargin<2, doupdatedisplay = true; end
             try
                 val = fn_clip(D.zslice.data(:),D.clipping.autoclipmode,'getrange');
+                if isinf(val(1)), val(1) = -1e6; end
+                if isinf(val(2)), val(2) = 1e6; end
                 if ~any(isnan(val)), setClip(D,val,doupdatedisplay), end
             catch ME
                 disp(ME)
@@ -1002,6 +1005,10 @@ classdef viewdisplay < xplr.graphnode
                 newlayoutID.y = [newlayoutID.y ystatic];
                 D.setLayout(newlayoutID) % this automatically updates display among other things
             else
+                % update layout (if first "y" dimension in layout is
+                % singleton, should be shown if diplaymode is image, but
+                % not if it is time courses)
+                D.layoutID = D.layoutIDmemory.currentlayout();
                 % update display
                 D.checkzslicesize() % is zslice too large for being displayed
                 D.graph.computeSteps() %#ok<MCSUP>

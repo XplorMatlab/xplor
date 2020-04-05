@@ -393,21 +393,15 @@ classdef header < hgsetget
                     str = cell(1,nval);
                     for k=1:nval
                         val = itemvalues{idx(k)};
-                        if ischar(val)
-                            if isempty(val)
-                                str{k} = num2str(idx(k));
-                            else
-                                str{k} = val;
-                            end
-                        elseif isnumeric(val) || islogical(val) || iscell(val)
-                            val = row(val);
-                            if isempty(val)
-                            elseif isscalar(val)
-                                str{k} = num2str(val);
-                            elseif isnumeric(val)
-                                str{k} = fn_idx2str(val,':,');
-                                if length(str{k})>12, str{k} = [str{k}(1:10) '...']; end
-                            end
+                        if isempty(val)
+                            str{k} = num2str(idx(k));
+                        elseif ischar(val)
+                            str{k} = val;
+                        elseif isnumeric(val) || islogical(val)
+                            str{k} = fn_idx2str(val,':,');
+                            if length(str{k})>12, str{k} = [str{k}(1:10) '...']; end
+                        elseif iscell(val)
+                            str{k} = fn_strcat(val,',');
                         else
                             error 'cannot form string from value'
                         end

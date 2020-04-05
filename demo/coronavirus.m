@@ -1,6 +1,9 @@
 
-url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
-data = webread(url);
+% url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
+url = 'https://opendata.ecdc.europa.eu/covid19/casedistribution/csv';
+file = fullfile(fileparts(which('xplor')),'demo','coronavirus.csv');
+websave(file,url);
+data = readtable(file);
 
 %% Header information
 
@@ -14,29 +17,28 @@ nday = max(dates) + 1;
 countries = table2array(data(:,7)); % cell of char arrays
 [countries, idxcountry2row, idxrow2country] = unique(countries);
 countries = strrep(countries,'_',' ');
-population = table2array(data(idxcountry2row,9));
+pop = table2array(data(idxcountry2row,10))';
 ncountry = length(countries);
 
 %% Data
 
-cases = table2array(data(:,5));
-deaths = table2array(data(:,6));
-pop = table2array(data(:,9));
-cases_prc_pop = cases ./ pop * 100;
-deaths_prc_pop = deaths ./ pop * 100;
-deaths_prc_cases = deaths ./ cases * 100;
-
-data_per_row = [cases deaths cases_prc_pop deaths_prc_pop deaths_prc_cases];
-datanames = {'cases' 'deaths' 'cases/population' 'deaths/population' 'deaths/cases'};
-ndata = length(datanames);
+newcasesanddeaths = table2array(data(:,[5 6]));
 
 % make a 3D array out of the Excel table
-data3d = zeros(nday, ncountry, ndata);
+data3d = zeros(nday, ncountry, 2);
 for i = 1:size(data_per_row,1)
-    
-    data3d(dates(i)+1, idxrow2country(i), :) = data_per_row(i,:);
-    
+    data3d(dates(i)+1, idxrow2country(i), :) = newcasesanddeaths(i,:);
 end
+
+data3d = cat(3,data3d,fn_div(data3d,pop));
+data3d = cat(3,data3d,cumsum(data3d,1));
+data3d = cat(3,data3d,data3d(:,:,6)./data3d(:,:,5));
+
+
+datanames = {'new cases' 'new deaths' 'new cases/population' 'new deaths/population' ...
+    'cases' 'deaths' 'cases/population' 'deaths/population' ...
+    'deaths/cases'};
+ndata = length(datanames);
 
 %% Get world map from internet (requires Mapping Toolbox and Internet connection)
 
@@ -145,13 +147,15 @@ data3d(:, unfound, :) = [];
 %% Make movie!!
 
 data4d = NaN(nday, nx*ny, ndata);
+population = NaN(nx,ny);
 for i = 1:ncountry
     mask = (map == country2shape(i));
     data4d(:, mask, :) = repmat(data3d(:, i, :), [1 sum(mask(:)) 1]);
+    population(mask) = pop(i);
 end
 data4d = reshape(data4d, [nday nx ny ndata]);
 
 %% Save data
 
 cd(folder)
-save coronavirus dates nday countries ncountry datanames ndata data3d data4d
+save coronavirus dates nday countries ncountry datanames ndata data3d data4d pop population

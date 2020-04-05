@@ -110,6 +110,7 @@ classdef displaylayout
                 [present, dim] = ismember(dimID, datadimID);
                 dim = dim(present); % dimension numbers of those actually present in the data
                 singleton = ([datahead(dim).n]==1);
+                keep = ~singleton;
                 L2.(f) = datadimID(dim(~singleton));
             end
         end
@@ -153,10 +154,8 @@ classdef displaylayout
                     % try to keep L balanced
                     if length(L.y) <= length(L.x)
                         L.y(end+1) = datadimID(d);
-                        L2.y(end+1) = datadimID(d);
                     else
                         L.x(end+1) = datadimID(d);
-                        L2.x(end+1) = datadimID(d);
                     end
                 end
             end
