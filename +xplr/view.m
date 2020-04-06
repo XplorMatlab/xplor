@@ -50,6 +50,11 @@ classdef view < hgsetget
             % open figure and create panels
             init_panels(V)
             
+            % Developer menu
+            if xplr.debuginfo
+                V.developerMenu()
+            end            
+            
             % DISPLAY
             V.D = xplr.viewdisplay(V);
             
@@ -62,6 +67,11 @@ classdef view < hgsetget
         function delete(V)
             if ~isprop(V,'hf'), return, end
             deleteValid(V.hf,V.C,V.D)
+        end
+        function developerMenu(V)
+            m = uimenu(V.hf,'label','Developer');
+            uimenu(m,'label','View object in base space', ...
+                'callback',@(u,e)assignin('base','V',V))
         end
     end
     
