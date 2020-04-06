@@ -375,6 +375,7 @@ classdef list < xplr.graphnode
         end
         function sel = buildCurrentSelection(L,domultin)
             val = get(L.hu,'value');
+            if isempty(val), sel = []; return, end
             if domultin 
                 nsel = length(val);
                 sel = xplr.selectionnd(nsel);

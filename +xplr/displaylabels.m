@@ -81,6 +81,7 @@ classdef displaylabels < xplr.graphnode
             str = head.label;
             if ~isempty(head.unit), str = [str ' (' head.unit ')']; end
             set(L.h(d),'string',['  ' str '  '])
+            set(L.h(d),'UserData',head.dimID)
         end
         function getHeights(L)
             % get heights

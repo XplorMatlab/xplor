@@ -190,7 +190,7 @@ if eval('false')
     % select types
     types = alltypes(~alltypes_empty);
     types = {'MOD_LSTD_M'}; % land temperature day
-    types = {'MOD10C1_M_SNOW'}; % snow
+%     types = {'MOD10C1_M_SNOW'}; % snow
     ntype = length(types);
 
     % types descriptions
@@ -223,6 +223,7 @@ if eval('false')
     kfile = 0;
     for ktype = 1:ntype    
         type_str = types{ktype}; % Get type as a string
+        disp(['Load ' desc{ktype}])
         subfolder = fullfile(base_folder,type_str);
         for kyear = 1:nyear
             year = years_range(kyear);
