@@ -487,9 +487,21 @@ classdef displaynavigation < xplr.graphnode
             % (2D: dimension locations must be respectively x and y)
             available = cell(2, length(layout.x), length(layout.y));
             if ~isempty(available)
+                % selections with first dim on x-axis, second dim on y-axis
                 for i = 1:length(layout.x)
                     for j = 1:length(layout.y)
                         d = [layout.x(i) layout.y(j)];
+                        available{1,i,j} = [header(d).dimID];
+                        available{2,i,j} = fn_strcat({header(d).label},',');
+                    end
+                end
+                fn_propcontrol(N,'selectiondimID', ...
+                    {'menugroup' available(1,:) available(2,:)}, ...
+                    {'parent',m2});
+                % selections with first dim on y-axis, second dim on x-axis
+                for i = 1:length(layout.x)
+                    for j = 1:length(layout.y)
+                        d = [layout.y(j) layout.x(i)];
                         available{1,i,j} = [header(d).dimID];
                         available{2,i,j} = fn_strcat({header(d).label},',');
                     end
@@ -658,16 +670,6 @@ classdef displaynavigation < xplr.graphnode
             dim(singleton) = [];
             if isequal(dimID, N.selectiondimID)
                 return
-            end
-            
-            % sort dimensions by header ID: this allows considering an
-            % (x,y) or a (y,x) selection both the same kind of selection
-            % (needed for loading/saving selections)
-            if nd == 2
-                headID = N.D.slice.header(dim).getID();
-                [~, ord] = sort(headID);
-                dimID = dimID(ord);
-                dim = dim(ord);
             end
             
             % set property
@@ -1052,8 +1054,12 @@ classdef displaynavigation < xplr.graphnode
                 fname = fn_getfile('*.xpls','Select selections file'); 
                 if isequal(fname,0), return, end
             end
-            N.selectionfilter.loadfromfile(fname);
-            N.selectionsavefile = fname;
+            try
+                N.selectionfilter.loadfromfile(fname);
+                N.selectionsavefile = fname;
+            catch ME
+                errordlg(ME.message)
+            end
         end
    end
 
