@@ -543,12 +543,12 @@ classdef header < hgsetget
                                     % removed all!
                                     ok = (newhead.start==H.start);
                                 elseif isscalar(nrmstart)
-                                    ok = abs(newhead.start-(H.start+nrmstart*H.scale))<H.scale/1000;
+                                    ok = abs(newhead.start-(H.start+nrmstart*H.scale))<abs(H.scale)/1000;
                                 else
                                     ok = false;
                                 end
                             elseif idxrm(1)==1
-                                ok = abs(newhead.start-(H.start+length(idxrm)*H.scale))<H.scale/1000 && all(diff(idxrm)==1);
+                                ok = abs(newhead.start-(H.start+length(idxrm)*H.scale))<abs(H.scale)/1000 && all(diff(idxrm)==1);
                             elseif idxrm(end)==H.n
                                 ok = (newhead.start==H.start) && all(diff(idxrm)==1);
                             else

@@ -90,7 +90,7 @@ monthly_types = { ...
 
 %% Download full datasets!
 
-if eval('true')
+if eval('false')
     %% (go inside this block to execute)
     
     % select datasets to download
@@ -184,69 +184,133 @@ disp(alltypes_years_range)
 
 %% Read data
 
-if eval('true')
-    %% (go inside this block to execute)
-    
-    % select types
-    types = alltypes(~alltypes_empty);
+if eval('false')
+    %% (temperature data set, load and save in 'demo data' folder)
     types = {'MOD_LSTD_M'}; % land temperature day
-%     types = {'MOD10C1_M_SNOW'}; % snow
-    ntype = length(types);
+    [data, desc, years_range] = load_data(types);
+    %% ()
+    cd(fullfile(fileparts(which('xplor')),'demo data'))
 
-    % types descriptions
-    desc = fn_map(@(type)alltypes_descriptions{strcmp(type,alltypes)},types);
-
-    % code below selects all available years for the selected types
-    years_range = fn_map(@(type)alltypes_years_range.(type),types','array');
-    years_range = [min(years_range(:,1)) max(years_range(:,2))];
-
-    % subselect years range
-    %     years_range(1) = max(years_range(1),2000);
-    fprintf('years range: from %i to %i\n',years_range)
-    years_range = years_range(1):years_range(2);
+    % reorganize data by months
+    data = data(:,:,:);
+    
+    % months    
+    nmonth = 12;
     nyear = length(years_range);
+    months = cell(nmonth,nyear);
+    for i = 1:nmonth
+        for j = 1:nyear
+            months{i,j} = sprintf('%.2i-%.4i',i,years_range(j));
+        end
+    end
+    months = row(months);
+    
+    % subselect months
+    ok_month = ~isnan(data(265,195,:));
+    data = data(:,:,ok_month);
+    months = months(:,ok_month);
+    
+    % compressed version of data: notice that all temperatures are comprised
+    % between -25 and 45 degrees
+    temperatures = [-25:.5:-19.5 -19:.25:38 38.5:.5:45];
+    x = zeros(size(data),'uint8');
+    idx = (data<-19);
+    x(idx) = round((data(idx)+25)*2) + 1;
+    idx = (data>=-19 & data<=38);
+    x(idx) = round((data(idx)+19)*4) + 13;
+    idx = (data>38);
+    x(idx) = round((data(idx)-38)*2) + 241;
+    s = struct( ...
+        'temperatures',[NaN temperatures], ...
+        'temperatures_indices',x);
+    datafcn = @()s.temperatures(s.temperatures_indices+1);
+    
+    % latitude and longitude
+    lat_long_unit = '°';
+    latitude = -179.75:.5:179.75;
+    longitude = 89.75:-.5:-89.75;
+    
+    
+    fn_savevar('NEO Earth Temperature.mat', ...
+        datafcn,lat_long_unit,latitude,longitude,months)
+    
+    %% (custom data set)
+    %     types = alltypes(~alltypes_empty);
+    %     types = {'MOD10C1_M_SNOW'}; % snow
+    [data, desc] = load_data(types);
+    
+end
 
-    % subselect months range or keep the default 1:12
+function [data, desc, years_range] = load_data(types, xbin, years_range_restrict, months_range)
+% function [data, desc, years_range] = load_data(types,[, years_range_restrict[, months_range]])
+
+% get variables from the base space
+[base_folder,alltypes,alltypes_descriptions,alltypes_years_range] = dealc( ...
+    evalin('base','{base_folder,alltypes,alltypes_descriptions,alltypes_years_range}'));
+
+% optional inputs
+if ~exist('xbin','var'), xbin = 5; end
+if ~exist('years_range_restrict','var'), years_range_restrict = []; end
+if ~exist('months_range','var'), months_range = []; end
+
+% types descriptions
+ntype = length(types);
+desc = fn_map(@(type)alltypes_descriptions{strcmp(type,alltypes)},types);
+
+% years range
+% (code below selects all available years for the selected types)
+years_range = fn_map(@(type)alltypes_years_range.(type),types','array');
+years_range = [min(years_range(:,1)) max(years_range(:,2))];
+% (subselect years range)
+if ~isempty(years_range_restrict)
+    years_range(1) = max(years_range(1),years_range_restrict(1));
+    years_range(2) = min(years_range(2),years_range_restrict(2));
+end
+fprintf('years range: from %i to %i\n',years_range)
+years_range = years_range(1):years_range(2);
+nyear = length(years_range);
+
+% subselect months range or keep the default 1:12
+if isempty(months_range)
     months_range = 1:12;
-    %     months_range = [1 7]; % January and July
-    nmonth = length(months_range);
+end
+nmonth = length(months_range);
 
-    % spatial binning
-    nx = 3600/5;
-    ny = 1800/5;
+% spatial binning
+nx = 3600/xbin;
+ny = 1800/xbin;
 
-    % array
-    clear data
-    data = NaN([nx ny nmonth nyear ntype]);
+% array
+data = NaN([nx ny nmonth nyear ntype]);
 
-    fn_progress('reading file',ntype*nmonth*nyear)
-    kfile = 0;
-    for ktype = 1:ntype    
-        type_str = types{ktype}; % Get type as a string
-        disp(['Load ' desc{ktype}])
-        subfolder = fullfile(base_folder,type_str);
-        for kyear = 1:nyear
-            year = years_range(kyear);
-            for kmonth = 1:nmonth
-                month = months_range(kmonth);
-                kfile = kfile + 1;
-                fn_progress(kfile)
-                file = [type_str '_' num2str(year) '-' num2str(month,'%02d') '.FLOAT.TIFF']; % File formatted as MOP_CO_M_2013-10.TIFF
-                file = fullfile(subfolder,file);
-                if exist(file,'file')
-                    x = fn_readimg(file);
-                    % undefined data: replace 99999 by NaN
-                    x(x==99999) = NaN;
-                    % bin
-                    x = fn_bin(x,[-nx -ny]);
-                    % put in array
-                    data(:,:,kmonth,kyear,ktype) = x;
-                else
-                    %fprintf('missing data for type %s, month %.2i/%i\n',type_str,month,year);
-                end
+kfile = 0;
+for ktype = 1:ntype
+    type_str = types{ktype}; % Get type as a string
+    fn_progress(['Load ' desc{ktype}],ntype*nmonth*nyear)
+    subfolder = fullfile(base_folder,type_str);
+    for kyear = 1:nyear
+        year = years_range(kyear);
+        for kmonth = 1:nmonth
+            month = months_range(kmonth);
+            kfile = kfile + 1;
+            fn_progress(kfile)
+            file = [type_str '_' num2str(year) '-' num2str(month,'%02d') '.FLOAT.TIFF']; % File formatted as MOP_CO_M_2013-10.TIFF
+            file = fullfile(subfolder,file);
+            if exist(file,'file')
+                x = fn_readimg(file);
+                % undefined data: replace 99999 by NaN
+                x(x==99999) = NaN;
+                % bin
+                x = fn_bin(x,[-nx -ny]);
+                % put in array
+                data(:,:,kmonth,kyear,ktype) = x;
+            else
+                %fprintf('missing data for type %s, month %.2i/%i\n',type_str,month,year);
             end
         end
     end
+end
 
 end
+
 

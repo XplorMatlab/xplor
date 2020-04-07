@@ -1,6 +1,7 @@
 classdef graphnode < matlab.mixin.SetGet
     
     properties (Transient) %(Access='private')
+        % objects the graph node is listening to
         listening = struct('object',{},'listener',{});
     end
     
@@ -8,12 +9,11 @@ classdef graphnode < matlab.mixin.SetGet
         idGraphNode
     end
     
-    
     events
         TestEvent
     end
-        
     
+    % Constructor, display
     methods
         function self = graphnode()
             self.idGraphNode = rand();
@@ -34,6 +34,10 @@ classdef graphnode < matlab.mixin.SetGet
                 str = ['deleted ' class(self)];
             end
         end
+    end
+    
+    % Listeners
+    methods
         function addListener(self,other,varargin)
             % function addListener(self,other,addlistener arguments...)
             % function addListener(self,other,listener)
@@ -156,6 +160,15 @@ classdef graphnode < matlab.mixin.SetGet
                
             % use disableListener function (in brick)
             c = disableListener(hl);
+        end
+    end
+    
+    % Composition (i.e. components that exist iff object exists)
+    methods
+        function component = addComponent(self,component)
+            addlistener(self,'ObjectBeingDestroyed',@(u,e)delete(component));
+            addlistener(component,'ObjectBeingDestroyed',@(u,e)delete(self));
+            if nargout==0, clear component, end
         end
     end
      

@@ -80,21 +80,21 @@ classdef viewdisplay < xplr.graphnode
             fn_controlpositions(p.hu,D.hp,[1 1],[-90 -25 90 25])
             
             % positionning (needed by both labels and data display)
-            D.graph = xplr.displaygraph(D);
+            D.graph = D.addComponent(xplr.displaygraph(D));
             
             % automatic label positionning
-            D.labels = xplr.displaylabels(D);
+            D.labels = D.addComponent(xplr.displaylabels(D));
             
             % clipping tool
-            D.clipping = xplr.cliptool(V.hf); % creates a menu
+            D.clipping = D.addComponent(xplr.cliptool(V.hf)); % creates a menu
             D.addListener(D.clipping,'ChangedClip',@(u,e)clipchange(D,e));
             
             % colormap tool
-            D.colormap = xplr.colormaptool(D); % creates a menu
+            D.colormap = D.addComponent(xplr.colormaptool(D)); % creates a menu
             D.addListener(D.colormap,'ChangedColorMap',@(u,e)D.updateDisplay('clip')); %#ok<CPROP>
             
             % navigation (sliders, mouse actions)
-            D.navigation = xplr.displaynavigation(D); % creates a menu
+            D.navigation = D.addComponent(xplr.displaynavigation(D)); % creates a menu
             
             % set organization, connect sliders, display data and labels
             D.sliceChangeEvent = struct('flag','global');

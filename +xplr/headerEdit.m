@@ -599,7 +599,7 @@ if isscalar(x) && isnumeric(x) && n~=1
     type = 'measure';
     value = [x 0];
     return
-elseif isvector(x) && isnumeric(x) && length(x)==n && max(abs(diff(x,2)))<diff(x(1:2))/1e6
+elseif isvector(x) && isnumeric(x) && length(x)==n && max(abs(diff(x,2)))<abs(diff(x(1:2)))/1e6
     % vector of equally spaced values
     if max(abs(diff(x,2)))==0
         scale = diff(x(1:2));

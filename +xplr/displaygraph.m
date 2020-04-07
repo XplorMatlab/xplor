@@ -126,7 +126,7 @@ classdef displaygraph < xplr.graphnode
                 % for the grid elements?
                 nelem = header(st.xydim).n;
                 if nx && ny && xpair(end) && ypair(end)
-                    elemratio = (yhead(end).scale*yhead(end).n)/(xhead(end).scale*xhead(end).n);
+                    elemratio = abs((yhead(end).scale*yhead(end).n)/(xhead(end).scale*xhead(end).n));
                 else
                     elemratio = 1; % this value will be only loosely respected
                 end
@@ -195,7 +195,7 @@ classdef displaygraph < xplr.graphnode
                 % there is a pair
                 if isempty(ix) || (ix==1 && ~xpair(ix)), break, end
                 curratio = abs(st.ystep(iy))/st.xstep(ix) * axisratio;
-                targetratio = yhead(iy).scale/xhead(ix).scale;
+                targetratio = abs(yhead(iy).scale/xhead(ix).scale);
                 correction = targetratio/curratio;
                 if correction>1
                     % need to reduce x-span
@@ -259,10 +259,10 @@ classdef displaygraph < xplr.graphnode
         end
         function values = nicevalues(G,valuestart,valuestop,targetstep)
             % actual step that will be used
-            t10 = log10(targetstep);
+            t10 = log10(abs(targetstep));
             tests = [1 2 5 10];
             [~, idx] = min(abs(mod(t10,1)-log10(tests)));
-            step = 10^floor(t10) * tests(idx);
+            step = sign(targetstep) * 10^floor(t10) * tests(idx);
             % tick values
             values = step * (ceil(valuestart/step):floor(valuestop/step)); % data coordinates
         end
