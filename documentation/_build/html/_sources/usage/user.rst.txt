@@ -1,6 +1,25 @@
 User documentation
 ****************************
 
+
+.. raw:: html
+
+    <div style="display: none;">
+
+
+.. toctree::
+   :maxdepth: 2
+
+   installation
+   tutorial
+   map/xplorGeneral
+   map/slicingChain
+
+.. raw:: html
+
+    </div>
+
+
 .. raw:: html
 
     <div class="btn btn-outline-primary disabled" disabled style="cursor:default;border-color:transparent;min-width:250px;text-align:right;">
@@ -39,7 +58,7 @@ User documentation
 
     <div class="btn btn-primary">
 
-:ref:`Quick Start`
+:ref:`tutorial`
 
 .. raw:: html
 
@@ -50,7 +69,7 @@ User documentation
     <div class="btn btn-outline-primary disabled" disabled style="cursor:default;border-color:transparent;min-width:250px;text-align:right;">
 
 
-	Schemas:
+	Core principles:
 
 .. raw:: html
 
@@ -60,12 +79,14 @@ User documentation
 .. raw:: html
 
     <div class="btn btn-primary">
-:ref:`Xplor General`
+
+:ref:`Slicing chain`
 
 .. raw:: html
 
     </div><div class="btn btn-primary">
-:ref:`Slicing chain`
+
+:ref:`Xplor General`
 
 .. raw:: html
 

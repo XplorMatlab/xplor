@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
     <link rel="stylesheet" type="text/css" href="../_static/css/bootstrap.min.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/basic.css" />
     
     <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script src="../_static/jquery.js"></script>
@@ -54,7 +55,6 @@
 <dd><p>Bases: <code class="xref mat mat-class docutils literal notranslate"><span class="pre">handle</span></code></p>
 <p>xplr.bank The bank is unique and store several elements :</p>
 <ul class="simple">
-<li><p>currentviews: not used yet but it will be used for multiview</p></li>
 <li><p>measures: units for measures conversion</p></li>
 <li><p>recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored</p></li>
 <li><p>filters_registry: registry of all existing filters, indexed by filter type, link key and input header</p></li>
@@ -124,25 +124,13 @@ otherwise returns an empty label</p>
 <dl class="staticmethod">
 <dt id="+xplr.bank.registerView">
 <em class="property">static </em><code class="sig-name descname">registerView</code><span class="sig-paren">(</span><em class="sig-param">V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerView" title="Permalink to this definition">¶</a></dt>
-<dd><p>register view</p>
+<dd><p>update list of recent headers</p>
 </dd></dl>
 
 <dl class="staticmethod">
 <dt id="+xplr.bank.unregisterFilter">
 <em class="property">static </em><code class="sig-name descname">unregisterFilter</code><span class="sig-paren">(</span><em class="sig-param">F</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterFilter" title="Permalink to this definition">¶</a></dt>
 <dd><p>function unregisterFilter(F, user)</p>
-</dd></dl>
-
-<dl class="staticmethod">
-<dt id="+xplr.bank.unregisterView">
-<em class="property">static </em><code class="sig-name descname">unregisterView</code><span class="sig-paren">(</span><em class="sig-param">V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterView" title="Permalink to this definition">¶</a></dt>
-<dd><p>unregister view</p>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="+xplr.bank.currentviews">
-<code class="sig-name descname">currentviews</code><em class="property"> = &quot;struct('obj',cell(1,0),'hl',cell(1,0))&quot;</em><a class="headerlink" href="#+xplr.bank.currentviews" title="Permalink to this definition">¶</a></dt>
-<dd><p>all current views are registered here</p>
 </dd></dl>
 
 <dl class="attribute">

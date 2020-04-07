@@ -90,7 +90,7 @@ monthly_types = { ...
 
 %% Download full datasets!
 
-if eval('false')
+if eval('true')
     %% (go inside this block to execute)
     
     % select datasets to download
@@ -130,7 +130,7 @@ end
 
 %% Download specific files 
 
-if eval('false')
+if eval('true')
     %% (go inside this block to execute)
     
         % select specific types to download and years range
@@ -184,7 +184,7 @@ disp(alltypes_years_range)
 
 %% Read data
 
-if eval('false')
+if eval('true')
     %% (go inside this block to execute)
     
     % select types
