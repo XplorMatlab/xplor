@@ -2,10 +2,18 @@ classdef displaygraph < xplr.graphnode
     % This class takes care of conversions between slice and graph coordinates,
 	% and of x/y ticks
 
+    % properties
     properties (SetAccess='private')
         D % parent xplr.viewdisplay object
-        xyticks % graphic objects
+        % graphic objects
+        xyticks 
+        separationlines
     end
+    properties (SetObservable, AbortSet=true)
+        showseparation = false;
+        separationcolor = [.8 .8 .8];
+    end
+    % shortcuts
     properties (Dependent, SetAccess='private')
         ha
     end
@@ -404,6 +412,12 @@ classdef displaygraph < xplr.graphnode
                     set(G.ha,'ytick',tick,'yticklabel',ticklabels)
                 end
             end
+            
+            % show separations
+            if G.showseparation
+                G.draw_separations()
+            end
+            
         end
         function setValueTicks(G)
             % do we show value ticks?
@@ -435,9 +449,11 @@ classdef displaygraph < xplr.graphnode
             startextent = G.D.gridclip;
             startextent(2,:) = startextent(2,:) - startextent(1,:);
             
-            % check every 'external' dimension: x, y or xy/yx? same clip
-            % values or not?
-            subs0 = substruct('()',repmat({':'},1,G.D.nd));
+            % check every 'external' dimension for which we might have
+            % several displays on the same y lines (i.e. dimensions at
+            % location x, ystatic or xy/yx); do these display have the same
+            % clip values?
+            subs0 = substruct('()',repmat({':'},1,1+G.D.nd));
             samecliprow = true;     % time courses on the same row have the same clipping range
             for d = 1:G.D.nd
                 if any(d == [org.ystatic org.x(2:end) G.steps.xydim])
@@ -528,6 +544,101 @@ classdef displaygraph < xplr.graphnode
         end
     end
 
+    % Separations mark for 'external' dimensions
+    methods
+        function set.showseparation(G, value)
+            G.showseparation = value;
+            G.draw_separations()
+        end
+        function set.separationcolor(G, value)
+            G.separationcolor = value;
+            set(G.separationlines,'color',value)
+        end
+        function draw_separations(G)
+            % no 'smart update', always delete all existing separation
+            % lines and redisplay new ones
+            deleteValid(G.separationlines)
+            G.separationlines = [];
+            if ~G.showseparation, return, end
+            
+            % some properties
+            org = G.D.layout;
+            nd = G.D.zslice.nd;
+            sz = G.D.zslice.sz;
+            st = G.steps;
+            
+            % some variables
+            lines = {};
+            lwmax = 0; % maximal line-width encountered so far
+            
+            % x
+            kstart = 2;
+            linewidth = 0;
+            for k = kstart:length(org.x)
+                d = org.x(k);                      % dimension for which we will draw vertical lines
+                dout = [org.x(k+1:end) st.xydim];  % other dimensions more external than di in x location
+                n = sz(d);
+                if n == 1, continue, end
+                szout = ones(1,nd); szout(dout) = sz(dout);
+                nout = prod(szout);
+                xpos = zeros(n-1,nout);
+                for kout = 1:nout
+                    % indices of external dimensions
+                    ijk = repmat(fn_indices(szout,kout,'g2i'),[1 n-1]);
+                    % indices for dimension d
+                    ijk(d,:) = 1.5:n-.5;
+                    % x-positions of n-1 lines
+                    xpos(:,kout) = sum(fn_add(st.xoffset(k:end)', fn_mult(ijk(org.x(k:end),:),st.xstep(k:end)')),1);
+                end
+                linewidth = linewidth+.5;
+                lwmax = max(lwmax,linewidth);
+                lines{end+1} = fn_lines('x',xpos(:),G.D.ha, ...
+                    'linewidth',linewidth,'color',G.separationcolor); %#ok<AGROW>
+            end
+            
+            % y
+            kstart = 1+strcmp(G.D.displaymode,'image');
+            linewidth = 0;
+            for k = kstart:length(org.y)
+                d = org.y(k);                      % dimension for which we will draw vertical lines
+                dout = [org.y(k+1:end) st.xydim];  % other dimensions more external than di in x location
+                n = sz(d);
+                if n == 1, continue, end
+                szout = ones(1,nd); szout(dout) = sz(dout);
+                nout = prod(szout);
+                ypos = zeros(n-1,nout);
+                for kout = 1:nout
+                    % indices of external dimensions
+                    ijk = repmat(fn_indices(szout,kout,'g2i'),[1 n-1]);
+                    % indices for dimension d
+                    ijk(d,:) = 1.5:n-.5;
+                    % y-positions of n-1 lines
+                    ypos(:,kout) = sum(fn_add(st.yoffset(k:end)', fn_mult(ijk(org.y(k:end),:),st.ystep(k:end)')),1);
+                end
+                linewidth = linewidth+.5;
+                lwmax = max(lwmax,linewidth);
+                lines{end+1} = fn_lines('y',ypos(:),G.D.ha, ...
+                    'linewidth',linewidth,'color',G.separationcolor); %#ok<AGROW>
+            end
+            
+            % xy
+            if ~isempty(st.xydim)
+                ncol = st.xyncol;
+                nrow = ceil(sz(st.xydim)/ncol);
+                xpos = -.5 + (1:ncol-1)/ncol;
+                ypos = -.5 + (1:nrow-1)/nrow;
+                linewidth = lwmax+.5;
+                lines = [lines fn_lines(xpos,ypos,G.D.ha, ...
+                    'linewidth',linewidth,'color',G.separationcolor)];
+            end
+            
+            % put lines below other graphic elements
+            G.separationlines = fn_map(@row,lines,'array'); % single vector of graphic handles
+            uistack(G.separationlines,'bottom')
+            
+        end
+    end
+    
     % Coordinates conversions
     methods (Access='private')
         function [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin)

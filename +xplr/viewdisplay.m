@@ -176,6 +176,8 @@ classdef viewdisplay < xplr.graphnode
         function display_menu(D)
             m = D.menu;
             delete(get(m,'children'))
+            
+            % time courses display
             if strcmp(D.displaymode,'time courses')
                 fn_propcontrol(D,'linealpha', ...
                     {'menuval', {1 .7 .4 .1}, {'none' 'mild' 'medium' 'strong' 'manual'}}, ...
@@ -184,16 +186,32 @@ classdef viewdisplay < xplr.graphnode
             else
                 dosep = false;
             end
+            
+            % cross
             fn_propcontrol(D.navigation,'showcross','menu', ...
                 {'parent',m,'label','Show cross','separator',onoff(dosep)});
             if D.navigation.showcross
                 fn_propcontrol(D.navigation,'crosscolor', ...
                     {'menu', {'k' 'b' 'r' [1 1 1]*.6 'w'}, {'black' 'blue' 'red' 'gray' 'white' 'other'}}, ...
-                    {'parent',m,'label','Cross color'})
+                    {'parent',m,'label','Cross color'});
                 fn_propcontrol(D.navigation,'crossalpha', ...
                     {'menu', {1 .4 .05}, {'none' 'medium' 'barely visible' 'manual'}}, ...
-                    {'parent',m,'label','Cross transparency'})
+                    {'parent',m,'label','Cross transparency'});
             end
+            
+            % separation marks
+            org = D.layoutID;
+            if length(org.x)>1 || length(org.y)>strcmp(D.displaymode,'image') || ~isempty([org.xy org.yx])
+                fn_propcontrol(D.graph,'showseparation','menu', ...
+                    {'parent',m,'label','Show separations for external dimensions','separator',onoff(dosep)});
+                if D.graph.showseparation
+                    fn_propcontrol(D.graph,'separationcolor', ...
+                        {'menu', {'k' [.8 .8 1] [1 .8 .8] [.8 .8 .8]}, {'black' 'light blue' 'light red' 'light gray' 'other'}}, ...
+                        {'parent',m,'label','Separations color'});
+                end
+            end            
+            
+            % reset display
             uimenu(m,'label','Reset display','separator','on', ...
                 'callback',@(u,e)D.resetDisplay())
         end
