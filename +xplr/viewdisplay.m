@@ -184,7 +184,17 @@ classdef viewdisplay < xplr.graphnode
             else
                 dosep = false;
             end
-            uimenu(m,'label','Reset display','separator',onoff(dosep), ...
+            fn_propcontrol(D.navigation,'showcross','menu', ...
+                {'parent',m,'label','Show cross','separator',onoff(dosep)});
+            if D.navigation.showcross
+                fn_propcontrol(D.navigation,'crosscolor', ...
+                    {'menu', {'k' 'b' 'r' [1 1 1]*.6 'w'}, {'black' 'blue' 'red' 'gray' 'white' 'other'}}, ...
+                    {'parent',m,'label','Cross color'})
+                fn_propcontrol(D.navigation,'crossalpha', ...
+                    {'menu', {1 .4 .05}, {'none' 'medium' 'barely visible' 'manual'}}, ...
+                    {'parent',m,'label','Cross transparency'})
+            end
+            uimenu(m,'label','Reset display','separator','on', ...
                 'callback',@(u,e)D.resetDisplay())
         end
     end
@@ -880,7 +890,9 @@ classdef viewdisplay < xplr.graphnode
             % reset axis
             cla(D.ha)
             % re-display everything
-            zslicechange(D)
+%             D.sliceChangeEvent = struct('flag','global');
+%             D.navigation.displayselection()
+            zslicechange(D) % this will automatically re-create the cross, but not the selection displays
         end
     end
     

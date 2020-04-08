@@ -922,6 +922,47 @@ classdef displaygraph < xplr.graphnode
             M(2,2,:) = yscale; 
             M(1:2,4,:) = xyoffset;
         end
+        function [bottomleft, siz] = sub_axes_position(G,ijk)
+            % function [bottomleft, siz] = sub_axes_position(G,ijk)
+            %---
+            % Input:
+            % - ijk     nd * npoint array
+            % 
+            % Output:
+            % - pos     4 * npoint array
+            
+            np = size(ijk,2);
+            st = G.steps;
+
+            % Position of sub-axes centers
+            % (x)
+%             if isempty(G.layout.x)
+%                 % no data dimension on x-axis: only 1 data point for time
+%                 % courses or image display, which must be positionned in
+%                 % the center of the available space
+%                 xoffsets = zeros(1,np); 
+%             else
+                xoffsets = fn_add( sum(st.xoffset(2:end)), sum(fn_mult(column(st.xstep(2:end)),ijk(G.layout.x(2:end),:)),1) );
+%             end
+            % (y)
+            switch G.D.displaymode
+                case 'image'
+                    yoffsets = fn_add( sum(st.yoffset(2:end)), sum(fn_mult(column(st.ystep(2:end)),ijk(G.layout.y(2:end),:)),1) );
+                case 'time courses'
+                    yoffsets = fn_add( sum(st.yoffset(1:end)), sum(fn_mult(column(st.ystep(1:end)),ijk(G.layout.y(1:end),:)),1) );
+                otherwise
+                    error 'invalid display mode'
+            end
+            % (add offsets for the xy grid)
+            xyoffsets = [xoffsets; yoffsets];
+            if ~isempty(st.xydim)
+                xyoffsets = xyoffsets + st.xyoffsets(:,ijk(st.xydim,:)); 
+            end
+            
+            % We are done!
+            siz = repmat([st.xspan(1); st.yspan(1)],[1 np]);
+            bottomleft = xyoffsets - siz/2;
+        end
         function pos = labelPosition(G,dim,orgin)
             % function pos = labelPosition(G,d[,orgin])
             
