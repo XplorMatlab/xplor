@@ -9,7 +9,6 @@ classdef eventinfo < event.EventData & dynamicprops
     % * 'chg&new',ind
     % * 'chg&rm',ind
     % * 'perm',ind
-    % * 'point'
     %
     % type: 'point'
     % arguments:    chgij [warning: if not set, default empty will be interpreted as false by a logical test]

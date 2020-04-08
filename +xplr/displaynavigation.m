@@ -310,7 +310,7 @@ classdef displaynavigation < xplr.graphnode
             N.cross(1) = line('Parent',N.D.ha,'ydata',[-.5 .5]);
             N.cross(2) = line('Parent',N.D.ha,'xdata',[-.5 .5]);
             N.cross(3) = line('Parent',N.D.ha,'xdata',0,'ydata',0,'marker','.','linestyle','none'); % a single point
-            set(N.cross,'Color','k')
+            set(N.cross,'Color',[[1 1 1]*.6 .5]) % cross is semi-transparent!
             
             % position
             N.crossCenter = [0 0];

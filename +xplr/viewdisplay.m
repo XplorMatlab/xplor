@@ -10,6 +10,7 @@ classdef viewdisplay < xplr.graphnode
         % graphics
         hp          % display panel
         ha          % main axes
+        menu        % general display menu
         % display
         nodisplay = false   % data is too large, cancel display
         htransform  % containers for line/images that will be translated/scaled
@@ -33,8 +34,8 @@ classdef viewdisplay < xplr.graphnode
     properties (SetObservable=true, AbortSet=true)
         displaymode = 'image';  % 'time courses' or 'image'
         showcolorlegend = false; % false by default because of bug in Matlab's legend function, which inactivates several listeners
-    end
-    
+        linealpha = 1; % lines have a small degree of transparency!
+    end    
     properties (SetAccess='private')
         layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayout
         layoutIDmemory                        % remembers position of all dimension ID encountered so far (i.e. even if not present in the current data)
@@ -43,7 +44,7 @@ classdef viewdisplay < xplr.graphnode
         clip = [0 1]                          % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
     end
     
-    % Fast access (dependent)
+    % Shortcuts (dependent)
     properties (Dependent, SetAccess='private')
         nd
         slice
@@ -85,13 +86,16 @@ classdef viewdisplay < xplr.graphnode
             % automatic label positionning
             D.labels = D.addComponent(xplr.displaylabels(D));
             
+            % general display menu
+            D.menu = uimenu(D.V.hf,'label','Display','callback',@(u,e)display_menu(D));
+            
             % clipping tool
             D.clipping = D.addComponent(xplr.cliptool(V.hf)); % creates a menu
             D.addListener(D.clipping,'ChangedClip',@(u,e)clipchange(D,e));
             
             % colormap tool
             D.colormap = D.addComponent(xplr.colormaptool(D)); % creates a menu
-            D.addListener(D.colormap,'ChangedColorMap',@(u,e)D.updateDisplay('clip')); %#ok<CPROP>
+            D.addListener(D.colormap,'ChangedColorMap',@(u,e)D.updateDisplay('clip'));
             
             % navigation (sliders, mouse actions)
             D.navigation = D.addComponent(xplr.displaynavigation(D)); % creates a menu
@@ -164,6 +168,24 @@ classdef viewdisplay < xplr.graphnode
                     error argument
                 end
             end
+        end
+    end
+    
+    % General methods
+    methods (Access='private')
+        function display_menu(D)
+            m = D.menu;
+            delete(get(m,'children'))
+            if strcmp(D.displaymode,'time courses')
+                fn_propcontrol(D,'linealpha', ...
+                    {'menuval', {1 .7 .4 .1}, {'none' 'mild' 'medium' 'strong' 'manual'}}, ...
+                    {'parent',m,'label','Lines transparency'});
+                dosep = true;
+            else
+                dosep = false;
+            end
+            uimenu(m,'label','Reset display','separator',onoff(dosep), ...
+                'callback',@(u,e)D.resetDisplay())
         end
     end
     
@@ -443,6 +465,16 @@ classdef viewdisplay < xplr.graphnode
                 D.setColorDim([],doImmediateDisplay)
             end
         end
+        function set.linealpha(D,linealpha)
+            % check
+            if ~isscalar(linealpha) || linealpha<=0 || linealpha>1, error 'incorrect alpha value for lines', end
+            % set value
+            D.linealpha = linealpha;
+            % update display
+            if strcmp(D.displaymode,'time courses')
+                D.updateDisplay('color')
+            end
+        end
         function set.showcolorlegend(D,val)
             D.showcolorlegend = val;
             displayColorLegend(D)
@@ -508,6 +540,20 @@ classdef viewdisplay < xplr.graphnode
     end
     
     % Update display
+    methods (Static)
+        function ok = testDisplayable(sz,displaymode,layout)
+            szgrid = sz;
+            if ~isempty(layout.x), szgrid(layout.x(1)) = 1; end
+            if strcmp(displaymode,'image') && ~isempty(layout.y), szgrid(layout.y(1)) = 1; end
+            if strcmp(displaymode,'time courses')
+                ok = (prod(szgrid) <= xplr.parameters.get('display.NLineMax')) && ...
+                    (prod(sz) <= xplr.parameters.get('display.NLinePointMax'));
+            else
+                ok = (prod(szgrid) <= xplr.parameters.get('display.NImageMax')) && ...
+                    (prod(sz) <= xplr.parameters.get('display.NImagePixelMax'));
+            end
+        end
+    end
     methods (Access = 'private')
         function slicechange(D,e)
             % function slicechange(D,e)
@@ -670,7 +716,7 @@ classdef viewdisplay < xplr.graphnode
                 cdim = D.colordim;
                 colorhead = D.zslice.header(cdim);
                 if isempty(D.colordim)
-                    if ~doreset, set(D.hdisplay(:),'color','k'), end
+                    if ~doreset, set(D.hdisplay(:),'color',[0 0 0 D.linealpha]), end
                     docolor = false;
                 else
                     kcolor = strcmp({colorhead.sublabels.label},'ViewColor');
@@ -678,6 +724,9 @@ classdef viewdisplay < xplr.graphnode
                         cmap = cell2mat(colorhead.values(:,kcolor));
                     else
                         cmap = fn_colorset('plot12',1:colorhead.n);
+                    end
+                    if size(cmap,2) == 3 && D.linealpha < 1
+                        cmap(:,4) = D.linealpha;
                     end
                 end
             end
@@ -826,21 +875,16 @@ classdef viewdisplay < xplr.graphnode
             D.nodisplay = ~D.testDisplayable(D.zslice.sz,D.displaymode,D.layout);
         end
     end
-    methods (Static)
-        function ok = testDisplayable(sz,displaymode,layout)
-            szgrid = sz;
-            if ~isempty(layout.x), szgrid(layout.x(1)) = 1; end
-            if strcmp(displaymode,'image') && ~isempty(layout.y), szgrid(layout.y(1)) = 1; end
-            if strcmp(displaymode,'time courses')
-                ok = (prod(szgrid) <= xplr.parameters.get('display.NLineMax')) && ...
-                    (prod(sz) <= xplr.parameters.get('display.NLinePointMax'));
-            else
-                ok = (prod(szgrid) <= xplr.parameters.get('display.NImageMax')) && ...
-                    (prod(sz) <= xplr.parameters.get('display.NImagePixelMax'));
-            end
+    methods
+        function resetDisplay(D)
+            % reset axis
+            cla(D.ha)
+            % re-display everything
+            zslicechange(D)
         end
     end
     
+    % Callbacks (i.e. handle specific changes in slice, properties, etc.)
     methods
         function zslicechange(D,e)
             if nargin<2, flag = 'global'; else flag = e.flag; end
@@ -1018,33 +1062,6 @@ classdef viewdisplay < xplr.graphnode
             end
             % show/hide color legend
             displayColorLegend(D)
-        end
-        function resetDisplay(D)
-            % reset axis
-            cla(D.ha)
-            % re-display everything
-            zslicechange(D)
-        end
-        function realCoordinates = getCrossCoordinate(D)
-            % return "real world "coordinates from relative window coordinate 
-            crossDisplayCoordinates = ([get(D.cross(3),'xdata'), get(D.cross(3),'ydata')]);
-            
-            xdataApplied = D.zslice;
-            
-            
-            
-            xdataScale = double.empty(length(crossDisplayCoordinates),0);
-            xdataStart = double.empty(length(crossDisplayCoordinates),0);
-            xdataValuesCoordinates = double.empty(length(crossDisplayCoordinates),0);
-            realCoordinates = double.empty(length(crossDisplayCoordinates),0);
-            
-            for i = 1:length(crossDisplayCoordinates)
-                xdataScale(i) = D.V.data.header(i).scale;
-                xdataStart(i) = D.V.data.header(i).start;
-                xdataValuesCoordinates(i) = ((crossDisplayCoordinates(i) +1)/2)*xdataApplied.sz(i);
-                realCoordinates(i) = xdataStart(i) + (xdataValuesCoordinates(i)-1)*xdataScale(i);
-            end
-            
         end
     end
     

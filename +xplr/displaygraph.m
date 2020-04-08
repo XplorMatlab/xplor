@@ -863,7 +863,7 @@ classdef displaygraph < xplr.graphnode
             ntransform = size(ijk,2);
             M = repmat(eye(4),[1 1 ntransform]);
             
-            % Scale & offset: depends only on in-curve/in-image dimension(s)
+            % Scale & offset
             % (x)
             if isempty(G.layout.x)
                 % no data dimension on x-axis: only 1 data point for time

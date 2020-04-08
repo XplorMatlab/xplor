@@ -19,7 +19,7 @@ classdef graphnode < matlab.mixin.SetGet
             self.idGraphNode = rand();
         end
         function delete(self)
-            xplr.debuginfo('graphnode', 'delete %s', self)
+            xplr.debuginfo('graphnode', ['delete ' class(self) num2str(floor(self.idGraphNode*1000),'%.3i')]);
             % when object is being deleted, make sure no more listener can
             % trigger actions on it
             for i = 1:length(self.listening)

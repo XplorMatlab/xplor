@@ -146,7 +146,7 @@ classdef filterAndPoint < xplr.dataOperand
             chgij = ~isequal(F.index,curind);
             notify(F,'ChangedOperation',xplr.eventinfo('point',chgij))
             if chgij && F.F.nsel==0
-                notify(F,'ChangedOperation',xplr.eventinfo('filter','point'))
+                notify(F,'ChangedOperation',xplr.eventinfo('filter','chg',1))
             end
         end
     end
@@ -184,8 +184,8 @@ classdef filterAndPoint < xplr.dataOperand
                         % same as above: copy e
                         e2 = xplr.eventinfo('point',e.chgij);
                         notify(F,'ChangedOperation',e2)
-                        if e.chgij
-                            notify(F,'ChangedOperation',xplr.eventinfo('filter','point'))
+                        if e.chgij && F.F.nsel==0
+                            notify(F,'ChangedOperation',xplr.eventinfo('filter','chg',1))
                         end
                     end
             end
@@ -247,10 +247,6 @@ classdef filterAndPoint < xplr.dataOperand
             %                     end
             %                 case 'perm'
             %                     slic = [];
-            %                 case 'point'
-            %                     if F.ndout~=1, error 'output header should be scalar', end
-            %                     flag = 'chg'; ind = 1;
-            %                     slic = slicing(F.P,x.data,dims,F.ndout);
             %                 otherwise
             %                     error('flag ''%s'' not handled',flag)
             %             end
