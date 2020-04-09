@@ -203,7 +203,7 @@ classdef viewdisplay < xplr.graphnode
             org = D.layoutID;
             if length(org.x)>1 || length(org.y)>strcmp(D.displaymode,'image') || ~isempty([org.xy org.yx])
                 fn_propcontrol(D.graph,'showseparation','menu', ...
-                    {'parent',m,'label','Show separations for external dimensions','separator',onoff(dosep)});
+                    {'parent',m,'label','Show separations between lines/images','separator','on'});
                 if D.graph.showseparation
                     fn_propcontrol(D.graph,'separationcolor', ...
                         {'menu', {'k' [.8 .8 1] [1 .8 .8] [.8 .8 .8]}, {'black' 'light blue' 'light red' 'light gray' 'other'}}, ...
@@ -534,7 +534,7 @@ classdef viewdisplay < xplr.graphnode
             if all(clip==D.clip), return, end
             if nargin<3, doupdatedisplay = true; end
             % set property
-            D.clip = clip;
+            D.clip = double(clip);
             % update display
             if doupdatedisplay, updateDisplay(D,'clip'), end
         end
@@ -840,8 +840,8 @@ classdef viewdisplay < xplr.graphnode
                         otherwise
                             error('unknown clipping adjustment flag ''%s''',clipadjust)
                     end
-                    xi = double(xi);
-                    clipi = double(clipi);
+                    xi = fn_float(xi);
+                    clipi = clipi;
                     % store clipping values
                     D.gridclip(:,idx) = clipi;                    
                     % display it

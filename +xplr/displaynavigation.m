@@ -205,8 +205,9 @@ classdef displaynavigation < xplr.graphnode
                             % determine in which dimension to zoom as the most
                             % exterior dimension(s) where at least 2
                             % elements are selected
+                            zijk = N.graph.graph2zslice(rect);
                             ijk = N.graph.graph2slice(rect);
-                            nonsingleton = logical(diff(round(ijk),1,2)); % nd*1 vector
+                            nonsingleton = logical(diff(round(zijk),1,2)); % nd*1 vector
                             org = N.D.layout;
                             xydim = [org.xy org.yx];
                             if nonsingleton(xydim)
@@ -313,7 +314,7 @@ classdef displaynavigation < xplr.graphnode
             N.cross(1) = line('Parent',N.D.ha,'ydata',[-.5 .5]);
             N.cross(2) = line('Parent',N.D.ha,'xdata',[-.5 .5]);
             N.cross(3) = line('Parent',N.D.ha,'xdata',[0 0],'ydata',[0 0]); % a single point
-            set(N.cross,'Color',[[1 1 1]*.6 .5]) % cross is semi-transparent!
+            set(N.cross,'Color',[N.crosscolor N.crossalpha]) % cross is semi-transparent!
             
             % position
             N.crossCenter = [0 0];
@@ -865,21 +866,21 @@ classdef displaynavigation < xplr.graphnode
                 %if strfind(D.selshow,'number')
                 if true
                     hl(end+1) = text(center(1),center(2),name, ...
-                        'Parent',N.D.ha,'color','w','visible',visible, ...
+                        'Parent',N.D.ha,'color',[1 1 1]*.8,'visible',visible, ...
                         'horizontalalignment','center','verticalalignment','middle', ...
-                        'color','w');
+                        'hittest','off');
                     %'color',fn_switch(k==D.currentselection,'r','w'));
                 end
                 %if strfind(D.selshow,'shape')
                 if true
                     hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
-                        'Color',col, ...
+                        'hittest','off','Color',col, ...
                         'UserData',k); % set user data because this line will be used when in seledit mode
                 end
                 %if strfind(D.selshow,'cross')
                 if false
                     hl(end+1) = line(center(1),center(2),'Parent',N.D.ha, ...
-                        'Color',col,'LineStyle','none', ...
+                        'hittest','off','Color',col,'LineStyle','none', ...
                         'Marker','+','MarkerSize',4);
                 end
                 set(hl,'tag','ActDispIm_Sel','HitTest','off')
