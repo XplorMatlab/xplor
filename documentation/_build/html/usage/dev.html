@@ -19,8 +19,8 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Data container: xdata" href="xdata.html" />
-    <link rel="prev" title="Slicing chain" href="map/slicingChain.html" /> 
+    <link rel="next" title="Concepts: controlling and using filters in multiple windows" href="concepts_dev.html" />
+    <link rel="prev" title="Concepts" href="concepts.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -32,10 +32,10 @@
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
         <li class="right" >
-          <a href="xdata.html" title="Data container: xdata"
+          <a href="concepts_dev.html" title="Concepts: controlling and using filters in multiple windows"
              accesskey="N">next</a> |</li>
         <li class="right" >
-          <a href="map/slicingChain.html" title="Slicing chain"
+          <a href="concepts.html" title="Concepts"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li> 
       </ul>
@@ -48,19 +48,44 @@
             
   <div class="section" id="developer-documentation">
 <h1>Developer documentation<a class="headerlink" href="#developer-documentation" title="Permalink to this headline">¶</a></h1>
-<div style="display: none;"><div class="toctree-wrapper compound">
+<div class="toctree-wrapper compound">
 <ul>
+<li class="toctree-l1"><a class="reference internal" href="concepts_dev.html">Concepts: controlling and using filters in multiple windows</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="concepts_dev.html#controlling-and-using-filters-in-multiple-windows">controlling and using filters in multiple windows</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="globalObjectMap.html">Global objects map</a></li>
 <li class="toctree-l1"><a class="reference internal" href="xdata.html">Data container: xdata</a></li>
 <li class="toctree-l1"><a class="reference internal" href="bank.html">The bank</a></li>
-<li class="toctree-l1"><a class="reference internal" href="objectmap.html">Object maps</a></li>
+<li class="toctree-l1"><a class="reference internal" href="structure.html">Structure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="structure.html#uml-diagram-of-all-xplor-s-modules">UML diagram of all Xplor’s modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="structure.html#presentation-of-the-modules">Presentation of the modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="structure.html#sequence-diagrams-events-handling">Sequence Diagrams, events handling</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="moduleXdata.html">Module xdata : defining a data structure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html#color-class">Color class:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html#dimensiondescription-class">DimensionDescription class:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html#header-abstract-class">Header abstract class:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html#categoricalheader-class">CategoricalHeader  class:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html#measureheader-class">MeasureHeader class:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html#xdata-class">Xdata class:</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="moduleView.html">Module view : user interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="credits.html">Credits</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="credits.html#numpy">numpy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credits.html#pandas">pandas</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credits.html#vispy-and-pyqt">Vispy and PyQt</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credits.html#sphinx">Sphinx</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credits.html#travis-ci">Travis CI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credits.html#websequencediagrams">WebSequenceDiagrams</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credits.html#umletino">UMLetino</a></li>
+</ul>
+</li>
 </ul>
 </div>
-</div><div class="btn btn-outline-primary disabled" disabled style="cursor:default;border-color:transparent;min-width:250px;text-align:right;">
-
-
-    Core principles:</div><div class="btn btn-primary"><p><a class="reference internal" href="xdata.html#data-container-xdata"><span class="std std-ref">Data container: xdata</span></a></p>
-</div><div class="btn btn-primary"><p><a class="reference internal" href="map/xplorGeneral.html#xplor-general"><span class="std std-ref">Xplor General</span></a></p>
-</div><br></div>
+</div>
 
 
           </div>
@@ -70,21 +95,26 @@
         <div class="sphinxsidebarwrapper">
 <h3><a href="../index.html">Table of Contents</a></h3>
 <ul class="current">
-<li class="toctree-l1"><a class="reference internal" href="user.html">User documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user.html">User tutorial</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Developer documentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="concepts_dev.html">Concepts: controlling and using filters in multiple windows</a></li>
+<li class="toctree-l2"><a class="reference internal" href="globalObjectMap.html">Global objects map</a></li>
 <li class="toctree-l2"><a class="reference internal" href="xdata.html">Data container: xdata</a></li>
 <li class="toctree-l2"><a class="reference internal" href="bank.html">The bank</a></li>
-<li class="toctree-l2"><a class="reference internal" href="objectmap.html">Object maps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="structure.html">Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html">Module xdata : defining a data structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="moduleView.html">Module view : user interface</a></li>
+<li class="toctree-l2"><a class="reference internal" href="credits.html">Credits</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="map/slicingChain.html"
-                        title="previous chapter">Slicing chain</a></p>
+  <p class="topless"><a href="concepts.html"
+                        title="previous chapter">Concepts</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="xdata.html"
-                        title="next chapter">Data container: xdata</a></p>
+  <p class="topless"><a href="concepts_dev.html"
+                        title="next chapter">Concepts: controlling and using filters in multiple windows</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -116,10 +146,10 @@
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
         <li class="right" >
-          <a href="xdata.html" title="Data container: xdata"
+          <a href="concepts_dev.html" title="Concepts: controlling and using filters in multiple windows"
              >next</a> |</li>
         <li class="right" >
-          <a href="map/slicingChain.html" title="Slicing chain"
+          <a href="concepts.html" title="Concepts"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li> 
       </ul>

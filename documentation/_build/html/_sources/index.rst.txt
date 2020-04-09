@@ -15,8 +15,10 @@ It started as a project for neuroscience at CNRS (French National Center for Sci
 
 .. image:: usage/image/presentation-example01.png
 
+Table of contents:
+
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 3
 
    usage/user
    usage/dev
