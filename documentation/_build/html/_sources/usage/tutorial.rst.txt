@@ -1,5 +1,5 @@
-Tutorial
-*************************
+Example : Temperature data
+****************************
 
 This tutorial shows the basic features of xplor.
 
