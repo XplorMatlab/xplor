@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Example : Temperature data &#8212; xplor-matlab  documentation</title>
+    <title>Tutorial &#8212; xplor-matlab  documentation</title>
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
@@ -19,7 +19,7 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Xplor General" href="map/xplorGeneral.html" />
+    <link rel="next" title="User tutorial - MLspike" href="tutorialMlspike.html" />
     <link rel="prev" title="Install from Github" href="installation.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
@@ -32,7 +32,7 @@
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
         <li class="right" >
-          <a href="map/xplorGeneral.html" title="Xplor General"
+          <a href="tutorialMlspike.html" title="User tutorial - MLspike"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="installation.html" title="Install from Github"
@@ -47,88 +47,20 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="example-temperature-data">
-<h1>Example : Temperature data<a class="headerlink" href="#example-temperature-data" title="Permalink to this headline">¶</a></h1>
-<p>This tutorial shows the basic features of xplor.</p>
-<blockquote>
-<div><a class="reference internal image-reference" href="../_images/videoTutorial.gif"><img alt="Set Path" src="../_images/videoTutorial.gif" style="width: 1200px;" /></a>
-</div></blockquote>
-<div class="section" id="loading-the-data">
-<h2>loading the data<a class="headerlink" href="#loading-the-data" title="Permalink to this headline">¶</a></h2>
-<p>The first thing to do is to load your data. Your data must be stored into a N
-dimension array.</p>
-<p>Then you can launch the toolbox with this simple line of command : xplor mydata</p>
-<p><strong>Screenshot of the command line to start xplor</strong></p>
-<blockquote>
-<div><a class="reference internal image-reference" href="../_images/callingxplor.png"><img alt="Set Path" src="../_images/callingxplor.png" style="width: 400px;" /></a>
-</div></blockquote>
-<p>The following window appears. It allows you to enter the metadata. For each
-dimension, there is a label, possibly a unit.
-The scale/value column can be filled with :</p>
-<ul class="simple">
-<li><p>nothing (the ticks of the axis will simply be numbered from 0)</p></li>
-<li><p>a list of named elements (each name will appear with a tick on the axis)</p></li>
-<li><dl class="simple">
-<dt>a start and a scale number (the ticks will be calculated from those</dt><dd><p>numbers), it corresponds to a continous dimension.</p>
-</dd>
-</dl>
+  <div class="section" id="tutorial">
+<h1>Tutorial<a class="headerlink" href="#tutorial" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="tutorialMlspike.html">User tutorial - MLspike</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorialTemperature.html">Example : Temperature data</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorialTemperature.html#loading-the-data">loading the data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorialTemperature.html#setting-the-headers">setting the headers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorialTemperature.html#create-a-new-filter">create a new filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorialTemperature.html#change-the-value-of-a-filter">Change the value of a filter</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorialTemperature.html#average-some-values">Average some values</a></li>
+</ul>
 </li>
 </ul>
-</div>
-<div class="section" id="setting-the-headers">
-<h2>setting the headers<a class="headerlink" href="#setting-the-headers" title="Permalink to this headline">¶</a></h2>
-<p><strong>Screenshot of the set headers window</strong></p>
-<blockquote>
-<div><a class="reference internal image-reference" href="../_images/setheaders.png"><img alt="Set Path" src="../_images/setheaders.png" style="width: 600px;" /></a>
-</div></blockquote>
-<p>Some filters may be automatically applied.
-This will reduce the size of the data, which will then be displayed properly.</p>
-<p><strong>Screenshot of the initial display</strong></p>
-<blockquote>
-<div><a class="reference internal image-reference" href="../_images/initialdisplay.png"><img alt="Set Path" src="../_images/initialdisplay.png" style="width: 600px;" /></a>
-</div></blockquote>
-</div>
-<div class="section" id="create-a-new-filter">
-<h2>create a new filter<a class="headerlink" href="#create-a-new-filter" title="Permalink to this headline">¶</a></h2>
-<p>To create a filter, right click on the name of the dimension you wish to
-filter in the left part of the window. A menu will appear. Click on Filter with share 1D filter.</p>
-<p>Each time a filter is created, a list of all the elements of the dimension
-(what appears on the axis) appears in the Shared Filters window.
-This window allows you to choose what elements to display on the graph
-(see next paragraphs).
-All the filters also appear on the main window in purple. It informs you of the
-order in which the filters are applied, and allows you to change it as well as
-locally deactivate a filter by clicking on it.</p>
-<p><strong>Screenshot of the creation of filters</strong></p>
-<blockquote>
-<div><a class="reference internal image-reference" href="../_images/filtercreation.png"><img alt="Set Path" src="../_images/filtercreation.png" style="width: 800px;" /></a>
-</div></blockquote>
-<p>In the shared filter window, you can select for each filtered dimension the
-values that will be displayed.</p>
-<p>For instance, in the previous screenshot we had the unemployment rate for
-females aged between 15 and 19 years old.</p>
-<p>By clicking on F and M in the sex column and Y15-39 and Y40-64 in the age
-column, one can easily compare the trends as seen in the next display.</p>
-</div>
-<div class="section" id="change-the-value-of-a-filter">
-<h2>Change the value of a filter<a class="headerlink" href="#change-the-value-of-a-filter" title="Permalink to this headline">¶</a></h2>
-<p><strong>Screenshot of a comparative display</strong></p>
-<blockquote>
-<div><a class="reference internal image-reference" href="../_images/comparison.png"><img alt="Set Path" src="../_images/comparison.png" style="width: 600px;" /></a>
-</div></blockquote>
-<p>If you which to display the same imformation differently, you can drag the
-labels. On the next screenshot, “sex” is not on the same axis as before.</p>
-</div>
-<div class="section" id="average-some-values">
-<h2>Average some values<a class="headerlink" href="#average-some-values" title="Permalink to this headline">¶</a></h2>
-<p><strong>Screenshot of an average</strong></p>
-<blockquote>
-<div><a class="reference internal image-reference" href="../_images/average.png"><img alt="Set Path" src="../_images/average.png" style="width: 600px;" /></a>
-</div></blockquote>
-<p>To make an average, as on the previous screenshot, select the values you want
-to average. Right click on it and a menu will appear. Click on “new group
-selection”. The values are now grouped, you can then compare them to another
-single selection or another group selection.</p>
 </div>
 </div>
 
@@ -142,9 +74,14 @@ single selection or another group selection.</p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="user.html">User tutorial</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="installation.html">Install from Github</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">Example : Temperature data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="map/xplorGeneral.html">Xplor General</a></li>
-<li class="toctree-l2"><a class="reference internal" href="map/slicingChain.html">Slicing chain</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Tutorial</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tutorialMlspike.html">User tutorial - MLspike</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorialTemperature.html">Example : Temperature data</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="tutorialMlspike.html">User tutorial - MLspike</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="concepts.html">Concepts</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="dev.html">Developer documentation</a></li>
@@ -154,8 +91,8 @@ single selection or another group selection.</p>
   <p class="topless"><a href="installation.html"
                         title="previous chapter">Install from Github</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="map/xplorGeneral.html"
-                        title="next chapter">Xplor General</a></p>
+  <p class="topless"><a href="tutorialMlspike.html"
+                        title="next chapter">User tutorial - MLspike</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -187,7 +124,7 @@ single selection or another group selection.</p>
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
         <li class="right" >
-          <a href="map/xplorGeneral.html" title="Xplor General"
+          <a href="tutorialMlspike.html" title="User tutorial - MLspike"
              >next</a> |</li>
         <li class="right" >
           <a href="installation.html" title="Install from Github"

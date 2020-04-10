@@ -6,5 +6,6 @@ User tutorial
 
    installation
    tutorial
+   tutorialMlspike
    overview
    concepts
