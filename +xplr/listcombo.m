@@ -80,9 +80,9 @@ classdef listcombo < hgsetget
         end
         function showList(C,filter)
             % add filter list, only if not already present
-            hID = getID(filter.headerin);
-            for idx = 1:length(C.filters)
-                if isequal(hID,getID(C.filters(idx).headerin)), return, end
+            if fn_find(filter, C.filters)
+                % filter is already shown
+                return
             end
             addList(C,filter)
         end

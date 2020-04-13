@@ -1,4 +1,4 @@
-classdef view < hgsetget
+classdef view < xplr.graphnode
     % Main window
     %
     
@@ -56,10 +56,13 @@ classdef view < hgsetget
             end            
             
             % DISPLAY
-            V.D = xplr.viewdisplay(V);
+            % (note: calling addComponent will cause V.D to be deleted when
+            % V will be deleted and vice-versa; the output of addComponent
+            % is simply its input)
+            V.D = V.addComponent(xplr.viewdisplay(V));
             
             % CONTROL
-            V.C = xplr.viewcontrol(V);
+            V.C = V.addComponent(xplr.viewcontrol(V));
             
             % save object in base workspace
             assignin('base','V',V)

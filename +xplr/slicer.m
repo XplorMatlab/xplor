@@ -532,14 +532,7 @@ classdef slicer < xplr.graphnode
         end
         function filterchange(S,F,dimID,e)
             if ~strcmp(e.type,'filter'), return, end
-            flag = e.flag;
-            if strcmp(flag,'point')
-                flag = 'chg'; 
-                ind = 1; 
-            else
-                ind = e.ind;
-            end
-            doslice(S,'filter',flag,dimID,ind,F)
+            doslice(S,'filter',e.flag,dimID,e.ind,F)
         end
         function reslice(S)
             S.slicingchain(:) = [];

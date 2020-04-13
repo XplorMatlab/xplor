@@ -1,8 +1,9 @@
-Install via Github
+Install from Github
 *********************
 xplor needs a few components available on Github:
 
-#. Download the sources
+Download the sources
+------------------------
 
 	* Download `brick`_
 
@@ -16,7 +17,8 @@ xplor needs a few components available on Github:
 	
 	.. _xplor-Matlab-: https://github.com/thomasdeneux/xplor-Matlab-
 
-#. Configure Matlab
+Configure Matlab
+-----------------
 
 	Add those downloaded folders to your paths:
 
@@ -24,7 +26,8 @@ xplor needs a few components available on Github:
 	  :width: 400
 	  :alt: Set Path
 
-#. Try
+Try
+----
 
 	Try to start xplor by typing:
 

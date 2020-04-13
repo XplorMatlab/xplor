@@ -1,4 +1,5 @@
 
+disp 'Load coronavirus data from opendata.ecdc.europa.eu'
 % url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
 url = 'https://opendata.ecdc.europa.eu/covid19/casedistribution/csv';
 file = fullfile(fileparts(which('xplor')),'demo','coronavirus.csv');
@@ -7,6 +8,7 @@ data = readtable(file);
 
 %% Header information
 
+disp 'Process data'
 % Dates
 dates = data(:,1); % first column
 dates = table2array(dates); % convert to datetime class
@@ -26,7 +28,7 @@ newcasesanddeaths = table2array(data(:,[5 6]));
 
 % make a 3D array out of the Excel table
 data3d = zeros(nday, ncountry, 2);
-for i = 1:size(data_per_row,1)
+for i = 1:size(data,1)
     data3d(dates(i)+1, idxrow2country(i), :) = newcasesanddeaths(i,:);
 end
 
@@ -46,6 +48,7 @@ folder = fullfile(fileparts(which('xplor')),'demo');
 worldmapfile = fullfile(folder,'worldmap.shp');
 if ~exist(worldmapfile,'file')
     %% ()
+    disp 'Get world map from thematicmapping.org'
     % see https://thematicmapping.org/downloads/world_borders.php
     url = 'https://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip';
     files = unzip(url, folder);
@@ -146,6 +149,7 @@ data3d(:, unfound, :) = [];
 
 %% Make movie!!
 
+disp 'Make movie from countries data'
 data4d = NaN(nday, nx*ny, ndata);
 population = NaN(nx,ny);
 for i = 1:ncountry
@@ -157,5 +161,6 @@ data4d = reshape(data4d, [nday nx ny ndata]);
 
 %% Save data
 
+disp 'Save'
 cd(folder)
 save coronavirus dates nday countries ncountry datanames ndata data3d data4d pop population

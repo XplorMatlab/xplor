@@ -47,7 +47,7 @@ classdef colormaptool < xplr.graphnode
             % Control visibility depending on dislay mode
             set(C.menu,'visible',fn_switch(D.displaymode,'image','on','off'));
             connectlistener(D,C,'displaymode','PostSet', ...
-                @(u,e)set(C.menu,'enable',fn_switch(D.displaymode,'image','on','off')));
+                @(u,e)set(C.menu,'visible',fn_switch(D.displaymode,'image','on','off')));
         end
     end
     

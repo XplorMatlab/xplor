@@ -18,7 +18,10 @@ classdef displaynavigation < xplr.graphnode
         selectiondisplay        % displays of selectionnd
         selectionsavefile       % name of file for saving current selection
     end
-    properties (SetObservable)
+    properties (SetObservable, AbortSet=true)
+        showcross = true;
+        crosscolor = [0 0 0];
+        crossalpha = .5;
         selectiondimID          % dimensions to which these selections apply, identified by its id
         selection2Dshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selectionround1Dmeasure = true; 
@@ -211,8 +214,9 @@ classdef displaynavigation < xplr.graphnode
                             % determine in which dimension to zoom as the most
                             % exterior dimension(s) where at least 2
                             % elements are selected
+                            zijk = N.graph.graph2zslice(rect);
                             ijk = N.graph.graph2slice(rect);
-                            nonsingleton = logical(diff(round(ijk),1,2)); % nd*1 vector
+                            nonsingleton = logical(diff(round(zijk),1,2)); % nd*1 vector
                             org = N.D.layout;
                             xydim = [org.xy org.yx];
                             if nonsingleton(xydim)
@@ -318,8 +322,8 @@ classdef displaynavigation < xplr.graphnode
             % cross
             N.cross(1) = line('Parent',N.D.ha,'ydata',[-.5 .5]);
             N.cross(2) = line('Parent',N.D.ha,'xdata',[-.5 .5]);
-            N.cross(3) = line('Parent',N.D.ha,'xdata',0,'ydata',0,'marker','.','linestyle','none'); % a single point
-            set(N.cross,'Color','k')
+            N.cross(3) = line('Parent',N.D.ha,'xdata',[0 0],'ydata',[0 0]); % a single point
+            set(N.cross,'Color',[N.crosscolor N.crossalpha]) % cross is semi-transparent!
             
             % position
             N.crossCenter = [0 0];
@@ -330,14 +334,21 @@ classdef displaynavigation < xplr.graphnode
             end
         end
         function set.crossCenter(N, crossCenter)
-            % set the property
-          
+
+            % re-display cross if it was deleted (happens upon
+            % D.resetDisplay)
+            if ~all(isvalid(N.cross))
+                deleteValid(N.cross)
+                N.displaycross()
+            end
+            
+            % set property
             N.crossCenter = crossCenter;
 
             % move the cross
             set(N.cross(1),'XData',crossCenter([1 1]))
             set(N.cross(2),'YData',crossCenter([2 2]))
-            set(N.cross(3),'XData',crossCenter(1),'YData',crossCenter(2))
+            set(N.cross(3),'XData',crossCenter([1 1]),'YData',crossCenter([2 2]))
 
         end
         function manualmovecross(N,il)
@@ -434,15 +445,19 @@ classdef displaynavigation < xplr.graphnode
             delete(N.cross)
         end      
         function update_cross_visibility(N)
-            
-            layout = N.D.layout;
-            
+            % do not show cross?
+            if ~N.showcross
+                set(N.cross,'Visible','off')
+                return
+            end           
+                        
             % dims that are out of display
             ijk = getPointIndexPosition(N);
             dimOutOfDisplay = N.isIndexOutOfDisplay(ijk,true);
            
             % Hide the vertical bar if all dimensions on x are singletons or if
             % crossCenter is out of display on any dimension on x
+            layout = N.D.layout;
             xdim = [layout.x layout.xy layout.yx];
             x_singleton = isempty(xdim);
             x_isOutOfDisplay = any(dimOutOfDisplay(xdim));
@@ -476,6 +491,21 @@ classdef displaynavigation < xplr.graphnode
             
             set(N.crossDataValue,'String',num2str(value,'%.3g'))
             disp("Cross value updated");
+        end
+        % cross color, transparency, and global visibility
+        function set.showcross(N,value)
+            N.showcross = value;
+            N.update_cross_visibility()
+        end
+        function set.crosscolor(N,color)
+            color = fn_colorbyname(color);
+            if isempty(color), error 'wrong color', end
+            N.crosscolor = color;
+            set(N.cross,'color',[N.crosscolor N.crossalpha])
+        end
+        function set.crossalpha(N,alpha)
+            N.crossalpha = alpha;
+            set(N.cross,'color',[N.crosscolor N.crossalpha])
         end
     end
     
@@ -822,6 +852,13 @@ classdef displaynavigation < xplr.graphnode
             % flags: what kind of update
             [flagnew, flagpos, flagname, flagedit] = ...
                 fn_flags('new','pos','name','edit',flag);
+            
+            % was selection display deleted (this occur upon
+            % D.resetDisplay call)
+            if ~all(ishandle(N.selectiondisplay{k}))
+                deleteValid(N.selectiondisplay{k})
+                flagnew = true;
+            end
 
             %selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
             %selij = selectionmarks(k);
@@ -853,21 +890,21 @@ classdef displaynavigation < xplr.graphnode
                 %if strfind(D.selshow,'number')
                 if true
                     hl(end+1) = text(center(1),center(2),name, ...
-                        'Parent',N.D.ha,'color','w','visible',visible, ...
+                        'Parent',N.D.ha,'color',[1 1 1]*.8,'visible',visible, ...
                         'horizontalalignment','center','verticalalignment','middle', ...
-                        'color','w');
+                        'hittest','off');
                     %'color',fn_switch(k==D.currentselection,'r','w'));
                 end
                 %if strfind(D.selshow,'shape')
                 if true
                     hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
-                        'Color',col, ...
+                        'hittest','off','Color',col, ...
                         'UserData',k); % set user data because this line will be used when in seledit mode
                 end
                 %if strfind(D.selshow,'cross')
                 if false
                     hl(end+1) = line(center(1),center(2),'Parent',N.D.ha, ...
-                        'Color',col,'LineStyle','none', ...
+                        'hittest','off','Color',col,'LineStyle','none', ...
                         'Marker','+','MarkerSize',4);
                 end
                 set(hl,'tag','ActDispIm_Sel','HitTest','off')
