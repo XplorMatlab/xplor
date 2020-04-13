@@ -7,6 +7,7 @@ classdef displaynavigation < xplr.graphnode
         hf = gobjects
         graph
         crossCenter
+        crossDataValue                          % data value at cross position
         cross = gobjects                        % display cross selector
         sliders = struct('x',[],'y',[]);        % slider objects
         zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
@@ -48,6 +49,9 @@ classdef displaynavigation < xplr.graphnode
             
             % sliders
             init_sliders(N)
+            
+            % data value display
+            init_value_display(N)
             
             % connect sliders to the active dimensions of the display
             % (note that this is in fact redundant with call in
@@ -96,6 +100,11 @@ classdef displaynavigation < xplr.graphnode
                 'backgroundcolor',pcol*.75,'slidercolor',pcol*.95)
             fn_controlpositions(N.sliders.x,N.ha,[0 1 1 0], [0 0 0 12]);
             fn_controlpositions(N.sliders.y,N.ha,[1 0 0 1], [0 0 12 -48]);
+        end
+        function init_value_display(N)
+            N.crossDataValue = uicontrol('Parent',N.D.hp,'style','text','enable','inactive', ...
+                'fontsize',8,'horizontalalignment','right');
+            fn_controlpositions(N.crossDataValue,N.D.hp,[1 0],[-75 10 65 15])
         end
     end
     
@@ -447,11 +456,26 @@ classdef displaynavigation < xplr.graphnode
             
             % Cross center
             updateCrossCenterVisibility(N);
+            
+            % Cross Value
+            updateValueDisplay(N);
         end
         function updateCrossCenterVisibility(N)
             %  if one of the dimension of the cross is hidden, hide the
             % cross center as well
             N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
+        end
+        function updateValueDisplay(N)
+            ijk = getPointIndexPosition(N);
+            idx = fn_indices(N.D.slice.sz, round(ijk));
+            value = N.D.slice.data(idx);
+            
+            % Test to display the value as "val(d1,d2,d3,...)=value"
+            %set(N.crossDataValue,'String',['val(' num2str(ijk(1),'%.3g') ',' num2str(ijk(2),'%.3g') ')=' ...
+            %            num2str(value,'%.3g')])
+            
+            set(N.crossDataValue,'String',num2str(value,'%.3g'))
+            disp("Cross value updated");
         end
     end
     
