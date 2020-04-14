@@ -620,8 +620,8 @@ classdef displaynavigation < xplr.graphnode
             else
                 nextsep = 'on';
             end
-            fn_propcontrol(N,'selectionadvanced','menu', ...
-                {'parent',m,'label','Advanced selection','separator',nextsep});
+            %             fn_propcontrol(N,'selectionadvanced','menu', ...
+            %                 {'parent',m,'label','Advanced selection','separator',nextsep});
             fn_propcontrol(N,'selectionpromptname','menu', ...
                 {'parent',m,'label','Prompt for name of new selections'});
 
