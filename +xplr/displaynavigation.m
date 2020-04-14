@@ -17,6 +17,7 @@ classdef displaynavigation < xplr.graphnode
         selectionfilter         % filter being modified by the selections
         selectiondisplay        % displays of selectionnd
         selectionsavefile       % name of file for saving current selection
+        selection_context       
     end
     properties (SetObservable, AbortSet=true)
         showcross = true;
@@ -61,8 +62,8 @@ classdef displaynavigation < xplr.graphnode
             % viewdisplay.slicechange when viewdisplay object is created)
             connectZoomFilter(N)
 
-            % mouse actions
-            set(D.ha,'buttondownfcn',@(u,e)Mouse(N))
+            % axes_click actions
+            set(D.ha,'buttondownfcn',@(u,e)axes_click(N))
 
             % scroll wheel zooming
             fn_scrollwheelregister(D.ha,@(n)N.Scroll(n))
@@ -74,9 +75,9 @@ classdef displaynavigation < xplr.graphnode
         % function init_buttons(N)
         % 3 buttons that control clipping
             
-            % first button to adjust clipping with mouse movements:
+            % first button to adjust clipping with axes_click movements:
             % display image on it indicating how image luminance and
-            % contrast change upon mouse movements
+            % contrast change upon axes_click movements
             [ii jj] = meshgrid(-13:0,13:-1:0); x=(0-ii)./(jj-ii)-.5; x(end)=0;
             u = uicontrol('parent',N.D.hp, ...
                 'enable','inactive','cdata',fn_clip(sin(pi*x),[-1 1],'gray'), ...
@@ -188,16 +189,20 @@ classdef displaynavigation < xplr.graphnode
         end
     end
     
-    % Mouse actions
+    % axes_click actions
     methods
-        function Mouse(N, flag)
-            % function Mouse(N [,'pointonly'])
+        function axes_click(N, flag)
+            % function axes_click(N)
+            % function axes_click(N, 'pointonly')
             %---
-            % 'pointonly' flag is set when we have already clicked and
-            % released the mouse button (for example because we clicked on
-            % the cross): in this case do not start drag zooming or
-            % ROI selection
-            pointonly = (nargin==2 && strcmp(flag,'pointonly'));
+            % Options:
+            % - 'pointonly' set this flag when we have already clicked
+            %               and released the axes_click button (for example
+            %               because we clicked on the cross): in this case
+            %               do not start drag zooming or ROI selection
+            
+            if nargin<2, flag = ''; end
+            pointonly = strcmp(flag,'pointonly');
             point =  get(N.D.ha,'CurrentPoint'); point = point(1,[1 2])';
             activedim = [N.D.activedim.x N.D.activedim.y];
             switch get(N.hf,'SelectionType')
@@ -354,7 +359,7 @@ classdef displaynavigation < xplr.graphnode
         function manualmovecross(N,il)
             if ~ismember(get(N.hf,'selectiontype'),{'normal' 'open'})
                 % not a left click: execute callback for axes
-                Mouse(N)
+                axes_click(N)
                 return
             end
             set(N.hf,'pointer',fn_switch(il,1,'left',2,'top',3,'cross'))
@@ -382,7 +387,7 @@ classdef displaynavigation < xplr.graphnode
             end
             if ~anymove
                 % execute callback for axes
-                Mouse(N, 'pointonly')
+                axes_click(N, 'pointonly')
                 return
             end
             
@@ -521,10 +526,32 @@ classdef displaynavigation < xplr.graphnode
             layout = N.D.layout;
 
             % Set selection dimension
-            % (info)
+            % (no active control? -> propose selection in the 'internal' dimensions)
+            if isempty(N.selectiondimID) && ~isempty([layout.x layout.y])
+                if ~isempty(layout.x) && (strcmp(N.D.displaymode,'time courses') || isempty(layout.y)) 
+                    % time courses (or image without y dimension) -> 1D selection
+                    propdim = layout.x(1);
+                elseif strcmp(N.D.displaymode,'image') && isempty(layout.x)
+                    % image but no x dimension -> 1D vertical selection
+                    propdim = layout.y(1);
+                else
+                    % image -> 2D selection
+                    propdim = [layout.x(1) layout.y(1)];
+                end
+                proplabels = {header(propdim).label};
+                if isscalar(propdim)
+                    itemlabel = ['Control selection in dimension ' proplabels{1}];
+                else
+                    itemlabel = ['Control selection in dimensions ' fn_strcat(proplabels,',')];
+                end
+                propdimID = [header(propdim).dimID];
+                uimenu(m,'label',itemlabel, ...
+                    'callback',@(u,e)set(N,'selectiondimID',propdimID))
+            end
+            % (sub-menu with other possible dimensions)
             switch length(N.selectiondimID)
                 case 0
-                    info = 'Control selection in dimension: (none)';
+                    info = 'Control selection in dimension...';
                 case 1
                     info = ['Control selection in dimension: ' sellabels{1}];
                 case 2
@@ -532,6 +559,7 @@ classdef displaynavigation < xplr.graphnode
                 otherwise
                     error 'programming: selection control in more than 2 dimensions'
             end
+            % (submenu for other possibilities)
             m2 = uimenu(m,'label',info);
             % (1D: dimension location must be x, y or xy)
             dimok = sort([layout.x layout.y layout.xy]);
@@ -592,10 +620,10 @@ classdef displaynavigation < xplr.graphnode
             else
                 nextsep = 'on';
             end
-            %             fn_propcontrol(N,'selectionadvanced','menu', ...
-            %                 {'parent',m,'label','Advanced selection','separator',nextsep});
+            fn_propcontrol(N,'selectionadvanced','menu', ...
+                {'parent',m,'label','Advanced selection','separator',nextsep});
             fn_propcontrol(N,'selectionpromptname','menu', ...
-                {'parent',m,'label','Prompt for name of new selections','separator',nextsep});
+                {'parent',m,'label','Prompt for name of new selections'});
 
             % Load/save selections
             uimenu(m,'label','Load...','separator','on', ...
@@ -605,7 +633,17 @@ classdef displaynavigation < xplr.graphnode
             uimenu(m,'label','Save as...', ...
                 'callback',@(u,e)N.selectionsave())
         end
-        function selectionMouse(N)
+        function selectionMouse(N, pointaction)
+            % function selectionMouse(N, [pointaction])
+            %---
+            % 'pointaction' argument is a function handle that sets a
+            % specific function to execute when drag action occurs to stay
+            % on a point: this is used to raise a context menu when
+            % right-clicking on a selection
+            
+            % input 
+            if nargin<2, pointaction = []; end
+            
             seldim = N.selectiondim;
             selnd = length(seldim);
 
@@ -647,7 +685,11 @@ classdef displaynavigation < xplr.graphnode
 
                 % create selection in slice indices coordinates
                 sz = N.D.slice.sz(seldim); % size of data in the dimension where selection is made
-                if N.D.slice.header(seldim).categorical
+                if diff(polyslice)==0 && ~isempty(pointaction)
+                    % mouse dragging did not move (i.e. only a point was
+                    % selected) -> execute specific action
+                    pointaction()
+                elseif N.D.slice.header(seldim).categorical
                     selslice = xplr.selectionnd('indices',round(polyslice(1)):round(polyslice(2)),sz);
                 elseif diff(polyslice)==0
                     selslice = xplr.selectionnd('point1D',polyslice(1));
@@ -670,8 +712,18 @@ classdef displaynavigation < xplr.graphnode
 
                 % create selection in graph coordinates
                 selax = xplr.selectionnd(seltype,polyax);
-                selax.checkpoint(.005) % if selection is too small, convert it to a single point
-
+                if selax.ispoint(.005)
+                    % selection is too small
+                    if ~isempty(pointaction)
+                        % execute 'point action'
+                        pointaction()
+                        return
+                    else
+                        % convert it to a single point
+                        selax.checkpoint(.005)
+                    end
+                end
+                
                 % convert to slice coordinates
                 selslice = N.graph.selection2slice(seldim,selax);
             end
@@ -887,19 +939,19 @@ classdef displaynavigation < xplr.graphnode
             if flagnew
                 
                 hl = [];
+                %if strfind(D.selshow,'shape')
+                if true
+                    hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
+                        'Color',col, ...
+                        'buttondownfcn',@(u,e)N.selection_clicked(u));
+                end
                 %if strfind(D.selshow,'number')
                 if true
                     hl(end+1) = text(center(1),center(2),name, ...
                         'Parent',N.D.ha,'color',col,'visible',visible, ...
                         'horizontalalignment','center','verticalalignment','middle', ...
-                        'hittest','off');
+                        'buttondownfcn',@(u,e)N.selection_clicked(hl(1)));
                     %'color',fn_switch(k==D.currentselection,'r','w'));
-                end
-                %if strfind(D.selshow,'shape')
-                if true
-                    hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
-                        'hittest','off','Color',col, ...
-                        'UserData',k); % set user data because this line will be used when in seledit mode
                 end
                 %if strfind(D.selshow,'cross')
                 if false
@@ -907,7 +959,6 @@ classdef displaynavigation < xplr.graphnode
                         'hittest','off','Color',col,'LineStyle','none', ...
                         'Marker','+','MarkerSize',4);
                 end
-                set(hl,'tag','ActDispIm_Sel','HitTest','off')
                 
                 if k <= length(N.selectiondisplay)
                     if isgraphics(N.selectiondisplay{k})
@@ -915,9 +966,7 @@ classdef displaynavigation < xplr.graphnode
                     end
                 end
                 
-                 N.selectiondisplay{k} = hl;
-
-                
+                N.selectiondisplay{k} = hl;               
                 
             else
                 hl = N.selectiondisplay{k};
@@ -925,9 +974,9 @@ classdef displaynavigation < xplr.graphnode
 %                 if strfind(D.selshow,'number'), ht=hl(i); i=i+1; end
 %                 if strfind(D.selshow,'shape'),  hs=hl(i); i=i+1; end
 %                 if strfind(D.selshow,'cross'),  hc=hl(i); i=i+1; end
+                if true, hs=hl(i); i=i+1; end
                 if true, ht=hl(i); i=i+1; end
-                if true,  hs=hl(i); i=i+1; end
-                if false,  hc=hl(i); i=i+1; end
+                if false, hc=hl(i); i=i+1; end
                 he = hl(i:end);
                 if flagpos
                     set(ht,'position',center)
@@ -978,8 +1027,50 @@ classdef displaynavigation < xplr.graphnode
             %                 end
             %             end
         end
-        function deletedisplayonesel(N,k)
-            delete(N.selectiondisplay{k});
+        function selection_clicked(N,u)
+            % click on selection u: execute normal axes callback, but if
+            % - mouse button was a right click
+            % - and user did not drag the mouse to make a new selection
+            % then raise a context menu for specific actions on this selection
+            if strcmp(get(N.D.V.hf,'SelectionType'),'alt')
+                % first get index of the selected selection
+                idx = fn_find(@(hl)eq(hl(1),u),N.selectiondisplay,'first');
+                % perform a regular new selection, but if mouse did not
+                % move, show the context menu instead of creating a point
+                % selection
+                pointaction = @()N.selection_context_menu(idx);
+                N.selectionMouse(pointaction)
+            else
+                N.axes_click()
+            end
+        end
+        function selection_context_menu(N,idx)
+            % init context menu
+            if isempty(N.selection_context)
+                % create context menu for the first time
+                N.selection_context = uicontextmenu(N.D.V.hf);
+            end
+            m = N.selection_context;
+            delete(get(m,'children'))
+            
+            % remove selection
+            uimenu(m,'label','remove selection', ...
+                'callback',@(u,e)N.selectionfilter.updateSelection('remove',idx))
+            
+            % change selection number
+            nsel = N.selectionfilter.nsel;
+            if idx ~= 1
+                uimenu(m,'label','make this selection first', ...
+                    'callback',@(u,e)N.selectionfilter.updateSelection('perm',[idx setdiff(1:nsel,idx)]))
+            end
+            if idx ~= nsel
+                uimenu(m,'label','make this selection last', ...
+                    'callback',@(u,e)N.selectionfilter.updateSelection('perm',[setdiff(1:nsel,idx) idx]))
+            end
+            
+            % make menu visible
+            p = get(N.D.V.hf,'currentpoint'); p = p(1,1:2);
+            set(m,'Position',p,'Visible','on')
         end
         function output = visiblePolygon(N,points,selectionDimension)
                     % visiblePolygon(N, points);

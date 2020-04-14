@@ -334,7 +334,7 @@ classdef filter < xplr.dataOperand
                     WO.operation(ind) = value;
                 case 'remove'
                     WO.operation(ind) = [];
-                case 'permute'
+                case 'perm'
                     WO.operation = WO.operation(ind);
                 case 'chg&new'
                     WO.operation([ind{:}]) = value;
