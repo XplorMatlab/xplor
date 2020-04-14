@@ -55,7 +55,7 @@ classdef displaynavigation < xplr.graphnode
             
             % data value display
             init_value_display(N)
-            
+
             % connect sliders to the active dimensions of the display
             % (note that this is in fact redundant with call in
             % viewdisplay.slicechange when viewdisplay object is created)
@@ -471,7 +471,7 @@ classdef displaynavigation < xplr.graphnode
             
             % Cross center
             updateCrossCenterVisibility(N);
-            
+
             % Cross Value
             updateValueDisplay(N);
         end
@@ -484,11 +484,11 @@ classdef displaynavigation < xplr.graphnode
             ijk = getPointIndexPosition(N);
             idx = fn_indices(N.D.slice.sz, round(ijk));
             value = N.D.slice.data(idx);
-            
+
             % Test to display the value as "val(d1,d2,d3,...)=value"
             %set(N.crossDataValue,'String',['val(' num2str(ijk(1),'%.3g') ',' num2str(ijk(2),'%.3g') ')=' ...
             %            num2str(value,'%.3g')])
-            
+
             set(N.crossDataValue,'String',num2str(value,'%.3g'))
             disp("Cross value updated");
         end
@@ -890,7 +890,7 @@ classdef displaynavigation < xplr.graphnode
                 %if strfind(D.selshow,'number')
                 if true
                     hl(end+1) = text(center(1),center(2),name, ...
-                        'Parent',N.D.ha,'color',[1 1 1]*.8,'visible',visible, ...
+                        'Parent',N.D.ha,'color',col,'visible',visible, ...
                         'horizontalalignment','center','verticalalignment','middle', ...
                         'hittest','off');
                     %'color',fn_switch(k==D.currentselection,'r','w'));

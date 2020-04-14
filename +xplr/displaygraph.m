@@ -271,17 +271,14 @@ classdef displaygraph < xplr.graphnode
             tests = [1 2 5 10];
             [~, idx] = min(abs(mod(t10,1)-log10(tests)));
             step = sign(targetstep) * 10^floor(t10) * tests(idx);
-            t10 = log10(abs(targetstep/4));
-            tests = [1 2.5 5 10];
-            [~, idx] = min(abs(mod(t10,1)-log10(tests)));
-            substep = sign(targetstep) * 10^floor(t10) * tests(idx);
+            substep = step/2;
             % tick values for all substeps
             tickvalues = substep * (ceil(valuestart/substep):floor(valuestop/substep)); % data coordinates
             % tick labels only for steps
             ntick = length(tickvalues);
             ticklabels = cell(1,ntick);
-            idxlabel = 1:round(step/substep):ntick;
-            ticklabels(idxlabel) = fn_num2str(tickvalues(idxlabel),'cell');
+            dolabel = (mod(tickvalues,step)==0);
+            ticklabels(dolabel) = fn_num2str(tickvalues(dolabel),'cell');
         end
     end
     methods
@@ -361,7 +358,6 @@ classdef displaygraph < xplr.graphnode
                     targetstep = targetspacing / abs(f_step) * scale;
                     % tick values
                     [ticksdata, ticklabels] = G.nicevalues(start,stop,targetstep);
-                    if f=='y', ticksdata = fliplr(ticksdata); end % make it ascending order
                     ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
                     % tick labels
                 else
@@ -406,10 +402,6 @@ classdef displaygraph < xplr.graphnode
                         end
                         ticksidx = []; ticklabels = {};
                     end
-                    if f=='y'
-                        ticksidx = fliplr(ticksidx); 
-                        ticklabels = fliplr(ticklabels);
-                    end
                 end
                 tick = f_off + ticksidx*f_step;
                 
@@ -417,7 +409,7 @@ classdef displaygraph < xplr.graphnode
                 if strcmp(f,'x')
                     set(G.ha,'xtick',tick,'xticklabel',ticklabels)
                 else
-                    set(G.ha,'ytick',tick,'yticklabel',ticklabels)
+                    set(G.ha,'ytick',fliplr(tick),'yticklabel',fliplr(ticklabels))
                 end
             end
             
@@ -514,7 +506,7 @@ classdef displaygraph < xplr.graphnode
                 [nxycol, nxyrow] = deal(1);
             end
             ny = prod(sz(org.y));
-            [ytick, yticklabels] = deal(cell([ny nxyrow]));
+            [ytick, ytickvalues, yticklabels] = deal(cell([ny nxyrow]));
             for krow = 1:nxyrow
                 for ky = 1:ny
                     % middle of the ticks
@@ -528,6 +520,7 @@ classdef displaygraph < xplr.graphnode
                     [tickvalues, ticklabels] = G.nicevalues(valuestart, valuestart+valueextent, targetstep);
                     yscale = st.yavailable / valueextent;
                     valuemiddle = valuestart + valueextent/2;
+                    ytickvalues{ky,krow} = tickvalues;
                     ytick{ky,krow} = yoffset + (tickvalues-valuemiddle)*yscale;
                     yticklabels{ky,krow} = ticklabels;
                 end
@@ -535,11 +528,12 @@ classdef displaygraph < xplr.graphnode
             % yoffset are descending, so read ytick in reverse order to
             % have only increasing values
             ytick = [ytick{end:-1:1}];
+            ytickvalues = [ytickvalues{end:-1:1}];
             yticklabel = [yticklabels{end:-1:1}];
             if ~samecliprow
                 % indicate that values are relative to mean
                 [yticklabel{ytickvalues==0}] = deal('(mean)');
-                idxp = (ytickvalues>0);
+                idxp = (ytickvalues>0 & ~fn_isemptyc(yticklabel));
                 yticklabel(idxp) = fn_map(@(str)['+' str],yticklabel(idxp),'cell');
             end
             

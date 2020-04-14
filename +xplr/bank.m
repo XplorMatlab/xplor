@@ -31,9 +31,7 @@ classdef bank < handle
     end
     methods (Static)
         function B = getbank()
-        % Unique filter bank is attached to the root graphic object.
-        % This is preferrable to using a global variable that might be
-        % deleted with the 'clear' command.
+            % Unique bank object is stored in a persistent variable.
             persistent B0
             if isempty(B0)
                 B0 = xplr.bank();
@@ -55,7 +53,7 @@ classdef bank < handle
     methods (Access='private')
         function loadprop(B,prop)
             % loadprop
-            fsave = fn_userconfig('configfolder','xplr.bank');
+            fsave = fn_userconfig('configfolder','xplor_bank');
             warning('off','MATLAB:load:variableNotFound')
             try %#ok<TRYNC>
                 B.(prop) = fn_loadvar(fsave,prop);
@@ -63,8 +61,8 @@ classdef bank < handle
             warning('on','MATLAB:load:variableNotFound')
         end
         function saveprop(B,prop)
-            fsave = fn_userconfig('configfolder','xplr.bank');
-            s = struct(prop,B.(prop)); %#ok<NASGU>
+            fsave = fn_userconfig('configfolder','xplor_bank');
+            s = struct(prop,{B.(prop)});
             if exist(fsave,'file')
                 save(fsave,'-STRUCT','s','-APPEND');
             else
