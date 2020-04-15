@@ -7,7 +7,7 @@
 
 %% Base file and url folders
 
-base_folder = fullfile('D:','Downloads','Travail','Recherche dataset','NASA_NEO');
+base_folder = fullfile(fileparts(which('xplor')),'demo','nasa_neo');
 fn_mkdir(base_folder);
 base_url = 'https://neo.sci.gsfc.nasa.gov/archive/geotiff.float/';
 

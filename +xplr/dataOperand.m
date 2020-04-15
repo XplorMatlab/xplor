@@ -106,7 +106,7 @@ classdef dataOperand < xplr.graphnode
             dimIDout = O.getdimIDout(dimIDs);
             head = data.header;
             head(dims) = [];
-            head = [head(1:dims(1)-1) xplr.dimheader(O.headerout,dimIDout) head(dims(1):end)];
+            head = [head(1:min(dims)-1) xplr.dimheader(O.headerout,dimIDout) head(min(dims):end)];
             % build output xdata object
             data = xplr.xdata(dat,head);
         end

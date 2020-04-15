@@ -37,8 +37,8 @@ classdef viewdisplay < xplr.graphnode
         linealpha = 1; % lines have a small degree of transparency!
     end    
     properties (SetAccess='private')
-        layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayout
-        layoutIDall                        % remembers position of all dimension ID encountered so far (i.e. even if not present in the current data)
+        layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayoutID
+        layoutIDall                           % layout, including singleton dimensions; set with function setLayoutID
         activedimID = struct('x',[],'y',[])   % dimensions on which zooming mouse actions and sliders apply; change with function makeDimActive(D,d)
         colordimID = [];                      % set with setColorDim
         clip = [0 1]                          % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
@@ -395,8 +395,8 @@ classdef viewdisplay < xplr.graphnode
             end
             D.zoomfilters(d).setBin(bin)
         end
-        function setLayoutMemory(D,newlayoutID,doImmediateDisplay)
-            % function setLayoutMemory(D,newlayoutID[,doImmediateDisplay])
+        function setLayoutID(D,newlayoutID,doImmediateDisplay)
+            % function setLayoutID(D,newlayoutID[,doImmediateDisplay])
             %---
             % if doImmediateDisplay is set to false, only labels are
             % updated; if it is set to true, update happens regardless of
@@ -430,6 +430,22 @@ classdef viewdisplay < xplr.graphnode
             D.navigation.repositionCross()
             % update selection display
             D.navigation.displayselection()
+        end
+        function set_dim_location(D,dimID,location,doImmediateDisplay)
+            % function set_dim_location(D,dimID,location,doImmediateDisplay)
+            %---
+            % set new location of specific dimensions; locations of other
+            % dimensions will automatically be adjusted
+            % more details in the help of xplr.displaylayout.set_dim_location
+            %
+            % See also xplr.displaylayout.set_dim_location
+            
+            % new layout
+            newlayoutID = D.layoutIDall.set_dim_location(dimID,location);
+            
+            % update display
+            if nargin<4, doImmediateDisplay = true; end
+            D.setLayoutID(newlayoutID,doImmediateDisplay)
         end
         function makeDimActive(D,dimID,flag)
             dimID = D.slice.dimensionID(dimID);
@@ -1077,12 +1093,8 @@ classdef viewdisplay < xplr.graphnode
                 ystatic = D.layoutID.ystatic;
                 newlayoutID.ystatic = setdiff(newlayoutID.ystatic, ystatic);
                 newlayoutID.y = [newlayoutID.y ystatic];
-                D.setLayout(newlayoutID) % this automatically updates display among other things
+                D.setLayoutID(newlayoutID) % this automatically updates display among other things
             else
-                % update layout (if first "y" dimension in layout is
-                % singleton, should be shown if diplaymode is image, but
-                % not if it is time courses)
-                D.layoutID = D.layoutIDall.currentlayout();
                 % update display
                 D.checkzslicesize() % is zslice too large for being displayed
                 D.graph.computeSteps() %#ok<MCSUP>

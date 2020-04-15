@@ -353,7 +353,7 @@ classdef displaylabels < xplr.graphnode
                 % update)
                 if ~isequal(newlayoutID,layoutID)
                     layoutID = newlayoutID;
-                    L.D.setLayoutMemory(layoutID,L.doImmediateDisplay)
+                    L.D.setLayoutID(layoutID,L.doImmediateDisplay)
                 end
                 drawnow update
             end
@@ -379,7 +379,7 @@ classdef displaylabels < xplr.graphnode
             else
                 % change organization (which will trigger data display
                 % update)only now
-                L.D.setLayoutMemory(layoutID,true); % second argument (true) is needed to force display update even though D.layout is already set to curlayout
+                L.D.setLayoutID(layoutID,true); % second argument (true) is needed to force display update even though D.layout is already set to curlayout
             end
         end
     end

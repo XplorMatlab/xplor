@@ -247,8 +247,7 @@ classdef viewcontrol < xplr.graphnode
                 return
             end
             
-            % commodity: convert dimension numbers or labels to dimension
-            % identifiers
+            % convert dimension numbers or labels to dimension identifiers
             dimID = C.V.data.dimensionID(dimID);
             
             % 'addfilter' flag -> several filters at once
@@ -294,7 +293,20 @@ classdef viewcontrol < xplr.graphnode
                     % to view and that are not already filtered
                     noviewdimID = setdiff([C.V.data.header.dimID], dimID);
                     curfiltdimID = [C.V.slicer.filters.dimID];
-                    adddimIDs = num2cell(setdiff(noviewdimID, curfiltdimID));
+                    adddimIDs = setdiff(noviewdimID, curfiltdimID);
+                    % among these dimensions, attempt to find pairs of
+                    % measure headers with same units to set 2D filter
+                    % instead of two 1D filters
+                    head = C.V.data.headerByID(adddimIDs);
+                    connections = measure_grouping(head);
+                    pairs = {};
+                    while any(connections(:))
+                        [i, j] = find(connections,1,'first');
+                        pairs{end+1} = adddimIDs(sort([i j]));
+                        connections([i j],:) = false;
+                        connections(:, [i j]) = false;
+                    end
+                    adddimIDs = [pairs num2cell(setdiff(adddimIDs,[pairs{:}]))];
                 end
                 nadd = length(adddimIDs);
                 if nadd > 0
@@ -307,6 +319,24 @@ classdef viewcontrol < xplr.graphnode
                         newfilters(end+1) = struct('dimID',adddimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
                     end
                     C.V.slicer.addFilter({newfilters.dimID},[newfilters.F],[newfilters.active]) % slicing will occur now
+                end
+                
+                % adjust display mode and layout if it seems appropriate
+                D = C.V.D;
+                if strcmp(flag,'viewdim')
+                    if isscalar(dimID)
+                        D.set_dim_location(dimID,'x',strcmp(D.displaymode,'time courses'))
+                        D.displaymode = 'time courses';
+                    elseif length(dimID)==2
+                        D.set_dim_location(dimID,{'x' 'y'},strcmp(D.displaymode,'image'))
+                        D.displaymode = 'image';
+                    end
+                else
+                    nsdimID = non_singleton_dimID(C.V.slice.header);
+                    if isscalar(nsdimID)
+                        D.set_dim_location(nsdimID,'x',strcmp(D.displaymode,'time courses'))
+                        D.displaymode = 'time courses';
+                    end
                 end
             end
             
