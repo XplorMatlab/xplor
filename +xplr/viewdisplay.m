@@ -1091,7 +1091,7 @@ classdef viewdisplay < xplr.graphnode
                 % dimensions at 'ystatic' location to 'y'
                 newlayoutID = D.layoutIDmem;
                 ystatic = D.layoutID.ystatic;
-                newlayoutID.ystatic = setdiff(newlayoutID.ystatic, ystatic);
+                newlayoutID.ystatic = setdiff(newlayoutID.ystatic, ystatic, 'stable');
                 newlayoutID.y = [newlayoutID.y ystatic];
                 D.setLayoutID(newlayoutID) % this automatically updates display among other things
             else
@@ -1101,6 +1101,7 @@ classdef viewdisplay < xplr.graphnode
                 D.graph.setTicks() %#ok<MCSUP>
                 D.labels.updateLabels() %#ok<MCSUP>
                 updateDisplay(D) % will call setValueTicks
+                D.navigation.displayselection() %#ok<MCSUP>
             end
             % show/hide color legend
             displayColorLegend(D)

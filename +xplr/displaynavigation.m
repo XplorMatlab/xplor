@@ -615,7 +615,7 @@ classdef displaynavigation < xplr.graphnode
             end
             if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
                 fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
-                    {'parent',m,'label','Round selections to data indices','separator','on'});
+                    {'parent',m,'label','Round 1D selections to data indices','separator','on'});
                 nextsep = 'off';
             else
                 nextsep = 'on';
@@ -680,8 +680,9 @@ classdef displaynavigation < xplr.graphnode
 
                 % convert to slice indices in the selected
                 % dimension
-                polyslice = N.graph.graph2slice(polyax);
-                polyslice = sort(polyslice(seldim,:));
+                ijk0 = round(N.graph.graph2slice(polyax(:,1)));
+                polyslice = N.graph.graph2slice(polyax, 'subdim', seldim, 'ijk0', ijk0);
+                polyslice = sort(polyslice);
 
                 % create selection in slice indices coordinates
                 sz = N.D.slice.sz(seldim); % size of data in the dimension where selection is made
@@ -737,9 +738,6 @@ classdef displaynavigation < xplr.graphnode
 
             % update filter
             N.selectionfilter.updateSelection('new',selslice,options{:})
-
-            % update display
-            N.displayselection('new',length(N.selection))
         end
         function sel = get.selection(N)
             F = N.selectionfilter;
@@ -928,7 +926,7 @@ classdef displaynavigation < xplr.graphnode
                     error('selection cannot be displayed')
                 end
                 
-                [polygon center] = N.D.graph.selectionMark(seldim,selij);
+                [polygon, center] = N.D.graph.selectionMark(seldim,selij);
                 %                 % visible part of the polygon
                 %                 polygon = visiblePolygon(N, selij.polygon,[1, 2]);                
             end

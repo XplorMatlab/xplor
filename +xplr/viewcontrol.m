@@ -291,9 +291,9 @@ classdef viewcontrol < xplr.graphnode
                 else
                     % add 1D filters il all dimensions that we do not want
                     % to view and that are not already filtered
-                    noviewdimID = setdiff([C.V.data.header.dimID], dimID);
+                    noviewdimID = setdiff([C.V.data.header.dimID], dimID, 'stable');
                     curfiltdimID = [C.V.slicer.filters.dimID];
-                    adddimIDs = setdiff(noviewdimID, curfiltdimID);
+                    adddimIDs = setdiff(noviewdimID, curfiltdimID, 'stable');
                     % among these dimensions, attempt to find pairs of
                     % measure headers with same units to set 2D filter
                     % instead of two 1D filters
@@ -306,7 +306,7 @@ classdef viewcontrol < xplr.graphnode
                         connections([i j],:) = false;
                         connections(:, [i j]) = false;
                     end
-                    adddimIDs = [pairs num2cell(setdiff(adddimIDs,[pairs{:}]))];
+                    adddimIDs = [pairs num2cell(setdiff(adddimIDs,[pairs{:}],'stable'))];
                 end
                 nadd = length(adddimIDs);
                 if nadd > 0
