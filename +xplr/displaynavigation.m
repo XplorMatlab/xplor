@@ -495,7 +495,7 @@ classdef displaynavigation < xplr.graphnode
             %            num2str(value,'%.3g')])
 
             set(N.crossDataValue,'String',num2str(value,'%.3g'))
-            disp("Cross value updated");
+            %disp("Cross value updated");
         end
         % cross color, transparency, and global visibility
         function set.showcross(N,value)
@@ -867,6 +867,9 @@ classdef displaynavigation < xplr.graphnode
                     for idx=ind
                         displayonesel(N,idx,'new'); 
                     end
+                    % keep cross above selections, with the cross center
+                    % N.cross(3) at the very top
+                    uistack(N.cross([3 1 2]),'top')
                 case {'add','change','affinity'}
                     % might be several indices
                     for k=ind, displayonesel(N,k,'pos'); end
