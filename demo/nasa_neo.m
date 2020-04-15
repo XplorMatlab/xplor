@@ -188,7 +188,6 @@ if eval('false')
     %% (temperature data set, load and save in 'demo data' folder)
     types = {'MOD_LSTD_M'}; % land temperature day
     [data, desc, years_range] = load_data(types);
-    %% ()
     cd(fullfile(fileparts(which('xplor')),'demo data'))
 
     % reorganize data by months
@@ -220,10 +219,18 @@ if eval('false')
     x(idx) = round((data(idx)+19)*4) + 13;
     idx = (data>38);
     x(idx) = round((data(idx)-38)*2) + 241;
-    s = struct( ...
-        'temperatures',[NaN temperatures], ...
-        'temperatures_indices',x);
-    datafcn = @()s.temperatures(s.temperatures_indices+1);
+    temperatures = [NaN temperatures];
+    temperatures_indices = x;
+    readme = { ...
+        'Earth land temperatures data 2000-2020', ...
+        'Nasa Earth Observations dataset (https://neo.sci.gsfc.nasa.gov/archive/geotiff.float/MOD_LSTN_M/', ...
+        'See xplor/demo/nasa_neo.m for more general download code.', ...
+        '', ...
+        'To explore this data:', ...
+        '    data = temperatures(1+temperatures_indices);', ...
+        '    xplor data', ...
+        'Then set dimension labels ''latitude'', ''longitude'' (both with ''°'' unit) and ''months'',', ...
+        'and type in scale/values: ''latitude'', ''longitude'', ''months''.'}';
     
     % latitude and longitude
     lat_long_unit = '°';
@@ -232,7 +239,7 @@ if eval('false')
     
     
     fn_savevar('NEO Earth Temperature.mat', ...
-        datafcn,lat_long_unit,latitude,longitude,months)
+        temperatures,temperatures_indices,readme,lat_long_unit,latitude,longitude,months)
     
     %% (custom data set)
     %     types = alltypes(~alltypes_empty);
