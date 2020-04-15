@@ -138,15 +138,41 @@ classdef filter < xplr.dataOperand
             
             % update header of output space
             if fn_ismemberstr(flag,{'all' 'new' 'chg' 'chg&new' 'chg&rm'})
+                % make a nice name for new 1D selections
+                if F.ndin == 1 && ~isempty(value) && ~any(strcmpi(addheaderinfo(1,:),'name'))
+                    n = length(value);
+                    names = cell(n,1);
+                    for i = 1:n
+                        lines = value(i).polygon;
+                        subnames = cell(1,size(lines,2));
+                        for j = 1:length(subnames)
+                            kstart = ceil(lines(1,j));
+                            kstop = floor(lines(2,j));
+                            if kstart==kstop
+                                subnames{j} = F.headerin.getItemNames{kstart};
+                            elseif F.headerin.categorical
+                                subnames{j} = [F.headerin.getItemNames{kstart} '-' F.headerin.getItemNames{kstop}];
+                            else
+                                % measure
+                                [start, scale, unit] = deal(F.headerin.start, F.headerin.scale, F.headerin.unit);
+                                subnames{j} = sprintf('%.4g-%.4g%s', start+[kstart kstop]*scale, unit);
+                            end
+                        end 
+                        names{i} = fn_strcat(subnames,',');
+                    end
+                    addheaderinfo(:,end+1) = {'Name', names};
+                end
                 % track header values
                 switch flag
                     case 'chg&new'
-                        headvalue = sliceHeader(F,[ind{:}],addheaderinfo);
+                        indchgnew = [ind{:}];
                     case 'chg&rm'
-                        headvalue = sliceHeader(F,ind{1},addheaderinfo);
+                        indchgnew = ind{1};
                     otherwise
-                        headvalue = sliceHeader(F,ind,addheaderinfo); % if flag is 'all', ind was set to 1:F.n
+                        indchgnew = ind;
                 end
+                headvalue = sliceHeader(F,indchgnew,addheaderinfo);
+                % update headerout
                 F.headerout = updateHeader(F.headerout,flag,ind,headvalue);
             else
                 F.headerout = updateHeader(F.headerout,flag,ind);
@@ -236,7 +262,7 @@ classdef filter < xplr.dataOperand
             
             % additional values set together with the selections
             if nargin<3, addheaderinfo = cell(2,0); end
-            [headvalue affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo);
+            [headvalue, affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo);
             okcolumn(affectedcolumns) = true;
             
             % put default values in columns which were not set

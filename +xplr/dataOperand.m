@@ -123,7 +123,7 @@ classdef dataOperand < xplr.graphnode
     
     % Additional information in output header
     methods
-        function [headvalue affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo)
+        function [headvalue, affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo)
             affectedcolumns = [];
             for i=1:size(addheaderinfo,2)
                 label = addheaderinfo{1,i};

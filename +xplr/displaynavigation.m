@@ -231,11 +231,11 @@ classdef displaynavigation < xplr.graphnode
                                 ydim = org.y(find(nonsingleton(org.y),1,'last'));
                                 zoomdim = [xdim ydim];
                             end
+                            zoom = ijk(zoomdim,:)';
                         else
                             zoomdim = activedim;
-                            ijk = N.graph.graph2slice(rect,'subdim',zoomdim);
+                            zoom = N.graph.graph2slice(rect,'subdim',zoomdim)';
                         end
-                        zoom = ijk(zoomdim,:)';
                         for i=1:length(zoomdim), zoom(:,i) = sort(zoom(:,i)); end
                         N.D.zoomslicer.setZoom(zoomdim,zoom)
                     else
@@ -733,7 +733,7 @@ classdef displaynavigation < xplr.graphnode
             options = {};
             if N.selectionpromptname
                 name = inputdlg('Selection name','xplor');
-                if ~isempty(name), options = {'name' name{1}}; end
+                if ~isempty(name), options = {'Name' name{1}}; end
             end
 
             % update filter
@@ -916,7 +916,7 @@ classdef displaynavigation < xplr.graphnode
             %selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
             %selij = selectionmarks(k);
             selij = N.selection(k);
-            name = N.selectionfilter.headerout.getItemNames(k);
+            name = N.selectionfilter.headerout.getItemNames{k};
             
             seldim = N.selectiondim;
             if flagnew || flagedit || flagpos
@@ -948,9 +948,15 @@ classdef displaynavigation < xplr.graphnode
                 end
                 %if strfind(D.selshow,'number')
                 if true
+                    if isscalar(N.selectiondimID) && length(name)>3
+                        rotation = 45;
+                    else
+                        rotation = 0;
+                    end
                     hl(end+1) = text(center(1),center(2),name, ...
                         'Parent',N.D.ha,'color',col,'visible',visible, ...
                         'horizontalalignment','center','verticalalignment','middle', ...
+                        'rotation',rotation, ...
                         'buttondownfcn',@(u,e)N.selection_clicked(hl(1)));
                     %'color',fn_switch(k==D.currentselection,'r','w'));
                 end

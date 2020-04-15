@@ -407,7 +407,10 @@ classdef header < hgsetget
                 % compute names
                 nval = length(idx);
                 if H.ncolumn>0
-                    itemvalues = H.values(:,1);
+                    % any column 'name' in the values table?
+                    idxname = find(strcmpi({H.sublabels.label},'name'));
+                    if isempty(idxname), idxname = 1; end
+                    itemvalues = H.values(:,idxname);
                     str = cell(1,nval);
                     for k=1:nval
                         val = itemvalues{idx(k)};

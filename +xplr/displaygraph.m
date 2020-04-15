@@ -1279,7 +1279,7 @@ classdef displaygraph < xplr.graphnode
                         [polygon{2:2:end}] = deal([NaN; NaN]);
                         polygon = [polygon{:}];
                         
-                        % center: will be better position if we average
+                        % center: will be better pKosition if we average
                         % after conversion from indices to graph positions
                         center = mean(G.slice2graph(sel.dataind,'subdim',dim),2);
                     else
