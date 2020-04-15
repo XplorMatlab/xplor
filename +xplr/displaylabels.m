@@ -230,7 +230,7 @@ classdef displaylabels < xplr.graphnode
         end
         function labelMove(L,dimID,obj)
             % prepare for changing organization
-            [prevlayoutID, layoutID_d, layoutID] = deal(L.D.layoutIDmemory); % previous, previous without d, current
+            [prevlayoutID, layoutID_d, layoutID] = deal(L.D.layoutIDall); % previous, previous without d, current
             dlayout = layoutID.dim_location(dimID);
             didx = find(layoutID.(dlayout)==dimID);
             layoutID_d.(dlayout) = setdiff(layoutID.(dlayout),dimID,'stable');

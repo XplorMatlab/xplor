@@ -106,33 +106,45 @@ classdef displaylayout
             F = {'x' 'y' 'ystatic' 'xy' 'yx'};
             for i = 1:length(F)
                 f = F{i};
-                dimID = L.(f);      % dimension identifiers
-                [present, dim] = ismember(dimID, datadimID);
-                dim = dim(present); % dimension numbers of those actually present in the data
-                singleton = ([datahead(dim).n]==1);
-                keep = ~singleton;
-                L2.(f) = datadimID(dim(~singleton));
+                dimIDf = L.(f);      % dimension identifiers
+                [present, dim] = ismember(dimIDf, datadimID);
+                dim_present = dim(present); % dimension numbers of those actually present in the data
+                singleton = ([datahead(dim_present).n]==1);
+                L2.(f) = datadimID(dim_present(~singleton));
             end
         end
         function [L, L2] = updateLayout(L)
             % function [L, L2] = updateLayout(L)
             %---
             % Update layout upon slice change.
-            % Keep locations of dimensions already present in L, use some
-            % heuristic to choose locations of new dimensions
+            % Keep locations of dimensions already present in L, 
+            % remove dimensions that are not in L.D.slice anymore,
+            % use some heuristic to choose locations of new dimensions
+            
             L2 = L; % copy (displaylayout is not a handle class)
             datahead = L.D.slice.header;
             datadimID = [datahead.dimID];
             
-            % dimensions already positionned
+            % dimensions already positionned + remove dimensions that
+            % disappeared
             dimPositionned = false(1,L.D.nd);
             F = {'x' 'y' 'ystatic' 'xy' 'yx'};
             for i = 1:length(F)
                 f = F{i};
-                dimPositionned = dimPositionned | ismember(datadimID, L.(f));
+                dimIDf = L.(f);      % dimension identifiers
+                % mark among data dimensions those that are positionned
+                dimPositionned = dimPositionned | ismember(datadimID, dimIDf);
+                % and keep among L.(f) and L2.(f) only dimensions that are
+                % still present in the data
+                [present, dim] = ismember(dimIDf, datadimID);
+                dim = dim(present); % dimension numbers of those actually present in the data
+                dim_present = dim(present); % dimension numbers of those actually present in the data
+                singleton = ([datahead(dim_present).n]==1);
+                L.(f) = datadimID(dim_present);
+                L2.(f) = datadimID(dim_present(~singleton));
             end
             
-            % current layout (i.e. only with displayed dimensions) so far
+            % layout without the singleton dimensions
             L2 = L.currentlayout();
             
             % position missing dimensions

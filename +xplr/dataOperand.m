@@ -78,7 +78,7 @@ classdef dataOperand < xplr.graphnode
             % dimensions is the same.
             % We consider that there is a dimension change when the number
             % of dimensions or the label(s) have changed.
-            b = (O.ndout ~= O.ndin) || ~all(strcmp({O.headerout.label}, {O.headerin.label}));
+            b = (O.ndout ~= O.ndin);
         end
     end
     methods

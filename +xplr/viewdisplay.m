@@ -38,7 +38,7 @@ classdef viewdisplay < xplr.graphnode
     end    
     properties (SetAccess='private')
         layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayout
-        layoutIDmemory                        % remembers position of all dimension ID encountered so far (i.e. even if not present in the current data)
+        layoutIDall                        % remembers position of all dimension ID encountered so far (i.e. even if not present in the current data)
         activedimID = struct('x',[],'y',[])   % dimensions on which zooming mouse actions and sliders apply; change with function makeDimActive(D,d)
         colordimID = [];                      % set with setColorDim
         clip = [0 1]                          % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
@@ -408,7 +408,7 @@ classdef viewdisplay < xplr.graphnode
                 if isequal(newlayoutID,D.layoutIDmem), return, end
                 doImmediateDisplay = true;
             end
-            D.layoutIDmemory = newlayoutID;
+            D.layoutIDall = newlayoutID;
             D.layoutID = newlayoutID.currentlayout(); % keep only dimensions actually displayed
             % is zslice too large for being displayed
             D.checkzslicesize()
@@ -596,16 +596,16 @@ classdef viewdisplay < xplr.graphnode
             xplr.debuginfo('viewdisplay','slicechange %s', flag)
             
             % first time?
-            if isempty(D.layoutIDmemory)
+            if isempty(D.layoutIDall)
                 % some heuristics to choose initial layout
                 D.displaymode = fn_switch(sum(D.slice.sz>1) == 1, 'time courses', 'image');
-                D.layoutIDmemory = xplr.displaylayout(D);
-                D.layoutID = D.layoutIDmemory;
+                D.layoutIDall = xplr.displaylayout(D);
+                D.layoutID = D.layoutIDall;
             else
                 % keep locations of dimensions already present in
-                % D.layoutIDmemory, use some heuristic to choose
+                % D.layoutIDall, use some heuristic to choose
                 % locations of new dimensions
-                [D.layoutIDmemory, D.layoutID] = D.layoutIDmemory.updateLayout();
+                [D.layoutIDall, D.layoutID] = D.layoutIDall.updateLayout();
             end
             
             % Update active dim and slider connections
@@ -1082,7 +1082,7 @@ classdef viewdisplay < xplr.graphnode
                 % update layout (if first "y" dimension in layout is
                 % singleton, should be shown if diplaymode is image, but
                 % not if it is time courses)
-                D.layoutID = D.layoutIDmemory.currentlayout();
+                D.layoutID = D.layoutIDall.currentlayout();
                 % update display
                 D.checkzslicesize() % is zslice too large for being displayed
                 D.graph.computeSteps() %#ok<MCSUP>
