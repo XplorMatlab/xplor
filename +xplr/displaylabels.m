@@ -285,11 +285,10 @@ classdef displaylabels < xplr.graphnode
             % make sure label will not be covered by data display
             uistack(obj,'top')
             % move
-            L.movingdim = dimID;
+            L.movingdim = L.D.slice.dimensionNumber(dimID);
             L.movingclone = copyobj(obj,L.ha);
             set(L.movingclone,'color',[1 1 1]*.6,'edgecolor','none','BackgroundColor','none')
             uistack(L.movingclone,'bottom')
-            %movelabel()
             moved = fn_buttonmotion(@movelabel,L.D.V.hf,'moved?');
             
             function movelabel

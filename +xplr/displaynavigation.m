@@ -256,6 +256,7 @@ classdef displaynavigation < xplr.graphnode
                     % depending on the parameter selectionshape
                     if ~isempty(N.selectiondimID)
                         selslice = N.selectionMouse();
+                        if isempty(selslice), return, end
 
                         % prompt for selection name
                         options = {};
@@ -627,19 +628,16 @@ classdef displaynavigation < xplr.graphnode
             if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
                 fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
                     {'parent',m,'label','Round 1D selections to data indices','separator','on'});
-                nextsep = 'off';
-            else
-                nextsep = 'on';
             end
+            fn_propcontrol(N,'selectionpromptname','menu', ...
+                {'parent',m,'label','Prompt for name of new selections'});
             fn_propcontrol(N,'selectionshow', ...
                 {'menuval', {'shape+name' 'shape' 'name' 'center'}}, ...
-                {'parent',m,'label','Display mode','separator',nextsep});       
+                {'parent',m,'label','Display mode','separator','on'});       
             % selection edit mode not ready yet!!! (need first to convert
             % selection from slice to graph)
             %             fn_propcontrol(N,'selectionedit','menu', ...
             %                 {'parent',m,'label','Selections modifyable'});
-            fn_propcontrol(N,'selectionpromptname','menu', ...
-                {'parent',m,'label','Prompt for name of new selections'});
 
             % Load/save selections
             uimenu(m,'label','Load...','separator','on', ...
@@ -667,19 +665,11 @@ classdef displaynavigation < xplr.graphnode
             selnd = length(seldim);
 
             % check dimension location
-            dim_location = [N.D.layoutID.dim_locations{seldim}];
-            switch selnd
-                case 1
-                    if ~ismember(dim_location, {'x' 'y' 'xy'})
-                        disp(['selection in location ''' dim_location ''' not handled'])
-                        return
-                    end
-                case 2
-                    if ~ismember(dim_location, {'xy' 'yx'})
-                        disp(['selection in location ''' dim_location ''' not handled'])
-                        return
-                    end
-                    invertxy = strcmp(dim_location,'yx');
+            dim_location = fn_strcat(N.D.layoutID.dim_locations(seldim),',');
+            if ~ismember(dim_location, {'x' 'y' 'xy' 'x,y' 'y,x'})
+                disp(['selection in location ''' dim_location ''' not handled'])
+                selslice = [];
+                return
             end
             
             % two different behaviors for the fn_mouse function
@@ -853,8 +843,8 @@ classdef displaynavigation < xplr.graphnode
             selectionaxis = [N.D.layoutID.dim_locations{N.selectiondim}];
             if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
                 disp('selections cannot be displayed')
-                delete([N.D.seldisp{ind}])
-                N.D.seldisp(ind) = [];
+                deleteValid(N.selectiondisplay)
+                N.selectiondisplay = [];
                 return
             end
             
@@ -889,7 +879,7 @@ classdef displaynavigation < xplr.graphnode
                     N.selectiondisplay(ind) = [];
                     % index (and therefore displayed name) of some other selections have changed
                     for k = min(ind):length(N.selection), displayonesel(N, k, 'name'), end
-                case 'reorder'
+                case 'perm'
                     perm = ind;
                     N.selectiondisplay = N.selectiondisplay(perm);
                     % index (and therefore displayed name) of some selections have changed
