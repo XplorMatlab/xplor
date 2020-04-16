@@ -1175,7 +1175,6 @@ classdef displaygraph < xplr.graphnode
 			% checks
 			nd = length(dim);
             dim = G.D.slice.dimensionNumber(dim);
-			dim_location = [G.D.layoutID.dim_locations{dim}];
 			if sel.nd ~= nd, error 'selection has incorrect number of dimensions', end
             
             % default polygon is empty (no display)
@@ -1203,6 +1202,7 @@ classdef displaygraph < xplr.graphnode
                     % locations), or as more complex polygon (for 'xy' and
                     % 'yx')
                     st = G.steps;
+                    dim_location = G.D.layoutID.dim_locations{dim};
 					if ismember(dim_location, {'x' 'y'})
 						% convert from zslice to graph coordinates:
 						% ignore dimensions that are more internal than dim
@@ -1287,14 +1287,140 @@ classdef displaygraph < xplr.graphnode
                         center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
                     end
                 case 2
-                    % somehow simpler because only the xy configuration is
+                    % somehow simpler because only the x,y configuration is
                     % allowed
+                    % get polygon in slice coordinates
                     polyslice = sel.polygon;
+                    centerslice = [mean(polyslice(1,1:end-1)); mean(polyslice(2,1:end-1))]; % remove the last point as it repeats the first one
+                    % restrict to the part that is visible within the
+                    % current zoom
+                    polyslice = G.visiblePolygon(polyslice,dim);
+                    display_limit = G.getZoom(dim,'displaylimit');
+                    if any(centerslice<display_limit(1,:)' | centerslice>display_limit(2,:)')
+                        centerslice(:) = NaN;
+                    end
+                    % convert to graph
                     polygon = G.slice2graph(polyslice,'subdim',dim);
-                    center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
+                    center = G.slice2graph(centerslice,'subdim',dim);
 				otherwise
 					error 'case not handled yet'
 			end
+
+        end
+        function output = visiblePolygon(G,polyslice,dim)
+                    % visiblePolygon(G, polyslice);
+                    
+                    % @param polyslice: nd*np list of points
+                    % @param dim: 1*nd list of dimensions in which the
+                    % polygon is defined
+                    % @return output: same double list of points with NaN instead of
+                    % points not visible and additional points to display
+                    % selection properly
+                    
+                    % sizes
+                    [nd, np] = size(polyslice);
+                    assert(length(dim)==nd)
+                    
+                    % get zoom limits in these dimensions
+                    zoomSliceValues = G.getZoom(dim,'displaylimit');
+                    
+                    % set the ouput to zeros (they will be set to one if one of the
+                    % dimension if it's out of display)
+                    polygonIsOutOfDisplay = false(1,np);
+                    for dimension = 1:nd  
+                       % is equal to one if is out of limits of the zoom or if the
+                       % previous value was already 1
+                        polygonIsOutOfDisplay = polyslice(dimension,:)<zoomSliceValues(1,dimension) | polyslice(dimension,:)>zoomSliceValues(2,dimension) | polygonIsOutOfDisplay;
+                    end
+                    
+                    % array of ones' boundaries in polygonIsOutOfDisplay.
+                    % Represent the start (1) and finish (-1) of lines not displayed
+                    boundaries=diff([0 polygonIsOutOfDisplay 0]);
+                    
+                    % if the first point and last point are hidden, don't
+                    % consider them as start and finish of group of ones
+                    if boundaries(1) == 1 && boundaries(end) == -1
+                       boundaries(1)=0;
+                       boundaries(end)=0;
+                    end
+                    
+                    boundariesIndexes=find(boundaries==-1 | boundaries==1);
+                    boundariesValues=nan(size(polyslice,1),size(boundariesIndexes,2));
+
+                    % add intermediate points between points displayed and 
+                    % points not displayed
+                    numberOfPointsAdded = 0;
+                    for boundariesIndex = 1:length(boundariesIndexes)
+                        if boundariesIndexes(boundariesIndex) == 1
+                            boundaryPrev = length(polyslice)-1;
+                        else
+                            boundaryPrev = boundariesIndexes(boundariesIndex)-1;
+                        end
+
+                        if(boundaries(boundariesIndexes(boundariesIndex))==1)
+                            % find the lowest ratio before limit of the
+                            % next point
+                            biggestRatio = 0;
+                            for dimension = 1:nd
+                                vector = polyslice(dimension,boundaryPrev) - polyslice(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMin = zoomSliceValues(1, dimension) - polyslice(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMax = zoomSliceValues(2, dimension) - polyslice(dimension,boundariesIndexes(boundariesIndex));
+                                
+                                % if same sign
+                                V = [vectorToLimitMax, vectorToLimitMin];
+                                if (~any(diff(sign(V(V~=0)))))
+                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
+                                end
+                            end
+                            
+                            boundariesValues(:,boundariesIndex) = polyslice(:,boundariesIndexes(boundariesIndex))+(polyslice(:,boundaryPrev)-polyslice(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                            boundariesIndexes(boundariesIndex) = boundariesIndexes(boundariesIndex) + numberOfPointsAdded;
+
+                        else
+                            boundariesIndexes(boundariesIndex) = boundaryPrev;
+                            if boundariesIndexes(boundariesIndex) == length(polyslice)
+                                boundaryNext = 2;
+                            else
+                                boundaryNext = boundariesIndexes(boundariesIndex)+1;
+                            end
+
+                            % find the lowest ratio before limit of the
+                            % next point
+                            biggestRatio = 0;
+                            for dimension = 1:nd
+                                vector = polyslice(dimension,boundaryNext) - polyslice(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMin = zoomSliceValues(1,dimension) - polyslice(dimension,boundariesIndexes(boundariesIndex));
+                                vectorToLimitMax = zoomSliceValues(2,dimension) - polyslice(dimension,boundariesIndexes(boundariesIndex));
+                                
+                                % if same sign
+                                V = [vectorToLimitMax, vectorToLimitMin];
+                                if (~any(diff(sign(V(V~=0)))))
+                                    biggestRatio = max(biggestRatio,min(abs(vectorToLimitMin),abs(vectorToLimitMax))/abs(vector));
+                                end
+             
+                            end
+                            
+                            boundariesValues(:,boundariesIndex) = polyslice(:,boundariesIndexes(boundariesIndex))+(polyslice(:,boundaryNext)-polyslice(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                            boundariesIndexes(boundariesIndex) = boundaryNext + numberOfPointsAdded;
+%                             points(selectionDimension,boundariesIndexes(boundariesIndex)) = points(:,boundariesIndexes(boundariesIndex))+(points(:,boundaryNext)-points(:,boundariesIndexes(boundariesIndex)))*biggestRatio;
+                        end
+                        
+                        numberOfPointsAdded = numberOfPointsAdded + 1;
+                    end
+
+                    % if column n of polygonIsOutOfDisplay is equal to 1 it
+                    % means the point in column n of polygon is out of
+                    % display so replace all values on those columns by Nan
+                    % to don't be drawn
+
+                    % coordinates in the full nd index coordinate system
+
+                    polyslice(:,polygonIsOutOfDisplay) = NaN;
+
+                    output = ones(G.D.nd, np + size(boundariesValues,2));
+                    
+                    output(dim,setdiff(1:end,boundariesIndexes)) = polyslice;
+                    output(dim,boundariesIndexes) = boundariesValues;
 
         end
         function selslice = selection2slice(G,dim,selax)
