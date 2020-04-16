@@ -925,7 +925,7 @@ classdef viewdisplay < xplr.graphnode
             cla(D.ha)
             % re-display everything
 %             D.sliceChangeEvent = struct('flag','global');
-%             D.navigation.displayselection()
+            D.navigation.displayselection('reset')
             zslicechange(D) % this will automatically re-create the cross, but not the selection displays
         end
     end
@@ -1045,7 +1045,7 @@ classdef viewdisplay < xplr.graphnode
            D.navigation.repositionCross()
            
            % update selections display
-           D.navigation.displayselection('changereferential')
+           D.navigation.displayselection('referentialchanged')
 
             % Update legend
             if strcmp(flag,'global')

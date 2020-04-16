@@ -15,7 +15,7 @@ classdef displaynavigation < xplr.graphnode
     end
     properties
         selectionfilter         % filter being modified by the selections
-        selectiondisplay        % displays of selectionnd
+        selectiondisplay        % displays of selectionnd: for each selection, 2 lines and a text
         selectionsavefile       % name of file for saving current selection
         selection_context       
     end
@@ -26,7 +26,8 @@ classdef displaynavigation < xplr.graphnode
         selectiondimID          % dimensions to which these selections apply, identified by its id
         selection2Dshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selectionround1Dmeasure = true; 
-        selectionadvanced = false
+        selectionshow = 'shape+name';
+        selectionedit = false
         selectionpromptname = false
     end
     properties (Dependent)
@@ -254,7 +255,17 @@ classdef displaynavigation < xplr.graphnode
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape
                     if ~isempty(N.selectiondimID)
-                        N.selectionMouse()
+                        selslice = N.selectionMouse();
+
+                        % prompt for selection name
+                        options = {};
+                        if N.selectionpromptname
+                            name = inputdlg('Selection name','xplor');
+                            if ~isempty(name), options = {'Name' name{1}}; end
+                        end
+                        
+                        % update filter
+                        N.selectionfilter.updateSelection('new',selslice,options{:})
                     end
             end
         end
@@ -620,8 +631,13 @@ classdef displaynavigation < xplr.graphnode
             else
                 nextsep = 'on';
             end
-            %             fn_propcontrol(N,'selectionadvanced','menu', ...
-            %                 {'parent',m,'label','Advanced selection','separator',nextsep});
+            fn_propcontrol(N,'selectionshow', ...
+                {'menuval', {'shape+name' 'shape' 'name' 'center'}}, ...
+                {'parent',m,'label','Display mode','separator',nextsep});       
+            % selection edit mode not ready yet!!! (need first to convert
+            % selection from slice to graph)
+            %             fn_propcontrol(N,'selectionedit','menu', ...
+            %                 {'parent',m,'label','Selections modifyable'});
             fn_propcontrol(N,'selectionpromptname','menu', ...
                 {'parent',m,'label','Prompt for name of new selections'});
 
@@ -633,16 +649,19 @@ classdef displaynavigation < xplr.graphnode
             uimenu(m,'label','Save as...', ...
                 'callback',@(u,e)N.selectionsave())
         end
-        function selectionMouse(N, pointaction)
-            % function selectionMouse(N, [pointaction])
+        function selslice = selectionMouse(N, message)
+            % function selslice = selectionMouse(N [,message])
             %---
             % 'pointaction' argument is a function handle that sets a
             % specific function to execute when drag action occurs to stay
             % on a point: this is used to raise a context menu when
             % right-clicking on a selection
-            
-            % input 
-            if nargin<2, pointaction = []; end
+            %
+            % if second argument 'message' is set, this message will be
+            % displayed under the mouse cursor, and it is assumed that the
+            % first point of the selection was not clicked yet; otherwise
+            % it is assumed that the first point of the selection was
+            % already clicked
             
             seldim = N.selectiondim;
             selnd = length(seldim);
@@ -662,12 +681,25 @@ classdef displaynavigation < xplr.graphnode
                     end
                     invertxy = strcmp(dim_location,'yx');
             end
+            
+            % two different behaviors for the fn_mouse function
+            if nargin<2
+                % we assume the first point of the selection was already
+                % clicked
+                popt = '-';
+                msgopt = {};
+            else
+                % we assume the first point of the selection was not
+                % clicked yet, and a message will be displayed
+                popt = '';
+                msgopt = {message};
+            end
 
             % define selection
             if selnd == 1
                 % user interaction
                 if isscalar(dim_location)
-                    polyax = fn_mouse(N.ha,[dim_location 'segment-']);
+                    polyax = fn_mouse(N.ha,[dim_location 'segment' popt], msgopt{:});
                     switch dim_location
                         case 'x'
                             polyax = [polyax; 0 0];
@@ -675,7 +707,7 @@ classdef displaynavigation < xplr.graphnode
                             polyax = [0 0; polyax];
                     end
                 else
-                    polyax = fn_mouse(N.ha,'rectaxp-');
+                    polyax = fn_mouse(N.ha,['rectaxp' popt], msgopt{:});
                 end
 
                 % convert to slice indices in the selected
@@ -686,11 +718,7 @@ classdef displaynavigation < xplr.graphnode
 
                 % create selection in slice indices coordinates
                 sz = N.D.slice.sz(seldim); % size of data in the dimension where selection is made
-                if diff(polyslice)==0 && ~isempty(pointaction)
-                    % mouse dragging did not move (i.e. only a point was
-                    % selected) -> execute specific action
-                    pointaction()
-                elseif N.D.slice.header(seldim).categorical
+                if N.D.slice.header(seldim).categorical
                     selslice = xplr.selectionnd('indices',round(polyslice(1)):round(polyslice(2)),sz);
                 elseif diff(polyslice)==0
                     selslice = xplr.selectionnd('point1D',polyslice(1));
@@ -702,42 +730,23 @@ classdef displaynavigation < xplr.graphnode
             elseif selnd == 2
                 % user interaction
                 mouseselmode = fn_switch(N.selection2Dshape, ...
-                    'line','segment','openpoly','poly','freeline','free', ...
+                    'line','segment',{'poly' 'openpoly'},'polypt','freeline','free', ...
                     'ellipse','ellipse*','ring','ring*', ...
                     N.selection2Dshape);
                 seltype = fn_switch(N.selection2Dshape, ...
                     {'poly','free'},'poly2D','rect','rect2D', ...
                     'ellipse','ellipse2D','ring','ring2D', ...
                     {'line','openpoly','freeline'},'openpoly2D');
-                polyax = fn_mouse(N.D.ha,[mouseselmode '-']);
+                polyax = fn_mouse(N.D.ha,[mouseselmode popt], msgopt{:});
 
                 % create selection in graph coordinates
                 selax = xplr.selectionnd(seltype,polyax);
-                if selax.ispoint(.005)
-                    % selection is too small
-                    if ~isempty(pointaction)
-                        % execute 'point action'
-                        pointaction()
-                        return
-                    else
-                        % convert it to a single point
-                        selax.checkpoint(.005)
-                    end
-                end
+                % if selection is too small, convert it to a single point
+                selax.checkpoint(.005)
                 
                 % convert to slice coordinates
                 selslice = N.graph.selection2slice(seldim,selax);
             end
-            
-            % prompt for selection name
-            options = {};
-            if N.selectionpromptname
-                name = inputdlg('Selection name','xplor');
-                if ~isempty(name), options = {'Name' name{1}}; end
-            end
-
-            % update filter
-            N.selectionfilter.updateSelection('new',selslice,options{:})
         end
         function sel = get.selection(N)
             F = N.selectionfilter;
@@ -820,14 +829,19 @@ classdef displaynavigation < xplr.graphnode
         end
         function selectionfilterchange(N,e)
             % Update selection display
-            N.displayselection()
+            N.displayselection(e.flag,e.ind)
         end
-        function displayselection(N,flag,ind,value)
-            % @param flag: string 'all', 'new'
-            % @param ind: integer
-            % @param value:
-            %
-            % @return:
+        function displayselection(N,flag,ind)
+            % function displayselection(N)
+            % function displayselection(N,'reset')
+            % function displayselection(N,'all')
+            % function displayselection(N,'referentialchanged')
+            % function displayselection(N,'new',ind)
+            % function displayselection(N,'chg',ind)
+            % function displayselection(N,'chg&new',{indchg indnew})
+            % function displayselection(N,'chg&rm',{indchg indrm})
+            % function displayselection(N,'remove',ind)
+            % function displayselection(N,'perm',perm)
            
             if isempty(N.selectiondimID)
                 deleteValid(N.selectiondisplay)
@@ -844,34 +858,25 @@ classdef displaynavigation < xplr.graphnode
                 return
             end
             
-            if nargin<2, flag = 'all'; end
-            if fn_ismemberstr(flag,{'all','reset'})
-                % 'findobj' allows a cleanup when some objects were not
-                % removed correctly
-                deleteValid(N.selectiondisplay)
-                N.selectiondisplay = cell(1,length(N.selection));
-                for k=1:length(N.selection)
-                     displayonesel(N,k,'new');
-                end
-                return
-            end
-            
             % or display update
-%             if ~isempty(N.D.curselprev) && ~isempty(strfind(N.D.selshow,'number'))
-%                 set(N.D.seldisp{N.D.curselprev}(1),'color','w')
-%             end
+            if nargin<2, flag = 'all'; end
+            if nargin<3, ind = 1:length(N.selection); end
             switch flag
-                case 'new'
-                    for idx=ind
-                        displayonesel(N,idx,'new'); 
+                case {'all' 'reset' 'new'}
+                    % delete current display
+                    if fn_ismemberstr(flag,{'all','reset'})
+                        deleteValid(N.selectiondisplay)
+                        N.selectiondisplay = [];
                     end
+                    % draw new selections
+                    for idx=ind, displayonesel(N,idx,'new'); end
                     % keep cross above selections, with the cross center
                     % N.cross(3) at the very top
-                    uistack(N.cross([3 1 2]),'top')
-                case {'add','change','affinity'}
+                    try uistack(N.cross([3 1 2]),'top'), end % can fail when D.resetDisplay is invoked
+                case {'add','chg', 'affinity'}
                     % might be several indices
                     for k=ind, displayonesel(N,k,'pos'); end
-                case 'changereferential'
+                case 'referentialchanged'
                     % it is not the positions of selections that have
                     % changed, but the referential of these positions
                     % relative to the main display axes: we need then to
@@ -879,176 +884,324 @@ classdef displaynavigation < xplr.graphnode
                     % inside this new referential
                     for k = 1:length(N.selection), displayonesel(N, k, 'pos'), end
                 case 'remove'
-                    delete([N.D.seldisp{ind}])
-                    N.D.seldisp(ind) = [];
-                    nsel = length(N.D.seldisp);
-                    if nsel==0, return, end
-                    updateselorderdisplay(N.D)
+                    % delete selected selections
+                    deleteValid(N.selectiondisplay(ind))
+                    N.selectiondisplay(ind) = [];
+                    % index (and therefore displayed name) of some other selections have changed
+                    for k = min(ind):length(N.selection), displayonesel(N, k, 'name'), end
                 case 'reorder'
-                    perm = value;
-                    N.D.seldisp = N.D.seldisp(perm);
-                    updateselorderdisplay(N.D)
-                case 'indices'
-                    % nothing to do
+                    perm = ind;
+                    N.selectiondisplay = N.selectiondisplay(perm);
+                    % index (and therefore displayed name) of some selections have changed
+                    for k = find(perm~=1:length(N.selection)), displayonesel(N, k, 'name'), end
+                otherwise
+                    error('unknown flag ''%s''', flag)
             end
-%             if ~isempty(N.D.currentselection) && ~isempty(strfind(N.D.selshow,'number'))
-%                 set(N.D.seldisp{N.D.currentselection}(1),'color','r')
-%             end
                 
         end
         function displayonesel(N,k,flag,varargin)
             % function displayonesel(D,k,'new')       - selection at index k is new
-            % function displayonesel(D,k,'pos')       - has changed
-            % function displayonesel(D,k,'name')      - has its name changed
-            % function displayonesel(D,k,'edit')      - edit mode has been turned on
+            % function displayonesel(D,k,'pos')       - position has changed
+            % function displayonesel(D,k,'name')      - name or color has changed
             
             % flags: what kind of update
-            [flagnew, flagpos, flagname, flagedit] = ...
-                fn_flags('new','pos','name','edit',flag);
+            [flagnew, flagpos, flagname] = fn_flags('new','pos','name',flag);
             
-            % was selection display deleted (this occur upon
-            % D.resetDisplay call)
-            if ~all(ishandle(N.selectiondisplay{k}))
-                deleteValid(N.selectiondisplay{k})
-                flagnew = true;
-            end
-
-            %selectionmarks = D.SI.selection.getselset(seldimsnum).singleset;
-            %selij = selectionmarks(k);
+            % selection in slice coordinates
             selij = N.selection(k);
             name = N.selectionfilter.headerout.getItemNames{k};
             
+            % convert selection to displayable polygon
             seldim = N.selectiondim;
-            if flagnew || flagedit || flagpos
-                % convert selection to displayable polygon
+            if flagnew || flagpos
                 selectionaxis = [N.D.layoutID.dim_locations{seldim}];
                 if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
                     error('selection cannot be displayed')
                 end
-                
                 [polygon, center] = N.D.graph.selectionMark(seldim,selij);
+                
+                disp 'commented code to hide non-visible part of the polygon'
                 %                 % visible part of the polygon
-                %                 polygon = visiblePolygon(N, selij.polygon,[1, 2]);                
+                %                 polygon = visiblePolygon(N, selij.polygon,[1, 2]);  
+                
+                if N.selectionedit
+                    switch selij.type
+                        case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
+                            shape_edit_poly = polygon(:,1:end-1); % the last point is a repetition of the 1st one
+                            shape_edit_info = [];
+                        case 'rect2D'
+                            shape_edit_poly = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
+                            shape_edit_info = [selij.shapes.points' selij.shapes.vectors'];
+                        case {'ellipse2D' 'ring2D'}
+                            c = selij.shapes.points;
+                            u = selij.shapes.vectors;
+                            e = selij.shapes.logic;
+                            shape_edit_poly = [c-u c+u];
+                            shape_edit_info = {c u e};
+                        otherwise
+                            error programming
+                    end
+                end
             end
-            if flagnew || flagedit || flagname
+            
+            % color
+            if flagnew || flagname
                 colors = fn_colorset;
                 col = colors(mod(k-1,size(colors,1))+1,:);
-                visible = 'on';
+                namerotation = fn_switch(isscalar(N.selectiondimID) && length(name)>3, 45, 0);
             end
             
             % Create / update objects
             if flagnew
-                
-                hl = [];
-                %if strfind(D.selshow,'shape')
-                if true
-                    hl(end+1) = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha, ...
-                        'Color',col, ...
-                        'buttondownfcn',@(u,e)N.selection_clicked(u));
+                hl = struct('shape',[],'label',[],'cross',[],'handles',[]);
+                % selection shape
+                if strfind(N.selectionshow,'shape')
+                    hl.shape = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha);
                 end
-                %if strfind(D.selshow,'number')
-                if true
-                    if isscalar(N.selectiondimID) && length(name)>3
-                        rotation = 45;
-                    else
-                        rotation = 0;
-                    end
-                    hl(end+1) = text(center(1),center(2),name, ...
-                        'Parent',N.D.ha,'color',col,'visible',visible, ...
+                % name
+                if strfind(N.selectionshow,'name')
+                    hl.label = text(center(1),center(2),name,'Parent',N.D.ha, ...
                         'horizontalalignment','center','verticalalignment','middle', ...
-                        'rotation',rotation, ...
-                        'buttondownfcn',@(u,e)N.selection_clicked(hl(1)));
-                    %'color',fn_switch(k==D.currentselection,'r','w'));
+                        'rotation',namerotation);
                 end
-                %if strfind(D.selshow,'cross')
-                if false
-                    hl(end+1) = line(center(1),center(2),'Parent',N.D.ha, ...
-                        'hittest','off','Color',col,'LineStyle','none', ...
-                        'Marker','+','MarkerSize',4);
+                % center marked with a cross
+                if strfind(N.selectionshow,'center')
+                    hl.cross = line(center(1),center(2),'Parent',N.D.ha, ...
+                        'LineStyle','none','Marker','+','MarkerSize',4);
                 end
-                
-                if k <= length(N.selectiondisplay)
-                    if isgraphics(N.selectiondisplay{k})
-                        delete(N.selectiondisplay{k});
-                    end
+                % handles to modify selection
+                if N.selectionedit
+                    hl.handles = line(shape_edit_poly(1,:),shape_edit_poly(2,:),'Parent',N.D.ha, ...
+                        'LineStyle','none','marker','.','UserData',shape_edit_info);
                 end
-                
-                N.selectiondisplay{k} = hl;               
-                
+                set(struct2array(hl),'Color',col, ...
+                    'ButtonDownFcn',@(u,e)N.selection_clicked(u));
+                if isempty(N.selectiondisplay)
+                    if k~=1, error 'attempting to create N.selectiondisplay at initial index different from 1', end
+                    N.selectiondisplay = hl;
+                else
+                    N.selectiondisplay(k) = hl;
+                end            
             else
-                hl = N.selectiondisplay{k};
-                i=1; ht=[]; hs=[]; hc=[];
-%                 if strfind(D.selshow,'number'), ht=hl(i); i=i+1; end
-%                 if strfind(D.selshow,'shape'),  hs=hl(i); i=i+1; end
-%                 if strfind(D.selshow,'cross'),  hc=hl(i); i=i+1; end
-                if true, hs=hl(i); i=i+1; end
-                if true, ht=hl(i); i=i+1; end
-                if false, hc=hl(i); i=i+1; end
-                he = hl(i:end);
+                hl = N.selectiondisplay(k);
                 if flagpos
-                    set(ht,'position',center)
-                    set(hs,'xdata',polygon(1,:),'ydata',polygon(2,:))
-                    set(hc,'xdata',center(1),'ydata',center(2))
+                    set(hl.label,'position',center)
+                    set(hl.shape,'xdata',polygon(1,:),'ydata',polygon(2,:))
+                    set(hl.cross,'xdata',center(1),'ydata',center(2))
+                    if N.selectionedit
+                        set(hl.handles,'xdata',shape_edit_poly(1,:),'ydata',shape_edit_poly(2,:), ...
+                            'UserData',shape_edit_info);
+                    end
                 elseif flagname
-                    set(ht,'string',str)
-                    set([hs hc he],'color',col)
+                    set(hl.label,'string',name,'rotation',namerotation)
+                    set(struct2array(hl),'color',col)
                 end
             end
-            
-            %             % Advanced selection mode (in this mode, D.seldisp = [ht hl he]
-            %             % because D.selshow = 'number+shape')
-            %             if ~D.seleditmode || flagisel, return, end
-            %             desc = [];
-            %             switch selectionmarks(k).type
-            %                 case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
-            %                     polymark = polygon;
-            %                 case 'rect2D'
-            %                     polymark = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
-            %                     desc = [sel.shapes.points' sel.shapes.vectors'];
-            %                 case {'ellipse2D' 'ring2D'}
-            %                     c = sel.shapes.points;
-            %                     u = sel.shapes.vectors;
-            %                     e = sel.shapes.logic;
-            %                     polymark = [c-u c+u];
-            %                     desc = {c u e};
-            %                 otherwise
-            %                     error programming
-            %             end
-            %             if flagnew || flagedit
-            %                 % right now, hl has 2 elements: number and shape
-            %                 set(hl(2),'hittest','on','buttondownfcn', ...
-            %                     @(h,evnt)seleditaction(D,get(h,'userdata'),'line'))
-            %                 hl(3) = line(polymark(1,:),polymark(2,:),'Parent',D.ha, ...
-            %                     'Color',col,'tag','ActDispIm_Sel', ...
-            %                     'LineStyle','none','marker','.', ...
-            %                     'UserData',k,'hittest','on','buttondownfcn',...
-            %                     @(h,evnt)seleditaction(D,get(h,'userdata'),'point'));
-            %                 if ~isempty(desc),
-            %                     setappdata(hl(3),'description',desc)
-            %                 end
-            %                 D.seldisp{k} = hl;
-            %             else
-            %                 set(hl(3),'xdata',polymark(1,:),'ydata',polymark(2,:));
-            %                 if ~isempty(desc)
-            %                     setappdata(hl(3),'description',desc)
-            %                 end
-            %             end
+        end
+        function set.selectionshow(N,value)
+            N.selectionshow = value;
+            % we must see the shape when selection edit is active
+            if N.selectionedit && ~any(strfind(N.selectionshow,'shape'))
+                N.selectionedit = false;
+            else
+                N.displayselection('all')
+            end
+        end
+        function set.selectionedit(N,value)
+            N.selectionedit = value;
+            % we must see the shape when selection edit is active
+            if N.selectionedit && ~any(strfind(N.selectionshow,'shape'))
+                N.selectionshow = 'shape+name';
+            else
+                N.displayselection('all')
+            end
         end
         function selection_clicked(N,u)
-            % click on selection u: execute normal axes callback, but if
-            % - mouse button was a right click
-            % - and user did not drag the mouse to make a new selection
-            % then raise a context menu for specific actions on this selection
-            if strcmp(get(N.D.V.hf,'SelectionType'),'alt')
-                % first get index of the selected selection
-                idx = fn_find(@(hl)eq(hl(1),u),N.selectiondisplay,'first');
+            % click on selection u: 
+            % - if selection edit mode is active, some specific actions can
+            %   happen
+            % - if right-click and no mouse motion, raise a context menu
+            % - if none of the two types of actions above are triggered,
+            %   execute normal axes callback
+            
+            % first get index of the clicked selection
+            idx = fn_find(@(hl)any(struct2array(hl)==u),N.selectiondisplay,'first');
+            
+            click_type = get(N.D.V.hf,'SelectionType');
+            if strcmp(click_type,'alt')
                 % perform a regular new selection, but if mouse did not
                 % move, show the context menu instead of creating a point
                 % selection
-                pointaction = @()N.selection_context_menu(idx);
-                N.selectionMouse(pointaction)
+                selslice = N.selectionMouse();
+                if ~ispoint(selslice)
+                    % prompt for selection name
+                    options = {};
+                    if N.selectionpromptname
+                        name = inputdlg('Selection name','xplor');
+                        if ~isempty(name), options = {'Name' name{1}}; end
+                    end
+
+                    % update filter
+                    N.selectionfilter.updateSelection('new',selslice,options{:})
+                else
+                    % instead of creating a point selection, raise the
+                    % context menu
+                    N.selection_context_menu(idx)
+                end
+            elseif N.selectionadvanced
+                flag = '';
+                if u == N.selectiondisplay{idx}(1)
+                    flag = 'line';
+                elseif u == N.selectiondisplay{idx}(end)
+                    flag = 'handle';
+                end
+                if ~isempty(flag)
+                    N.selection_edit(N,idx,flag)
+                else
+                    N.axes_click()
+                end
             else
                 N.axes_click()
+            end
+        end
+        function selection_edit(N,idx,flag)
+            % function selection_edit(N,idx,'line|handle|redraw')
+            
+            switch flag
+                case 'redraw'
+                    selslice = N.selectionMouse('select new shape');
+                    N.selectionfilter.updateSelection('chg',idx,selslice)
+            end
+            
+            % code below is not ready
+            return
+            
+            htl = N.selectiondisplay{idx};
+            hshape = hl(1);
+            hhandle = hl(end);
+            hl = htl(2:end);
+            [flagpt, flaglin] = fn_flags({'handle','line'},flag);
+            p = get(N.ha,'currentpoint'); p = p(1,1:2)';
+            polymark = [get(hl(2),'xdata'); get(hl(2),'ydata')];
+            seldimsnum = N.seldims-'w';
+            selectionmarks = N.SI.selection.getselset(seldimsnum).singleset;
+            switch get(N.hf,'selectiontype')
+                case 'normal'               % MOVE POINT
+                    shapetype = selectionmarks(idx).type;
+                    switch shapetype
+                        case {'poly2D' 'mixed' 'line2D' 'openpoly2D'}
+                            % note that first and last point in polygon are
+                            % the same!
+                            if flagpt
+                                % closest point
+                                dist = sum(fn_add(polymark,-p).^2);
+                                [dum idx] = min(dist); idx = idx(1); %#ok<*ASGLU>
+                                if idx==1 && ~fn_ismemberstr(shapetype,{'line2D' 'openpoly2D'})
+                                    % need to move both the first and last point (which is a repetition of the first)
+                                    idx=[1 size(polymark,2)]; 
+                                end 
+                            else
+                                % closest segment (in fact, closest line)
+                                a = polymark(:,1:end-1);
+                                b = polymark(:,2:end);
+                                ab = b-a;
+                                ab2 = sum(ab.^2);
+                                ap = fn_add(p,-a);
+                                abap = ab(1,:).*ap(2,:)-ab(2,:).*ap(1,:);
+                                dist = abs(abap) ./ ab2;
+                                [dum idx] = min(dist); idx = idx(1);
+                                polymark = [a(:,1:idx) p b(:,idx:end)];
+                                set(hl,'xdata',polymark(1,:),'ydata',polymark(2,:))
+                                idx = idx+1;
+                            end
+                            fn_moveobject(hl,'point',idx)
+                            seleditupdateslice(N,idx)
+                        case 'rect2D'
+                            desc = getappdata(hl(2),'description');
+                            x = desc(1); y = desc(2);
+                            w = desc(3); h = desc(4);
+                            x2 = x+w; y2 = y+h;
+                            if flagpt
+                                % move corner
+                                pol = [x x2 x2 x; y y y2 y2]; % anti-clockwise from (x,y)
+                                dist = sum(fn_add(pol,-p).^2);
+                                [dum idx] = min(dist); idx = idx(1);
+                            else
+                                % move edge
+                                dist = abs([p(2)-y p(1)-x2 p(2)-y2 p(1)-x]);
+                                [dum idx] = min(dist);
+                            end
+                            col = get(hl(1),'color');
+                            set(hl,'color',.5*[1 1 1])
+                            chgrectangle(N.ha,hl,flagpt,idx,desc)
+                            fn_buttonmotion({@chgrectangle,N.ha,hl,flagpt,idx,desc},N.hf);
+                            set(hl,'color',col)
+                            seleditupdateslice(N,idx)
+                        case {'ellipse2D' 'ring2D'}
+                            desc = getappdata(hl(2),'description');
+                            if flagpt
+                                % closest of two anchor points
+                                dist = sum(fn_add(polymark,-p).^2);
+                                [dum idx] = min(dist); idx = idx(1);
+                            elseif strcmp(shapetype,'ellipse2D')
+                                % eccentricity
+                                idx = 0;
+                            else
+                                % eccentricity or secondary radius?
+                                polygon = [get(hl(1),'xdata'); get(hl(1),'ydata')];
+                                dist = sum(fn_add(polygon,-p).^2);
+                                [dum idx] = min(dist);
+                                if idx<length(polygon)/2
+                                    % eccentricity
+                                    idx = 0;
+                                else
+                                    % secondary radius
+                                    idx = -1;
+                                end
+                            end
+                            col = get(hl(1),'color');
+                            set(hl,'color',.5*[1 1 1])
+                            chgellipse(N.ha,hl,idx,desc)
+                            fn_buttonmotion({@chgellipse,N.ha,hl,idx,desc},N.hf);
+                            set(hl,'color',col)
+                            seleditupdateslice(N,idx)
+                        otherwise
+                            error programming
+                    end
+                case 'extend'               % MOVE SHAPE
+                    if flagpt
+                        dp = fn_moveobject(htl);
+                        seleditupdateslice(N,idx,dp)
+                    elseif flaglin
+                        dp = fn_moveobject([N.seldisp{:}]);
+                        seleditupdateslice(N,1:length(N.seldisp),dp) % move all shapes
+                    end
+                case 'alt'                  % REMOVE
+                    if fn_ismemberstr(selectionmarks(idx).type, ...
+                            {'poly2D','mixed'}) && flagpt
+                        % closest point -> remove vertex
+                        dist = sum(fn_add(polymark,-p).^2);
+                        [dum idx] = min(dist); idx = idx(1);
+                        if idx==1, idx=[1 size(polymark,2)]; end
+                        polymark(:,idx) = [];
+                        selax = selectionND('poly2D',polymark);
+                        sel = AX2IJ(N.SI,selax);
+                        updateselection(N.SI,'change',idx,sel)
+                    else
+                        % replace the whole shape
+                        set(hl,'visible','off')
+                        mouseselmode = fn_switch(N.shapemode, ...
+                            {'poly' 'openpoly'},'polypt','freeline','free', ...
+                            N.shapemode);
+                        TYPE = fn_switch(N.shapemode,{'poly','free'},'poly2D','rect','rect2D', ...
+                            'ellipse','ellipse2D','ring','ring2D', ...
+                            'segment','line2D',{'openpoly','freeline'},'openpoly2D');
+                        polyax = fn_mouse(N.ha,mouseselmode,'select new shape');
+                        selax = selectionND(TYPE,polyax);
+                        sel = AX2IJ(N.SI,selax);
+                        updateselection(N.SI,'change',idx,sel)
+                        set(hl,'visible','on')
+                    end
             end
         end
         function selection_context_menu(N,idx)
@@ -1063,6 +1216,10 @@ classdef displaynavigation < xplr.graphnode
             % remove selection
             uimenu(m,'label','remove selection', ...
                 'callback',@(u,e)N.selectionfilter.updateSelection('remove',idx))
+            
+            % replace selection
+            uimenu(m,'label','re-draw selection', ...
+                'callback',@(u,e)N.selection_edit(idx,'redraw'))
             
             % change selection number
             nsel = N.selectionfilter.nsel;
