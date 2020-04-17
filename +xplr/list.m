@@ -9,12 +9,12 @@ classdef list < xplr.graphnode
         hf  % figure parent
         hlabel
         menu
-        menuitems
         valuestr    % precomputed list of values
     end
-    properties
+    properties (SetObservable, AbortSet=true)
         selmultin = true;
         scrollwheel = 'on'; % 'on', 'off' or 'default'
+        selectionpromptname = 'none'; % 'all', 'groups' or 'none'
     end
     
     % Constructor and Destructor
@@ -82,7 +82,10 @@ classdef list < xplr.graphnode
             end
             
             % watch filter
-            connectlistener(F,L,'ChangedOperation',@(u,e)displayselection(L));
+            function filterchanged(~,e)
+                if strcmp(e.type,'filter'), displayselection(L), end
+            end
+            connectlistener(F,L,'ChangedOperation',@filterchanged);
             
             % auto-delete
             set(L.hu,'deletefcn',@(u,e)delete(L))
@@ -107,31 +110,43 @@ classdef list < xplr.graphnode
             m = L.menu;
             set(L.hu,'UIContextMenu',m)
             
-            uimenu(m,'label','new singleton selections','callback',@(u,e)event(L,'newuni'))
-            uimenu(m,'label','new group selection [A]','callback',@(u,e)event(L,'newgroup'))
-            uimenu(m,'label','add to selection','callback',@(u,e)event(L,'add'))
+            uimenu(m,'label','New singleton selections','callback',@(u,e)event(L,'newuni'))
+            uimenu(m,'label','New group selection [A]','callback',@(u,e)event(L,'newgroup'))
+            uimenu(m,'label','Add to selection','callback',@(u,e)event(L,'add'))
 
-            uimenu(m,'label','define new group...','callback',@(u,e)event(L,'definegroup'),'separator','on')
+            uimenu(m,'label','Define new group...','callback',@(u,e)event(L,'definegroup'),'separator','on')
 
-            uimenu(m,'label','sort selections according to list order','callback',@(u,e)event(L,'sort'),'separator','on')
-            uimenu(m,'label','reorder selections...','callback',@(u,e)event(L,'reorder'))
+            uimenu(m,'label','Sort selections according to list order','callback',@(u,e)event(L,'sort'),'separator','on')
+            uimenu(m,'label','Reorder selections...','callback',@(u,e)event(L,'reorder'))
             
-            uimenu(m,'label','remove highlighted group(s)','callback',@(u,e)event(L,'rmgroup'),'separator','on')
-            uimenu(m,'label','remove all groups','callback',@(u,e)event(L,'rmgroupall'))
-            uimenu(m,'label','remove highlighted individuals','callback',@(u,e)event(L,'rmuni'))
-            uimenu(m,'label','remove all individuals','callback',@(u,e)event(L,'rmuniall'))
-            uimenu(m,'label','remove highlighted selections','callback',@(u,e)event(L,'rm'))
-            uimenu(m,'label','remove all selections','callback',@(u,e)event(L,'rmall'))
+            uimenu(m,'label','Remove highlighted group(s)','callback',@(u,e)event(L,'rmgroup'),'separator','on')
+            uimenu(m,'label','Remove all groups','callback',@(u,e)event(L,'rmgroupall'))
+            uimenu(m,'label','Remove highlighted individuals','callback',@(u,e)event(L,'rmuni'))
+            uimenu(m,'label','Remove all individuals','callback',@(u,e)event(L,'rmuniall'))
+            uimenu(m,'label','Remove highlighted selections','callback',@(u,e)event(L,'rm'))
+            uimenu(m,'label','Remove all selections','callback',@(u,e)event(L,'rmall'))
 
-            L.menuitems.selmultin = uimenu(m,'separator','on','checked',onoff(L.selmultin), ...
-                'label','temporary selection: individuals','callback',@(u,e)set(L,'selmultin',~L.selmultin));
-            uimenu(m,'label','select all','callback',@(u,e)event(L,'selectall'))
+            uimenu(m,'label','Select all','separator','on','callback',@(u,e)event(L,'selectall'))
             
-            m1 = uimenu(m,'label','scroll wheel','separator','on');
-            L.menuitems.scrollwheel = uimenu(m1,'label','activated', ...
-                'checked',L.scrollwheel,'callback',@(u,e)set(L,'scrollwheel',fn_switch(L.scrollwheel,'toggle')));
-            uimenu(m1,'label','make default in figure', ...
-                'callback',@(u,e)set(L,'scrollwheel','default'));
+            fn_propcontrol(L,'selmultin', ...
+                {'menuval', {true false}, {'individuals' 'group'}}, ...
+                {'parent',m,'label','Temporary selection','separator','on'});
+            fn_propcontrol(L,'selectionpromptname', ...
+                {'menu' {'all' 'groups' 'none'} {'all selections' 'group selections only' 'none'}}, ...
+                {'parent',m,'label','Prompt for selection name'});
+            
+            % scroll wheel behavior: changing it would make sense only if
+            % list is inside a figure with other elements, which does not
+            % occur in XPLOR at the present time
+            % and anyway, there are some bugs, and the whole
+            % windowcallbackmanager thing needs to be replaced by calls to
+            % iptaddcallback
+            %             m1 = uimenu(m,'label','scroll wheel','separator','on');
+            %             fn_propcontrol(L,'scrollwheel', ...
+            %                 {'menu', {'on' 'off' 'default'}}, ...
+            %                 {'parent',m1,'label','Scroll wheel behavior'});
+            %             uimenu(m1,'label','make default in figure', ...
+            %                 'callback',@(u,e)set(L,'scrollwheel','default'));
         end
         function delete(L)
             delete@xplr.graphnode(L)
@@ -355,6 +370,24 @@ classdef list < xplr.graphnode
                     idxrm = find(rmmask);
             end
             
+            % prompt for name of new selections
+            name_options = {};
+            if ~strcmp(L.selectionpromptname,'none') && ~newissoft
+                anyname = false;
+                nnew = length(newsel);
+                names = cell(1,nnew);
+                for i = 1:nnew
+                    if strcmp(L.selectionpromptname,'groups') && isscalar(newsel(i).dataind), continue, end
+                    name = inputdlg('Group name','xplor');
+                    if isempty(name), continue, end
+                    names{i} = name;
+                    anyname = true;
+                end
+                if anyname
+                    name_options = {'Name' names};
+                end
+            end
+            
             % remove/change/add new selections
             nnew = length(newsel);
             nrm = length(idxrm);
@@ -366,11 +399,11 @@ classdef list < xplr.graphnode
             elseif nnew==0
                 updateSelection(L.F,'remove',idxrm)
             elseif nnew==nrm
-                updateSelection(L.F,'chg',idxrm,newsel,'SoftSelection',newissoft)
+                updateSelection(L.F,'chg',idxrm,newsel,'SoftSelection',newissoft,name_options{:})
             elseif nnew>nrm
-                updateSelection(L.F,'chg&new',{idxrm nsel+(1:nnew-nrm)},newsel,'SoftSelection',newissoft)
+                updateSelection(L.F,'chg&new',{idxrm nsel+(1:nnew-nrm)},newsel,'SoftSelection',newissoft,name_options{:})
             elseif nrm>nnew
-                updateSelection(L.F,'chg&rm',{idxrm(1:nnew) idxrm(nnew+1:nrm)},newsel,'SoftSelection',newissoft)
+                updateSelection(L.F,'chg&rm',{idxrm(1:nnew) idxrm(nnew+1:nrm)},newsel,'SoftSelection',newissoft,name_options{:})
             end
         end
         function sel = buildCurrentSelection(L,domultin)
@@ -407,7 +440,6 @@ classdef list < xplr.graphnode
                 otherwise
                     error 'scrollwheel value must be ''off'', ''on'' or ''default'''
             end
-            set(L.menuitems.scrollwheel,'checked',L.scrollwheel) %#ok<MCSUP>
         end
     end
     
@@ -416,8 +448,6 @@ classdef list < xplr.graphnode
         function set.selmultin(L,val)
             if val==L.selmultin, return, end
             L.selmultin = val;
-            % update menu item
-            set(L.menuitems.selmultin,'checked',onoff(val)) %#ok<MCSUP>
             % update selection
             event(L,'select')
         end
