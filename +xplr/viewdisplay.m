@@ -419,9 +419,11 @@ classdef viewdisplay < xplr.graphnode
             if doImmediateDisplay, D.checkActiveDim(false), end
             D.labels.updateLabels()
             drawnow
+            % check whether color dim and active dim remain valid
+            D.checkColorDim(false)
+            D.checkActiveDim(false,true)
             % update ticks and display
             if ~doImmediateDisplay, return, end
-            D.checkColorDim(false)
             D.graph.setTicks()
             updateDisplay(D) % will call setValueTicks if necessary
             % update slider connections
@@ -446,6 +448,9 @@ classdef viewdisplay < xplr.graphnode
             % update display
             if nargin<4, doImmediateDisplay = true; end
             D.setLayoutID(newlayoutID,doImmediateDisplay)
+        end
+        function set.activedimID(D,value)
+            D.activedimID = value;
         end
         function makeDimActive(D,dimID,flag)
             dimID = D.slice.dimensionID(dimID);
