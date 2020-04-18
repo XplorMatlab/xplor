@@ -287,38 +287,42 @@ classdef viewcontrol < xplr.graphnode
                 if nargin>=4, key = varargin{1}; else, key = 1; end
                 if nargin>=5, active = varargin{2}; else, active = true; end
                 if strcmp(flag,'addfilter')
-                    adddimIDs = dimIDs; % already a cell array
+                    dimIDs_add = dimIDs; % already a cell array
                 else
                     % add 1D filters il all dimensions that we do not want
                     % to view and that are not already filtered
                     noviewdimID = setdiff([C.V.data.header.dimID], dimID, 'stable');
                     curfiltdimID = [C.V.slicer.filters.dimID];
-                    adddimIDs = setdiff(noviewdimID, curfiltdimID, 'stable');
+                    dimIDs_add = setdiff(noviewdimID, curfiltdimID, 'stable');
                     % among these dimensions, attempt to find pairs of
                     % measure headers with same units to set 2D filter
                     % instead of two 1D filters
-                    head = C.V.data.headerByID(adddimIDs);
+                    head = C.V.data.headerByID(dimIDs_add);
                     connections = measure_grouping(head);
                     pairs = {};
                     while any(connections(:))
                         [i, j] = find(connections,1,'first');
-                        pairs{end+1} = adddimIDs(sort([i j]));
+                        pairs{end+1} = dimIDs_add(sort([i j]));
                         connections([i j],:) = false;
                         connections(:, [i j]) = false;
                     end
-                    adddimIDs = [pairs num2cell(setdiff(adddimIDs,[pairs{:}],'stable'))];
+                    dimIDs_add = [pairs num2cell(setdiff(dimIDs_add,[pairs{:}],'stable'))];
                 end
-                nadd = length(adddimIDs);
+                nadd = length(dimIDs_add);
                 if nadd > 0
                     if nadd>1 && isscalar(key), key = repmat(key,1,nadd); end
                     if nadd>1 && isscalar(active), active = repmat(active,1,nadd); end
                     % loop on dimension sets
                     newfilters = struct('dimID',cell(1,0),'F',[],'active',[]);
-                    for i = 1:length(adddimIDs)
-                        F = C.createFilterAndItem(adddimIDs{i},key(i),active(i));
-                        newfilters(end+1) = struct('dimID',adddimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
+                    for i = 1:length(dimIDs_add)
+                        F = C.createFilterAndItem(dimIDs_add{i},key(i),active(i));
+                        newfilters(end+1) = struct('dimID',dimIDs_add{i},'F',F,'active',active(i)); %#ok<AGROW>
                     end
                     C.V.slicer.addFilter({newfilters.dimID},[newfilters.F],[newfilters.active]) % slicing will occur now
+                else
+                    % we might have removed filters before without updating
+                    % completely the slice
+                    C.V.slicer.applyPending()
                 end
                 
                 % adjust display mode and layout if it seems appropriate

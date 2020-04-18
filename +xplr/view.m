@@ -40,7 +40,7 @@ classdef view < xplr.graphnode
             
             % SLICER
             if ~isa(data,'xplr.xdata'), error 'data argument must be a xplr.xdata object', end
-            V.slicer = xplr.slicer(V,data,varargin{:});
+            V.slicer = V.addComponent(xplr.slicer(V,data,varargin{:}));
             
             % LINKS
             % register view object to the bank

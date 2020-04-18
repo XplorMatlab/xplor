@@ -29,6 +29,7 @@ classdef displaynavigation < xplr.graphnode
         selectionshow = 'shape+name';
         selectionedit = false
         selectionpromptname = false
+        selectionatmostone = false
     end
     properties (Dependent)
         selectiondim            % dimension(s) to which selections apply, identified by its(their) number
@@ -266,7 +267,11 @@ classdef displaynavigation < xplr.graphnode
                         end
                         
                         % update filter
-                        N.selectionfilter.updateSelection('new',selslice,options{:})
+                        if ~N.selectionatmostone || isempty(N.selection)
+                            N.selectionfilter.updateSelection('new',selslice,options{:})
+                        else
+                            N.selectionfilter.updateSelection('chg&rm',{1 2:length(N.selection)},selslice,options{:})
+                        end
                     end
             end
         end
@@ -631,6 +636,9 @@ classdef displaynavigation < xplr.graphnode
             end
             fn_propcontrol(N,'selectionpromptname','menu', ...
                 {'parent',m,'label','Prompt for name of new selections'});
+            fn_propcontrol(N,'selectionatmostone','menu', ...
+                {'parent',m,'label','At most one selection'})
+            
             fn_propcontrol(N,'selectionshow', ...
                 {'menuval', {'shape+name' 'shape' 'name' 'center'}}, ...
                 {'parent',m,'label','Display mode','separator','on'});       
@@ -884,6 +892,12 @@ classdef displaynavigation < xplr.graphnode
                     N.selectiondisplay = N.selectiondisplay(perm);
                     % index (and therefore displayed name) of some selections have changed
                     for k = find(perm~=1:length(N.selection)), displayonesel(N, k, 'name'), end
+                case 'chg&new'
+                    N.displayselection('chg',ind{1})
+                    N.displayselection('new',ind{2})
+                case 'chg&rm'
+                    N.displayselection('chg',ind{1})
+                    N.displayselection('remove',ind{2})
                 otherwise
                     error('unknown flag ''%s''', flag)
             end
@@ -1003,6 +1017,15 @@ classdef displaynavigation < xplr.graphnode
                 N.displayselection('all')
             end
         end
+        function set.selectionatmostone(N,value)
+            N.selectionatmostone = value;
+            if value
+                nsel = length(N.selection);
+                if nsel > 1
+                    N.selectionfilter.updateSelection('remove',2:nsel)
+                end
+            end
+        end
         function selection_clicked(N,u)
             % click on selection u: 
             % - if selection edit mode is active, some specific actions can
@@ -1029,7 +1052,11 @@ classdef displaynavigation < xplr.graphnode
                     end
 
                     % update filter
-                    N.selectionfilter.updateSelection('new',selslice,options{:})
+                    if N.selectionatmostone
+                        N.selectionfilter.updateSelection('chg&rm',{1 2:length(N.selection)},selslice,options{:})
+                    else
+                        N.selectionfilter.updateSelection('new',selslice,options{:})
+                    end
                 else
                     % instead of creating a point selection, raise the
                     % context menu

@@ -267,6 +267,12 @@ classdef slicer < xplr.graphnode
             S.slicingchain(nok+1:end) = [];
             doslice(S,'slicer','global')
         end
+        function applyPending(S)
+            if S.pendingrmfilter
+                S.doslice('slicer','global')
+                S.pendingrmfilter = false;
+            end
+        end
     end
 
     % Get filter

@@ -145,7 +145,6 @@ classdef displaylayout
                 % and keep among L.(f) and L2.(f) only dimensions that are
                 % still present in the data
                 [present, dim] = ismember(dimIDf, datadimID);
-                dim = dim(present); % dimension numbers of those actually present in the data
                 dim_present = dim(present); % dimension numbers of those actually present in the data
                 singleton = ([datahead(dim_present).n]==1);
                 L.(f) = datadimID(dim_present);
