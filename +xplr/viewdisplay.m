@@ -53,6 +53,8 @@ classdef viewdisplay < xplr.graphnode
         activedim
         colordim
         layout
+        internal_dim
+        internal_dimID
     end
     
     % Constructor, destructor
@@ -149,6 +151,38 @@ classdef viewdisplay < xplr.graphnode
         end
         function layout = get.layout(D)
             layout = D.layoutID.dimensionNumber();
+        end
+        function dim = get.internal_dim(D)
+            org = D.layout;
+            if strcmp(D.displaymode,'image') && ~isempty(org.y)
+                if isempty(org.x)
+                    dim = org.y(1);
+                else
+                    dim = [org.x(1) org.y(1)];
+                end
+            else
+                if isempty(org.x)
+                    dim = [];
+                else
+                    dim = org.x(1);
+                end
+            end
+        end
+        function dim = get.internal_dimID(D)
+            org = D.layoutID;
+            if strcmp(D.displaymode,'image') && ~isempty(org.y)
+                if isempty(org.x)
+                    dim = org.y(1);
+                else
+                    dim = [org.x(1) org.y(1)];
+                end
+            else
+                if isempty(org.x)
+                    dim = [];
+                else
+                    dim = org.x(1);
+                end
+            end
         end
     end
     

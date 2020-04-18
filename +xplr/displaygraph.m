@@ -1433,6 +1433,46 @@ classdef displaygraph < xplr.graphnode
             % use the selectionnd method
             selslice = selax.applyaffinity(affinity,G.D.slice.sz(dim));
         end
+        %         function [dim, ij] = pointed_dim(G, xy)
+        %             % function [dim, ij] = pointed_dim(G, xy)
+        %             %---
+        %             % Some areas of the main display graph "belong" to different
+        %             % dimensions; for example inside an image belongs to the
+        %             % dimensions of the images, but outside the image belongs to
+        %             % some external dimensions.
+        %             % This function is used in particular for zooming with the
+        %             % scroll wheel as it helps determining in which dimension to
+        %             % perform the zoom. It also returns the coordinated in
+        %             % this/these relevant dimensions of the pointed point.
+        %             % It returns values for point inside the graph, below it (only
+        %             % dimensions in layout.x/.xy/.yx) or on its left (only in
+        %             % layout.y/.xy/.yx). It returns an empty array for point
+        %             % anywhere else outside the graph.
+        %             %
+        %             % Input:
+        %             % - xy      coordinates of a single point
+        %             %
+        %             % Output:
+        %             % - dim     vector of one or two relevant dimensions for this
+        %             %           point
+        %             % - ij      coordinate(s) of this point in this(these)
+        %             %           dimension(s)
+        %
+        %             % Check input
+        %             assert(isnumeric(xy) && length(xy)==2)
+        %
+        %             org = G.layout;
+        %             st = G.steps;
+        %             dim = [];
+        %             ij = [];
+        %
+        %             % Areas not covered (right and top of graph, and the
+        %             % bottom-left corner): no dimension selected
+        %             if any(xy>.5) || all(xy<-.5)
+        %                 return
+        %             end
+        %
+        %         end
     end
 end
 

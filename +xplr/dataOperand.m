@@ -190,7 +190,13 @@ classdef dataOperand < xplr.graphnode
                 error('attempted to load a %s object, but file content is a %s',class(O),class(obj))
             end
             if ~isequal(obj.headerin, O.headerin)
-                error('operand loaded from file does not apply to the same type of input headers as the current object')
+                if ~isequal({obj.headerin.label}, {O.headerin.label})
+                    error('operand loaded from file applies to dimensions %s, expected %s instead',fn_strcat({obj.headerin.label},','),fn_strcat({O.headerin.label},','))
+                elseif ~isequal([obj.headerin.n], [O.headerin.n])
+                    error('operand loaded from file applies on data of size %s, expected %s instead',num2str([obj.headerin.n],'%i '),num2str([O.headerin.n],'%i '))
+                else
+                    error('operand loaded from file does not apply to the same type of input headers as the current object')
+                end
             end
             
             % copy property values
