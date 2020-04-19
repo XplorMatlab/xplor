@@ -140,7 +140,7 @@ classdef displaylabels < xplr.graphnode
                     % fixed properties
                     set(L.h(d),'visible','on', ...
                         'rotation',fn_switch(f,{'y' 'yx'},90,0), ...
-                        'horizontalalignment',fn_switch(f,{'x' 'y'},'center',{'xy' 'ystatic'},'left','yx','right'), ...
+                        'horizontalalignment',fn_switch(f,{'x' 'y'},'center',{'xy' 'mergeddata'},'left','yx','right'), ...
                         'verticalalignment',fn_switch(f,'yx','bottom','middle'), ...
                         'EdgeColor',fn_switch(isactive(d),'k','none'))
                     % set position
@@ -153,9 +153,9 @@ classdef displaylabels < xplr.graphnode
                             i = find(org.y==d,1);
                             ypos = .5 + L.graph.labelPosition(d);
                             newpos = [-(1.5+i)*yhstep ypos];
-                        case 'ystatic'
-                            i = find(org.ystatic==d,1);
-                            newpos = [-4*L.rotheight (length(org.ystatic)+.5-i)*L.height];
+                        case 'mergeddata'
+                            i = find(org.mergeddata==d,1);
+                            newpos = [-4*L.rotheight (length(org.mergeddata)+.5-i)*L.height];
                         case 'xy'
                             newpos = [0 1+1.5*L.height];
                         case 'yx'
@@ -236,10 +236,11 @@ classdef displaylabels < xplr.graphnode
             layoutID_d.(dlayout) = setdiff(layoutID.(dlayout),dimID,'stable');
             % (if d is assigned to xy or yx and there is already a
             % dimension there, this one will need to be moved away)
-            xydim = [layoutID_d.xy layoutID_d.yx];
+            xydimID = [layoutID_d.xy layoutID_d.yx];
             
             % data
             sz = L.D.slice.sz; okdim = (sz>1);
+            dim = L.D.slice.dimensionNumber(dimID);
             dimIDsok = [L.D.slice.header(okdim).dimID];
             
             % set thresholds: 
@@ -282,6 +283,21 @@ classdef displaylabels < xplr.graphnode
             end
             ythr = [-Inf row(ythr)];
             
+            % can dimension go do 'mergeddata' location?
+            if strcmp(L.D.displaymode,'image') 
+                % 'mergeddata' dimension will correspond to color channel,
+                % it can contain at most one dimension, so
+                % dimension already at 'mergeddata' location needs to
+                % be moved out if dimension dim is moved there
+                colordimID = layoutID.mergeddata;
+            else
+                % all traces are superimposed for dimension in the
+                % 'mergeddata' location (which can contain any number of
+                % dimensions)
+                colordimID = []; 
+            end
+            
+            
             % make sure label will not be covered by data display
             uistack(obj,'top')
             % move
@@ -314,9 +330,15 @@ classdef displaylabels < xplr.graphnode
                     else
                         newlayoutID.x = [layoutID_d.x(1:idx-1) dimID layoutID_d.x(idx:end)];
                     end
-                elseif p(1)<=0 && strcmp(L.D.displaymode,'time courses') && p(2)<=.25
-                    % goes in ystatic
-                    newlayoutID.ystatic(end+1) = dimID;
+                elseif p(1)<=0 && p(2)<=.25
+                    % goes in mergeddata
+                    newlayoutID.mergeddata(end+1) = dimID;
+                    if colordimID
+                        % move away dimension that was occupying mergeddata
+                        % location
+                        tmp = newlayoutID.(dlayout);
+                        newlayoutID.(dlayout) = [tmp(1:didx-1) colordimID tmp(didx:end)];
+                    end
                 elseif p(1)<=0
                     % insert in y
                     idx = find(1-p(2)>=ythr,1,'last'); % never empty thanks to the +Inf
@@ -342,10 +364,11 @@ classdef displaylabels < xplr.graphnode
                     else
                         newlayoutID.xy = []; newlayoutID.yx = dimID;
                     end
-                    if xydim
+                    if xydimID
                         % move away dimension that was occupying xy or yx
+                        % (swap with dimID previous location)
                         tmp = newlayoutID.(dlayout);
-                        newlayoutID.(dlayout) = [tmp(1:didx-1) xydim tmp(didx:end)];
+                        newlayoutID.(dlayout) = [tmp(1:didx-1) xydimID tmp(didx:end)];
                     end
                 end
                 % update organization (-> will trigger automatic display

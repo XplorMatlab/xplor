@@ -11,7 +11,7 @@ classdef displaylayout
         % numbers)
         x
         y
-        ystatic
+        mergeddata
         xy
         yx
     end
@@ -54,7 +54,7 @@ classdef displaylayout
             pos = cell(1,L.D.nd);
             datahead = L.D.slice.header;
             datadimID = [datahead.dimID];
-            F = {'x', 'y', 'ystatic', 'xy', 'yx'};
+            F = {'x', 'y', 'mergeddata', 'xy', 'yx'};
             for i=1:length(F)
                 f = F{i};
                 dimID = L.(f);
@@ -65,7 +65,7 @@ classdef displaylayout
         function pos = dim_location(L, dim)
             if ~isscalar(dim), error 'argument ''dim'' must be scalar', end
             dimID = L.D.slice.dimensionID(dim);
-            F = {'x', 'y', 'ystatic', 'xy', 'yx'};
+            F = {'x', 'y', 'mergeddata', 'xy', 'yx'};
             for i=1:length(F)
                 f = F{i};
                 if any(L.(f) == dimID)
@@ -78,13 +78,13 @@ classdef displaylayout
         function s = dimensionNumber(L)
             % function s = dimensionNumber(L)
             %---
-            % Return a structure with same fields x, y, ystatic, xy and yx
+            % Return a structure with same fields x, y, mergeddata, xy and yx
             % as L, but where values will be dimension numbers instead of
             % identifiers.
             s = struct;
             datahead = L.D.slice.header;
             datadimID = [datahead.dimID];
-            F = {'x', 'y', 'ystatic', 'xy', 'yx'};
+            F = {'x', 'y', 'mergeddata', 'xy', 'yx'};
             for i=1:length(F)
                 f = F{i};
                 dimID = L.(f);
@@ -102,7 +102,7 @@ classdef displaylayout
             L2 = L; % copy (displaylayout is not a handle class)
             datahead = L.D.slice.header;
             datadimID = [datahead.dimID];
-            F = {'x' 'y' 'ystatic' 'xy' 'yx'};
+            F = {'x' 'y' 'mergeddata' 'xy' 'yx'};
             for i = 1:length(F)
                 f = F{i};
                 dimIDf = L.(f);      % dimension identifiers
@@ -136,7 +136,7 @@ classdef displaylayout
             % dimensions already positionned + remove dimensions that
             % disappeared
             dimPositionned = false(1,L.D.nd);
-            F = {'x' 'y' 'ystatic' 'xy' 'yx'};
+            F = {'x' 'y' 'mergeddata' 'xy' 'yx'};
             for i = 1:length(F)
                 f = F{i};
                 dimIDf = L.(f);      % dimension identifiers
@@ -188,7 +188,7 @@ classdef displaylayout
             % Input:
             % - dimID       dimension identifier(s)
             % - location    character arrays: 'x', 'y', 'xy', 'yx' or
-            %               'ystatic', with, for 'x' and 'y' optional
+            %               'mergeddata', with, for 'x' and 'y' optional
             %               indication of index where to insert the
             %               location ('x0' = at the beginning = default,
             %               'x1' = next, 'x-1' = last)
@@ -204,7 +204,7 @@ classdef displaylayout
             if length(dimID) ~= length(location), error 'input lengths mismatch', end
             
             % remove these dimensions from the layout
-            F = {'x' 'y' 'ystatic' 'xy' 'yx'};
+            F = {'x' 'y' 'mergeddata' 'xy' 'yx'};
             for i = 1:length(F)
                 f = F{i};
                 L.(f)(ismember(L.(f), dimID)) = [];
@@ -222,9 +222,9 @@ classdef displaylayout
                     % assign requested dimension to the requested location
                     L.(f) = dimID(i);
                 else
-                    % insert in either location 'x', 'y' or 'ystatic' at a
+                    % insert in either location 'x', 'y' or 'mergeddata' at a
                     % specific position
-                    [f, index] = fn_regexptokens(f,'^(x|y|ystatic)([\-0-9]*)$');
+                    [f, index] = fn_regexptokens(f,'^(x|y|mergeddata)([\-0-9]*)$');
                     if isempty(index)
                         index = 0;
                     else

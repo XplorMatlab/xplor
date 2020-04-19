@@ -448,12 +448,12 @@ classdef displaygraph < xplr.graphnode
             
             % check every 'external' dimension for which we might have
             % several displays on the same y lines (i.e. dimensions at
-            % location x, ystatic or xy/yx); do these display have the same
+            % location x, mergeddata or xy/yx); do these display have the same
             % clip values?
             subs0 = substruct('()',repmat({':'},1,1+G.D.nd));
             samecliprow = true;     % time courses on the same row have the same clipping range
             for d = 1:G.D.nd
-                if any(d == [org.ystatic org.x(2:end) G.steps.xydim])
+                if any(d == [org.mergeddata org.x(2:end) G.steps.xydim])
                     % check whether clip values are the same along this
                     % dimension
                     test = diff(startextent,1,1+d);
