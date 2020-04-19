@@ -51,9 +51,9 @@ classdef view < xplr.graphnode
             init_panels(V)
             
             % Developer menu
-            if xplr.debuginfo
-                V.developerMenu()
-            end            
+            %if xplr.debuginfo
+            V.developerMenu()
+            %end            
             
             % DISPLAY
             % (note: calling addComponent will cause V.D to be deleted when

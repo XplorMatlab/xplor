@@ -375,7 +375,7 @@ classdef viewcontrol < xplr.graphnode
             % Empty the dimension selection
             set(C.dimlist,'value',[])
         end
-        function addFilterItem(C,dimID,label,F,active)            
+        function addFilterItem(C,dimID,F,active)            
             % panel
             id = {'filter' dimID};
             [panel, itemidx] = C.newItem(id,1,'panel');
@@ -386,13 +386,25 @@ classdef viewcontrol < xplr.graphnode
             C.items(itemidx).F = F;
             
             % label
+            label = ['filter ' F.headerin.label ' (' F.F.slicefunstr ')'];
             hlab = uicontrol('parent',panel, ...
                 'position',[20 5 300 15], ...
                 'style','text','string',label,'horizontalalignment','left', ...
                 'backgroundcolor',backgroundColor, ...
                 'enable', fn_switch(active,'inactive','off'), ...
-                'buttondownfcn',@(u,e)clickFilterItem(C,dimID,id));
+                'buttondownfcn',@(u,e)clickFilterItem(C,dimID,id), ...
+                'uicontextmenu',uicontextmenu(C.V.hf,'callback',@(m,e)F.context_menu(m)));
             C.items(itemidx).label = hlab;
+            
+            % change label upon operation change
+            function check_operation_change(~,e)
+                if strcmp(e.type,'operation')
+                    label = ['filter ' F.headerin.label ' (' F.F.slicefunstr ')'];
+                    set(hlab,'string',label)
+                end
+            end
+            hl = addlistener(F.F,'ChangedOperation',@check_operation_change);
+            addlistener(hlab,'ObjectBeingDestroyed',@(u,e)delete(hl));
             
             % buttons
             [ii, jj] = ndgrid(-2:2);
@@ -511,8 +523,7 @@ classdef viewcontrol < xplr.graphnode
             % add the filter to the items, it is important that
             % filter.linkkey is set before using addFilterItem
             % TODO: change how the string filter is shifted
-            str = ['filter ' header.label ' (' char(F.F.slicefun) ')'];
-            C.addFilterItem(dimID,str,F,active)
+            C.addFilterItem(dimID,F,active)
         end
     end
     

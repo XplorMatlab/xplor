@@ -838,6 +838,7 @@ classdef displaynavigation < xplr.graphnode
         end
         function selectionfilterchange(N,e)
             % Update selection display
+            if ~strcmp(e.type,'filter'), return, end
             N.displayselection(e.flag,e.ind)
         end
         function displayselection(N,flag,ind)

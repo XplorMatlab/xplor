@@ -165,7 +165,13 @@ classdef filterAndPoint < xplr.dataOperand
             switch flag
                 case 'filter'
                     setHeaderout(F)
-                    if strcmp(e.flag,'remove') && F.F.nsel==0
+                    if strcmp(e.type,'operation')
+                        if F.F.nsel == 0
+                            return
+                        else
+                            e2 = xplr.eventinfo('filter','chg',1:F.F.nsel);
+                        end
+                    elseif strcmp(e.flag,'remove') && F.F.nsel==0
                         % removal of selection(s) replaces filter selection
                         % by point selection
                         e2 = xplr.eventinfo('filter','all');
@@ -272,6 +278,15 @@ classdef filterAndPoint < xplr.dataOperand
         function copyin(F,obj)
             F.F.copyin(obj.F)
             F.P.copyin(obj.P)
+        end
+    end
+    
+    % Context menu
+    methods
+        function context_menu(F,m)
+            % the context menu of the filterAndPoint object is no more than
+            % the context menu of its filter component object
+            context_menu(F.F,m)
         end
     end
 end

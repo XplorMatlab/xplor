@@ -204,4 +204,17 @@ classdef dataOperand < xplr.graphnode
         end
     end
     
+    % Context menu
+    methods
+        function context_menu(O,m)
+            % function context_menu(O,m)
+            %---
+            % populate a context menu with actions that can be applied to
+            % the filter
+            % this function should be overwritten by sub-classes
+            delete(get(m,'children'))
+            uimenu(m,'enable','off','label','(empty menu)')
+        end
+    end
+    
 end
