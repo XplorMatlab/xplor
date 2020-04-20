@@ -37,8 +37,8 @@ classdef viewdisplay < xplr.graphnode
         linealpha = 1; % lines have a small degree of transparency!
     end    
     properties (SetAccess='private')
-        layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayout
-        layoutIDmemory                        % remembers position of all dimension ID encountered so far (i.e. even if not present in the current data)
+        layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayoutID
+        layoutIDall                           % layout, including singleton dimensions; set with function setLayoutID
         activedimID = struct('x',[],'y',[])   % dimensions on which zooming mouse actions and sliders apply; change with function makeDimActive(D,d)
         colordimID = [];                      % set with setColorDim
         clip = [0 1]                          % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
@@ -53,6 +53,8 @@ classdef viewdisplay < xplr.graphnode
         activedim
         colordim
         layout
+        internal_dim
+        internal_dimID
     end
     
     % Constructor, destructor
@@ -149,6 +151,38 @@ classdef viewdisplay < xplr.graphnode
         end
         function layout = get.layout(D)
             layout = D.layoutID.dimensionNumber();
+        end
+        function dim = get.internal_dim(D)
+            org = D.layout;
+            if strcmp(D.displaymode,'image') && ~isempty(org.y)
+                if isempty(org.x)
+                    dim = org.y(1);
+                else
+                    dim = [org.x(1) org.y(1)];
+                end
+            else
+                if isempty(org.x)
+                    dim = [];
+                else
+                    dim = org.x(1);
+                end
+            end
+        end
+        function dim = get.internal_dimID(D)
+            org = D.layoutID;
+            if strcmp(D.displaymode,'image') && ~isempty(org.y)
+                if isempty(org.x)
+                    dim = org.y(1);
+                else
+                    dim = [org.x(1) org.y(1)];
+                end
+            else
+                if isempty(org.x)
+                    dim = [];
+                else
+                    dim = org.x(1);
+                end
+            end
         end
     end
     
@@ -395,8 +429,8 @@ classdef viewdisplay < xplr.graphnode
             end
             D.zoomfilters(d).setBin(bin)
         end
-        function setLayoutMemory(D,newlayoutID,doImmediateDisplay)
-            % function setLayoutMemory(D,newlayoutID[,doImmediateDisplay])
+        function setLayoutID(D,newlayoutID,doImmediateDisplay)
+            % function setLayoutID(D,newlayoutID[,doImmediateDisplay])
             %---
             % if doImmediateDisplay is set to false, only labels are
             % updated; if it is set to true, update happens regardless of
@@ -408,7 +442,7 @@ classdef viewdisplay < xplr.graphnode
                 if isequal(newlayoutID,D.layoutIDmem), return, end
                 doImmediateDisplay = true;
             end
-            D.layoutIDmemory = newlayoutID;
+            D.layoutIDall = newlayoutID;
             D.layoutID = newlayoutID.currentlayout(); % keep only dimensions actually displayed
             % is zslice too large for being displayed
             D.checkzslicesize()
@@ -419,9 +453,11 @@ classdef viewdisplay < xplr.graphnode
             if doImmediateDisplay, D.checkActiveDim(false), end
             D.labels.updateLabels()
             drawnow
+            % check whether color dim and active dim remain valid
+            D.checkColorDim(false)
+            D.checkActiveDim(false,true)
             % update ticks and display
             if ~doImmediateDisplay, return, end
-            D.checkColorDim(false)
             D.graph.setTicks()
             updateDisplay(D) % will call setValueTicks if necessary
             % update slider connections
@@ -430,6 +466,25 @@ classdef viewdisplay < xplr.graphnode
             D.navigation.repositionCross()
             % update selection display
             D.navigation.displayselection()
+        end
+        function set_dim_location(D,dimID,location,doImmediateDisplay)
+            % function set_dim_location(D,dimID,location,doImmediateDisplay)
+            %---
+            % set new location of specific dimensions; locations of other
+            % dimensions will automatically be adjusted
+            % more details in the help of xplr.displaylayout.set_dim_location
+            %
+            % See also xplr.displaylayout.set_dim_location
+            
+            % new layout
+            newlayoutID = D.layoutIDall.set_dim_location(dimID,location);
+            
+            % update display
+            if nargin<4, doImmediateDisplay = true; end
+            D.setLayoutID(newlayoutID,doImmediateDisplay)
+        end
+        function set.activedimID(D,value)
+            D.activedimID = value;
         end
         function makeDimActive(D,dimID,flag)
             dimID = D.slice.dimensionID(dimID);
@@ -596,16 +651,16 @@ classdef viewdisplay < xplr.graphnode
             xplr.debuginfo('viewdisplay','slicechange %s', flag)
             
             % first time?
-            if isempty(D.layoutIDmemory)
+            if isempty(D.layoutIDall)
                 % some heuristics to choose initial layout
                 D.displaymode = fn_switch(sum(D.slice.sz>1) == 1, 'time courses', 'image');
-                D.layoutIDmemory = xplr.displaylayout(D);
-                D.layoutID = D.layoutIDmemory;
+                D.layoutIDall = xplr.displaylayout(D);
+                D.layoutID = D.layoutIDall;
             else
                 % keep locations of dimensions already present in
-                % D.layoutIDmemory, use some heuristic to choose
+                % D.layoutIDall, use some heuristic to choose
                 % locations of new dimensions
-                [D.layoutIDmemory, D.layoutID] = D.layoutIDmemory.updateLayout();
+                [D.layoutIDall, D.layoutID] = D.layoutIDall.updateLayout();
             end
             
             % Update active dim and slider connections
@@ -691,7 +746,8 @@ classdef viewdisplay < xplr.graphnode
             dochgx = strcmp(flag,'chgdata&blocksize');
             docolor = dotimecourses && ~fn_ismemberstr(flag,{'chgdata' 'chgdata&blocksize' 'clip'});
             
-            % Reshape slice data adequately
+            % Reshape slice data adequately: after reshape, dimensions in x
+            % will alternate between external and internal dimensions
             sz = D.zslice.sz;
             org = D.layout; % convert from dim ID to dim numbers
             if ~isempty(org.x)
@@ -702,17 +758,13 @@ classdef viewdisplay < xplr.graphnode
                 xlayout0 = length(sz)+1;
                 sz(end+1) = 1;
             end
-            x = D.zslice.data;
+            % build a 3-element vector of 'internal' dimensions; some of
+            % them might be fake dimensions, the idea is to have in any
+            % case 3 internal dimensions to avoid handling multiple
+            % separate cases
             if dotimecourses
-                nt = sz(xlayout0);
-                if nt==1
-                    lineopt = {'linestyle','none','marker','.'};
-                else
-                    lineopt = {'linestyle','-','marker','none'};
-                end
-                szo = [prod(sz(1:xlayout0-1)) prod(sz(xlayout0+1:end))];
-                x = reshape(x,[szo(1) nt szo(2)]);
-                ylayout0 = [];
+                internaldim = [xlayout0 length(sz)+(1:2)];
+                sz(end+(1:2)) = 1;
             else
                 if ~isempty(org.y)
                     ylayout0 = org.y(1);
@@ -720,17 +772,43 @@ classdef viewdisplay < xplr.graphnode
                     ylayout0 = length(sz)+1;
                     sz(end+1) = 1;
                 end
-                dotranspose = (ylayout0<xlayout0);
-                if dotranspose, [xlayout0, ylayout0] = deal(ylayout0,xlayout0); end
-                nx = sz(xlayout0);
-                ny = sz(ylayout0);
-                szo = [prod(sz(1:xlayout0-1)) prod(sz(xlayout0+1:ylayout0-1)) prod(sz(ylayout0+1:end))];
-                x = reshape(x,[szo(1) nx szo(2) ny szo(3)]);
+                if ~isempty(org.mergeddata)
+                    channeldim = org.mergeddata;
+                else
+                    channeldim = length(sz)+1;
+                    sz(end+1) = 1;
+                end
+                internaldim = [xlayout0 ylayout0 channeldim];
             end
-            
+            % prepare the dimensions permutation after extracting each
+            % sub-signal/sub-image
+            [internaldim_sort, perm_xi2slice] = sort(internaldim);
+            perm_slice2xi = [0 0 0 1 3 5 7]; 
+            perm_slice2xi(perm_xi2slice) = [2 4 6];
+            if ~dotimecourses
+                % for image, XPLOR dimension order is x-y, but Matlab is
+                % y-x, so we permute the two before displaying images
+                perm_slice2xi(1:2) = perm_slice2xi([2 1]);
+            end
+            % size of reshape
+            szr = zeros(1,7);           
+            for i = 1:3
+                if i==1
+                    szr(2*i-1) = prod(sz(1:internaldim_sort(1)-1));
+                else
+                    szr(2*i-1) = prod(sz(internaldim_sort(i-1)+1:internaldim_sort(i)-1)); 
+                end
+                szr(2*i) = sz(internaldim_sort(i));
+            end
+            szr(7) = prod(sz(internaldim_sort(3)+1:end));
+            % reshape
+            x = reshape(D.zslice.data, szr);
+            % size of remaining external dimensions
+            szo = szr(1:2:end);
+
             % Check that current htransform and hdisplay are valid
             nd = D.zslice.nd;
-            sz1 = sz; sz1([xlayout0 ylayout0]) = 1;
+            sz1 = sz; sz1(internaldim) = 1;
             sz1prev = sz1;
             if ~isempty(dim), sz1prev(dim) = sz1prev(dim)+(doremove-donew)*length(ind); end
             if ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))...
@@ -760,7 +838,7 @@ classdef viewdisplay < xplr.graphnode
             end
             
             % Prepare display and grid
-            sz1 = sz; sz1([xlayout0 ylayout0]) = 1;
+            sz1 = sz; sz1(internaldim) = 1;
             if doreset          % reset display and grid elements
                 deleteValid(D.htransform) % this will also delete children D.hdisplay
                 [D.htransform, D.hdisplay] = deal(gobjects([sz1 1]));
@@ -798,11 +876,7 @@ classdef viewdisplay < xplr.graphnode
                 idxlist = row(subsref(idxlist,subs));
             end
             ijklist = fn_indices(sz1,idxlist,'g2i');
-            if dotimecourses
-                [ibeflist iaftlist] = ind2sub(szo,idxlist);
-            else
-                [ibeflist imidlist iaftlist] = ind2sub(szo,idxlist);
-            end
+            [i1, i2, i3, i4] = ind2sub(szo,idxlist);
             
             % Prepare dispatch
             if doposition
@@ -826,11 +900,8 @@ classdef viewdisplay < xplr.graphnode
                 % line/image
                 if docreatecur || dodatacur
                     % get the data and adjust clipping if requested
-                    if dotimecourses
-                        xi = x(ibeflist(u),:,iaftlist(u));
-                    else
-                        xi = x(ibeflist(u),:,imidlist(u),:,iaftlist(u));
-                    end
+                    xi = x(i1(u),:,i2(u),:,i3(u),:,i4(u));
+                    xi = permute(xi, perm_slice2xi);
                     switch clipadjust
                         case 'none'
                             clipi = clip0;
@@ -847,6 +918,12 @@ classdef viewdisplay < xplr.graphnode
                     % display it
                     if dotimecourses
                         xi = (xi-clipi(1))/clipextent;
+                        nt = sz(internaldim(1));
+                        if nt==1
+                            lineopt = {'linestyle','none','marker','.'};
+                        else
+                            lineopt = {'linestyle','-','marker','none'};
+                        end
                         if docreatecur
                             hl = line(1:nt,xi, ...
                                 'parent',D.htransform(idx),'HitTest','off',lineopt{:});
@@ -861,12 +938,25 @@ classdef viewdisplay < xplr.graphnode
                             if docolor, set(hl,'color',cmap(ijk(cdim),:)), end
                         end
                     else
-                        if dotranspose
-                            im = permute(xi,[2 4 1 3]);
-                        else
-                            im = permute(xi,[4 2 1 3]);
+                        nanvalue = .95;
+                        % size in color dimension must be 1, 3 or 4;
+                        % correct if it is not the case
+                        alpha = [];
+                        nc = sz(internaldim(3));
+                        if nc == 2
+                            % add a third blue channel set to zero
+                            xi(:,:,3) = 0;
+                        elseif nc > 4
+                            xi = xi(:,:,1:3);
                         end
-                        im = fn_clip(im,clipi,D.colormap.cmap,.95);
+                        if size(xi,3) == 1
+                            im = fn_clip(xi,clipi,D.colormap.cmap,nanvalue);
+                        else
+                            im = fn_clip(xi,clipi,[0 1],nanvalue);
+                        end
+                        if nc == 4
+                            [im, alpha] = deal(im(:,:,1:3), im(:,:,4));
+                        end
                         if docreatecur
                             % y coordinates are negative to orient the
                             % image downward (see also comment inside of
@@ -875,12 +965,16 @@ classdef viewdisplay < xplr.graphnode
                             % negative)
                             D.hdisplay(idx) = surface([.5 size(im,2)+.5],[-.5 -.5-size(im,1)],zeros(2), ...
                                 'parent',D.htransform(idx), ...
-                                'EdgeColor','none','FaceColor','texturemap','CDataMapping','scaled','CData',im, ...
+                                'EdgeColor','none','FaceColor','texturemap', ...
+                                'CDataMapping','scaled', 'CData',im, ...
                                 'HitTest','off');
                         elseif dochgx
                             set(D.hdisplay(idx),'xdata',[.5 size(im,2)+.5],'ydata',[-.5 -.5-size(im,1)],'CData',im)
                         else
                             set(D.hdisplay(idx),'CData',im)
+                        end
+                        if ~isempty(alpha)
+                            set(D.hdisplay(idx),'FaceAlpha','texturemap','AlphaData',alpha)
                         end
                     end
                 end
@@ -909,7 +1003,7 @@ classdef viewdisplay < xplr.graphnode
             cla(D.ha)
             % re-display everything
 %             D.sliceChangeEvent = struct('flag','global');
-%             D.navigation.displayselection()
+            D.navigation.displayselection('reset')
             zslicechange(D) % this will automatically re-create the cross, but not the selection displays
         end
     end
@@ -1029,7 +1123,7 @@ classdef viewdisplay < xplr.graphnode
            D.navigation.repositionCross()
            
            % update selections display
-           D.navigation.displayselection('changereferential')
+           D.navigation.displayselection('referentialchanged')
 
             % Update legend
             if strcmp(flag,'global')
@@ -1070,25 +1164,22 @@ classdef viewdisplay < xplr.graphnode
             D.displaymode = mode;
             % for 'image' mode, check that layout is valid, and modify it if
             % necessary
-            if strcmp(mode,'image') && ~isempty(D.layoutID.ystatic)
-                % it is not possible to superimpose images -> move
-                % dimensions at 'ystatic' location to 'y'
+            if strcmp(mode,'image') && length(D.layoutID.mergeddata)>1
+                % it is not possible to have more than 1 color dimension ->
+                % move other dimensions at 'mergeddata' location to 'y'
                 newlayoutID = D.layoutIDmem;
-                ystatic = D.layoutID.ystatic;
-                newlayoutID.ystatic = setdiff(newlayoutID.ystatic, ystatic);
-                newlayoutID.y = [newlayoutID.y ystatic];
-                D.setLayout(newlayoutID) % this automatically updates display among other things
+                dimIDmove = D.layoutID.mergeddata(2:end);
+                newlayoutID.mergeddata = setdiff(newlayoutID.mergeddata, dimIDmove, 'stable');
+                newlayoutID.y = [newlayoutID.y dimIDmove];
+                D.setLayoutID(newlayoutID) % this automatically updates display among other things
             else
-                % update layout (if first "y" dimension in layout is
-                % singleton, should be shown if diplaymode is image, but
-                % not if it is time courses)
-                D.layoutID = D.layoutIDmemory.currentlayout();
                 % update display
                 D.checkzslicesize() % is zslice too large for being displayed
                 D.graph.computeSteps() %#ok<MCSUP>
                 D.graph.setTicks() %#ok<MCSUP>
                 D.labels.updateLabels() %#ok<MCSUP>
                 updateDisplay(D) % will call setValueTicks
+                D.navigation.displayselection() %#ok<MCSUP>
             end
             % show/hide color legend
             displayColorLegend(D)

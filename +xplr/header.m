@@ -359,6 +359,24 @@ classdef header < hgsetget
         end
     end
     
+    % Group measure headers operating on the same space
+    methods
+        function connections = measure_grouping(H)
+            % function connections = measure_grouping(H)
+            %---
+            % returns square boolean matrix indicating with ones the
+            % dimensions whose headers are measure with the same units
+            nh = length(H);
+            connections = false(nh,nh);
+            idxmeasure = find([H.ismeasure]);
+            for i = idxmeasure
+                for j = setdiff(idxmeasure,i)
+                    connections(i,j) = strcmp(H(i).unit, H(j).unit);
+                end
+            end
+        end
+    end
+    
     % Access value in table
     methods
         function x = getValue(H,label,idx)
@@ -389,7 +407,10 @@ classdef header < hgsetget
                 % compute names
                 nval = length(idx);
                 if H.ncolumn>0
-                    itemvalues = H.values(:,1);
+                    % any column 'name' in the values table?
+                    idxname = find(strcmpi({H.sublabels.label},'name'));
+                    if isempty(idxname), idxname = 1; end
+                    itemvalues = H.values(:,idxname);
                     str = cell(1,nval);
                     for k=1:nval
                         val = itemvalues{idx(k)};

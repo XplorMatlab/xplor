@@ -132,6 +132,13 @@ classdef dimheader < xplr.header
             d = H.dimensionNumber(dimID);
             head = H(d);
         end
+        function [dim, dimID] = non_singleton_dim(H)
+            dim = find([H.n]>1);
+            dimID = [H(dim).dimID];
+        end
+        function dimID = non_singleton_dimID(H)
+            dimID = [H([H.n]>1).dimID];
+        end
     end
     
 end

@@ -22,6 +22,8 @@ classdef viewcontrol < xplr.graphnode
             % items
             init_items(C)
             % (data)
+            datastr = 'Data';
+            if ~isempty(V.data.name), datastr = [datastr ' (' V.data.name ')']; end
             C.newItem('data',1, ...
                 {'style','text','string',V.data.name, ...
                 'backgroundcolor',xplr.colors('gui.controls.dataname'), ...
@@ -245,8 +247,7 @@ classdef viewcontrol < xplr.graphnode
                 return
             end
             
-            % commodity: convert dimension numbers or labels to dimension
-            % identifiers
+            % convert dimension numbers or labels to dimension identifiers
             dimID = C.V.data.dimensionID(dimID);
             
             % 'addfilter' flag -> several filters at once
@@ -286,25 +287,60 @@ classdef viewcontrol < xplr.graphnode
                 if nargin>=4, key = varargin{1}; else, key = 1; end
                 if nargin>=5, active = varargin{2}; else, active = true; end
                 if strcmp(flag,'addfilter')
-                    adddimIDs = dimIDs; % already a cell array
+                    dimIDs_add = dimIDs; % already a cell array
                 else
                     % add 1D filters il all dimensions that we do not want
                     % to view and that are not already filtered
-                    noviewdimID = setdiff([C.V.data.header.dimID], dimID);
+                    noviewdimID = setdiff([C.V.data.header.dimID], dimID, 'stable');
                     curfiltdimID = [C.V.slicer.filters.dimID];
-                    adddimIDs = num2cell(setdiff(noviewdimID, curfiltdimID));
+                    dimIDs_add = setdiff(noviewdimID, curfiltdimID, 'stable');
+                    % among these dimensions, attempt to find pairs of
+                    % measure headers with same units to set 2D filter
+                    % instead of two 1D filters
+                    head = C.V.data.headerByID(dimIDs_add);
+                    connections = measure_grouping(head);
+                    pairs = {};
+                    while any(connections(:))
+                        [i, j] = find(connections,1,'first');
+                        pairs{end+1} = dimIDs_add(sort([i j]));
+                        connections([i j],:) = false;
+                        connections(:, [i j]) = false;
+                    end
+                    dimIDs_add = [pairs num2cell(setdiff(dimIDs_add,[pairs{:}],'stable'))];
                 end
-                nadd = length(adddimIDs);
+                nadd = length(dimIDs_add);
                 if nadd > 0
                     if nadd>1 && isscalar(key), key = repmat(key,1,nadd); end
                     if nadd>1 && isscalar(active), active = repmat(active,1,nadd); end
                     % loop on dimension sets
                     newfilters = struct('dimID',cell(1,0),'F',[],'active',[]);
-                    for i = 1:length(adddimIDs)
-                        F = C.createFilterAndItem(adddimIDs{i},key(i),active(i));
-                        newfilters(end+1) = struct('dimID',adddimIDs{i},'F',F,'active',active(i)); %#ok<AGROW>
+                    for i = 1:length(dimIDs_add)
+                        F = C.createFilterAndItem(dimIDs_add{i},key(i),active(i));
+                        newfilters(end+1) = struct('dimID',dimIDs_add{i},'F',F,'active',active(i)); %#ok<AGROW>
                     end
                     C.V.slicer.addFilter({newfilters.dimID},[newfilters.F],[newfilters.active]) % slicing will occur now
+                else
+                    % we might have removed filters before without updating
+                    % completely the slice
+                    C.V.slicer.applyPending()
+                end
+                
+                % adjust display mode and layout if it seems appropriate
+                D = C.V.D;
+                if strcmp(flag,'viewdim')
+                    if isscalar(dimID)
+                        D.set_dim_location(dimID,'x',strcmp(D.displaymode,'time courses'))
+                        D.displaymode = 'time courses';
+                    elseif length(dimID)==2
+                        D.set_dim_location(dimID,{'x' 'y'},strcmp(D.displaymode,'image'))
+                        D.displaymode = 'image';
+                    end
+                else
+                    nsdimID = non_singleton_dimID(C.V.slice.header);
+                    if isscalar(nsdimID)
+                        D.set_dim_location(nsdimID,'x',strcmp(D.displaymode,'time courses'))
+                        D.displaymode = 'time courses';
+                    end
                 end
             end
             
@@ -339,7 +375,7 @@ classdef viewcontrol < xplr.graphnode
             % Empty the dimension selection
             set(C.dimlist,'value',[])
         end
-        function addFilterItem(C,dimID,label,F,active)            
+        function addFilterItem(C,dimID,F,active)            
             % panel
             id = {'filter' dimID};
             [panel, itemidx] = C.newItem(id,1,'panel');
@@ -350,13 +386,25 @@ classdef viewcontrol < xplr.graphnode
             C.items(itemidx).F = F;
             
             % label
+            label = ['filter ' F.headerin.label ' (' F.F.slicefunstr ')'];
             hlab = uicontrol('parent',panel, ...
                 'position',[20 5 300 15], ...
                 'style','text','string',label,'horizontalalignment','left', ...
                 'backgroundcolor',backgroundColor, ...
                 'enable', fn_switch(active,'inactive','off'), ...
-                'buttondownfcn',@(u,e)clickFilterItem(C,dimID,id));
+                'buttondownfcn',@(u,e)clickFilterItem(C,dimID,id), ...
+                'uicontextmenu',uicontextmenu(C.V.hf,'callback',@(m,e)F.context_menu(m)));
             C.items(itemidx).label = hlab;
+            
+            % change label upon operation change
+            function check_operation_change(~,e)
+                if strcmp(e.type,'operation')
+                    label = ['filter ' F.headerin.label ' (' F.F.slicefunstr ')'];
+                    set(hlab,'string',label)
+                end
+            end
+            hl = addlistener(F.F,'ChangedOperation',@check_operation_change);
+            addlistener(hlab,'ObjectBeingDestroyed',@(u,e)delete(hl));
             
             % buttons
             [ii, jj] = ndgrid(-2:2);
@@ -475,8 +523,7 @@ classdef viewcontrol < xplr.graphnode
             % add the filter to the items, it is important that
             % filter.linkkey is set before using addFilterItem
             % TODO: change how the string filter is shifted
-            str = ['filter ' header.label ' (' char(F.F.slicefun) ')'];
-            C.addFilterItem(dimID,str,F,active)
+            C.addFilterItem(dimID,F,active)
         end
     end
     

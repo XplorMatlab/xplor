@@ -1,10 +1,10 @@
 classdef parameters < handle
     % XPLR.PARAMETERS  handle parameters stored in a xml file
     % has the following methods
-    % xplr.getAllPar()  get all parameters
-    % xplr.reload()     reload from file
-    % xplr.get(key)     get a specific parameter
-    % xplr.set(key, value)  set value of a parameter
+    % xplr.parameters.getAllPar()  get all parameters
+    % xplr.parameters.reload()     reload from file
+    % xplr.parameters.get(key)     get a specific parameter
+    % xplr.parameters.set(key, value)  set value of a parameter
     
     properties
         params
@@ -58,9 +58,10 @@ classdef parameters < handle
             str = fn_strcut(str,'.');
             s = setstruct(s,str,value);
             % save
-            P.params = s;
             fname = fullfile(fileparts(which('xplor')),'xplor parameters.xml');
             fn_savexml(fname,s)
+            % reload
+            xplr.parameters.getAllPar(true);
         end
     end
     

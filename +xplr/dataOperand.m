@@ -78,7 +78,7 @@ classdef dataOperand < xplr.graphnode
             % dimensions is the same.
             % We consider that there is a dimension change when the number
             % of dimensions or the label(s) have changed.
-            b = (O.ndout ~= O.ndin) || ~all(strcmp({O.headerout.label}, {O.headerin.label}));
+            b = (O.ndout ~= O.ndin);
         end
     end
     methods
@@ -106,7 +106,7 @@ classdef dataOperand < xplr.graphnode
             dimIDout = O.getdimIDout(dimIDs);
             head = data.header;
             head(dims) = [];
-            head = [head(1:dims(1)-1) xplr.dimheader(O.headerout,dimIDout) head(dims(1):end)];
+            head = [head(1:min(dims)-1) xplr.dimheader(O.headerout,dimIDout) head(min(dims):end)];
             % build output xdata object
             data = xplr.xdata(dat,head);
         end
@@ -123,7 +123,7 @@ classdef dataOperand < xplr.graphnode
     
     % Additional information in output header
     methods
-        function [headvalue affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo)
+        function [headvalue, affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo)
             affectedcolumns = [];
             for i=1:size(addheaderinfo,2)
                 label = addheaderinfo{1,i};
@@ -190,11 +190,30 @@ classdef dataOperand < xplr.graphnode
                 error('attempted to load a %s object, but file content is a %s',class(O),class(obj))
             end
             if ~isequal(obj.headerin, O.headerin)
-                error('operand loaded from file does not apply to the same type of input headers as the current object')
+                if ~isequal({obj.headerin.label}, {O.headerin.label})
+                    error('operand loaded from file applies to dimensions %s, expected %s instead',fn_strcat({obj.headerin.label},','),fn_strcat({O.headerin.label},','))
+                elseif ~isequal([obj.headerin.n], [O.headerin.n])
+                    error('operand loaded from file applies on data of size %s, expected %s instead',num2str([obj.headerin.n],'%i '),num2str([O.headerin.n],'%i '))
+                else
+                    error('operand loaded from file does not apply to the same type of input headers as the current object')
+                end
             end
             
             % copy property values
             O.copyin(obj);
+        end
+    end
+    
+    % Context menu
+    methods
+        function context_menu(O,m)
+            % function context_menu(O,m)
+            %---
+            % populate a context menu with actions that can be applied to
+            % the filter
+            % this function should be overwritten by sub-classes
+            delete(get(m,'children'))
+            uimenu(m,'enable','off','label','(empty menu)')
         end
     end
     

@@ -5,8 +5,11 @@ classdef filter < xplr.dataOperand
         % input: headerin is already a property of the dataOperand mother class
         % operation:
         selection = xplr.selectionnd.empty(1,0);
-        slicefun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
         % output: headerout is already a property of the dataOperand mother class
+    end
+    properties (SetObservable, AbortSet)
+        slicefun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
+        slicefunstr = 'nmean'; 
     end
     properties(Dependent, SetAccess='protected', Transient)
         nsel
@@ -138,15 +141,41 @@ classdef filter < xplr.dataOperand
             
             % update header of output space
             if fn_ismemberstr(flag,{'all' 'new' 'chg' 'chg&new' 'chg&rm'})
+                % make a nice name for new 1D selections
+                if F.ndin == 1 && ~isempty(value) && ~any(strcmpi(addheaderinfo(1,:),'name'))
+                    n = length(value);
+                    names = cell(n,1);
+                    for i = 1:n
+                        lines = value(i).polygon;
+                        subnames = cell(1,size(lines,2));
+                        for j = 1:length(subnames)
+                            kstart = ceil(lines(1,j));
+                            kstop = floor(lines(2,j));
+                            if kstart==kstop
+                                subnames{j} = F.headerin.getItemNames{kstart};
+                            elseif F.headerin.categorical
+                                subnames{j} = [F.headerin.getItemNames{kstart} '-' F.headerin.getItemNames{kstop}];
+                            else
+                                % measure
+                                [start, scale, unit] = deal(F.headerin.start, F.headerin.scale, F.headerin.unit);
+                                subnames{j} = sprintf('%.4g-%.4g%s', start+[kstart kstop]*scale, unit);
+                            end
+                        end 
+                        names{i} = fn_strcat(subnames,',');
+                    end
+                    addheaderinfo(:,end+1) = {'Name', names};
+                end
                 % track header values
                 switch flag
                     case 'chg&new'
-                        headvalue = sliceHeader(F,[ind{:}],addheaderinfo);
+                        indchgnew = [ind{:}];
                     case 'chg&rm'
-                        headvalue = sliceHeader(F,ind{1},addheaderinfo);
+                        indchgnew = ind{1};
                     otherwise
-                        headvalue = sliceHeader(F,ind,addheaderinfo); % if flag is 'all', ind was set to 1:F.n
+                        indchgnew = ind;
                 end
+                headvalue = sliceHeader(F,indchgnew,addheaderinfo);
+                % update headerout
                 F.headerout = updateHeader(F.headerout,flag,ind,headvalue);
             else
                 F.headerout = updateHeader(F.headerout,flag,ind);
@@ -155,6 +184,46 @@ classdef filter < xplr.dataOperand
             % notification
             e = xplr.eventinfo('filter',flag,ind,value);
             notify(F,'ChangedOperation',e)
+        end
+        function set.slicefunstr(F,fun)
+            F.slicefunstr = fun;
+            F.slicefun = eval(['@' fun]);
+        end
+        function set.slicefun(F,fun)
+            % input
+            if ischar(fun)
+                F.slicefunstr = fun;
+            elseif isa(fun,'function_handle')
+                F.slicefunstr = char(fun);
+            else
+                error 'incorrect slicing function'
+            end
+            % some functions are recognized and adapted to be called
+            % with the second argument being the dimension
+            fspec = {@std @nanstd @nstd @var @nanvar @nvar};
+            for i = 1:length(fspec)
+                if isequal(fun,fspec{i})
+                    fun = @(x,d)fun(fn_float(x),0,d);
+                    break
+                end
+            end
+            fspec = {@min @max};
+            for i = 1:length(fspec)
+                if isequal(fun,fspec{i})
+                    fun = @(x,d)fun(x,[],d);
+                    break
+                end
+            end
+            % try it: make sure that when applied to a given dimension the
+            % function reduces the test data to an array of same size
+            % except 1 in the specified dimension
+            testdata = rand(2,3,2);
+            x = fun(testdata,2);
+            assert(isequal(size(x),[2 1 2]))
+            % update property
+            F.slicefun = fun;
+            % notification
+            notify(F,'ChangedOperation',xplr.eventinfo('operation'))
         end
         function setFun(F,fun)
             % convert char to function handle
@@ -236,7 +305,7 @@ classdef filter < xplr.dataOperand
             
             % additional values set together with the selections
             if nargin<3, addheaderinfo = cell(2,0); end
-            [headvalue affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo);
+            [headvalue, affectedcolumns] = setAddHeaderInfo(F,headvalue,addheaderinfo);
             okcolumn(affectedcolumns) = true;
             
             % put default values in columns which were not set
@@ -322,6 +391,7 @@ classdef filter < xplr.dataOperand
             selection_world = aff.move_selection(F.selection);
         end
         function updateOperationData2Space(F,WO,e)
+            if ~strcmp(e.type,'filter'), return, end
             [flag, ind, value] = deal(e.flag, e.ind, e.value);
             if ~isempty(value)
                 aff = xplr.affinitynd([F.headerin.scale],[F.headerin.start]-[F.headerin.scale]);
@@ -334,7 +404,7 @@ classdef filter < xplr.dataOperand
                     WO.operation(ind) = value;
                 case 'remove'
                     WO.operation(ind) = [];
-                case 'permute'
+                case 'perm'
                     WO.operation = WO.operation(ind);
                 case 'chg&new'
                     WO.operation([ind{:}]) = value;
@@ -362,5 +432,14 @@ classdef filter < xplr.dataOperand
         end
     end
     
-    
+    % Context menu
+    methods
+        function context_menu(F,m)
+            delete(get(m,'children'))
+            funstr = {'mean' 'nmean' 'median' 'min' 'max' 'std'};
+            fn_propcontrol(F,'slicefunstr', ...
+                {'menuval' funstr [funstr {'other...'}]}, ...
+                {'parent', m, 'label', 'Filter operation'});
+        end
+    end
 end

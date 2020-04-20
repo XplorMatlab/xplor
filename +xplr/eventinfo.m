@@ -10,6 +10,9 @@ classdef eventinfo < event.EventData & dynamicprops
     % * 'chg&rm',ind
     % * 'perm',ind
     %
+    % type: 'operation'
+    % no argument
+    %
     % type: 'point'
     % arguments:    chgij [warning: if not set, default empty will be interpreted as false by a logical test]
     %
@@ -56,7 +59,7 @@ classdef eventinfo < event.EventData & dynamicprops
                     F = {'flag' 'ind' 'value'};
                 case 'zoom'
                     F = {'chgnout' 'dim'};
-                case 'bin'
+                case {'bin' 'operation'}
                     F = {};
                 case 'clip'
                     F = {'flag' 'value'};
