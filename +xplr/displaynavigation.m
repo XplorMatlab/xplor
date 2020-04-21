@@ -130,7 +130,7 @@ classdef displaynavigation < xplr.graphnode
         function init_value_display(N)
             N.crossDataValue = uicontrol('Parent',N.D.hp,'style','text','enable','inactive', ...
                 'fontsize',8,'horizontalalignment','right');
-            fn_controlpositions(N.crossDataValue,N.D.hp,[1 0],[-75 10 65 15])
+            fn_controlpositions(N.crossDataValue,N.D.hp,[1 0],[-100 10 90 15])
         end
     end
     
@@ -481,6 +481,7 @@ classdef displaynavigation < xplr.graphnode
             % do not show cross?
             if ~N.showcross
                 set(N.cross,'Visible','off')
+                set(N.crossDataValue,'Visible','off')                
                 return
             end           
                         
@@ -506,6 +507,7 @@ classdef displaynavigation < xplr.graphnode
             updateCrossCenterVisibility(N);
 
             % Cross Value
+            set(N.crossDataValue,'Visible','on') 
             updateValueDisplay(N);
         end
         function updateCrossCenterVisibility(N)
@@ -513,17 +515,15 @@ classdef displaynavigation < xplr.graphnode
             % cross center as well
             N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
         end
-        function updateValueDisplay(N)
+        function updateValueDisplay(N)            
             ijk = getPointIndexPosition(N);
             idx = fn_indices(N.D.slice.sz, round(ijk));
             value = N.D.slice.data(idx);
 
             % Test to display the value as "val(d1,d2,d3,...)=value"
             %set(N.crossDataValue,'String',['val(' num2str(ijk(1),'%.3g') ',' num2str(ijk(2),'%.3g') ')=' ...
-            %            num2str(value,'%.3g')])
-
-            set(N.crossDataValue,'String',num2str(value,'%.3g'))
-            %disp("Cross value updated");
+            %            num2str(value,'%.3g')])         
+            set(N.crossDataValue,'String',['Value: ', num2str(value,'%.3g')])
         end
         % cross color, transparency, and global visibility
         function set.showcross(N,value)
