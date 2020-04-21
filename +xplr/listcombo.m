@@ -59,7 +59,7 @@ classdef listcombo < hgsetget
             C.lists(idx) = xplr.list(filter,'in',hp);
             
             % remove panel when list will be distroyed
-            addlistener(C.lists(idx),'ObjectBeingDestroyed',@(u,e)C.removeList(hp))
+            addlistener(C.lists(idx),'ObjectBeingDestroyed',@(u,e)C.removeList(hp));
             
             % memorize which filter is at this position
             C.filters(idx) = filter;
