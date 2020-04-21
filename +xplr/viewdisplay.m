@@ -783,7 +783,7 @@ classdef viewdisplay < xplr.graphnode
             % prepare the dimensions permutation after extracting each
             % sub-signal/sub-image
             [internaldim_sort, perm_xi2slice] = sort(internaldim);
-            perm_slice2xi = [0 0 0 1 3 5 7]; 
+            perm_slice2xi = [0 0 0 1 3 5 7];
             perm_slice2xi(perm_xi2slice) = [2 4 6];
             if ~dotimecourses
                 % for image, XPLOR dimension order is x-y, but Matlab is
@@ -791,12 +791,12 @@ classdef viewdisplay < xplr.graphnode
                 perm_slice2xi(1:2) = perm_slice2xi([2 1]);
             end
             % size of reshape
-            szr = zeros(1,7);           
+            szr = zeros(1,7);
             for i = 1:3
                 if i==1
                     szr(2*i-1) = prod(sz(1:internaldim_sort(1)-1));
                 else
-                    szr(2*i-1) = prod(sz(internaldim_sort(i-1)+1:internaldim_sort(i)-1)); 
+                    szr(2*i-1) = prod(sz(internaldim_sort(i-1)+1:internaldim_sort(i)-1));
                 end
                 szr(2*i) = sz(internaldim_sort(i));
             end

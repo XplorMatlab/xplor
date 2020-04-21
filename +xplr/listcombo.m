@@ -53,30 +53,16 @@ classdef listcombo < hgsetget
             end
             
             % new panel
-            [hp idx] = C.container.addSubPanel;
+            [hp, idx] = C.container.addSubPanel;
             
-            % create graphic objects
-            % (list)
-            hlist = uicontrol('parent',hp,'style','listbox');
-            fn_controlpositions(hlist,hp,[0 0 1 1],[8 5 -16 -5-21-2])
-            % (label)
-            hlabel = uicontrol('parent',hp,'style','text', ...
-                'backgroundcolor',xplr.colors('linkkey',filter.linkkey));
-            fn_controlpositions(hlabel,hp,[0 1 1 0],[8 -21 -8-18 18])
-            % (close button)
-            x = fn_printnumber(ones(18),'x','pos','center')'; 
-            x(x==1) = NaN; x = repmat(x,[1 1 3]);
-            hclose = uicontrol('parent',hp,'cdata',x,'callback',@(u,e)C.removeList(hp));
-            fn_controlpositions(hclose,hp,[1 1],[-8-18 -3-18 18 18])
-
             % create list
-            C.lists(idx) = xplr.list(filter,'in',[hlist hlabel]);
+            C.lists(idx) = xplr.list(filter,'in',hp);
+            
+            % remove panel when list will be distroyed
+            addlistener(C.lists(idx),'ObjectBeingDestroyed',@(u,e)C.removeList(hp))
             
             % memorize which filter is at this position
             C.filters(idx) = filter;
-            
-            % watch filter deletion
-            addlistener(filter,'ObjectBeingDestroyed',@(u,e)removeList(C,hp));
         end
         function showList(C,filter)
             % add filter list, only if not already present

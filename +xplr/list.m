@@ -1,10 +1,10 @@
 classdef list < xplr.graphnode
-    % function L = list(filter[,'in',fig/axes/uicontrol/ctrl+label][,other options...])
+    % function L = list(filter[,'in',uipanel][,other options...])
         
     properties (SetAccess='private')
         F           % xplr.filterAndPoint object
         seltype
-        hu
+        hlist
         hp  % direct parent
         hf  % figure parent
         hlabel
@@ -28,7 +28,7 @@ classdef list < xplr.graphnode
                 head = xplr.header('testheader',10);
                 F = xplr.filterAndPoint(head);
             end
-            [opt optadd] = parseInput(opt,varargin{:});
+            [opt, optadd] = parseInput(opt,varargin{:});
             
             % check filter
             L.F = F;
@@ -36,42 +36,54 @@ classdef list < xplr.graphnode
             if ~isa(F,'xplr.filterAndPoint'), error 'list can act only on a filterAndPoint object', end
             L.seltype = fn_switch(F.headerin.categorical,'indices','point1D');
             
+            % watch filter deletion
+            addlistener(L.F,'ObjectBeingDestroyed',@(u,e)delete(L));
+            
             % add 'SoftSelection' label to output header
             F.augmentHeader('SoftSelection','logical')
             
-            % figure and axes
-            if isempty(opt.in), opt.in = gcf; end
-            if length(opt.in)==2
-                L.hlabel = opt.in(2); % handle for label is given in input; label will be properly displayed later
-                opt.in = opt.in(1);
+            % uipanel container
+            newfigure = isempty(opt.in);
+            if newfigure
+                % create uipanel in a new figure
+                L.hp = uipanel('parent',figure);
+            elseif strcmp(get(opt.in,'type'),'uipanel')
+                L.hp = opt.in;
+            else
+                error 'input container must be an uipanel object'
             end
-            if ~ishandle(opt.in) && mod(opt.in,1)==0 && opt.in>0, figure(opt.in), end
-            switch get(opt.in,'type')
-                case 'figure'
-                    L.hp = opt.in;
-                    figure(opt.in), set(L.hp,'menubar','none'), delete(findall(opt.in,'parent',opt.in))
-                    L.hu = uicontrol('units','normalized','position',[0 0 1 1]);
-                case 'uicontrol'
-                    L.hu = opt.in;
-                    L.hp = get(opt.in,'parent');
-                case 'axes'
-                    % replace axes by an uicontrol
-                    ha = opt.in;
-                    L.hp = get(ha,'parent');
-                    L.hu = uicontrol('parent',L.hp,'units',get(ha,'units'),'position',get(ha,'position'));
-                    delete(ha)
-                otherwise
-                    error('bad handle')
-            end
+            
+            % parent figure
             L.hf = fn_parentfigure(L.hp);
+
+            % create several components
+            % (list)
+            L.hlist = uicontrol('parent',L.hp,'style','listbox','min',0,'max',2, ...
+                'callback',@(hlist,evnt)event(L,'select'), ...
+            	'keypressfcn',@(hlist,evnt)keypress(L,evnt));
+            fn_controlpositions(L.hlist,L.hp,[0 0 1 1],[8 5 -16 -5-21-2])
+            % (label)
+            L.hlabel = uicontrol('parent',L.hp,'style','text', ...
+                'string',L.F.headerout.label, ...
+                'horizontalalignment','center', ...
+                'backgroundcolor',xplr.colors('linkkey',L.F.linkkey));
+            fn_controlpositions(L.hlabel,L.hp,[0 1 1 0],[8 -21 -8-18 18])
+            % (close button)
+            if ~newfigure
+                x = fn_printnumber(ones(18),'x','pos','center')';
+                x(x==1) = NaN; x = repmat(x,[1 1 3]);
+                hclose = uicontrol('parent',L.hp,'cdata',x,'callback',@(u,e)delete(L));
+                fn_controlpositions(hclose,L.hp,[1 1],[-8-18 -3-18 18 18])
+            end
+            % (group button)
+            ctrl = fn_propcontrol(L,'selmultin','togglebutton', ...
+                {'parent',L.hp,'string','G'});
+            fn_controlpositions(ctrl.hu,L.hp,[1 1],[-8-38 -3-18 18 18])
             
             % context menu
             initlocalmenu(L)
             
             % list and event (bottom-up)
-            set(L.hu,'style','listbox','min',0,'max',2, ...
-                'callback',@(hu,evnt)event(L,'select'), ...
-            	'keypressfcn',@(hu,evnt)keypress(L,evnt))
             if boolean(L.scrollwheel)
                 L.scrollwheel = 'on'; % this will automaticall register scroll wheel
             end
@@ -88,13 +100,12 @@ classdef list < xplr.graphnode
             connectlistener(F,L,'ChangedOperation',@filterchanged);
             
             % auto-delete
-            set(L.hu,'deletefcn',@(u,e)delete(L))
+            set(L.hlist,'deletefcn',@(u,e)delete(L))
             addlistener(F,'ObjectBeingDestroyed',@(u,e)delete(L));
 
             % update display (here, just sets the correct value)
             preformatvalues(L)
             displayselection(L)
-            displaylabel(L)
             
             % set more properties
             if ~isempty(optadd)
@@ -108,7 +119,7 @@ classdef list < xplr.graphnode
             delete(L.menu)
             L.menu = uicontextmenu('parent',L.hf);
             m = L.menu;
-            set(L.hu,'UIContextMenu',m)
+            set(L.hlist,'UIContextMenu',m)
             
             uimenu(m,'label','New singleton selections','callback',@(u,e)event(L,'newuni'))
             uimenu(m,'label','New group selection [A]','callback',@(u,e)event(L,'newgroup'))
@@ -150,8 +161,8 @@ classdef list < xplr.graphnode
         end
         function delete(L)
             delete@xplr.graphnode(L)
-            if ~isvalid(L) && ~isprop(L,'hu'), return, end
-            deleteValid(L.hu,L.hlabel)
+            if ~isvalid(L) && ~isprop(L,'hlist'), return, end
+            deleteValid(L.hlist,L.hlabel)
         end
     end
        
@@ -178,7 +189,7 @@ classdef list < xplr.graphnode
             % - rmall, rmgroup, rmgroupall, rmuni, rmuniall, rm         
             
             % selected list entries
-            val = get(L.hu,'value');
+            val = get(L.hlist,'value');
             %L.F.shared.list.cursel = val; % make available to all lists acting on this filter what is the new entries selection
             
             % get the current selections
@@ -203,7 +214,7 @@ classdef list < xplr.graphnode
                         flag = 'unisel';
                     end
                 case 'selectall'
-                    set(L.hu,'value',1:L.F.szin)
+                    set(L.hlist,'value',1:L.F.szin)
                     flag = 'select';
                 case 'scroll'
                     n = varargin{1};
@@ -243,7 +254,7 @@ classdef list < xplr.graphnode
                         val = fn_coerce(L.F.index+n,1,L.F.szin);
                         if val==L.F.index, return, end
                     end
-                    set(L.hu,'value',val,'listboxtop',val(1)-2);
+                    set(L.hlist,'value',val,'listboxtop',val(1)-2);
                     flag = 'select';
             end            
             
@@ -407,7 +418,7 @@ classdef list < xplr.graphnode
             end
         end
         function sel = buildCurrentSelection(L,domultin)
-            val = get(L.hu,'value');
+            val = get(L.hlist,'value');
             if isempty(val), sel = []; return, end
             if domultin 
                 nsel = length(val);
@@ -429,13 +440,13 @@ classdef list < xplr.graphnode
         function set.scrollwheel(L,flag)
             switch flag
                 case 'on'
-                    fn_scrollwheelregister(L.hu,@(n)event(L,'scroll',n)) %#ok<MCSUP>
+                    fn_scrollwheelregister(L.hlist,@(n)event(L,'scroll',n)) %#ok<MCSUP>
                     L.scrollwheel = 'on';
                 case 'default'
-                    fn_scrollwheelregister(L.hu,@(n)event(L,'scroll',n),'default') %#ok<MCSUP>
+                    fn_scrollwheelregister(L.hlist,@(n)event(L,'scroll',n),'default') %#ok<MCSUP>
                     L.scrollwheel = 'on';
                 case 'off'
-                    fn_scrollwheelregister(L.hu,flag) %#ok<MCSUP>
+                    fn_scrollwheelregister(L.hlist,flag) %#ok<MCSUP>
                     L.scrollwheel = 'off';
                 otherwise
                     error 'scrollwheel value must be ''off'', ''on'' or ''default'''
@@ -491,34 +502,15 @@ classdef list < xplr.graphnode
             end
             
             % update display!
-            top = get(L.hu,'listboxtop'); % the portion of the list that is shown moves when setting the string -> reset it to its current position
-            set(L.hu,'string',str,'ListboxTop',top)
+            top = get(L.hlist,'listboxtop'); % the portion of the list that is shown moves when setting the string -> reset it to its current position
+            set(L.hlist,'string',str,'ListboxTop',top)
             if nsel==0
                 % if no selection, highlight the point selection
-                set(L.hu,'value',L.F.index)
+                set(L.hlist,'value',L.F.index)
             else
-                set(L.hu,'value',[selinds{softsel}])
+                set(L.hlist,'value',[selinds{softsel}])
             %             elseif isfield(L.F.shared,'list')
-            %                 set(L.hu,'value',L.F.shared.list.cursel)
-            end
-        end
-        function displaylabel(L)
-            fullfigure = isequal(fn_pixelsize(L.hu),fn_pixelsize(L.hp));
-            if ~isempty(L.hlabel)
-                % a control has already be created by the user for the
-                % label, it only needs to be filled in
-                set(L.hlabel,'style','text','string',L.F.headerout.label, ...
-                    'horizontalalignment','center');
-            elseif fullfigure
-                % list occupies the full figure, put label in figure name
-                % if parent is the figure
-                if L.hp==L.hf, set(L.hf,'name',L.F.headerout.label), end
-            else
-                % list occupies only part of the figure, put label above
-                % the list
-                L.hlabel = uicontrol('parent',L.hp,'style','text','string',L.F.headerout.label, ...
-                    'horizontalalignment','center');
-                fn_controlpositions(L.hlabel,L.hu,[0 1 1 0],[0 2 0 15])
+            %                 set(L.hlist,'value',L.F.shared.list.cursel)
             end
         end
             

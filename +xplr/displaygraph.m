@@ -1365,7 +1365,7 @@ classdef displaygraph < xplr.graphnode
                         [inside_point, outside_point] = deal(boundaryNext, boundaryPrev);
                     end
 
-                    % scan dimensions to determine the what portion of the
+                    % scan dimensions to determine what portion of the
                     % initial segment should be hidden.
                     biggestRatio = 0;
                     for dimension = 1:nd
@@ -1378,7 +1378,7 @@ classdef displaygraph < xplr.graphnode
                         % opposite sign, this means that 'outside_point' is
                         % inside the zoom limit for this dimension)
                         V = [outside_to_limit_max, outside_to_limit_min];
-                        if (~any(diff(sign(V))))
+                        if ~any(diff(sign(V)))
                             biggestRatio = max(biggestRatio,min(abs(outside_to_limit_min),abs(outside_to_limit_max))/abs(outside_to_inside));
                         end
                     end
