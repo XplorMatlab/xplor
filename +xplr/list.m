@@ -78,7 +78,7 @@ classdef list < xplr.graphnode
             % (group button)
             ctrl = fn_propcontrol(L,'selmultin','togglebutton', ...
                 {'parent',L.hp,'string','G'});
-            fn_controlpositions(ctrl.hu,L.hp,[1 1],[-8-38 -3-18 18 18])
+            fn_controlpositions(ctrl.hu,L.hp,[0 1],[8 -3-18 18 18])
             
             % context menu
             initlocalmenu(L)
