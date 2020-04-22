@@ -1405,3 +1405,14 @@ classdef displaynavigation < xplr.graphnode
     
     
 end
+
+
+%--- 
+% Matlab's struct2array is only provided with some of the toolboxes, so
+% let's write our own
+function x = struct2array(s)
+
+c = struct2cell(s);
+x = [c{:}];
+
+end

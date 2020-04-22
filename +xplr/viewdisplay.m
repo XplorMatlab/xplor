@@ -154,35 +154,23 @@ classdef viewdisplay < xplr.graphnode
         end
         function dim = get.internal_dim(D)
             org = D.layout;
-            if strcmp(D.displaymode,'image') && ~isempty(org.y)
-                if isempty(org.x)
-                    dim = org.y(1);
-                else
-                    dim = [org.x(1) org.y(1)];
+            if isempty(org.x)
+                dim = [];
+            else
+                dim = org.x(1);
+            end
+            if strcmp(D.displaymode,'image')
+                if ~isempty(org.y)
+                    dim = [dim org.y(1) org.mergeddata];
+                elseif ~isempty(org.mergeddata)
+                    dim = [dim org.mergeddata];
                 end
             else
-                if isempty(org.x)
-                    dim = [];
-                else
-                    dim = org.x(1);
-                end
             end
         end
-        function dim = get.internal_dimID(D)
-            org = D.layoutID;
-            if strcmp(D.displaymode,'image') && ~isempty(org.y)
-                if isempty(org.x)
-                    dim = org.y(1);
-                else
-                    dim = [org.x(1) org.y(1)];
-                end
-            else
-                if isempty(org.x)
-                    dim = [];
-                else
-                    dim = org.x(1);
-                end
-            end
+        function dimID = get.internal_dimID(D)
+            dim = D.internal_dim();
+            dimID = [D.slice.header(dim).dimID];
         end
     end
     
@@ -943,10 +931,7 @@ classdef viewdisplay < xplr.graphnode
                         % correct if it is not the case
                         alpha = [];
                         nc = sz(internaldim(3));
-                        if nc == 2
-                            % add a third blue channel set to zero
-                            xi(:,:,3) = 0;
-                        elseif nc > 4
+                        if nc > 4
                             xi = xi(:,:,1:3);
                         end
                         if size(xi,3) == 1
@@ -954,7 +939,10 @@ classdef viewdisplay < xplr.graphnode
                         else
                             im = fn_clip(xi,clipi,[0 1],nanvalue);
                         end
-                        if nc == 4
+                        if nc == 2
+                            % add a third blue channel set to zero
+                            im(:,:,3) = 0;
+                        elseif nc == 4
                             [im, alpha] = deal(im(:,:,1:3), im(:,:,4));
                         end
                         if docreatecur
@@ -966,15 +954,14 @@ classdef viewdisplay < xplr.graphnode
                             D.hdisplay(idx) = surface([.5 size(im,2)+.5],[-.5 -.5-size(im,1)],zeros(2), ...
                                 'parent',D.htransform(idx), ...
                                 'EdgeColor','none','FaceColor','texturemap', ...
-                                'CDataMapping','scaled', 'CData',im, ...
+                                'CDataMapping','scaled','FaceAlpha','texturemap', ...
+                                'CData',im,'AlphaData',alpha, ...
                                 'HitTest','off');
                         elseif dochgx
-                            set(D.hdisplay(idx),'xdata',[.5 size(im,2)+.5],'ydata',[-.5 -.5-size(im,1)],'CData',im)
+                            set(D.hdisplay(idx),'xdata',[.5 size(im,2)+.5],'ydata',[-.5 -.5-size(im,1)], ...
+                                'CData',im,'AlphaData',alpha)
                         else
-                            set(D.hdisplay(idx),'CData',im)
-                        end
-                        if ~isempty(alpha)
-                            set(D.hdisplay(idx),'FaceAlpha','texturemap','AlphaData',alpha)
+                            set(D.hdisplay(idx),'CData',im,'AlphaData',alpha)
                         end
                     end
                 end
@@ -1064,8 +1051,7 @@ classdef viewdisplay < xplr.graphnode
                 updateDisplay(D,'chgdata')
             else
                 % Smart display update
-                if (~isempty(D.layoutID.x) && D.layoutID.x(1)==chgdimID) ...
-                        || (strcmp(D.displaymode,'image') && ~isempty(D.layoutID.y) && D.layoutID.y(1)==chgdimID)
+                if ismember(chgdimID, D.internal_dimID)
                     % changes are within elements (the grid arrangement
                     % remains the same)
                     if fn_ismemberstr(flag,{'perm' 'chg'}) ...
@@ -1095,11 +1081,11 @@ classdef viewdisplay < xplr.graphnode
                                 updateDisplay(D,'chg',chgdim,1:n)
                             end
                         case 'chg&new'
+                            updateDisplay(D,'chg',chgdim,e.ind{1})
                             updateDisplay(D,'new',chgdim,e.ind{2})
-                            updateDisplay(D,'chg',chgdim,e.ind{1})
                         case 'chg&rm'
-                            updateDisplay(D,'remove',chgdim,e.ind{2})
                             updateDisplay(D,'chg',chgdim,e.ind{1})
+                            updateDisplay(D,'remove',chgdim,e.ind{2})
                         otherwise
                             error('flag ''%s'' is not handled','flag')
                     end

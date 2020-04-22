@@ -234,9 +234,18 @@ classdef displaylabels < xplr.graphnode
             dlayout = layoutID.dim_location(dimID);
             didx = find(layoutID.(dlayout)==dimID);
             layoutID_d.(dlayout) = setdiff(layoutID.(dlayout),dimID,'stable');
-            % (if d is assigned to xy or yx and there is already a
-            % dimension there, this one will need to be moved away)
+            
+            % only one dimension gan go to either xy or yx, and if image
+            % display only one dimension can go to mergeddata=colordim
+            % -> remember the current dimension in these location for a
+            % swap
             xydimID = [layoutID_d.xy layoutID_d.yx];
+            if strcmp(L.D.displaymode,'image') 
+                colordimID = layoutID_d.mergeddata;
+            else
+                colordimID = []; 
+            end
+            
             
             % data
             sz = L.D.slice.sz; okdim = (sz>1);
@@ -282,22 +291,7 @@ classdef displaylabels < xplr.graphnode
                 ythr = NaN(2,length(ylayout)); ythr(:,oky) = ythrok;
             end
             ythr = [-Inf row(ythr)];
-            
-            % can dimension go do 'mergeddata' location?
-            if strcmp(L.D.displaymode,'image') 
-                % 'mergeddata' dimension will correspond to color channel,
-                % it can contain at most one dimension, so
-                % dimension already at 'mergeddata' location needs to
-                % be moved out if dimension dim is moved there
-                colordimID = layoutID.mergeddata;
-            else
-                % all traces are superimposed for dimension in the
-                % 'mergeddata' location (which can contain any number of
-                % dimensions)
-                colordimID = []; 
-            end
-            
-            
+                        
             % make sure label will not be covered by data display
             uistack(obj,'top')
             % move
