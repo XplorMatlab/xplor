@@ -926,7 +926,6 @@ classdef viewdisplay < xplr.graphnode
                             if docolor, set(hl,'color',cmap(ijk(cdim),:)), end
                         end
                     else
-                        nanvalue = .95;
                         % size in color dimension must be 1, 3 or 4;
                         % correct if it is not the case
                         alpha = [];
@@ -934,11 +933,7 @@ classdef viewdisplay < xplr.graphnode
                         if nc > 4
                             xi = xi(:,:,1:3);
                         end
-                        if size(xi,3) == 1
-                            im = fn_clip(xi,clipi,D.colormap.cmap,nanvalue);
-                        else
-                            im = fn_clip(xi,clipi,[0 1],nanvalue);
-                        end
+                        im = D.colormap.color_image(xi, clipi);
                         if nc == 2
                             % add a third blue channel set to zero
                             im(:,:,3) = 0;

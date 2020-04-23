@@ -1,25 +1,28 @@
 classdef colormaptool < xplr.graphnode
     
-    properties (SetObservable=true)
+    properties (SetObservable=true, AbortSet)
         cmapdef
+        do_nonlinear = false
     end
     properties (SetObservable=true, AbortSet, SetAccess='private')
         cmap
     end
-    properties (SetAccess='private')
+    properties (Access='private')
         menu
+        nonlinear_fun_editor
     end
     
     events
         ChangedColorMap
     end
    
+    % Constructor, destructor, menu
     methods
         function C = colormaptool(D)
             % Build menu
             buildmenu(C,D);
             % Set to default: jet
-            C.cmap = 'jet';
+            C.cmapdef = 'jet';
         end
         function delete(C)
             delete@xplr.graphnode(C)
@@ -39,10 +42,14 @@ classdef colormaptool < xplr.graphnode
                 delete(get(m,'children'))
             end
             
-            % Menu items
+            % List of possible color maps
             mapnames = {'gray' 'jet' 'parula' 'hot' 'mapgeog' 'mapgeogclip' 'mapclip' 'mapcliphigh' ...
                 'mapcliplow' 'vdaq' 'green' 'red' 'black_red' 'black_green' 'white_red' 'white_green' 'white_black' 'maporient'};
             fn_propcontrol(C,'cmapdef',['menugroup' mapnames 'user...'],m);
+            
+            % Apply non-linear function to values before coloring
+            fn_propcontrol(C,'do_nonlinear','menu', ...
+                {'parent',m,'label','Apply nonlinear function before coloring','separator','on'});
             
             % Control visibility depending on dislay mode
             set(C.menu,'visible',fn_switch(D.displaymode,'image','on','off'));
@@ -87,6 +94,55 @@ classdef colormaptool < xplr.graphnode
             C.cmapdef = name;
             % Notify
             notify(C,'ChangedColorMap')            
+        end
+    end
+    
+    % Nonlinear function edition: we apply a nonlinear function before
+    % applying the colormap, this allows for example in a black & white
+    % image to enhance low contrast in the dark range, etc.
+    methods
+        function set.do_nonlinear(C,value)
+            C.do_nonlinear = logical(value);
+            % is we want to apply nonlinear function, we create an object
+            % of class signaleditor to control the parameters of this
+            % function
+            if value && (isempty(C.nonlinear_fun_editor) || ~isvalid(C.nonlinear_fun_editor))
+                C.nonlinear_fun_editor = signaleditor([1 256], [0 1], ...
+                    @(x)notify(C,'ChangedColorMap'), 'monotonous', 'min', 0, 'max', 1);
+                % if the editor is closed, we stop applying the nonlinear
+                % function
+                C.addListener(C.nonlinear_fun_editor,'ObjectBeingDestroyed',@(u,e)set(C,'do_nonlinear',false))
+            else
+                notify(C,'ChangedColorMap')
+            end
+        end
+    end
+    
+    % Apply colormap to image
+    methods
+        function im = color_image(C, xi, clipi)
+            % vectorize image
+            [nx, ny, nc] = size(xi);
+            xi = reshape(xi,[nx*ny, nc]);
+            % clip data
+            xi = fn_clip(xi,clipi,[0 1]);
+            % apply nonlinear function if any
+            if C.do_nonlinear
+                xi = C.nonlinear_fun_editor.interp(1 + 255*xi);
+            end
+            % color the image and replace NaNs by a specific color
+            idxnan = any(isnan(xi),2);
+            if size(xi,2) == 1
+                xi(idxnan) = 0;
+                xi = 1 + round(xi*(size(C.cmap,1)-1));
+                im = C.cmap(xi(:),:);
+            else
+                im = xi;
+            end
+            nanvalue = .95;
+            im(idxnan,:) = nanvalue;
+            % final reshape restores original image size
+            im = reshape(im,[nx ny size(im,2)]);
         end
     end
 end
