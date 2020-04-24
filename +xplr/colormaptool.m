@@ -3,6 +3,7 @@ classdef colormaptool < xplr.graphnode
     properties (SetObservable=true, AbortSet)
         cmapdef
         do_nonlinear = false
+        invert_map = false
     end
     properties (SetObservable=true, AbortSet, SetAccess='private')
         cmap
@@ -48,8 +49,10 @@ classdef colormaptool < xplr.graphnode
             fn_propcontrol(C,'cmapdef',['menugroup' mapnames 'user...'],m);
             
             % Apply non-linear function to values before coloring
+            fn_propcontrol(C,'invert_map','menu', ...
+                {'parent',m,'label','Invert map','separator','on'});
             fn_propcontrol(C,'do_nonlinear','menu', ...
-                {'parent',m,'label','Apply nonlinear function before coloring','separator','on'});
+                {'parent',m,'label','Apply nonlinear function before coloring'});
             
             % Control visibility depending on dislay mode
             set(C.menu,'visible',fn_switch(D.displaymode,'image','on','off'));
@@ -116,6 +119,11 @@ classdef colormaptool < xplr.graphnode
                 notify(C,'ChangedColorMap')
             end
         end
+        function set.invert_map(C,value)
+            C.invert_map = value;
+            % update diplay
+            notify(C,'ChangedColorMap')
+        end
     end
     
     % Apply colormap to image
@@ -124,6 +132,7 @@ classdef colormaptool < xplr.graphnode
             % vectorize image
             [nx, ny, nc] = size(xi);
             xi = reshape(xi,[nx*ny, nc]);
+            idxnan = any(isnan(xi),2);
             % clip data
             xi = fn_clip(xi,clipi,[0 1]);
             % apply nonlinear function if any
@@ -131,10 +140,13 @@ classdef colormaptool < xplr.graphnode
                 xi = C.nonlinear_fun_editor.interp(1 + 255*xi);
             end
             % color the image and replace NaNs by a specific color
-            idxnan = any(isnan(xi),2);
             if size(xi,2) == 1
                 xi(idxnan) = 0;
-                xi = 1 + round(xi*(size(C.cmap,1)-1));
+                if C.invert_map
+                    xi = 256 - round(xi*(size(C.cmap,1)-1));
+                else
+                    xi = 1 + round(xi*(size(C.cmap,1)-1));
+                end
                 im = C.cmap(xi(:),:);
             else
                 im = xi;
