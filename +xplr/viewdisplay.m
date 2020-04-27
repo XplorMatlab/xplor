@@ -689,6 +689,9 @@ classdef viewdisplay < xplr.graphnode
         end
         function updateDisplay(D,flag,dim,ind)
             % function updateDisplay(D[,flag,dim,ind])
+            %---
+            % available flags are: 'clip' 'global' 'chgdata'
+            % 'chgdata&blocksize' 'new' 'remove' 'chg' 'perm' 'pos' 'color' 
             if nargin<3, dim = []; end
             
             % Is data too large for being displayed?
@@ -795,13 +798,12 @@ classdef viewdisplay < xplr.graphnode
             szo = szr(1:2:end);
 
             % Check that current htransform and hdisplay are valid
-            nd = D.zslice.nd;
             sz1 = sz; sz1(internaldim) = 1;
             sz1prev = sz1;
             if ~isempty(dim), sz1prev(dim) = sz1prev(dim)+(doremove-donew)*length(ind); end
-            if ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))...
-                    || ~isequal(strictsize(D.htransform,nd),sz1prev) || ~all(ishandle(D.htransform(:)))
-                [doreset doposition dodataall] = deal(true);
+            if ~isequal(strictsize(D.htransform,length(sz1)),sz1prev) || ~all(ishandle(D.htransform(:)))
+                [doreset, doposition, dodataall] = deal(true);
+                docolor = dotimecourses;
                 dodataselect = false;
             end
             

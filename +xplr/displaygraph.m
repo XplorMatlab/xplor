@@ -351,7 +351,7 @@ classdef displaygraph < xplr.graphnode
                     targetspacing = targetspacing/min(1/fspan(jf),2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
                     % target space in data coordinates
                     [start, scale] = deal(head.start,head.scale);
-                    [start, stop] = deal(start-.5*scale, start+(n-.5)*scale);
+                    [start, stop] = deal(start, start+n*scale);
                     targetstep = targetspacing / abs(f_step) * scale;
                     % tick values
                     [ticksdata, ticklabels] = G.nicevalues(start,stop,targetstep);
@@ -395,7 +395,7 @@ classdef displaygraph < xplr.graphnode
                         for i=1:n
                             G.xyticks(i) = text(xy(1,i),xy(2,i),ticklabels{i}, ...
                                 'parent',G.ha,'hittest','off', ...
-                                'horizontalalignment','center'); %,'verticalalignment','top')
+                                'horizontalalignment','center','verticalalignment','top');
                         end
                         ticksidx = []; ticklabels = {};
                     end

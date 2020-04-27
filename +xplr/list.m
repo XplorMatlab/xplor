@@ -16,6 +16,9 @@ classdef list < xplr.graphnode
         scrollwheel = 'on'; % 'on', 'off' or 'default'
         selectionpromptname = 'none'; % 'all', 'groups' or 'none'
     end
+    properties
+        selectionsavefile       % name of file for saving current selection
+    end
     
     % Constructor and Destructor
     methods
@@ -158,6 +161,35 @@ classdef list < xplr.graphnode
             %                 {'parent',m1,'label','Scroll wheel behavior'});
             %             uimenu(m1,'label','make default in figure', ...
             %                 'callback',@(u,e)set(L,'scrollwheel','default'));
+
+            % Load/save selections
+            uimenu(m,'label','Load selections...','separator','on', ...
+                'callback',@(u,e)L.selectionload())
+            uimenu(m,'label','Save selections','enable',onoff(~isempty(L.selectionsavefile)), ...
+                'callback',@(u,e)L.selectionsave(L.selectionsavefile))
+            uimenu(m,'label','Save selections as...', ...
+                'callback',@(u,e)L.selectionsave())
+        end
+        function selectionsave(L,fname)
+            if nargin<2 || isempty(fname)
+                prompt = 'Select file for saving selections';
+                fname = fn_savefile('*.xpls',prompt,L.selectionsavefile);
+                if isequal(fname,0), return, end
+            end
+            L.F.savetofile(fname);
+            L.selectionsavefile = fname;
+        end
+        function selectionload(L,fname)
+            if nargin<2
+                fname = fn_getfile('*.xpls','Select selections file'); 
+                if isequal(fname,0), return, end
+            end
+            try
+                L.F.loadfromfile(fname);
+                L.selectionsavefile = fname;
+            catch ME
+                errordlg(ME.message)
+            end
         end
         function delete(L)
             delete@xplr.graphnode(L)

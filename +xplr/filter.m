@@ -158,7 +158,7 @@ classdef filter < xplr.dataOperand
                             else
                                 % measure
                                 [start, scale, unit] = deal(F.headerin.start, F.headerin.scale, F.headerin.unit);
-                                subnames{j} = sprintf('%.4g-%.4g%s', start+[kstart kstop]*scale, unit);
+                                subnames{j} = sprintf('%.4g-%.4g%s', start+([kstart kstop]-1)*scale, unit);
                             end
                         end 
                         names{i} = fn_strcat(subnames,',');

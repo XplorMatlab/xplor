@@ -885,25 +885,25 @@ classdef displaynavigation < xplr.graphnode
                     try uistack(N.cross([3 1 2]),'top'), end % can fail when D.resetDisplay is invoked
                 case {'add','chg', 'affinity'}
                     % might be several indices
-                    for k=ind, displayonesel(N,k,'pos'); end
+                    for k=ind, displayonesel(N,k,'chg'); end
                 case 'referentialchanged'
                     % it is not the positions of selections that have
                     % changed, but the referential of these positions
                     % relative to the main display axes: we need then to
                     % recompute the positions of each selection display
                     % inside this new referential
-                    for k = 1:length(N.selection), displayonesel(N, k, 'pos'), end
+                    for k = 1:length(N.selection), displayonesel(N, k, 'chg'), end
                 case 'remove'
                     % delete selected selections
                     deleteValid(N.selectiondisplay(ind))
                     N.selectiondisplay(ind) = [];
                     % index (and therefore displayed name) of some other selections have changed
-                    for k = min(ind):length(N.selection), displayonesel(N, k, 'name'), end
+                    for k = min(ind):length(N.selection), displayonesel(N, k, 'chg'), end
                 case 'perm'
                     perm = ind;
                     N.selectiondisplay = N.selectiondisplay(perm);
                     % index (and therefore displayed name) of some selections have changed
-                    for k = find(perm~=1:length(N.selection)), displayonesel(N, k, 'name'), end
+                    for k = find(perm~=1:length(N.selection)), displayonesel(N, k, 'chg'), end
                 case 'chg&new'
                     N.displayselection('chg',ind{1})
                     N.displayselection('new',ind{2})
@@ -917,55 +917,52 @@ classdef displaynavigation < xplr.graphnode
         end
         function displayonesel(N,k,flag,varargin)
             % function displayonesel(D,k,'new')       - selection at index k is new
-            % function displayonesel(D,k,'pos')       - position has changed
-            % function displayonesel(D,k,'name')      - name or color has changed
+            % function displayonesel(D,k,'chg')       - selection has changed
             
-            % flags: what kind of update
-            [flagnew, flagpos, flagname] = fn_flags('new','pos','name',flag);
+            % new selection?
+            new_sel = fn_switch(flag,'new',true,'chg',false);
             
+            % position
             % selection in slice coordinates
             selij = N.selection(k);
-            name = N.selectionfilter.headerout.getItemNames{k};
-            
+            name = N.selectionfilter.headerout.getItemNames{k};            
             % convert selection to displayable polygon
             seldim = N.selectiondim;
-            if flagnew || flagpos
-                selectionaxis = [N.D.layoutID.dim_locations{seldim}];
-                if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
-                    error('selection cannot be displayed')
-                end
-                % selection shape
-                [polygon, center] = N.D.graph.selectionMark(seldim,selij);
-                % additional points for when in selection edit mode
-                if N.selectionedit
-                    switch selij.type
-                        case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
-                            shape_edit_poly = polygon(:,1:end-1); % the last point is a repetition of the 1st one
-                            shape_edit_info = [];
-                        case 'rect2D'
-                            shape_edit_poly = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
-                            shape_edit_info = [selij.shapes.points' selij.shapes.vectors'];
-                        case {'ellipse2D' 'ring2D'}
-                            c = selij.shapes.points;
-                            u = selij.shapes.vectors;
-                            e = selij.shapes.logic;
-                            shape_edit_poly = [c-u c+u];
-                            shape_edit_info = {c u e};
-                        otherwise
-                            error programming
-                    end
+            selectionaxis = [N.D.layoutID.dim_locations{seldim}];
+            if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
+                error('selection cannot be displayed')
+            end
+            % selection shape
+            [polygon, center] = N.D.graph.selectionMark(seldim,selij);
+            % additional points for when in selection edit mode
+            if N.selectionedit
+                switch selij.type
+                    case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
+                        shape_edit_poly = polygon(:,1:end-1); % the last point is a repetition of the 1st one
+                        shape_edit_info = [];
+                    case 'rect2D'
+                        shape_edit_poly = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
+                        shape_edit_info = [selij.shapes.points' selij.shapes.vectors'];
+                    case {'ellipse2D' 'ring2D'}
+                        c = selij.shapes.points;
+                        u = selij.shapes.vectors;
+                        e = selij.shapes.logic;
+                        shape_edit_poly = [c-u c+u];
+                        shape_edit_info = {c u e};
+                    otherwise
+                        error programming
                 end
             end
+            
+            % name
+            namerotation = fn_switch(isscalar(N.selectiondimID) && length(name)>3, 45, 0);
             
             % color
-            if flagnew || flagname
-                colors = fn_colorset;
-                col = colors(mod(k-1,size(colors,1))+1,:);
-                namerotation = fn_switch(isscalar(N.selectiondimID) && length(name)>3, 45, 0);
-            end
+            colors = fn_colorset;
+            col = colors(mod(k-1,size(colors,1))+1,:);
             
             % Create / update objects
-            if flagnew
+            if new_sel
                 hl = struct('shape',[],'label',[],'cross',[],'handles',[]);
                 % selection shape
                 if strfind(N.selectionshow,'shape')
@@ -997,18 +994,18 @@ classdef displaynavigation < xplr.graphnode
                 end            
             else
                 hl = N.selectiondisplay(k);
-                if flagpos
-                    set(hl.label,'position',center)
-                    set(hl.shape,'xdata',polygon(1,:),'ydata',polygon(2,:))
-                    set(hl.cross,'xdata',center(1),'ydata',center(2))
-                    if N.selectionedit
-                        set(hl.handles,'xdata',shape_edit_poly(1,:),'ydata',shape_edit_poly(2,:), ...
-                            'UserData',shape_edit_info);
-                    end
-                elseif flagname
-                    set(hl.label,'string',name,'rotation',namerotation)
-                    set(struct2array(hl),'color',col)
+                % update position
+                set(hl.label,'position',center)
+                set(hl.shape,'xdata',polygon(1,:),'ydata',polygon(2,:))
+                set(hl.cross,'xdata',center(1),'ydata',center(2))
+                if N.selectionedit
+                    set(hl.handles,'xdata',shape_edit_poly(1,:),'ydata',shape_edit_poly(2,:), ...
+                        'UserData',shape_edit_info);
                 end
+                % update name
+                set(hl.label,'string',name,'rotation',namerotation)
+                % update color
+                set(struct2array(hl),'color',col)
             end
         end
         function set.selectionshow(N,value)
