@@ -1,21 +1,21 @@
-function out = debuginfo(category, message, varargin)
-%DEBUGINFO  display debug messages for developers only
+function out = debug_info(category, message, varargin)
+%debug_info  display debug messages for developers only
 %---
-% function debugactive = debuginfo()
-% function debuginfo(code, message [, sprintf arguments])
-% function debuginfo('select')
-% function debuginfo('on|off')
-% function debuginfo('reset')
+% function debugactive = debug_info()
+% function debug_info(code, message [, sprintf arguments])
+% function debug_info('select')
+% function debug_info('on|off')
+% function debug_info('reset')
 %---
 % This function is only for XPLOR developers.
-% First activate debug info display by typing debuginfo('on') in Matlab.
+% First activate debug info display by typing debug_info('on') in Matlab.
 % Each message belongs to a category, and categories to display or not can
-% be selected by the user by typing debuginfo('select').
-% Each time debuginfo(category, message) is called with a new category
+% be selected by the user by typing debug_info('select').
+% Each time debug_info(category, message) is called with a new category
 % name, user is asked whether this category should be displayed.
-% If some register categories are not used any more, use debuginfo('reset')
+% If some register categories are not used any more, use debug_info('reset')
 % to remove all categories and rebuild the list from upcoming call to
-% debuginfo(category, message).
+% debug_info(category, message).
 %
 % Special category 'stop' stops the debugger in addition to displaying the
 % message.
@@ -26,8 +26,8 @@ switch nargin
     case 1
         flag = category;
         switch(flag)
-            case {'on' 'off'}
-                set_active(strcmp(flag,'on'))
+            case {'on', 'off'}
+                set_active(strcmp(flag, 'on'))
             case 'select'
                 select_categories()
             otherwise
@@ -41,29 +41,29 @@ end
 function state = get_state(set_value)
 % keep state in memory to avoid multiple reading from file
 
-persistent memstate
+persistent mem_state
 
 if nargin==1
-    memstate = set_value;
+    mem_state = set_value;
     return
 end
 
-if isempty(memstate)
-    memstate = fn_userconfig('xplr.debuginfo');
-    if isempty(memstate)
-        memstate = struct('active', false, 'categories', struct());
-        save_state(memstate)
+if isempty(mem_state)
+    mem_state = fn_userconfig('xplr.debug_info');
+    if isempty(mem_state)
+        mem_state = struct('active', false, 'categories', struct());
+        save_state(mem_state)
     end
 end
 
-state = memstate;
+state = mem_state;
 
 
 %---
 function save_state(state)
 
 % save on disk
-fn_userconfig('xplr.debuginfo',state)
+fn_userconfig('xplr.debug_info', state)
 
 % replace value in get_state persistent variable
 get_state(state)
@@ -88,7 +88,7 @@ catch
     % first time this category is met
     quest = sprintf('Do you want to display debug information of new category ''%s''?', ...
         category);
-    do_display = fn_dialog_questandmem(quest,'xplr.debuginfo');
+    do_display = fn_dialog_questandmem(quest,'xplr.debug_info');
     
     % memorize answer
     state.categories.(category) = do_display;
@@ -114,7 +114,7 @@ state.active = value;
 save_state(state)
 if value
     disp 'xplor debug information enabled'
-    disp 'select which categories to display with xplr.debuginfo(''select'')'
+    disp 'select which categories to display with xplr.debug_info(''select'')'
 else
     disp 'xplor debug information disabled'
 end
@@ -127,14 +127,14 @@ state = get_state();
 names = fieldnames(state.categories);
 selected = cell2mat(struct2cell(state.categories));
 if isempty(names)
-    disp('xplr.debuginfo: no message category met yet')
+    disp('xplr.debug_info: no message category met yet')
     return
 end
     
 state = get_state();
 [selection, ok] = listdlg( ...
-    'Name', 'xplr.debuginfo', ...
-    'PromptString', 'Select which debuginfo categories should be displayed', ...
+    'Name', 'xplr.debug_info', ...
+    'PromptString', 'Select which debug_info categories should be displayed', ...
     'ListString', names, 'SelectionMode', 'multiple', ...
     'CancelString', 'None', ...
     'InitialValue', find(selected));
@@ -143,8 +143,3 @@ selected(:) = false;
 if ok, selected(selection) = true; end
 state.categories = cell2struct(num2cell(selected), names);
 save_state(state)
-
-        
-    
-
-
