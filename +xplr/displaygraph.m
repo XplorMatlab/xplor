@@ -253,23 +253,31 @@ classdef displaygraph < xplr.graphnode
     
     % Ticks
     methods (Access='private')
-        function targetspacing = ticksTargetSpacing(G,k)
+        function minimumspacing = ticksMinimumSpacing(G,k)
             % k = 1 for 'x', 2 for 'y'
             axsiz = fn_pixelsize(G.ha);
             axsizinch = axsiz/get(0,'ScreenPixelsPerInch');
-            targetspacinginch = .5; % optimal space between ticks in inches
+            minimumspacinginch = .2; % optimal space between ticks in inches
             
             % target space between ticks
-            targetspacing = targetspacinginch / axsizinch(k);   % target spacing in axes coordinates
+            minimumspacing = minimumspacinginch / axsizinch(k);   % target spacing in axes coordinates
         end
-        function [tickvalues, ticklabels] = nicevalues(G,valuestart,valuestop,targetstep)
-            % actual step that will be used
-            t10 = log10(abs(targetstep));
+        function step = nicestep(G,minstep)
+            t10 = log10(abs(minstep));
             tests = [1 2 5 10];
-            [~, idx] = min(abs(mod(t10,1)-log10(tests)));
-            step = sign(targetstep) * 10^floor(t10) * tests(idx);
-            substep = step/2;
+            [~, idx] = find(log10(tests)>=mod(t10,1),1,'first');
+            step = sign(minstep) * 10^floor(t10) * tests(idx);
+        end
+        function [tickvalues, ticklabels] = nicevalues(G,valuestart,valuestop,minsubstep)
+            % there will be two sub-steps per step (i.e. one value label
+            % every two ticks)
+            nsubstep = 2;
+            minstep = minsubstep * nsubstep;
+            % actual step that will be used: minimal "nice step" that is
+            % larger than minstep
+            step = G.nicestep(minstep);
             % tick values for all substeps
+            substep = step/nsubstep;
             tickvalues = substep * (ceil(valuestart/substep):floor(valuestop/substep)); % data coordinates
             % tick labels only for steps
             ntick = length(tickvalues);
@@ -319,7 +327,7 @@ classdef displaygraph < xplr.graphnode
 
                 % conversion between data coordinates and graph
                 domeasure = head.ismeasure;
-                dogrid = (d==G.layout.(ff));
+                dogrid = any(d==G.layout.(ff));
                 if dogrid
                     % step for ncol (or nrow) data points
                     ncol = find(diff(st.xyoffsets(k,:)),1);
@@ -329,6 +337,9 @@ classdef displaygraph < xplr.graphnode
                     f_step = f_step / ncol;
                     f_off = st.xyoffsets(k,1) - (ncol+1)/2*f_step;
                     domeasure = false;
+                    
+                    % no constraint on a minimumstep
+                    minimumstep = 0;
                 else
                     jf = find(d==G.layout.(f),1);
                     if isempty(jf), error('%s activedim must be either at ''%s'' or ''%s'' location!',f,f,ff), end
@@ -340,40 +351,39 @@ classdef displaygraph < xplr.graphnode
                             f_off = st.xyoffsets(k,1) + st.yoffset(jf) + sum(st.yoffset(jf+1:end)+st.ystep(jf+1:end));
                             f_step = st.ystep(jf);
                     end
+                    
+                    % target space between ticks
+                    minimumspacing = G.ticksMinimumSpacing(k);
+                    fspan = fn_cast(k,st.xspan,st.yspan);
+                    minimumspacing = minimumspacing/min(1/fspan(jf),2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
+                    
+                    % target space in data coordinates
+                    minimumstep = minimumspacing / abs(f_step);
                 end
-
+                
                 % different display depending on whether header is
                 % measure or categorical
                 if domeasure
-                    % target space between ticks
-                    targetspacing = G.ticksTargetSpacing(k);
-                    fspan = fn_cast(k,st.xspan,st.yspan);
-                    targetspacing = targetspacing/min(1/fspan(jf),2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
-                    % target space in data coordinates
                     [start, scale] = deal(head.start,head.scale);
-                    [start, stop] = deal(start, start+n*scale);
-                    targetstep = targetspacing / abs(f_step) * scale;
-                    % tick values
-                    [ticksdata, ticklabels] = G.nicevalues(start,stop,targetstep);
-                    ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
-                    % tick labels
+                    [start, stop] = deal(start, start+(n-1)*scale);
+                    if ~dogrid %minimumstep > 2 || ismember(d,G.D.internal_dim)
+                        [ticksdata, ticklabels] = G.nicevalues(start,stop,minimumstep*scale);
+                        ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
+                    else
+                        % ticks follow data points if minimum step allows
+                        % it and we are in an external dimension
+                        ticksidx = 1:n;
+                        ticksdata = start + (0:n-1)*scale;
+                        ticklabels = fn_num2str(ticksdata,'cell');
+                    end
                 else
                     % ticks for each data point (display only some of
                     % them if there is not enough space for all)
-                    if dogrid
-                        % display all ticks anyway for grid mode
-                        ntickmax = Inf;
-                    else
-                        % check the available space in centimeters and
-                        % set a maximal number of ticks
-                        axes_size = G.D.getSize('centimeters', f);
-                        ntickmax = axes_size * fn_switch(f, 'x', 1, 'y', 2);
-                    end
                     ticklabels = row(head.getItemNames());
-                    if n <= ntickmax                           
+                    if minimumstep <= 1                     
                         ticksidx = 1:n;
                     else
-                        step = fn_smartstep(n / ntickmax);
+                        step = G.nicestep(minimumstep);
                         if strcmp(ticklabels{1}, '1')
                             % it seems that we have a mere enumeration,
                             % use a smart step
@@ -390,12 +400,17 @@ classdef displaygraph < xplr.graphnode
                     % 2D grid: put text rather than using axes ticks
                     % system
                     if dogrid
-                        xy = fn_add([0; -st.xysteps(2)/2],st.xyoffsets);
+                        if isempty(st.yspan)
+                            row_height = st.yavailable;
+                        else
+                            row_height = st.yspan(end);
+                        end
+                        xy = fn_add([0; row_height/2],st.xyoffsets);
                         G.xyticks = gobjects(1,n);
                         for i=1:n
                             G.xyticks(i) = text(xy(1,i),xy(2,i),ticklabels{i}, ...
                                 'parent',G.ha,'hittest','off', ...
-                                'horizontalalignment','center','verticalalignment','top');
+                                'horizontalalignment','center','verticalalignment','bottom');
                         end
                         ticksidx = []; ticklabels = {};
                     end
@@ -434,8 +449,8 @@ classdef displaygraph < xplr.graphnode
             % enough space on y-axis to show values?
             org = G.D.layout;
             st = G.steps;
-            targetspacing = G.ticksTargetSpacing(2);
-            if ~isempty([org.y st.xydim]), targetspacing = targetspacing/2; end
+            minimumspacing = G.ticksMinimumSpacing(2);
+            if ~isempty([org.y st.xydim]), minimumspacing = minimumspacing/2; end
 %             if st.yavailable < targetspacing
 %                 set(G.D.ha,'ytick',[])
 %                 ylabel(G.D.ha,'')
@@ -507,14 +522,14 @@ classdef displaygraph < xplr.graphnode
             for krow = 1:nxyrow
                 for ky = 1:ny
                     % middle of the ticks
-                    yidx = ind2sub(sz(org.y),ky);
+                    yidx = row(fn_indices(sz(org.y),ky,'g2i'));
                     yoffset = st.xyoffsets(2,1+(krow-1)*nxycol) + sum(st.yoffset) + sum(st.ystep .* yidx);
                     % tick values
                     if any(isnan(startextent(:,ky))), continue, end % happens when data itself consists only of NaNs
                     valuestart = startextent(1,ky);
                     valueextent = startextent(2,ky);
-                    targetstep = targetspacing * valueextent/st.yavailable;
-                    [tickvalues, ticklabels] = G.nicevalues(valuestart, valuestart+valueextent, targetstep);
+                    minimumsubstep = minimumspacing * valueextent/st.yavailable;
+                    [tickvalues, ticklabels] = G.nicevalues(valuestart, valuestart+valueextent, minimumsubstep);
                     yscale = st.yavailable / valueextent;
                     valuemiddle = valuestart + valueextent/2;
                     ytickvalues{ky,krow} = tickvalues;
