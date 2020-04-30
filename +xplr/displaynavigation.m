@@ -4,22 +4,20 @@ classdef displaynavigation < xplr.graphnode
 % These can control the following elements:
 % - point selection left button click to move the cross in all visible
 %                   dimensions
-% - ROIselections   drag with right button to make new selections in
+% - ROI selections  drag with right button to make new selections in
 %                   the N.selectiondim dimension(s); use also the Selection
 %                   menu on the top and selection context menus that appear
 %                   when right-clicking on a displayed selection
-% - zoom            zoom can be controlled by different actions, but they
-%                   do not all affect the same dimensions!
-%   zoom in/out in internal dimensions  with the scroll wheel
-%   zoom reset in internal dimensions   left double-click
-%   zoom in, automatic dimension(s)     drag and make a rectangle with the
-%                   left mouse to zoom in: the affected dimensions will be
-%                   automatically determined based on where there seemed to
-%                   be an intended change
-%   zoom in/out/reset in specific dimension     select the label of the
-%                   intended dimension to make it active and make a zooming
-%                   slider appear, then drag the edges of the slider or
-%                   double-click on it to reset zoom
+% - zoom            zoom can be controlled by different actions, the
+%                   affected dimensions are detected automatically:
+%                   - with the scroll wheel
+%                   - drag the mouse left button and draw rectangle region
+%                     where to zoom in 
+%                   - double-click with the mouse left button to reset zoom
+%                   - select the label of the intended dimension to make it
+%                     active and make a zooming slider appear, then drag
+%                     the edges of the slider or double-click on it to
+%                     reset zoom
 
     properties (SetAccess='private')
         D                                       % parent xplr.viewdisplay
@@ -211,7 +209,7 @@ classdef displaynavigation < xplr.graphnode
         end
     end
     
-    % axes_click actions
+    % general mouse actions inside the graph
     methods
         function axes_click(N, flag)
             % function axes_click(N)
@@ -246,23 +244,26 @@ classdef displaynavigation < xplr.graphnode
                         org = N.D.layout;
                         xydim = [org.xy org.yx];
                         if nonsingleton(xydim)
-                            zoomdim = xydim;
+                            zoom_dim = xydim;
                         else
                             xdim = org.x(find(nonsingleton(org.x),1,'last'));
                             ydim = org.y(find(nonsingleton(org.y),1,'last'));
-                            zoomdim = [xdim ydim];
+                            zoom_dim = [xdim ydim];
                         end
-                        zoom = ijk(zoomdim,:)';
-                        for i=1:length(zoomdim), zoom(:,i) = sort(zoom(:,i)); end
-                        N.D.zoomslicer.setZoom(zoomdim,zoom)
+                        zoom = ijk(zoom_dim,:)';
+                        for i=1:length(zoom_dim), zoom(:,i) = sort(zoom(:,i)); end
+                        N.D.zoomslicer.setZoom(zoom_dim,zoom)
                     else
                         N.manualclickmovecross(point);
                     end
                 case 'open'
                     % zoom reset
-                    zoomoutdim = N.D.internal_dim;
-                    zoom = repmat(':',1,length(zoomoutdim));
-                    N.D.zoomslicer.setZoom(zoomoutdim,zoom)
+                    % (automatic determination of the intended dimensions
+                    % for changing zoom)
+                    zoom_dim = N.pointed_dimension(point);
+                    % (zoom reset)
+                    zoom = repmat(':',1,length(zoom_dim));
+                    N.D.zoomslicer.setZoom(zoom_dim,zoom)
                 case 'alt'
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape
@@ -1284,6 +1285,24 @@ classdef displaynavigation < xplr.graphnode
 
     % Slider and scroll wheel callbacks: change zoom
     methods
+        function zoom_dim = pointed_dimension(N, point)
+            % automatic determination of the intended dimensions for
+            % changing zoom: apply to the most internal dimensions where we
+            % are not ouf of display
+            indim = ~N.isPointOutOfDisplay(point, true);
+            % case of image display: if point is outside image in either of
+            % the 2 dimensions, zoom in neither of the 2
+            internal_dim = N.D.internal_dim;
+            indim(internal_dim) = all(indim(internal_dim));
+            % most internal x and y dimensions where we are not out of
+            % display
+            org = N.D.layout;
+            zoom_dim = [org.x(find(indim(org.x),1,'first')) org.y(find(indim(org.y),1,'first'))];
+            % if empty, grid (xy or yx) dimension
+            if isempty(zoom_dim)
+                zoom_dim = [org.xy org.yx];
+            end
+        end
         function chgzoom(N,f,obj)
             dim = N.D.activedim.(f);
             if isempty(dim), return, end
@@ -1299,11 +1318,23 @@ classdef displaynavigation < xplr.graphnode
             end
         end
         function Scroll(N,nscroll)
+            persistent last_tic last_zoom_dim
+            
             p = get(N.D.ha,'currentpoint'); p = p(1,1:2);
             origin = row(N.graph.graph2slice(p)); % current point in data coordinates
             zoomfactor = 1.5^nscroll;
             
-            zoomdim = N.D.internal_dim;            
+            % if we keep zooming from the same point, apply to the same
+            % dimension if it is not the same dimensions that are pointed
+            % any more
+            if ~isempty(last_tic) && toc(last_tic) < .6
+                zoom_dim = last_zoom_dim;
+            else
+                % automatic determination of the intended dimensions for
+                % changing zoom
+                zoom_dim = N.pointed_dimension(p);
+            end
+            [last_tic, last_zoom_dim] = deal(tic, zoom_dim);
             
             % This commented code had been put to replace the line below,
             % but it seems that the effect is less intuitive. Let's go back
@@ -1316,10 +1347,12 @@ classdef displaynavigation < xplr.graphnode
             %                 dim(N.graph.filling(dim)<1) = [];
             %             end
             %             zoom = N.graph.getZoom(dim); %,'effective');
-            zoom = N.graph.getZoom(zoomdim,'effective');
-            newzoom = fn_add(origin(zoomdim), fn_mult(zoomfactor,fn_subtract(zoom,origin(zoomdim))));
+            zoom = N.graph.getZoom(zoom_dim,'effective');
+            origin_dim = origin(zoom_dim);
+            origin_dim = fn_coerce(origin_dim, zoom);
+            newzoom = fn_add(origin_dim, fn_mult(zoomfactor,fn_subtract(zoom,origin_dim)));
             %fprintf('%.2f -> %.2f\n',diff(zoom),diff(newzoom))
-            N.D.zoomslicer.setZoom(zoomdim,newzoom)
+            N.D.zoomslicer.setZoom(zoom_dim,newzoom)
         end
     end
 
