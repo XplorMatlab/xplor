@@ -161,7 +161,7 @@ classdef displaynavigation < xplr.graphnode
                     ht = uicontrol('style','text','position',[2 2 200 17],'parent',N.hf);
                     % change clip
                     moveclipsub() % this displays the bottom-left numbers
-                    fn_buttonmotion(@moveclipsub,N.hf)
+                    fn_buttonmotion(@moveclipsub,N.hf,'pointer','cross')
                     delete(ht)
                 case 'open'         % use default clipping
                     autoClip(N.D)
@@ -391,7 +391,6 @@ classdef displaynavigation < xplr.graphnode
                 axes_click(N)
                 return
             end
-            set(N.hf,'pointer',fn_switch(il,1,'left',2,'top',3,'cross'))
             
             % prepare a time to pan zoom while moving the cross!
             do_drag_zoom = (il == 1) && isequal(N.D.layout.x,1) && isequal(N.D.activedim.x,1);
@@ -409,8 +408,8 @@ classdef displaynavigation < xplr.graphnode
             end
             point = [];
             
-            anymove = fn_buttonmotion(@movecrosssub,N.hf,'moved?');            
-            set(N.hf,'pointer','arrow')
+            pointer = fn_switch(il,1,'left',2,'top',3,'crosshair');
+            anymove = fn_buttonmotion(@movecrosssub,N.hf,'moved?','pointer',pointer);            
             if do_drag_zoom
                 stop(drag_timer)
             end
