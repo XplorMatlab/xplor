@@ -1,4 +1,4 @@
-classdef displaylabels < xplr.graphnode
+classdef DisplayLabels < xplr.GraphNode
 % displaylabels
 
     properties (Access='private')
@@ -7,22 +7,22 @@ classdef displaylabels < xplr.graphnode
         graph
         % internal
         height     % unit: normalized to axis size
-        rotheight  % unit: normalized to axis size
+        rot_height  % unit: normalized to axis size
         h
-        movingdim
-        movingclone
-        listeners = struct('slice',[]);
-        prevorgSetpos     % last organization seen by setPositions
+        moving_dim
+        moving_clone
+        listeners = struct('slice', []);
+        prev_org_set_pos     % last organization seen by set_positions
     end
     properties
-        doImmediateDisplay = false;
+        do_immediate_display = false;
     end
     properties (Dependent, Access='private')
         ha
     end
         
     methods
-        function L = displaylabels(D)
+        function L = DisplayLabels(D)
             % contructor displaylabels
             
             % parent xplr.viewdisplay object
@@ -30,14 +30,14 @@ classdef displaylabels < xplr.graphnode
             
             % create labels and position them
             L.graph = D.graph;
-            createLabels(L,'global')
-            getHeights(L)
-            if ~isempty(D.layoutID), setPositions(L), end
+            create_labels(L, 'global')
+            get_heights(L)
+            if ~isempty(D.layout_id), set_positions(L), end
             % watch in axes size (no need to take care of deleting this
             % listener when L is deleted, because there is no reason that L
             % be deleted without D, D.ha, and the listener itself being
             % deleted as well)
-            fn_pixelsizelistener(D.ha,@(u,e)updateLabels(L,'axsiz'))
+            fn_pixelsizelistener(D.ha, @(u,e)update_labels(L, 'axsiz'))
             % note that changes in D lead to display updates through direct
             % method calls rather than notifications
         end
@@ -48,61 +48,62 @@ classdef displaylabels < xplr.graphnode
     
     % Create and position labels
     methods (Access='private')
-        function createLabels(L,flag,dims)
+        function create_labels(L, flag, dims)
             % create labels
-            if nargin<2, flag = 'global'; end
-            if nargin<3 || strcmp(flag,'global'), dims = 1:L.D.nd; end
-            [dims, dimIDs] = L.D.slice.dimensionNumberAndID(dims);
-            curheaders = L.D.zslice.header;
+            if nargin < 2, flag = 'global'; end
+            if nargin < 3 || strcmp(flag, 'global'), dims = 1:L.D.nd; end
+            [dims, dim_ids] = L.D.slice.dimension_number_and_id(dims);
+            cur_headers = L.D.zslice.header;
             switch flag
                 case 'global'
                     deleteValid(L.h)
-                    L.h = gobjects(1,L.D.nd);
+                    L.h = gobjects(1, L.D.nd);
                 otherwise
-                    error('invalid flag ''%s''',flag)
+                    error('invalid flag ''%s''', flag)
             end
             for i = 1:length(dims)
-                d = dims(i); dimID = dimIDs(i);
-                str = curheaders(d).label;
-                if ~isempty(curheaders(d).unit), str = [str ' (' curheaders(d).unit ')']; end
-                L.h(d) = text('string',['  ' str '  '],'parent',L.ha, ...
-                    'margin',1, ...
-                    'backgroundcolor',[1 1 1]*.95,'units','normalized', ...
-                    'UserData',dimID,'buttondownfcn',@(u,e)labelClick(L,u), ...
-                    'UIContextMenu',uicontextmenu(L.D.V.hf,'callback',@(m,e)L.D.dimensionContextMenu(m,dimID)));
+                d = dims(i);
+                dim_id = dim_ids(i);
+                str = cur_headers(d).label;
+                if ~isempty(cur_headers(d).unit), str = [str, ' (', cur_headers(d).unit, ')']; end
+                L.h(d) = text('string', ['  ', str, '  '], 'parent', L.ha, ...
+                    'margin', 1, ...
+                    'backgroundcolor', [1, 1, 1]*.95, 'units', 'normalized', ...
+                    'UserData', dim_id, 'buttondownfcn', @(u,e)label_click(L, u), ...
+                    'UIContextMenu', uicontextmenu(L.D.V.hf, 'callback', @(m, e)L.D.dimensionContextMenu(m, dim_id)));
             end
         end
-        function changeLabel(L,d)
+        function change_label(L, d)
             % change properties that need to when data undergoes a 'chgdim'
             % change
             
             % label
             head = L.D.zslice.header(d);
             str = head.label;
-            if ~isempty(head.unit), str = [str ' (' head.unit ')']; end
-            set(L.h(d),'string',['  ' str '  '])
-            set(L.h(d),'UserData',head.dimID)
+            if ~isempty(head.unit), str = [str, ' (', head.unit, ')']; end
+            set(L.h(d), 'string', ['  ', str, '  '])
+            set(L.h(d), 'UserData', head.dim_id)
         end
-        function getHeights(L)
+        function get_heights(L)
             % get heights
-            fontsize = get(L.D.hp,'defaultuicontrolfontsize'); % unit: points
-            hinch = 1.5*fontsize/72;
-            hpix = hinch*get(0,'ScreenPixelsPerInch');
+            font_size = get(L.D.hp, 'defaultuicontrolfont_size'); % unit: points
+            hinch = 1.5*font_size/72;
+            hpix = hinch*get(0, 'ScreenPixelsPerInch');
             axsiz = fn_pixelsize(L.ha);
             L.height = hpix/axsiz(2);     % normalized to axis size
-            L.rotheight = hpix/axsiz(1);  % normalized to axis size
-            L.prevorgSetpos = []; % next call to setPositions should have doloose set to false
+            L.rot_height = hpix/axsiz(1);  % normalized to axis size
+            L.prev_org_set_pos = []; % next call to set_positions should have doloose set to false
         end
-        function setPositions(L)
-            persistent prevorg
+        function set_positions(L)
+            persistent prev_org
             
             % current layout
             org = L.D.layout;
-            dim_locations = L.D.layoutID.dim_locations;
+            dim_locations = L.D.layout_id.dim_locations;
             
             % visible labels and active dimensions
             sz = L.D.slice.sz; % slice size
-            okdim = (sz>1);
+            ok_dim = (sz > 1);
             isactive = false(1,length(sz));
             isactive([L.D.activedim.x L.D.activedim.y]) = true;
             
@@ -110,75 +111,77 @@ classdef displaylabels < xplr.graphnode
             % non-relevant coordinates)
             % NO MORE NEEDED, as automatic positionning should be good
             % enough now
-            if isempty(L.movingdim)
-                doloose = false; %isequal(org,prevorg);
-                prevorg = org;
+            if isempty(L.moving_dim)
+                doloose = false; %isequal(org,prev_org);
+                prev_org = org;
             else
                 doloose = false;
-                prevorg = [];
+                prev_org = [];
             end
             
             % steps in the direction orthogonal to the positioning one
             axis_pos = fn_pixelpos(L.D.ha);
             available_space = axis_pos(1:2)./axis_pos(3:4) - L.height;
-            xvstep = min(1.5*L.height, available_space(2)/(1.5+length(org.x)));
-            yhstep = min(1.5*L.rotheight, available_space(1)/(1.5+length(org.y)));
+            xv_step = min(1.5*L.height, available_space(2)/(1.5+length(org.x)));
+            yh_step = min(1.5*L.rot_height, available_space(1)/(1.5+length(org.y)));
             
             % set positions 
             for d=1:length(sz)
-                if ~isgraphics(L.h(d),'text')
+                if ~isgraphics(L.h(d), 'text')
                     % it can happen that labels do not exist yet when
-                    % updateLabels(L,'axsiz') is invoked
-                    prevorg = []; % positions will not be set, so do not store a 'prevlayout'!
+                    % update_labels(L,'axsiz') is invoked
+                    prev_org = []; % positions will not be set, so do not store a 'prevlayout'!
                     continue
                 end
-                if ~okdim(d)
+                if ~ok_dim(d)
                     % do not display the label of singleton dimension
-                    set(L.h(d),'visible','off')
+                    set(L.h(d), 'visible', 'off')
                 else
                     f = dim_locations{d};
                     % fixed properties
-                    set(L.h(d),'visible','on', ...
-                        'rotation',fn_switch(f,{'y' 'yx'},90,0), ...
-                        'horizontalalignment',fn_switch(f,{'x' 'y'},'center',{'xy' 'mergeddata'},'left','yx','right'), ...
-                        'verticalalignment',fn_switch(f,'yx','bottom','middle'), ...
-                        'EdgeColor',fn_switch(isactive(d),'k','none'))
+                    set(L.h(d), 'visible', 'on', ...
+                        'rotation', fn_switch(f, {'y', 'yx'}, 90, 0), ...
+                        'horizontalalignment', fn_switch(f, {'x', 'y'}, 'center', {'xy', 'merged_data'}, 'left', 'yx', 'right'), ...
+                        'verticalalignment', fn_switch(f, 'yx', 'bottom', 'middle'), ...
+                        'EdgeColor', fn_switch(isactive(d), 'k', 'none'))
                     % set position
                     switch f
                         case 'x'
-                            i = find(org.x==d,1);
-                            xpos = .5 + L.graph.labelPosition(d);
-                            newpos = [xpos -(1.5+i)*xvstep];
+                            i = find(org.x == d, 1);
+                            x_pos = .5 + L.graph.label_position(d);
+                            new_pos = [x_pos - (1.5+i)*xv_step];
                         case 'y'
-                            i = find(org.y==d,1);
-                            ypos = .5 + L.graph.labelPosition(d);
-                            newpos = [-(1.5+i)*yhstep ypos];
-                        case 'mergeddata'
-                            i = find(org.mergeddata==d,1);
-                            newpos = [-4*L.rotheight (length(org.mergeddata)+.5-i)*L.height];
+                            i = find(org.y == d, 1);
+                            y_pos = .5 + L.graph.label_position(d);
+                            new_pos = [-(1.5+i)*yh_step, y_pos];
+                        case 'merged_data'
+                            i = find(org.merged_data == d, 1);
+                            new_pos = [-4*L.rot_height, (length(org.merged_data) + .5 - i)*L.height];
                         case 'xy'
-                            newpos = [0 1+1.5*L.height];
+                            new_pos = [0, 1 + 1.5*L.height];
                         case 'yx'
-                            newpos = [-(length(org.y)+2)*L.rotheight 1];
+                            new_pos = [-(length(org.y) + 2)*L.rot_height, 1];
                     end
                     if doloose
-                        pos = get(L.h(d),'position');
+                        pos = get(L.h(d), 'position');
                         switch f
                             case 'x'
-                                newpos(2) = pos(2); set(L.h(d),'position',newpos)
+                                new_pos(2) = pos(2);
+                                set(L.h(d), 'position', new_pos)
                             case 'y'
-                                newpos(1) = pos(1); set(L.h(d),'position',newpos)
+                                new_pos(1) = pos(1);
+                                set(L.h(d), 'position', new_pos)
                             otherwise
-                                set(L.h(d),'position',newpos)
+                                set(L.h(d), 'position', new_pos)
                         end
                     else
-                        if any(d==L.movingdim)
-                            set(L.movingclone,'position',newpos, ...
-                                'rotation',get(L.h(d),'rotation'), ...
-                                'horizontalalignment',get(L.h(d),'horizontalalignment'), ...
-                                'verticalalignment',get(L.h(d),'verticalalignment'))
+                        if any(d == L.moving_dim)
+                            set(L.moving_clone, 'position', new_pos, ...
+                                'rotation', get(L.h(d), 'rotation'), ...
+                                'horizontalalignment', get(L.h(d), 'horizontalalignment'), ...
+                                'verticalalignment', get(L.h(d), 'verticalalignment'))
                         else
-                            set(L.h(d),'position',newpos)
+                            set(L.h(d), 'position', new_pos)
                         end
                     end
                 end
@@ -188,218 +191,227 @@ classdef displaylabels < xplr.graphnode
     
     % Update labels
     methods
-        function updateLabels(L,flag,dim)
-            if nargin<2, flag = 'pos'; end
+        function update_labels(L, flag, dim)
+            if nargin < 2, flag = 'pos'; end
             switch flag
                 case 'global'
-                    createLabels(L,'global')
+                    create_labels(L, 'global')
                 case 'chgdim'
                     % some specific properties need to be updated
-                    for d=dim, changeLabel(L,d), end
+                    for d = dim, change_label(L, d), end
                 case 'axsiz'
-                    if isempty(L.D.layoutID), return, end % happens sometimes at init because figure size changes for no clear reason
-                    getHeights(L)
+                    if isempty(L.D.layout_id), return, end % happens sometimes at init because figure size changes for no clear reason
+                    get_heights(L)
                 case 'pos'
                 case 'active'
                     % only mark labels as active or not
                     nd = L.D.nd;
-                    isactive = false(1,nd);
-                    isactive([L.D.activedim.x L.D.activedim.y]) = true;
+                    isactive = false(1, nd);
+                    isactive([L.D.activedim.x, L.D.activedim.y]) = true;
                     for d=1:nd
-                        set(L.h(d),'EdgeColor',fn_switch(isactive(d),'k','none'))
+                        set(L.h(d), 'EdgeColor', fn_switch(isactive(d), 'k', 'none'))
                     end
                     return
                 otherwise
                     error('invalid flag ''%s''',flag)
             end
-            setPositions(L)
+            set_positions(L)
         end
     end
     
     % Label click
     methods
-        function labelClick(L,obj)
+        function label_click(L, obj)
             % dimension number
-            dimID = get(obj,'UserData');
+            dim_id = get(obj, 'UserData');
             % which action
-            switch get(L.D.V.hf,'SelectionType')
+            switch get(L.D.V.hf, 'SelectionType')
                 case 'normal'
                     % move the label; if it is not moved, change active dim
-                    labelMove(L,dimID,obj)
+                    label_move(L, dim_id, obj)
             end
         end
-        function labelMove(L,dimID,obj)
+        function label_move(L, dim_id, obj)
             % prepare for changing organization
-            [prevlayoutID, layoutID_d, layoutID] = deal(L.D.layoutIDall); % previous, previous without d, current
-            dlayout = layoutID.dim_location(dimID);
-            didx = find(layoutID.(dlayout)==dimID);
-            layoutID_d.(dlayout) = setdiff(layoutID.(dlayout),dimID,'stable');
+            [prev_layout_id, layout_id_d, layout_id] = deal(L.D.layout_idall); % previous, previous without d, current
+            d_layout = layout_id.dim_location(dim_id);
+            didx = find(layout_id.(d_layout) == dim_id);
+            layout_id_d.(d_layout) = setdiff(layout_id.(d_layout), dim_id, 'stable');
             
             % only one dimension gan go to either xy or yx, and if image
-            % display only one dimension can go to mergeddata=colordim
+            % display only one dimension can go to merged_data=color_dim
             % -> remember the current dimension in these location for a
             % swap
-            xydimID = [layoutID_d.xy layoutID_d.yx];
-            if strcmp(L.D.displaymode,'image') 
-                colordimID = layoutID_d.mergeddata;
+            xy_dim_id = [layout_id_d.xy, layout_id_d.yx];
+            if strcmp(L.D.display_mode, 'image') 
+                color_dim_id = layout_id_d.merged_data;
             else
-                colordimID = []; 
+                color_dim_id = []; 
             end
             
             
             % data
-            sz = L.D.slice.sz; okdim = (sz>1);
-            dim = L.D.slice.dimensionNumber(dimID);
-            dimIDsok = [L.D.slice.header(okdim).dimID];
+            sz = L.D.slice.sz;
+            ok_dim = (sz>1);
+            dim = L.D.slice.dimension_number(dim_id);
+            dim_ids_ok = [L.D.slice.header(ok_dim).dim_id];
             
             % set thresholds: 
             % thresholds will first be computed while ignoring
             % singleton dimensions, then NaNs will be inserted at the
             % locations of these singleton dimensions
             % (x)
-            xlayout = layoutID.x; xthr = .5+L.graph.labelPosition(xlayout); % first get threshold with d and singleton dimensions still included
-            xthr(xlayout==dimID) = []; xlayout(xlayout==dimID) = [];        % remove dimension d
-            okx = ismember(xlayout,dimIDsok); xthr(~okx) = NaN;        % make it impossible to insert to the right of a singleton or non-present dimension
-            if strcmp(dlayout,'y')                                     % refine intervals in case of swapping
+            x_layout = layout_id.x;
+            x_thr = .5 + L.graph.label_position(x_layout); % first get threshold with d and singleton dimensions still included
+            x_thr(x_layout == dim_id) = [];
+            x_layout(x_layout == dim_id) = [];        % remove dimension d
+            ok_x = ismember(x_layout, dim_ids_ok);
+            x_thr(~ok_x) = NaN;        % make it impossible to insert to the right of a singleton or non-present dimension
+            if strcmp(d_layout, 'y')                                     % refine intervals in case of swapping
                 % not only x insertions, but also x/y swaps are possible
                 % for example:
                 %      pos =    0   x           x               1
                 %   -> thr =       | |       |     |
-                nokx = sum(okx);
-                pos = [0 xthr(okx) 1]; % add absolute min and max
-                xthrok = zeros(2,nokx);
-                for ithr=1:nokx
-                    dmax = min(pos(ithr+1)-pos(ithr),pos(ithr+2)-pos(ithr+1))/4; % maximal distance to an x-label to swap with this label
-                    xthrok(:,ithr) = pos(ithr+1)+[-dmax dmax];
+                nok_x = sum(ok_x);
+                pos = [0, x_thr(ok_x), 1]; % add absolute min and max
+                x_thr_ok = zeros(2, nok_x);
+                for i_thr=1:nok_x
+                    dmax = min(pos(i_thr+1) - pos(i_thr), pos(i_thr+2) - pos(i_thr+1))/4; % maximal distance to an x-label to swap with this label
+                    x_thr_ok(:, i_thr) = pos(i_thr+1) + [-dmax, dmax];
                 end
-                xthr = NaN(2,length(xlayout)); xthr(:,okx) = xthrok;
+                x_thr = NaN(2, length(x_layout));
+                x_thr(:, ok_x) = x_thr_ok;
             end
-            xthr = [-Inf row(xthr)];
+            x_thr = [-Inf, row(x_thr)];
             % (y)
-            ylayout = layoutID.y; ythr = .5-L.graph.labelPosition(ylayout); % first get threshold with d and singleton dimensions still included
-            ythr(ylayout==dimID) = []; ylayout(ylayout==dimID) = [];        % remove dimension d
-            oky = ismember(ylayout,dimIDsok); ythr(~oky) = NaN;             % make it impossible to insert to the right of a singleton or non-present dimension
-            if strcmp(dlayout,'x')
+            y_layout = layout_id.y;
+            y_thr = .5 - L.graph.label_position(y_layout); % first get threshold with d and singleton dimensions still included
+            y_thr(y_layout == dim_id) = [];
+            y_layout(y_layout == dim_id) = [];        % remove dimension d
+            ok_y = ismember(y_layout, dim_ids_ok);
+            y_thr(~ok_y) = NaN;             % make it impossible to insert to the right of a singleton or non-present dimension
+            if strcmp(d_layout, 'x')
                 % not only y insertions, but also x/y swaps are possible
-                noky = sum(oky);
-                pos = [0 ythr(oky) 1];
-                ythrok = zeros(2,noky);
-                for ithr=1:noky
-                    dmax = min(pos(ithr+1)-pos(ithr),pos(ithr+2)-pos(ithr+1))/4; % maximal distance to an x-label to swap with this label
-                    ythrok(:,ithr) = pos(ithr+1)+[-dmax dmax];
+                nok_y = sum(ok_y);
+                pos = [0, y_thr(ok_y), 1];
+                y_thr_ok = zeros(2, nok_y);
+                for i_thr=1:nok_y
+                    dmax = min(pos(i_thr+1) - pos(i_thr), pos(i_thr+2) - pos(i_thr+1))/4; % maximal distance to an x-label to swap with this label
+                    y_thr_ok(:, i_thr) = pos(i_thr+1) + [-dmax dmax];
                 end
-                ythr = NaN(2,length(ylayout)); ythr(:,oky) = ythrok;
+                y_thr = NaN(2, length(y_layout));
+                y_thr(:, ok_y) = y_thr_ok;
             end
-            ythr = [-Inf row(ythr)];
+            y_thr = [-Inf, row(y_thr)];
                         
             % make sure label will not be covered by data display
-            uistack(obj,'top')
+            uistack(obj, 'top')
             % move
-            L.movingdim = L.D.slice.dimensionNumber(dimID);
-            L.movingclone = copyobj(obj,L.ha);
-            set(L.movingclone,'color',[1 1 1]*.6,'edgecolor','none','BackgroundColor','none')
-            uistack(L.movingclone,'bottom')
-            moved = fn_buttonmotion(@movelabel,L.D.V.hf,'moved?');
+            L.moving_dim = L.D.slice.dimension_number(dim_id);
+            L.moving_clone = copyobj(obj, L.ha);
+            set(L.moving_clone, 'color', [1, 1, 1]*.6, 'edgecolor', 'none', 'BackgroundColor', 'none')
+            uistack(L.moving_clone, 'bottom')
+            moved = fn_buttonmotion(@move_label, L.D.V.hf, 'moved?');
             
-            function movelabel
-                p = get(L.ha,'currentpoint');
-                p = fn_coordinates(L.ha,'a2c',p(1,1:2)','position'); % convert to 'normalized' unit
+            function move_label
+                p = get(L.ha, 'currentpoint');
+                p = fn_coordinates(L.ha, 'a2c', p(1, 1:2)', 'position'); % convert to 'normalized' unit
                 % move object
-                set(obj,'position',p)
+                set(obj, 'position', p)
                 % update organization and object location
-                newlayoutID = layoutID_d;
-                if p(2)<=0 && p(2)<=p(1)
+                new_layout_id = layout_id_d;
+                if p(2) <= 0 && p(2) <= p(1)
                     % insert in x
-                    idx = find(p(1)>=xthr,1,'last'); % never empty thanks to the -Inf
+                    idx = find(p(1) >= x_thr, 1, 'last'); % never empty thanks to the -Inf
                     % x/y swap rather than insert?
-                    if strcmp(dlayout,'y')
-                        doswap = ~mod(idx,2);
+                    if strcmp(d_layout, 'y')
+                        do_swap = ~mod(idx, 2);
                         idx = ceil(idx/2);
                     else
-                        doswap = false;
+                        do_swap = false;
                     end
-                    if doswap
-                        newlayoutID.x = [layoutID_d.x(1:idx-1) dimID layoutID_d.x(idx+1:end)];
-                        newlayoutID.y = [layoutID_d.y(1:didx-1) layoutID_d.x(idx) layoutID_d.y(didx:end)];
+                    if do_swap
+                        new_layout_id.x = [layout_id_d.x(1:idx-1), dim_id, layout_id_d.x(idx+1:end)];
+                        new_layout_id.y = [layout_id_d.y(1:didx-1), layout_id_d.x(idx), layout_id_d.y(didx:end)];
                     else
-                        newlayoutID.x = [layoutID_d.x(1:idx-1) dimID layoutID_d.x(idx:end)];
+                        new_layout_id.x = [layout_id_d.x(1:idx-1), dim_id, layout_id_d.x(idx:end)];
                     end
-                elseif p(1)<=0 && p(2)<=.25
-                    % goes in mergeddata
-                    newlayoutID.mergeddata(end+1) = dimID;
-                    if colordimID
-                        % move away dimension that was occupying mergeddata
+                elseif p(1) <= 0 && p(2) <= .25
+                    % goes in merged_data
+                    new_layout_id.merged_data(end+1) = dim_id;
+                    if color_dim_id
+                        % move away dimension that was occupying merged_data
                         % location
-                        tmp = newlayoutID.(dlayout);
-                        newlayoutID.(dlayout) = [tmp(1:didx-1) colordimID tmp(didx:end)];
+                        tmp = new_layout_id.(d_layout);
+                        new_layout_id.(d_layout) = [tmp(1:didx-1), color_dim_id, tmp(didx:end)];
                     end
                 elseif p(1)<=0
                     % insert in y
-                    idx = find(1-p(2)>=ythr,1,'last'); % never empty thanks to the +Inf
+                    idx = find(1 - p(2) >= y_thr, 1, 'last'); % never empty thanks to the +Inf
                     % x/y swap rather than insert?
-                    if strcmp(dlayout,'x')
-                        doswap = ~mod(idx,2);
+                    if strcmp(d_layout, 'x')
+                        do_swap = ~mod(idx, 2);
                         idx = ceil(idx/2);
                     else
-                        doswap = false;
+                        do_swap = false;
                     end
-                    if doswap
-                        newlayoutID.x = [layoutID_d.x(1:didx-1) layoutID_d.y(idx) layoutID_d.x(didx:end)];
-                        newlayoutID.y = [layoutID_d.y(1:idx-1) dimID layoutID_d.y(idx+1:end)];
+                    if do_swap
+                        new_layout_id.x = [layout_id_d.x(1:didx-1), layout_id_d.y(idx), layout_id_d.x(didx:end)];
+                        new_layout_id.y = [layout_id_d.y(1:idx-1), dim_id, layout_id_d.y(idx+1:end)];
                     else
-                        newlayoutID.y = [newlayoutID.y(1:idx-1) dimID newlayoutID.y(idx:end)];
+                        new_layout_id.y = [new_layout_id.y(1:idx-1), dim_id, new_layout_id.y(idx:end)];
                     end
                 else
                     % xy or yx
-                    if p(1)>=p(2) || p(1)>=(1-p(2))
+                    if p(1) >= p(2) || p(1) >= (1-p(2))
                         % xy arrangement is more usual than yx, therefore
                         % give it more 'space
-                        newlayoutID.xy = dimID; newlayoutID.yx = [];
+                        new_layout_id.xy = dim_id;
+                        new_layout_id.yx = [];
                     else
-                        newlayoutID.xy = []; newlayoutID.yx = dimID;
+                        new_layout_id.xy = [];
+                        new_layout_id.yx = dim_id;
                     end
-                    if xydimID
+                    if xy_dim_id
                         % move away dimension that was occupying xy or yx
-                        % (swap with dimID previous location)
-                        tmp = newlayoutID.(dlayout);
-                        newlayoutID.(dlayout) = [tmp(1:didx-1) xydimID tmp(didx:end)];
+                        % (swap with dim_id previous location)
+                        tmp = new_layout_id.(d_layout);
+                        new_layout_id.(d_layout) = [tmp(1:didx-1), xy_dim_id, tmp(didx:end)];
                     end
                 end
                 % update organization (-> will trigger automatic display
                 % update)
-                if ~isequal(newlayoutID,layoutID)
-                    layoutID = newlayoutID;
-                    L.D.setLayoutID(layoutID,L.doImmediateDisplay)
+                if ~isequal(new_layout_id, layout_id)
+                    layout_id = new_layout_id;
+                    L.D.setlayout_id(layout_id, L.do_immediate_display)
                 end
                 drawnow update
             end
             
             % finish 
-            L.movingdim = [];
-            delete(L.movingclone)
-            L.movingclone = [];
+            L.moving_dim = [];
+            delete(L.moving_clone)
+            L.moving_clone = [];
             if ~moved
                 % label was not moved, make d the active x or y dimension
                 % if appropriate
-                makeDimActive(L.D,dimID,'toggle')
-            elseif isequal(layoutID,prevlayoutID)
+                makeDimActive(L.D, dim_id, 'toggle')
+            elseif isequal(layout_id, prev_layout_id)
                 % update label positions once more to put the one for dimension
                 % d in place, but keep the "non-so-meaningful" coordinate
                 % at its new position (maybe user moved the label to a
                 % better place where it does not hide other information)
-                setPositions(L)
-            elseif L.doImmediateDisplay || isequal(layoutID,prevlayoutID)
+                set_positions(L)
+            elseif L.do_immediate_display || isequal(layout_id,prev_layout_id)
                 % update label positions once more to put the one for dimension
                 % d in place
-                setPositions(L)
+                set_positions(L)
             else
                 % change organization (which will trigger data display
                 % update)only now
-                L.D.setLayoutID(layoutID,true); % second argument (true) is needed to force display update even though D.layout is already set to curlayout
+                L.D.setlayout_id(layout_id,true); % second argument (true) is needed to force display update even though D.layout is already set to curlayout
             end
         end
     end
     
 end
-
-

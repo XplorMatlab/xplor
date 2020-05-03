@@ -1,7 +1,7 @@
-classdef parameters < handle
+classdef Parameters < handle
     % XPLR.PARAMETERS  handle parameters stored in a xml file
     % has the following methods
-    % xplr.parameters.getAllPar()  get all parameters
+    % xplr.parameters.get_all_par()  get all parameters
     % xplr.parameters.reload()     reload from file
     % xplr.parameters.get(key)     get a specific parameter
     % xplr.parameters.set(key, value)  set value of a parameter
@@ -12,40 +12,40 @@ classdef parameters < handle
    
     % Constructor is private
     methods (Access='private')
-        function P= parameters
+        function P = Parameters
         end
     end
     
     % Only static functions are public
     methods (Static)
-        function P = getAllPar(forcereload)
-            persistent Pmem
-            if nargin<1, forcereload = false; end
-            if isempty(Pmem) || forcereload
-                fname = fullfile(fileparts(which('xplor')),'xplor parameters.xml');
-                if exist(fname,'file')
-                    s = fn_readxml(fname);
+        function P = get_all_par(force_reload)
+            persistent P_mem
+            if nargin < 1, force_reload = false; end
+            if isempty(P_mem) || force_reload
+                f_name = fullfile(fileparts(which('xplor')), 'xplor parameters.xml');
+                if exist(f_name, 'file')
+                    s = fn_readxml(f_name);
                 else
                     s = struct;
                 end
-                Pmem = xplr.parameters;
-                Pmem.params = s;
+                P_mem = xplr.Parameters;
+                P_mem.params = s;
             end
-            P = Pmem.params;
+            P = P_mem.params;
         end
         function reload()
-            xplr.parameters.getAllPar(true);
+            xplr.Parameters.get_all_par(true);
         end
         function value = get(str)
-            value = xplr.parameters.getAllPar();
+            value = xplr.Parameters.get_all_par();
             if nargin
-                strc = fn_strcut(str,'.');
+                strc = fn_strcut(str, '.');
                 for i=1:length(strc)
                     value = value.(strc{i});
                 end
             end
         end
-        function set(str,value)
+        function set(str, value)
             % check value
             if isnumeric(value) || islogical(value)
                 if ~isscalar(value), error 'numerical or logical values must be scalar', end
@@ -53,15 +53,15 @@ classdef parameters < handle
                 error 'value is not a valid parameter'
             end
             % get parameter structure
-            s = xplr.parameters.getAllPar();
+            s = xplr.Parameters.get_all_par();
             % set value
-            str = fn_strcut(str,'.');
-            s = setstruct(s,str,value);
+            str = fn_strcut(str, '.');
+            s = set_struct(s, str, value);
             % save
-            fname = fullfile(fileparts(which('xplor')),'xplor parameters.xml');
-            fn_savexml(fname,s)
+            f_name = fullfile(fileparts(which('xplor')), 'xplor parameters.xml');
+            fn_savexml(f_name, s)
             % reload
-            xplr.parameters.getAllPar(true);
+            xplr.Parameters.get_all_par(true);
         end
     end
     
@@ -69,18 +69,17 @@ end
 
 
 %---
-function s = setstruct(s,str,value)
+function s = set_struct(s, str, value)
 
     if isscalar(str)
         s.(str{1}) = value;
     else
-        if isfield(s,str{1})
+        if isfield(s, str{1})
             s1 = s.(str{1});
         else
             s1 = struct;
         end
-        s.(str{1}) = setstruct(s1,str(2:end),value);
+        s.(str{1}) = set_struct(s1, str(2:end), value);
     end
 
 end
-

@@ -1,11 +1,11 @@
-classdef displaynavigation < xplr.graphnode
+classdef DisplayNavigation < xplr.GraphNode
 % The displaynavigation class handles all the callbacks of events (mouse
 % click, scroll, etc.) that occur in the graph. 
 % These can control the following elements:
 % - point selection left button click to move the cross in all visible
 %                   dimensions
 % - ROIselections   drag with right button to make new selections in
-%                   the N.selectiondim dimension(s); use also the Selection
+%                   the N.selection_dim dimension(s); use also the Selection
 %                   menu on the top and selection context menus that appear
 %                   when right-clicking on a displayed selection
 % - zoom            zoom can be controlled by different actions, but they
@@ -23,44 +23,44 @@ classdef displaynavigation < xplr.graphnode
 
     properties (SetAccess='private')
         D                                       % parent xplr.viewdisplay
-        ha = gobjects
-        hf = gobjects
+        ha = g_objects
+        hf = g_objects
         graph
-        crossCenter
-        crossDataValue                          % data value at cross position
-        cross = gobjects                        % display cross selector
-        sliders = struct('x',[],'y',[]);        % slider objects
-        zoomfilters = struct('x',[],'y',[]);    % connected zoom filters
-        pointfilters = {};
+        cross_center
+        cross_data_value                          % data value at cross position
+        cross = g_objects                        % display cross selector
+        sliders = struct('x', [], 'y', []);        % slider objects
+        zoom_filters = struct('x', [], 'y', []);    % connected zoom filters
+        point_filters = {};
     end
     properties
-        selectionfilter         % filter being modified by the selections
-        selectiondisplay        % displays of selectionnd: for each selection, 2 lines and a text
-        selectionsavefile       % name of file for saving current selection
+        selection_filter         % filter being modified by the selections
+        selection_display        % displays of SelectionNd: for each selection, 2 lines and a text
+        selection_save_file       % name of file for saving current selection
         selection_context       
     end
     properties (SetObservable, AbortSet=true)
-        showcross = true;
-        crosscolor = [0 0 0];
-        crossalpha = .5;
-        selectiondimID          % dimensions to which these selections apply, identified by its id
-        selection2Dshape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
-        selectionround1Dmeasure = true; 
-        selectionshow = 'shape+name';
-        selectionedit = false
-        selectionpromptname = false
-        selectionatmostone = false
+        show_cross = true;
+        cross_color = [0, 0  0];
+        cross_alpha = .5;
+        selection_dim_id          % dimensions to which these selections apply, identified by its id
+        selection_2d_shape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
+        selection_round_1d_measure = true; 
+        selection_show = 'shape+name';
+        selection_edit = false
+        selection_prompt_name = false
+        selection_at_most_one = false
     end
     properties (Dependent)
-        selectiondim            % dimension(s) to which selections apply, identified by its(their) number
+        selection_dim            % dimension(s) to which selections apply, identified by its(their) number
     end
     properties (Dependent, SetAccess='private')
-        selection               % list of selectionnd object from the filter
+        selection               % list of SelectionNd object from the filter
     end
 
     % Constructor
     methods
-        function N = displaynavigation(D)
+        function N = DisplayNavigation(D)
             % parent xplr.viewdisplay object and other external objects
             N.D = D;
             N.ha = D.ha;
@@ -71,7 +71,7 @@ classdef displaynavigation < xplr.graphnode
             init_buttons(N)
             
             % cross
-            N.displaycross()
+            N.display_cross()
             
             % sliders
             init_sliders(N)
@@ -82,16 +82,16 @@ classdef displaynavigation < xplr.graphnode
             % connect sliders to the active dimensions of the display
             % (note that this is in fact redundant with call in
             % viewdisplay.slicechange when viewdisplay object is created)
-            connectZoomFilter(N)
+            connect_zoom_filter(N)
 
             % axes_click actions
-            set(D.ha,'buttondownfcn',@(u,e)axes_click(N))
+            set(D.ha, 'buttondownfcn', @(u,e)axes_click(N))
 
             % scroll wheel zooming
-            fn_scrollwheelregister(D.ha,@(n)N.Scroll(n))
+            fn_scrollwheelregister(D.ha, @(n)N.Scroll(n))
             
             % selection menu
-            uimenu(N.hf,'Label','Selection','callback',@(m,e)N.selectionMenu(m))
+            uimenu(N.hf, 'Label', 'Selection', 'callback', @(m, e)N.selection_menu(m))
         end
         function init_buttons(N)
         % function init_buttons(N)
@@ -100,79 +100,81 @@ classdef displaynavigation < xplr.graphnode
             % first button to adjust clipping with axes_click movements:
             % display image on it indicating how image luminance and
             % contrast change upon axes_click movements
-            [ii jj] = meshgrid(-13:0,13:-1:0); x=(0-ii)./(jj-ii)-.5; x(end)=0;
-            u = uicontrol('parent',N.D.hp, ...
-                'enable','inactive','cdata',fn_clip(sin(pi*x),[-1 1],'gray'), ...
-                'buttondownfcn',@(u,e)moveclip(N));
-            fn_controlpositions(u,N.ha,[1 1 0 0],[-1 -16 16 16])
+            [ii, jj] = meshgrid(-13:0,13:-1:0);
+            x=(0-ii)./(jj-ii) - .5;
+            x(end)=0;
+            u = uicontrol('parent', N.D.hp, ...
+                'enable', 'inactive', 'cdata', fn_clip(sin(pi*x), [-1, 1], 'gray'), ...
+                'buttondownfcn', @(u,e)move_clip(N));
+            fn_controlpositions(u, N.ha,[1, 1, 0, 0],[-1, -16, 16, 16])
 
             % two next buttons control extent of clipping
-            u = uicontrol('parent',N.D.hp, ...
-                'string','+','fontsize',8, ...
-                'callback',@(u,e)cliprange(N,'+'));
-            fn_controlpositions(u,N.ha,[1 1 0 0],[-1 -32 16 16])
-            u = uicontrol('parent',N.D.hp, ...
-                'string','-','fontsize',8, ...
-                'callback',@(u,e)cliprange(N,'-'));
-            fn_controlpositions(u,N.ha,[1 1 0 0],[-1 -48 16 16])
+            u = uicontrol('parent', N.D.hp, ...
+                'string', '+', 'fontsize', 8, ...
+                'callback', @(u,e)cliprange(N, '+'));
+            fn_controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -32, 16, 16])
+            u = uicontrol('parent', N.D.hp, ...
+                'string', '-', 'fontsize', 8, ...
+                'callback', @(u,e)cliprange(N, '-'));
+            fn_controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -48, 16, 16])
         end
         function init_sliders(N)
-            N.sliders.x = fn_slider('parent',N.D.hp,'mode','area', ...
-                'layout','right','callback',@(u,evnt)chgzoom(N,'x',u));
-            N.sliders.y = fn_slider('parent',N.D.hp,'mode','area', ...
-                'layout','down','callback',@(u,evnt)chgzoom(N,'y',u));
-            pcol = get(N.D.hp,'backgroundcolor');
-            set([N.sliders.x N.sliders.y],'visible','off','scrollwheel','on','value',[0 1], ...
-                'backgroundcolor',pcol*.75,'slidercolor',pcol*.95)
-            fn_controlpositions(N.sliders.x,N.ha,[0 1 1 0], [0 0 0 12]);
-            fn_controlpositions(N.sliders.y,N.ha,[1 0 0 1], [0 0 12 -48]);
+            N.sliders.x = fn_slider('parent', N.D.hp, 'mode', 'area', ...
+                'layout', 'right', 'callback', @(u, evnt)chg_zoom(N, 'x', u));
+            N.sliders.y = fn_slider('parent', N.D.hp, 'mode', 'area', ...
+                'layout', 'down', 'callback', @(u, evnt)chg_zoom(N, 'y', u));
+            pcol = get(N.D.hp, 'backgroundcolor');
+            set([N.sliders.x, N.sliders.y], 'visible', 'off', 'scrollwheel', 'on', 'value', [0, 1], ...
+                'backgroundcolor', pcol*.75, 'slidercolor', pcol*.95)
+            fn_controlpositions(N.sliders.x, N.ha, [0, 1, 1, 0], [0, 0, 0, 12]);
+            fn_controlpositions(N.sliders.y, N.ha, [1, 0, 0, 1], [0, 0, 12, -48]);
         end
         function init_value_display(N)
-            N.crossDataValue = uicontrol('Parent',N.D.hp,'style','text','enable','inactive', ...
-                'fontsize',8,'horizontalalignment','right');
-            fn_controlpositions(N.crossDataValue,N.D.hp,[1 0],[-100 10 90 15])
+            N.cross_data_value = uicontrol('Parent', N.D.hp, 'style', 'text', 'enable', 'inactive', ...
+                'fontsize', 8, 'horizontalalignment', 'right');
+            fn_controlpositions(N.cross_data_value, N.D.hp, [1, 0], [-100, 10, 90, 15])
         end
     end
     
     % Get/Set dependent
     methods
-        function d = get.selectiondim(N)
-            d = N.D.slice.dimensionNumber(N.selectiondimID);
+        function d = get.selection_dim(N)
+            d = N.D.slice.dimension_number(N.selection_dim_id);
         end
-        function set.selectiondim(N,dim)
-            N.selectiondimID = N.D.slice.dimensionID(dim);
+        function set.selection_dim(N, dim)
+            N.selection_dim_id = N.D.slice.dimension_id(dim);
         end
     end
     
     % Clip control
     methods
-        function moveclip(N)
-            switch get(N.hf,'selectiontype')
+        function move_clip(N)
+            switch get(N.hf, 'selectiontype')
                 case 'normal'       % change clip
                     clip0 = N.D.clip;
                     e0 = diff(clip0);
-                    clipcenter = N.D.clipping.center;
+                    clip_center = N.D.clipping.center;
                     switch N.D.clipping.adjust
                         case 'none'
                             % nothing
                         otherwise
-                            clipcenter = 0;
+                            clip_center = 0;
                     end
-                    if ~isempty(clipcenter), clip0 = clipcenter + [-.5 .5]*e0; end
-                    p0 = get(N.hf,'currentpoint');
-                    ht = uicontrol('style','text','position',[2 2 200 17],'parent',N.hf);
+                    if ~isempty(clip_center), clip0 = clip_center + [-.5, .5]*e0; end
+                    p0 = get(N.hf, 'currentpoint');
+                    ht = uicontrol('style', 'text', 'position', [2, 2, 200, 17], 'parent', N.hf);
                     % change clip
-                    moveclipsub() % this displays the bottom-left numbers
-                    fn_buttonmotion(@moveclipsub,N.hf)
+                    move_clipsub() % this displays the bottom-left numbers
+                    fn_buttonmotion(@move_clipsub, N.hf)
                     delete(ht)
                 case 'open'         % use default clipping
                     autoClip(N.D)
             end
-            function moveclipsub
+            function move_clipsub
                 % 'naive' new clip
-                p = get(N.hf,'currentpoint');
-                dp = p-p0;
-                if ~isempty(clipcenter), dp = [-1 1]*(dp(2)-dp(1))/2; end
+                p = get(N.hf, 'currentpoint');
+                dp = p - p0;
+                if ~isempty(clip_center), dp = [-1, 1]*(dp(2)-dp(1))/2; end
                 FACT = 1/100;
                 clip = clip0 + dp*(e0*FACT);
                 % it might be that we have diff(clip)<=0 here! apply some
@@ -182,14 +184,14 @@ classdef displaynavigation < xplr.graphnode
                 if e<thr
                     %e = thr*exp(e/thr-1); % goes from thr for e=thr to 0 for e=-Inf
                     e = thr^2 / (2*thr-e); % goes from thr for e=thr to 0 for e=-Inf
-                    clip = mean(clip) + [-.5 .5]*e;
+                    clip = mean(clip) + [-.5, .5]*e;
                 end     
                 % update display
-                set(ht,'string',sprintf('min: %.3f,  max: %.3f',clip(1),clip(2)))
+                set(ht, 'string', sprintf('min: %.3f,  max: %.3f', clip(1), clip(2)))
                 N.D.setClip(clip)
             end
         end
-        function cliprange(N,flag)
+        function cliprange(N, flag)
             % current clip extent
             clip = N.D.clip;
             m = mean(clip);
@@ -198,13 +200,13 @@ classdef displaynavigation < xplr.graphnode
             % round it to a nice value
             e10 = 10^floor(log10(e));
             e = e / e10;
-            vals = [.75 1 1.5 2 3 4 5 7.5 10 15];
-            f = find(e*1.1>vals,1,'last');
+            vals = [.75, 1, 1.5, 2, 3, 4, 5, 7.5, 10, 15];
+            f = find(e*1.1>vals, 1, 'last');
             
             % update as specified
-            f = f + fn_switch(flag,'+',-1,'-',1);
+            f = f + fn_switch(flag, '+', -1, '-', 1);
             e = e10 * vals(f);
-            clip = m + [-.5 .5]*e;
+            clip = m + [-.5, .5]*e;
             
             % set clip
             N.D.setClip(clip)
@@ -215,73 +217,74 @@ classdef displaynavigation < xplr.graphnode
     methods
         function axes_click(N, flag)
             % function axes_click(N)
-            % function axes_click(N, 'pointonly')
+            % function axes_click(N, 'point_only')
             %---
             % Options:
-            % - 'pointonly' set this flag when we have already clicked
+            % - 'point_only' set this flag when we have already clicked
             %               and released the axes_click button (for example
             %               because we clicked on the cross): in this case
             %               do not start drag zooming or ROI selection
             
             if nargin<2, flag = ''; end
-            pointonly = strcmp(flag,'pointonly');
-            point =  get(N.D.ha,'CurrentPoint'); point = point(1,[1 2])';
-            activedim = [N.D.activedim.x N.D.activedim.y];
-            switch get(N.hf,'SelectionType')
+            point_only = strcmp(flag, 'point_only');
+            point =  get(N.D.ha, 'CurrentPoint');
+            point = point(1, [1, 2])';
+            active_dim = [N.D.active_dim.x, N.D.active_dim.y];
+            switch get(N.hf, 'SelectionType')
                 case 'normal'
                     % zoom in or select point
-                    if pointonly                        
-                        dozoom = false;
+                    if point_only                        
+                        do_zoom = false;
                     else
-                        rect = fn_mouse(N.ha,'rectaxp-');
-                        dozoom = any(any(abs(diff(rect,1,2))>1e-2));
+                        rect = fn_mouse(N.ha, 'rectaxp-');
+                        do_zoom = any(any(abs(diff(rect, 1, 2))>1e-2));
                     end
-                    if dozoom
+                    if do_zoom
                         % determine in which dimension to zoom as the most
                         % exterior dimension(s) where at least 2
                         % elements are selected
-                        zijk = N.graph.graph2zslice(rect);
-                        ijk = N.graph.graph2slice(rect);
-                        nonsingleton = logical(diff(round(zijk),1,2)); % nd*1 vector
+                        zijk = N.graph.graph_2_zslice(rect);
+                        ijk = N.graph.graph_2_slice(rect);
+                        non_single_ton = logical(diff(round(zijk), 1, 2)); % nd*1 vector
                         org = N.D.layout;
-                        xydim = [org.xy org.yx];
-                        if nonsingleton(xydim)
-                            zoomdim = xydim;
+                        xy_dim = [org.xy, org.yx];
+                        if non_single_ton(xy_dim)
+                            zoom_dim = xy_dim;
                         else
-                            xdim = org.x(find(nonsingleton(org.x),1,'last'));
-                            ydim = org.y(find(nonsingleton(org.y),1,'last'));
-                            zoomdim = [xdim ydim];
+                            x_dim = org.x(find(non_single_ton(org.x), 1, 'last'));
+                            y_dim = org.y(find(non_single_ton(org.y), 1, 'last'));
+                            zoom_dim = [x_dim, y_dim];
                         end
-                        zoom = ijk(zoomdim,:)';
-                        for i=1:length(zoomdim), zoom(:,i) = sort(zoom(:,i)); end
-                        N.D.zoomslicer.setZoom(zoomdim,zoom)
+                        zoom = ijk(zoom_dim, :)';
+                        for i=1:length(zoom_dim), zoom(:, i) = sort(zoom(:, i)); end
+                        N.D.zoom_slicer.set_zoom(zoom_dim, zoom)
                     else
-                        N.manualclickmovecross(point);
+                        N.manual_click_move_cross(point);
                     end
                 case 'open'
                     % zoom reset
-                    zoomoutdim = N.D.internal_dim;
-                    zoom = repmat(':',1,length(zoomoutdim));
-                    N.D.zoomslicer.setZoom(zoomoutdim,zoom)
+                    zoom_out_dim = N.D.internal_dim;
+                    zoom = repmat(':', 1, length(zoom_out_dim));
+                    N.D.zoom_slicer.set_zoom(zoom_out_dim, zoom)
                 case 'alt'
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape
-                    if ~isempty(N.selectiondimID)
-                        selslice = N.selectionMouse();
-                        if isempty(selslice), return, end
+                    if ~isempty(N.selection_dim_id)
+                        sel_slice = N.selection_mouse();
+                        if isempty(sel_slice), return, end
 
                         % prompt for selection name
                         options = {};
-                        if N.selectionpromptname
-                            name = inputdlg('Selection name','xplor');
-                            if ~isempty(name), options = {'Name' name{1}}; end
+                        if N.selection_prompt_name
+                            name = inputdlg('Selection name', 'xplor');
+                            if ~isempty(name), options = {'Name', name{1}}; end
                         end
                         
                         % update filter
-                        if ~N.selectionatmostone || isempty(N.selection)
-                            N.selectionfilter.updateSelection('new',selslice,options{:})
+                        if ~N.selection_at_most_one || isempty(N.selection)
+                            N.selection_filter.update_selection('new', sel_slice, options{:})
                         else
-                            N.selectionfilter.updateSelection('chg&rm',{1 2:length(N.selection)},selslice,options{:})
+                            N.selection_filter.update_selection('chg&rm', {1, 2:length(N.selection)}, sel_slice, options{:})
                         end
                     end
             end
@@ -290,151 +293,152 @@ classdef displaynavigation < xplr.graphnode
     
     % Cross point selection
     methods
-        function connectPointFilter(N,dim,key)
+        function connect_point_filter(N, dim, key)
             if nargin < 3, key = 1; end
 
             % Disconnect current point filters
             if nargin < 2
-                disconnectPointFilter(N)
+                disconnect_point_filter(N)
                 dim = 1:N.D.slice.nd;
             else
-                disconnectPointFilter(N,dim)
+                disconnect_point_filter(N, dim)
             end
             
             % Connect new point filters: loop on dimensions
             for d = dim
-                linkkey = key;
+                link_key = key;
                 head = N.D.slice.header(d);
                 % no interest in creating and controling a filter for a
                 % dimension with only 1 value
-                if head.n ==1 
-                    N.pointfilters{d} = [];
+                if head.n == 1 
+                    N.point_filters{d} = [];
                     continue
                 end
                 % get filter from bank or create one for the header in this
                 % dimension
-                P = xplr.bank.getPointFilter(linkkey,head,N); % FilterAndPoint filter
-                N.pointfilters{d} = P;
+                P = xplr.Bank.getPointFilter(link_key, head, N); % FilterAndPoint filter
+                N.point_filters{d} = P;
                 % listen to the point filter event
-                N.addListener(P,'ChangedOperation',@(u,e)movedPoint(N,e))
+                N.add_listener(P, 'changed_operation', @(u,e)moved_point(N, e))
             end
         end
-        function disconnectPointFilter(N,dim)
+        function disconnect_point_filter(N, dim)
             if nargin < 2
-                dim = 1:length(N.pointfilters);
+                dim = 1:length(N.point_filters);
             end
             for d = dim
-                P = N.pointfilters{d};
+                P = N.point_filters{d};
                 if isempty(P), continue, end
-                xplr.bank.unregisterFilter(P,N)
+                xplr.Bank.unregister_filter(P, N)
                 N.disconnect(P)  % this is the same as F.disconnect(N)!
             end
         end
-        function movedPoint(N,e)
-            if ~strcmp(e.type,'point'), return, end
-            ijk = getPointIndexPosition(N);
-            N.crossCenter = N.graph.slice2graph(ijk);
+        function moved_point(N, e)
+            if ~strcmp(e.type, 'point'), return, end
+            ijk = get_point_index_position(N);
+            N.cross_center = N.graph.slice_2_graph(ijk);
             update_cross_visibility(N);
         end
-        function ijk = getPointIndexPosition(N)
+        function ijk = get_point_index_position(N)
             nd = N.D.slice.nd;
             ijk = ones(nd, 1);
             for d = 1:nd
-                P = N.pointfilters{d};
+                P = N.point_filters{d};
                 if isempty(P), continue, end
                 ijk(d) = P.index0;
             end
         end
-        function repositionCross(N)
-            ijk = getPointIndexPosition(N);
-            N.crossCenter = N.graph.slice2graph(ijk);
+        function reposition_cross(N)
+            ijk = get_point_index_position(N);
+            N.cross_center = N.graph.slice_2_graph(ijk);
             update_cross_visibility(N);
         end
-        function displaycross(N)
+        function display_cross(N)
            
             % cross
-            N.cross(1) = line('Parent',N.D.ha,'ydata',[-.5 .5]);
-            N.cross(2) = line('Parent',N.D.ha,'xdata',[-.5 .5]);
-            N.cross(3) = line('Parent',N.D.ha,'xdata',[0 0],'ydata',[0 0]); % a single point
-            set(N.cross,'Color',[N.crosscolor N.crossalpha]) % cross is semi-transparent!
+            N.cross(1) = line('Parent', N.D.ha, 'ydata', [-.5, .5]);
+            N.cross(2) = line('Parent', N.D.ha, 'xdata', [-.5, .5]);
+            N.cross(3) = line('Parent', N.D.ha, 'xdata', [0, 0], 'ydata', [0, 0]); % a single point
+            set(N.cross, 'Color', [N.cross_color, N.cross_alpha]) % cross is semi-transparent!
             
             % position
-            N.crossCenter = [0 0];
+            N.cross_center = [0, 0];
             
             % callbacks
             for i=1:3
-                set(N.cross(i),'buttondownfcn',@(u,e)manualmovecross(N,i))
+                set(N.cross(i),'buttondownfcn', @(u,e)manualmovecross(N, i))
             end
         end
-        function set.crossCenter(N, crossCenter)
+        function set.cross_center(N, cross_center)
 
             % re-display cross if it was deleted (happens upon
             % D.resetDisplay)
             if ~all(isvalid(N.cross))
                 deleteValid(N.cross)
-                N.displaycross()
+                N.display_cross()
             end
             
             % set property
-            N.crossCenter = crossCenter;
+            N.cross_center = cross_center;
 
             % move the cross
-            set(N.cross(1),'XData',crossCenter([1 1]))
-            set(N.cross(2),'YData',crossCenter([2 2]))
-            set(N.cross(3),'XData',crossCenter([1 1]),'YData',crossCenter([2 2]))
+            set(N.cross(1), 'XData', cross_center([1, 1]))
+            set(N.cross(2), 'YData', cross_center([2, 2]))
+            set(N.cross(3), 'XData', cross_center([1, 1]), 'YData', cross_center([2, 2]))
 
         end
-        function manualmovecross(N,il)
-            if ~ismember(get(N.hf,'selectiontype'),{'normal' 'open'})
+        function manualmovecross(N, il)
+            if ~ismember(get(N.hf, 'selectiontype'), {'normal', 'open'})
                 % not a left click: execute callback for axes
                 axes_click(N)
                 return
             end
-            set(N.hf,'pointer',fn_switch(il,1,'left',2,'top',3,'cross'))
+            set(N.hf, 'pointer', fn_switch(il, 1, 'left', 2, 'top', 3, 'cross'))
             
             % prepare a time to pan zoom while moving the cross!
-            do_drag_zoom = (il == 1) && isequal(N.D.layout.x,1) && isequal(N.D.activedim.x,1);
+            do_drag_zoom = (il == 1) && isequal(N.D.layout.x, 1) && isequal(N.D.active_dim.x, 1);
             if do_drag_zoom
-                Z = N.D.zoomfilters(1);
-                do_drag_zoom = ~strcmp(Z.zoom,':');
+                Z = N.D.zoom_filters(1);
+                do_drag_zoom = ~strcmp(Z.zoom, ':');
             end
             if do_drag_zoom
-                drag_timer = timer('timerfcn',@drag_zoom,'ExecutionMode','fixedSpacing','period',.01);
+                drag_timer = timer('timerfcn', @drag_zoom, 'ExecutionMode', 'fixedSpacing', 'period', .01);
                 zoom_width = diff(Z.zoom);
                 zoom_min = .5;
-                zoom_max = .5+Z.headerin.n;
+                zoom_max = .5 + Z.header_in.n;
                 drag_zone = .15; % width of special zone where zoom dragging occurs
                 drag_speed = 0;
             end
             point = [];
             
-            anymove = fn_buttonmotion(@movecrosssub,N.hf,'moved?');            
-            set(N.hf,'pointer','arrow')
+            anymove = fn_buttonmotion(@move_cross_sub, N.hf, 'moved?');            
+            set(N.hf, 'pointer', 'arrow')
             if do_drag_zoom
                 stop(drag_timer)
             end
             if ~anymove
                 % execute callback for axes
-                axes_click(N, 'pointonly')
+                axes_click(N, 'point_only')
                 return
             end
             
-            function movecrosssub
+            function move_cross_sub
                 %anymove = true;
-                p = get(N.D.ha,'currentpoint'); p = p(1,1:2);
+                p = get(N.D.ha, 'currentpoint');
+                p = p(1, 1:2);
                 switch il
                     case 1
-                        point = [p(1) N.crossCenter(2)];
+                        point = [p(1), N.cross_center(2)];
                     case 2
-                        point = [N.crossCenter(1) p(2)];
+                        point = [N.cross_center(1), p(2)];
                     case 3
                         point = p;
                 end
                 % move the cross
-                manualclickmovecross(N,point)
+                manual_click_move_cross(N, point)
                 % pan view if we are close to edge!
                 if do_drag_zoom
-                    if abs(p(1))>.5-drag_zone
+                    if abs(p(1)) > .5 - drag_zone
                         drag_speed = sign(p(1)) * ((abs(p(1)) - (.5-drag_zone))/drag_zone)/10;
                         if ~boolean(drag_timer.Running)
                             start(drag_timer)
@@ -445,21 +449,21 @@ classdef displaynavigation < xplr.graphnode
                 end
             end
             
-            function drag_zoom(~,~)
+            function drag_zoom(~, ~)
                 zoom = Z.zoom + drag_speed * zoom_width;
                 if zoom(1) < zoom_min
-                    zoom = zoom_min + [0 zoom_width];
+                    zoom = zoom_min + [0, zoom_width];
                 elseif zoom(2) > zoom_max
-                    zoom = zoom_max - [zoom_width 0];
+                    zoom = zoom_max - [zoom_width, 0];
                 end
-                Z.setZoom(zoom)
-                manualclickmovecross(N,point)
+                Z.set_zoom(zoom)
+                manual_click_move_cross(N, point)
             end
             
         end        
-        function manualclickmovecross(N,point)
+        function manual_click_move_cross(N, point)
             % move the cross to the selected point
-            ijk = N.graph.graph2slice(point,'invertible',true);
+            ijk = N.graph.graph_2_slice(point, 'invertible', true);
             
             % round indices values in dimensions with categorical headers
             categorical = [N.D.slice.header.categorical];
@@ -467,207 +471,207 @@ classdef displaynavigation < xplr.graphnode
             
             % update the point filters (only for dimensions where the point
             % remains within the slice)
-            for d = find(~isPointOutOfDisplay(N,point,true))
-                P = N.pointfilters{d};
+            for d = find(~is_point_out_of_display(N, point, true))
+                P = N.point_filters{d};
                 if ~isempty(P)
                     P.index = ijk(d);
                 end
             end
         end        
-        function removecross(N)
+        function remove_cross(N)
             delete(N.cross)
         end      
         function update_cross_visibility(N)
             % do not show cross?
-            if ~N.showcross
-                set(N.cross,'Visible','off')
-                set(N.crossDataValue,'Visible','off')                
+            if ~N.show_cross
+                set(N.cross, 'Visible', 'off')
+                set(N.cross_data_value, 'Visible', 'off')                
                 return
             end           
                         
             % dims that are out of display
-            ijk = getPointIndexPosition(N);
-            dimOutOfDisplay = N.isIndexOutOfDisplay(ijk,true);
+            ijk = get_point_index_position(N);
+            dim_out_of_display = N.is_index_out_of_display(ijk, true);
            
             % Hide the vertical bar if all dimensions on x are singletons or if
-            % crossCenter is out of display on any dimension on x
+            % cross_center is out of display on any dimension on x
             layout = N.D.layout;
-            xdim = [layout.x layout.xy layout.yx];
-            x_singleton = isempty(xdim);
-            x_isOutOfDisplay = any(dimOutOfDisplay(xdim));
-            N.cross(1).Visible = onoff(~x_singleton && ~x_isOutOfDisplay);
+            x_dim = [layout.x, layout.xy, layout.yx];
+            x_singleton = isempty(x_dim);
+            x_is_out_of_display = any(dim_out_of_display(x_dim));
+            N.cross(1).Visible = onoff(~x_singleton && ~x_is_out_of_display);
             
             % Same things for horizontal bar
-            ydim = [layout.y layout.xy layout.yx];
-            y_singleton = isempty(ydim);
-            y_isOutOfDisplay = any(dimOutOfDisplay(ydim));
-            N.cross(2).Visible = onoff(~(y_singleton|y_isOutOfDisplay));
+            y_dim = [layout.y, layout.xy, layout.yx];
+            y_singleton = isempty(y_dim);
+            y_is_out_of_display = any(dim_out_of_display(y_dim));
+            N.cross(2).Visible = onoff(~(y_singleton|y_is_out_of_display));
             
             % Cross center
-            updateCrossCenterVisibility(N);
+            update_cross_center_visibility(N);
 
             % Cross Value
-            set(N.crossDataValue,'Visible','on') 
-            updateValueDisplay(N);
+            set(N.cross_data_value,'Visible','on') 
+            update_value_display(N);
         end
-        function updateCrossCenterVisibility(N)
+        function update_cross_center_visibility(N)
             %  if one of the dimension of the cross is hidden, hide the
             % cross center as well
             N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
         end
-        function updateValueDisplay(N)            
-            ijk = getPointIndexPosition(N);
+        function update_value_display(N)            
+            ijk = get_point_index_position(N);
             idx = fn_indices(N.D.slice.sz, round(ijk));
             value = N.D.slice.data(idx);
 
             % Test to display the value as "val(d1,d2,d3,...)=value"
-            %set(N.crossDataValue,'String',['val(' num2str(ijk(1),'%.3g') ',' num2str(ijk(2),'%.3g') ')=' ...
+            %set(N.cross_data_value,'String',['val(' num2str(ijk(1),'%.3g') ',' num2str(ijk(2),'%.3g') ')=' ...
             %            num2str(value,'%.3g')])         
-            set(N.crossDataValue,'String',['Value: ', num2str(value,'%.3g')])
+            set(N.cross_data_value, 'String', ['Value: ', num2str(value, '%.3g')])
         end
         % cross color, transparency, and global visibility
-        function set.showcross(N,value)
-            N.showcross = value;
+        function set.show_cross(N, value)
+            N.show_cross = value;
             N.update_cross_visibility()
         end
-        function set.crosscolor(N,color)
+        function set.cross_color(N,color)
             color = fn_colorbyname(color);
             if isempty(color), error 'wrong color', end
-            N.crosscolor = color;
-            set(N.cross,'color',[N.crosscolor N.crossalpha])
+            N.cross_color = color;
+            set(N.cross, 'color', [N.cross_color, N.cross_alpha])
         end
-        function set.crossalpha(N,alpha)
-            N.crossalpha = alpha;
-            set(N.cross,'color',[N.crosscolor N.crossalpha])
+        function set.cross_alpha(N, alpha)
+            N.cross_alpha = alpha;
+            set(N.cross, 'color', [N.cross_color, N.cross_alpha])
         end
     end
     
     % ROI selection
     methods
-        function selectionMenu(N,m)
+        function selection_menu(N, m)
             % Selection menu is populated when being activated
-            delete(get(m,'children'))
+            delete(get(m, 'children'))
             
             header = N.D.slice.header;
-            seldim = N.selectiondim;
-            sellabels = {header(seldim).label};
+            sel_dim = N.selection_dim;
+            sel_labels = {header(sel_dim).label};
             layout = N.D.layout;
 
             % Set selection dimension
             % (no active control? -> propose selection in the 'internal' dimensions)
-            if isempty(N.selectiondimID) && ~isempty([layout.x layout.y])
-                if ~isempty(layout.x) && (strcmp(N.D.displaymode,'time courses') || isempty(layout.y)) 
+            if isempty(N.selection_dim_id) && ~isempty([layout.x, layout.y])
+                if ~isempty(layout.x) && (strcmp(N.D.displaymode, 'time courses') || isempty(layout.y)) 
                     % time courses (or image without y dimension) -> 1D selection
-                    propdim = layout.x(1);
-                elseif strcmp(N.D.displaymode,'image') && isempty(layout.x)
+                    prop_dim = layout.x(1);
+                elseif strcmp(N.D.displaymode, 'image') && isempty(layout.x)
                     % image but no x dimension -> 1D vertical selection
-                    propdim = layout.y(1);
+                    prop_dim = layout.y(1);
                 else
                     % image -> 2D selection
-                    propdim = [layout.x(1) layout.y(1)];
+                    prop_dim = [layout.x(1), layout.y(1)];
                 end
-                proplabels = {header(propdim).label};
-                if isscalar(propdim)
-                    itemlabel = ['Control selection in dimension ' proplabels{1}];
+                prop_labels = {header(prop_dim).label};
+                if isscalar(prop_dim)
+                    item_label = ['Control selection in dimension ', prop_labels{1}];
                 else
-                    itemlabel = ['Control selection in dimensions ' fn_strcat(proplabels,',')];
+                    item_label = ['Control selection in dimensions ', fn_strcat(prop_labels,',')];
                 end
-                propdimID = [header(propdim).dimID];
-                uimenu(m,'label',itemlabel, ...
-                    'callback',@(u,e)set(N,'selectiondimID',propdimID))
+                prop_dim_id = [header(prop_dim).dim_id];
+                uimenu(m, 'label', item_label, ...
+                    'callback', @(u,e)set(N, 'selection_dim_id', prop_dim_id))
             end
             % (sub-menu with other possible dimensions)
-            switch length(N.selectiondimID)
+            switch length(N.selection_dim_id)
                 case 0
                     info = 'Control selection in dimension...';
                 case 1
-                    info = ['Control selection in dimension: ' sellabels{1}];
+                    info = ['Control selection in dimension: ', sel_labels{1}];
                 case 2
-                    info = ['Control selection in dimensions: ' fn_strcat(sellabels,',')];
+                    info = ['Control selection in dimensions: ', fn_strcat(sel_labels,',')];
                 otherwise
                     error 'programming: selection control in more than 2 dimensions'
             end
             % (submenu for other possibilities)
-            m2 = uimenu(m,'label',info);
+            m2 = uimenu(m, 'label', info);
             % (1D: dimension location must be x, y or xy)
-            dimok = sort([layout.x layout.y layout.xy]);
-            fn_propcontrol(N,'selectiondimID', ...
-                {'menugroup' {header(dimok).dimID} {header(dimok).label}}, ...
-                {'parent',m2});
+            dim_ok = sort([layout.x, layout.y, layout.xy]);
+            fn_propcontrol(N, 'selection_dim_id', ...
+                {'menugroup', {header(dim_ok).dim_id}, {header(dim_ok).label}}, ...
+                {'parent', m2});
             % (2D: dimension locations must be respectively x and y)
             available = cell(2, length(layout.x), length(layout.y));
             if ~isempty(available)
                 % selections with first dim on x-axis, second dim on y-axis
                 for i = 1:length(layout.x)
                     for j = 1:length(layout.y)
-                        d = [layout.x(i) layout.y(j)];
-                        available{1,i,j} = [header(d).dimID];
-                        available{2,i,j} = fn_strcat({header(d).label},',');
+                        d = [layout.x(i), layout.y(j)];
+                        available{1, i, j} = [header(d).dim_id];
+                        available{2, i, j} = fn_strcat({header(d).label}, ',');
                     end
                 end
-                fn_propcontrol(N,'selectiondimID', ...
-                    {'menugroup' available(1,:) available(2,:)}, ...
-                    {'parent',m2});
+                fn_propcontrol(N, 'selection_dim_id', ...
+                    {'menugroup', available(1, :) available(2, :)}, ...
+                    {'parent', m2});
                 % selections with first dim on y-axis, second dim on x-axis
                 for i = 1:length(layout.x)
                     for j = 1:length(layout.y)
-                        d = [layout.y(j) layout.x(i)];
-                        available{1,i,j} = [header(d).dimID];
-                        available{2,i,j} = fn_strcat({header(d).label},',');
+                        d = [layout.y(j), layout.x(i)];
+                        available{1, i, j} = [header(d).dim_id];
+                        available{2, i, j} = fn_strcat({header(d).label}, ',');
                     end
                 end
-                fn_propcontrol(N,'selectiondimID', ...
-                    {'menugroup' available(1,:) available(2,:)}, ...
-                    {'parent',m2});
+                fn_propcontrol(N, 'selection_dim_id', ...
+                    {'menugroup', available(1, :), available(2, :)}, ...
+                    {'parent', m2});
             end
 
             %             uimenu(m2,'label','ND selection...','separator','on', ...
-            %                 'callback',@(u,e)set(N,'selectiondimID','prompt'))
+            %                 'callback',@(u,e)set(N,'selection_dim_id','prompt'))
             % (stop)
-            if ~isempty(N.selectiondimID)
-                uimenu(m,'label','Stop selection control', ...
-                    'callback',@(u,e)set(N,'selectiondimID',[]))
+            if ~isempty(N.selection_dim_id)
+                uimenu(m, 'label', 'Stop selection control', ...
+                    'callback', @(u,e)set(N, 'selection_dim_id', []))
             end
 
             % Options below should not be displayed if there is no active
             % selection control
-            if isempty(N.selectiondimID), return, end
+            if isempty(N.selection_dim_id), return, end
 
             % Selection options
-            uimenu(m,'label','Clear selections','separator','on', ...
-                'callback',@(u,e)N.selectionfilter.updateSelection('reset'))
-            if length(N.selectiondimID) == 2
-                fn_propcontrol(N,'selection2Dshape', ...
-                    {'menuval' {'poly', 'free', 'rect', 'ellipse', 'ring', 'line', 'openpoly', 'freeline'}}, ...
-                    'parent',m,'label','Shape');
+            uimenu(m, 'label', 'Clear selections', 'separator', 'on', ...
+                'callback', @(u,e)N.selection_filter.update_selection('reset'))
+            if length(N.selection_dim_id) == 2
+                fn_propcontrol(N, 'selection_2d_shape', ...
+                    {'menuval', {'poly', 'free', 'rect', 'ellipse', 'ring', 'line', 'openpoly', 'freeline'}}, ...
+                    'parent', m, 'label', 'Shape');
             end
-            if length(N.selectiondimID) == 1 && N.D.slice.header(seldim).ismeasure
-                fn_propcontrol(N,'selectionround1Dmeasure','menu', ...
-                    {'parent',m,'label','Round 1D selections to data indices','separator','on'});
+            if length(N.selection_dim_id) == 1 && N.D.slice.header(sel_dim).ismeasure
+                fn_propcontrol(N, 'selection_round_1d_measure', 'menu', ...
+                    {'parent', m, 'label', 'Round 1D selections to data indices', 'separator', 'on'});
             end
-            fn_propcontrol(N,'selectionpromptname','menu', ...
-                {'parent',m,'label','Prompt for name of new selections'});
-            fn_propcontrol(N,'selectionatmostone','menu', ...
-                {'parent',m,'label','At most one selection'})
+            fn_propcontrol(N, 'selection_prompt_name', 'menu', ...
+                {'parent', m, 'label', 'Prompt for name of new selections'});
+            fn_propcontrol(N, 'selection_at_most_one', 'menu', ...
+                {'parent', m, 'label', 'At most one selection'})
             
-            fn_propcontrol(N,'selectionshow', ...
-                {'menuval', {'shape+name' 'shape' 'name' 'center'}}, ...
-                {'parent',m,'label','Display mode','separator','on'});       
+            fn_propcontrol(N, 'selection_show', ...
+                {'menuval', {'shape+name', 'shape', 'name', 'center'}}, ...
+                {'parent', m, 'label', 'Display mode', 'separator', 'on'});       
             % selection edit mode not ready yet!!! (need first to convert
             % selection from slice to graph)
-            %             fn_propcontrol(N,'selectionedit','menu', ...
+            %             fn_propcontrol(N,'selection_edit','menu', ...
             %                 {'parent',m,'label','Selections modifyable'});
 
             % Load/save selections
-            uimenu(m,'label','Load...','separator','on', ...
-                'callback',@(u,e)N.selectionload())
-            uimenu(m,'label','Save','enable',onoff(~isempty(N.selectionsavefile)), ...
-                'callback',@(u,e)N.selectionsave(N.selectionsavefile))
-            uimenu(m,'label','Save as...', ...
-                'callback',@(u,e)N.selectionsave())
+            uimenu(m, 'label', 'Load...', 'separator', 'on', ...
+                'callback', @(u,e)N.selection_load())
+            uimenu(m, 'label', 'Save', 'enable', onoff(~isempty(N.selection_save_file)), ...
+                'callback', @(u,e)N.selection_save(N.selection_save_file))
+            uimenu(m, 'label', 'Save as...', ...
+                'callback', @(u,e)N.selection_save())
         end
-        function selslice = selectionMouse(N, message)
-            % function selslice = selectionMouse(N [,message])
+        function sel_slice = selection_mouse(N, message)
+            % function sel_slice = selection_mouse(N [,message])
             %---
             % 'pointaction' argument is a function handle that sets a
             % specific function to execute when drag action occurs to stay
@@ -680,14 +684,14 @@ classdef displaynavigation < xplr.graphnode
             % it is assumed that the first point of the selection was
             % already clicked
             
-            seldim = N.selectiondim;
-            selnd = length(seldim);
+            sel_dim = N.selection_dim;
+            selnd = length(sel_dim);
 
             % check dimension location
-            dim_location = fn_strcat(N.D.layoutID.dim_locations(seldim),',');
-            if ~ismember(dim_location, {'x' 'y' 'xy' 'x,y' 'y,x'})
+            dim_location = fn_strcat(N.D.layout_id.dim_locations(sel_dim), ',');
+            if ~ismember(dim_location, {'x', 'y', 'xy', 'x,y', 'y,x'})
                 disp(['selection in location ''' dim_location ''' not handled'])
-                selslice = [];
+                sel_slice = [];
                 return
             end
             
@@ -708,163 +712,163 @@ classdef displaynavigation < xplr.graphnode
             if selnd == 1
                 % user interaction
                 if isscalar(dim_location)
-                    polyax = fn_mouse(N.ha,[dim_location 'segment' popt], msgopt{:});
+                    poly_ax = fn_mouse(N.ha, [dim_location, 'segment', popt], msgopt{:});
                     switch dim_location
                         case 'x'
-                            polyax = [polyax; 0 0];
+                            poly_ax = [poly_ax; 0, 0];
                         case 'y'
-                            polyax = [0 0; polyax];
+                            poly_ax = [0, 0; poly_ax];
                     end
                 else
-                    polyax = fn_mouse(N.ha,['rectaxp' popt], msgopt{:});
+                    poly_ax = fn_mouse(N.ha, ['rectaxp', popt], msgopt{:});
                 end
 
                 % convert to slice indices in the selected
                 % dimension
-                ijk0 = round(N.graph.graph2slice(polyax(:,1)));
-                polyslice = N.graph.graph2slice(polyax, 'subdim', seldim, 'ijk0', ijk0);
-                polyslice = sort(polyslice);
+                ijk0 = round(N.graph.graph_2_slice(poly_ax(:, 1)));
+                poly_slice = N.graph.graph_2_slice(poly_ax, 'subdim', sel_dim, 'ijk0', ijk0);
+                poly_slice = sort(poly_slice);
 
                 % create selection in slice indices coordinates
-                sz = N.D.slice.sz(seldim); % size of data in the dimension where selection is made
-                if N.D.slice.header(seldim).categorical
-                    selslice = xplr.selectionnd('indices',round(polyslice(1)):round(polyslice(2)),sz);
-                elseif diff(polyslice)==0
-                    selslice = xplr.selectionnd('point1D',polyslice(1));
-                elseif N.selectionround1Dmeasure
-                    selslice = xplr.selectionnd('line1D',round(polyslice)+[-.5 .5]);
+                sz = N.D.slice.sz(sel_dim); % size of data in the dimension where selection is made
+                if N.D.slice.header(sel_dim).categorical
+                    sel_slice = xplr.SelectionNd('indices', round(poly_slice(1)):round(poly_slice(2)), sz);
+                elseif diff(poly_slice)==0
+                    sel_slice = xplr.SelectionNd('point1D', poly_slice(1));
+                elseif N.selection_round_1d_measure
+                    sel_slice = xplr.SelectionNd('line1D', round(poly_slice) + [-.5, .5]);
                 else
-                    selslice = xplr.selectionnd('line1D',polyslice);
+                    sel_slice = xplr.SelectionNd('line1D', poly_slice);
                 end
             elseif selnd == 2
                 % user interaction
-                mouseselmode = fn_switch(N.selection2Dshape, ...
-                    'line','segment',{'poly' 'openpoly'},'polypt','freeline','free', ...
-                    'ellipse','ellipse*','ring','ring*', ...
-                    N.selection2Dshape);
-                seltype = fn_switch(N.selection2Dshape, ...
-                    {'poly','free'},'poly2D','rect','rect2D', ...
-                    'ellipse','ellipse2D','ring','ring2D', ...
-                    {'line','openpoly','freeline'},'openpoly2D');
-                polyax = fn_mouse(N.D.ha,[mouseselmode popt], msgopt{:});
+                mouse_sel_mode = fn_switch(N.selection_2d_shape, ...
+                    'line', 'segment', {'poly', 'openpoly'}, 'polypt', 'freeline', 'free', ...
+                    'ellipse', 'ellipse*', 'ring', 'ring*', ...
+                    N.selection_2d_shape);
+                sel_type = fn_switch(N.selection_2d_shape, ...
+                    {'poly', 'free'}, 'poly2D', 'rect', 'rect2D', ...
+                    'ellipse', 'ellipse2D', 'ring', 'ring2D', ...
+                    {'line', 'openpoly', 'freeline'}, 'openpoly2D');
+                poly_ax = fn_mouse(N.D.ha, [mouse_sel_mode popt], msgopt{:});
 
                 % create selection in graph coordinates
-                selax = xplr.selectionnd(seltype,polyax);
+                sel_ax = xplr.SelectionNd(sel_type, poly_ax);
                 % if selection is too small, convert it to a single point
-                selax.checkpoint(.005)
+                sel_ax.checkpoint(.005)
                 
                 % convert to slice coordinates
-                selslice = N.graph.selection2slice(seldim,selax);
+                sel_slice = N.graph.selection_2_slice(sel_dim, sel_ax);
             end
         end
         function sel = get.selection(N)
-            F = N.selectionfilter;
+            F = N.selection_filter;
             if isempty(F)
                 sel = [];
             else
                 sel = F.selection;
             end
         end
-        function set.selectiondimID(N,dimID)
-            % function setselectiondimID(N,dimID)
+        function set.selection_dim_id(N, dim_id)
+            % function setselection_dim_id(N,dim_id)
             %---
             % Select the dimension(s) for which selections are displayed and
             % made in the display
             
             % special: prompt user for selecting dimensions
-            if ischar(dimID) && strcmp(dimID,'prompt')
+            if ischar(dim_id) && strcmp(dim_id, 'prompt')
                 header = N.D.slice.header;
-                seldim = listdlg( ...
+                sel_dim = listdlg( ...
                     'PromptString', 'Select up to 2 dimensions', ...
                     'ListString', {header.label});
-                dimID = [header(seldim(1:min(2,end))).dimID];
+                dim_id = [header(sel_dim(1:min(2,end))).dim_id];
             end
 
             % check dimension(s)
-            nd = length(dimID);
-            if ~ismember(nd,[0 1 2])
+            nd = length(dim_id);
+            if ~ismember(nd, [0, 1, 2])
                 error 'number of dimension for selection display must be 1 or 2'
             end
-            dim = N.D.slice.dimensionNumber(dimID);
+            dim = N.D.slice.dimension_number(dim_id);
             if iscell(dim), error 'some dimension is not present in the slice data', end
-            singleton = (N.D.slice.sz(dim)==1);
-            dimID(singleton) = []; % no selection in singleton dimension(s)
+            singleton = (N.D.slice.sz(dim) == 1);
+            dim_id(singleton) = []; % no selection in singleton dimension(s)
             dim(singleton) = [];
-            if isequal(dimID, N.selectiondimID)
+            if isequal(dim_id, N.selection_dim_id)
                 return
             end
             
             % set property
-            N.selectiondimID = dimID;
+            N.selection_dim_id = dim_id;
             
             % disconnect from previous filter
-            F = N.selectionfilter;
+            F = N.selection_filter;
             if ~isempty(F)
-                xplr.bank.unregisterFilter(F,N)
+                xplr.Bank.unregister_filter(F,N)
                 N.disconnect(F)
             end
             
             % no selection?
-            if isempty(dimID)
-                N.selectionfilter = [];
-                N.displayselection()
+            if isempty(dim_id)
+                N.selection_filter = [];
+                N.display_selection()
                 return
             end
             
             % find filter to connect to
-            headerin = N.D.slice.header(dim); 
-            F = xplr.bank.getFilterFilter(1, headerin, N); % xplr.filter object
+            header_in = N.D.slice.header(dim); 
+            F = xplr.Bank.get_filter_filter(1, header_in, N); % xplr.filter object
             if isempty(F)
                 % filter needs to be created
                 error 'not implemented yet'
             end
-            N.selectionfilter = F;
+            N.selection_filter = F;
             
             % watch changes in filter to update display!
-            N.addListener(F,'ChangedOperation',@(u,e)selectionfilterchange(N,e));
+            N.add_listener(F, 'changed_operation', @(u,e)selection_filter_change(N, e));
             
             % update display
-            N.displayselection()
+            N.display_selection()
             
         end
-        function checkselectionfilter(N)
+        function check_selection_filter(N)
             % Check whether current dimension for selections display is
             % still valid, i.e. whether the connected filter still fits a
             % dimension in the new slice
-            if isempty(N.selectiondimID), return, end
-            if ~all(ismember(N.selectiondimID,[N.D.slice.non_singleton_header().dimID]))
-                N.selectiondimID = [];
+            if isempty(N.selection_dim_id), return, end
+            if ~all(ismember(N.selection_dim_id, [N.D.slice.non_singleton_header().dim_id]))
+                N.selection_dim_id = [];
             end
         end
-        function selectionfilterchange(N,e)
+        function selection_filter_change(N, e)
             % Update selection display
-            if ~strcmp(e.type,'filter'), return, end
-            N.displayselection(e.flag,e.ind)
+            if ~strcmp(e.type, 'filter'), return, end
+            N.display_selection(e.flag, e.ind)
         end
-        function displayselection(N,flag,ind)
-            % function displayselection(N)
-            % function displayselection(N,'reset')
-            % function displayselection(N,'all')
-            % function displayselection(N,'referentialchanged')
-            % function displayselection(N,'new',ind)
-            % function displayselection(N,'chg',ind)
-            % function displayselection(N,'chg&new',{indchg indnew})
-            % function displayselection(N,'chg&rm',{indchg indrm})
-            % function displayselection(N,'remove',ind)
-            % function displayselection(N,'perm',perm)
+        function display_selection(N, flag, ind)
+            % function display_selection(N)
+            % function display_selection(N,'reset')
+            % function display_selection(N,'all')
+            % function display_selection(N,'referentialchanged')
+            % function display_selection(N,'new',ind)
+            % function display_selection(N,'chg',ind)
+            % function display_selection(N,'chg&new',{indchg indnew})
+            % function display_selection(N,'chg&rm',{indchg indrm})
+            % function display_selection(N,'remove',ind)
+            % function display_selection(N,'perm',perm)
            
-            if isempty(N.selectiondimID)
-                deleteValid(N.selectiondisplay)
-                N.selectiondisplay = [];
+            if isempty(N.selection_dim_id)
+                deleteValid(N.selection_display)
+                N.selection_display = [];
                 return
             end
             
             % before all, check that selections can be displayed
-            selectionaxis = [N.D.layoutID.dim_locations{N.selectiondim}];
-            if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
+            selection_axis = [N.D.layout_id.dim_locations{N.selection_dim}];
+            if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
                 disp('selections cannot be displayed')
-                deleteValid(N.selectiondisplay)
-                N.selectiondisplay = [];
+                deleteValid(N.selection_display)
+                N.selection_display = [];
                 return
             end
             
@@ -872,85 +876,85 @@ classdef displaynavigation < xplr.graphnode
             if nargin<2, flag = 'all'; end
             if nargin<3, ind = 1:length(N.selection); end
             switch flag
-                case {'all' 'reset' 'new'}
+                case {'all', 'reset', 'new'}
                     % delete current display
-                    if fn_ismemberstr(flag,{'all','reset'})
-                        deleteValid(N.selectiondisplay)
-                        N.selectiondisplay = [];
+                    if fn_ismemberstr(flag, {'all', 'reset'})
+                        deleteValid(N.selection_display)
+                        N.selection_display = [];
                     end
                     % draw new selections
-                    for idx=ind, displayonesel(N,idx,'new'); end
+                    for idx=ind, display_one_sel(N, idx, 'new'); end
                     % keep cross above selections, with the cross center
                     % N.cross(3) at the very top
-                    try uistack(N.cross([3 1 2]),'top'), end % can fail when D.resetDisplay is invoked
-                case {'add','chg', 'affinity'}
+                    try uistack(N.cross([3, 1, 2]), 'top'), end % can fail when D.resetDisplay is invoked
+                case {'add', 'chg', 'affinity'}
                     % might be several indices
-                    for k=ind, displayonesel(N,k,'pos'); end
+                    for k=ind, display_one_sel(N, k, 'pos'); end
                 case 'referentialchanged'
                     % it is not the positions of selections that have
                     % changed, but the referential of these positions
                     % relative to the main display axes: we need then to
                     % recompute the positions of each selection display
                     % inside this new referential
-                    for k = 1:length(N.selection), displayonesel(N, k, 'pos'), end
+                    for k = 1:length(N.selection), display_one_sel(N, k, 'pos'), end
                 case 'remove'
                     % delete selected selections
-                    deleteValid(N.selectiondisplay(ind))
-                    N.selectiondisplay(ind) = [];
+                    deleteValid(N.selection_display(ind))
+                    N.selection_display(ind) = [];
                     % index (and therefore displayed name) of some other selections have changed
-                    for k = min(ind):length(N.selection), displayonesel(N, k, 'name'), end
+                    for k = min(ind):length(N.selection), display_one_sel(N, k, 'name'), end
                 case 'perm'
                     perm = ind;
-                    N.selectiondisplay = N.selectiondisplay(perm);
+                    N.selection_display = N.selection_display(perm);
                     % index (and therefore displayed name) of some selections have changed
-                    for k = find(perm~=1:length(N.selection)), displayonesel(N, k, 'name'), end
+                    for k = find(perm~=1:length(N.selection)), display_one_sel(N, k, 'name'), end
                 case 'chg&new'
-                    N.displayselection('chg',ind{1})
-                    N.displayselection('new',ind{2})
+                    N.display_selection('chg', ind{1})
+                    N.display_selection('new', ind{2})
                 case 'chg&rm'
-                    N.displayselection('chg',ind{1})
-                    N.displayselection('remove',ind{2})
+                    N.display_selection('chg', ind{1})
+                    N.display_selection('remove', ind{2})
                 otherwise
                     error('unknown flag ''%s''', flag)
             end
                 
         end
-        function displayonesel(N,k,flag,varargin)
-            % function displayonesel(D,k,'new')       - selection at index k is new
-            % function displayonesel(D,k,'pos')       - position has changed
-            % function displayonesel(D,k,'name')      - name or color has changed
+        function display_one_sel(N, k, flag, varargin)
+            % function display_one_sel(D,k,'new')       - selection at index k is new
+            % function display_one_sel(D,k,'pos')       - position has changed
+            % function display_one_sel(D,k,'name')      - name or color has changed
             
             % flags: what kind of update
-            [flagnew, flagpos, flagname] = fn_flags('new','pos','name',flag);
+            [flag_new, flag_pos, flag_name] = fn_flags('new', 'pos', 'name', flag);
             
             % selection in slice coordinates
-            selij = N.selection(k);
-            name = N.selectionfilter.headerout.getItemNames{k};
+            sel_ij = N.selection(k);
+            name = N.selection_filter.header_out.get_item_names{k};
             
             % convert selection to displayable polygon
-            seldim = N.selectiondim;
-            if flagnew || flagpos
-                selectionaxis = [N.D.layoutID.dim_locations{seldim}];
-                if ~ismember(selectionaxis, {'x' 'y' 'xy' 'yx'})
+            sel_dim = N.selection_dim;
+            if flag_new || flag_pos
+                selection_axis = [N.D.layout_id.dim_locations{sel_dim}];
+                if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
                     error('selection cannot be displayed')
                 end
                 % selection shape
-                [polygon, center] = N.D.graph.selectionMark(seldim,selij);
+                [polygon, center] = N.D.graph.selection_mark(sel_dim, sel_ij);
                 % additional points for when in selection edit mode
-                if N.selectionedit
-                    switch selij.type
-                        case {'poly2D','mixed','point2D','line2D'} % TODO: not sure about 'point2D'
-                            shape_edit_poly = polygon(:,1:end-1); % the last point is a repetition of the 1st one
+                if N.selection_edit
+                    switch sel_ij.type
+                        case {'poly2D', 'mixed', 'point2D', 'line2D'} % TODO: not sure about 'point2D'
+                            shape_edit_poly = polygon(:, 1:end-1); % the last point is a repetition of the 1st one
                             shape_edit_info = [];
                         case 'rect2D'
-                            shape_edit_poly = polygon(:,1:4); % the 5th point of polygon is a repetition of the 1st one
-                            shape_edit_info = [selij.shapes.points' selij.shapes.vectors'];
-                        case {'ellipse2D' 'ring2D'}
-                            c = selij.shapes.points;
-                            u = selij.shapes.vectors;
-                            e = selij.shapes.logic;
-                            shape_edit_poly = [c-u c+u];
-                            shape_edit_info = {c u e};
+                            shape_edit_poly = polygon(:, 1:4); % the 5th point of polygon is a repetition of the 1st one
+                            shape_edit_info = [sel_ij.shapes.points', sel_ij.shapes.vectors'];
+                        case {'ellipse2D', 'ring2D'}
+                            c = sel_ij.shapes.points;
+                            u = sel_ij.shapes.vectors;
+                            e = sel_ij.shapes.logic;
+                            shape_edit_poly = [c-u, c+u];
+                            shape_edit_info = {c, u, e};
                         otherwise
                             error programming
                     end
@@ -958,87 +962,87 @@ classdef displaynavigation < xplr.graphnode
             end
             
             % color
-            if flagnew || flagname
+            if flag_new || flag_name
                 colors = fn_colorset;
-                col = colors(mod(k-1,size(colors,1))+1,:);
-                namerotation = fn_switch(isscalar(N.selectiondimID) && length(name)>3, 45, 0);
+                col = colors(mod(k-1, size(colors, 1)) + 1, :);
+                namerotation = fn_switch(isscalar(N.selection_dim_id) && length(name)>3, 45, 0);
             end
             
             % Create / update objects
-            if flagnew
-                hl = struct('shape',[],'label',[],'cross',[],'handles',[]);
+            if flag_new
+                hl = struct('shape', [], 'label', [], 'cross', [], 'handles', []);
                 % selection shape
-                if strfind(N.selectionshow,'shape')
-                    hl.shape = line(polygon(1,:),polygon(2,:),'Parent',N.D.ha);
+                if strfind(N.selection_show, 'shape')
+                    hl.shape = line(polygon(1, :), polygon(2, :), 'Parent', N.D.ha);
                 end
                 % name
-                if strfind(N.selectionshow,'name')
-                    hl.label = text(center(1),center(2),name,'Parent',N.D.ha, ...
-                        'horizontalalignment','center','verticalalignment','middle', ...
-                        'rotation',namerotation);
+                if strfind(N.selection_show, 'name')
+                    hl.label = text(center(1), center(2), name, 'Parent', N.D.ha, ...
+                        'horizontalalignment', 'center', 'verticalalignment', 'middle', ...
+                        'rotation', namerotation);
                 end
                 % center marked with a cross
-                if strfind(N.selectionshow,'center')
-                    hl.cross = line(center(1),center(2),'Parent',N.D.ha, ...
-                        'LineStyle','none','Marker','+','MarkerSize',4);
+                if strfind(N.selection_show, 'center')
+                    hl.cross = line(center(1), center(2), 'Parent', N.D.ha, ...
+                        'LineStyle', 'none', 'Marker', '+', 'MarkerSize', 4);
                 end
                 % handles to modify selection
-                if N.selectionedit
-                    hl.handles = line(shape_edit_poly(1,:),shape_edit_poly(2,:),'Parent',N.D.ha, ...
-                        'LineStyle','none','marker','.','UserData',shape_edit_info);
+                if N.selection_edit
+                    hl.handles = line(shape_edit_poly(1, :), shape_edit_poly(2, :), 'Parent', N.D.ha, ...
+                        'LineStyle', 'none', 'marker', '.', 'UserData', shape_edit_info);
                 end
-                set(struct2array(hl),'Color',col, ...
-                    'ButtonDownFcn',@(u,e)N.selection_clicked(u));
-                if isempty(N.selectiondisplay)
-                    if k~=1, error 'attempting to create N.selectiondisplay at initial index different from 1', end
-                    N.selectiondisplay = hl;
+                set(struct_2_array(hl), 'Color', col, ...
+                    'ButtonDownFcn', @(u,e)N.selection_clicked(u));
+                if isempty(N.selection_display)
+                    if k ~= 1, error 'attempting to create N.selection_display at initial index different from 1', end
+                    N.selection_display = hl;
                 else
-                    N.selectiondisplay(k) = hl;
+                    N.selection_display(k) = hl;
                 end            
             else
-                hl = N.selectiondisplay(k);
-                if flagpos
-                    set(hl.label,'position',center)
-                    set(hl.shape,'xdata',polygon(1,:),'ydata',polygon(2,:))
-                    set(hl.cross,'xdata',center(1),'ydata',center(2))
-                    if N.selectionedit
-                        set(hl.handles,'xdata',shape_edit_poly(1,:),'ydata',shape_edit_poly(2,:), ...
-                            'UserData',shape_edit_info);
+                hl = N.selection_display(k);
+                if flag_pos
+                    set(hl.label, 'position', center)
+                    set(hl.shape, 'xdata', polygon(1, :), 'ydata', polygon(2, :))
+                    set(hl.cross, 'xdata', center(1), 'ydata', center(2))
+                    if N.selection_edit
+                        set(hl.handles, 'xdata', shape_edit_poly(1, :), 'ydata', shape_edit_poly(2, :), ...
+                            'UserData', shape_edit_info);
                     end
-                elseif flagname
-                    set(hl.label,'string',name,'rotation',namerotation)
-                    set(struct2array(hl),'color',col)
+                elseif flag_name
+                    set(hl.label, 'string', name, 'rotation', namerotation)
+                    set(struct_2_array(hl), 'color', col)
                 end
             end
         end
-        function set.selectionshow(N,value)
-            N.selectionshow = value;
+        function set.selection_show(N, value)
+            N.selection_show = value;
             % we must see the shape when selection edit is active
-            if N.selectionedit && ~any(strfind(N.selectionshow,'shape'))
-                N.selectionedit = false;
+            if N.selection_edit && ~any(strfind(N.selection_show, 'shape'))
+                N.selection_edit = false;
             else
-                N.displayselection('all')
+                N.display_selection('all')
             end
         end
-        function set.selectionedit(N,value)
-            N.selectionedit = value;
+        function set.selection_edit(N, value)
+            N.selection_edit = value;
             % we must see the shape when selection edit is active
-            if N.selectionedit && ~any(strfind(N.selectionshow,'shape'))
-                N.selectionshow = 'shape+name';
+            if N.selection_edit && ~any(strfind(N.selection_show,'shape'))
+                N.selection_show = 'shape+name';
             else
-                N.displayselection('all')
+                N.display_selection('all')
             end
         end
-        function set.selectionatmostone(N,value)
-            N.selectionatmostone = value;
+        function set.selection_at_most_one(N, value)
+            N.selection_at_most_one = value;
             if value
                 nsel = length(N.selection);
                 if nsel > 1
-                    N.selectionfilter.updateSelection('remove',2:nsel)
+                    N.selection_filter.update_selection('remove', 2:nsel)
                 end
             end
         end
-        function selection_clicked(N,u)
+        function selection_clicked(N, u)
             % click on selection u: 
             % - if selection edit mode is active, some specific actions can
             %   happen
@@ -1047,42 +1051,42 @@ classdef displaynavigation < xplr.graphnode
             %   execute normal axes callback
             
             % first get index of the clicked selection
-            idx = fn_find(@(hl)any(struct2array(hl)==u),N.selectiondisplay,'first');
+            idx = fn_find(@(hl)any(struct_2_array(hl) == u), N.selection_display, 'first');
             
-            click_type = get(N.D.V.hf,'SelectionType');
-            if strcmp(click_type,'alt')
+            click_type = get(N.D.V.hf, 'SelectionType');
+            if strcmp(click_type, 'alt')
                 % perform a regular new selection, but if mouse did not
                 % move, show the context menu instead of creating a point
                 % selection
-                selslice = N.selectionMouse();
-                if ~ispoint(selslice)
+                sel_slice = N.selection_mouse();
+                if ~ispoint(sel_slice)
                     % prompt for selection name
                     options = {};
-                    if N.selectionpromptname
-                        name = inputdlg('Selection name','xplor');
-                        if ~isempty(name), options = {'Name' name{1}}; end
+                    if N.selection_prompt_name
+                        name = inputdlg('Selection name', 'xplor');
+                        if ~isempty(name), options = {'Name', name{1}}; end
                     end
 
                     % update filter
-                    if N.selectionatmostone
-                        N.selectionfilter.updateSelection('chg&rm',{1 2:length(N.selection)},selslice,options{:})
+                    if N.selection_at_most_one
+                        N.selection_filter.update_selection('chg&rm', {1, 2:length(N.selection)}, sel_slice, options{:})
                     else
-                        N.selectionfilter.updateSelection('new',selslice,options{:})
+                        N.selection_filter.update_selection('new', sel_slice, options{:})
                     end
                 else
                     % instead of creating a point selection, raise the
                     % context menu
                     N.selection_context_menu(idx)
                 end
-            elseif N.selectionedit
+            elseif N.selection_edit
                 flag = '';
-                if u == N.selectiondisplay{idx}(1)
+                if u == N.selection_display{idx}(1)
                     flag = 'line';
-                elseif u == N.selectiondisplay{idx}(end)
+                elseif u == N.selection_display{idx}(end)
                     flag = 'handle';
                 end
                 if ~isempty(flag)
-                    N.selection_edit(N,idx,flag)
+                    N.selection_edit(N, idx, flag)
                 else
                     N.axes_click()
                 end
@@ -1090,94 +1094,103 @@ classdef displaynavigation < xplr.graphnode
                 N.axes_click()
             end
         end
-        function selection_edit(N,idx,flag)
+        function selection_edit(N, idx, flag)
             % function selection_edit(N,idx,'line|handle|redraw')
             
             switch flag
                 case 'redraw'
-                    selslice = N.selectionMouse('select new shape');
-                    N.selectionfilter.updateSelection('chg',idx,selslice)
+                    sel_slice = N.selection_mouse('select new shape');
+                    N.selection_filter.update_selection('chg', idx, sel_slice)
             end
             
             % code below is not ready
             return
             
-            htl = N.selectiondisplay{idx};
-            hshape = hl(1);
-            hhandle = hl(end);
+            htl = N.selection_display{idx};
+            h_shape = hl(1);
+            h_handle = hl(end);
             hl = htl(2:end);
-            [flagpt, flaglin] = fn_flags({'handle','line'},flag);
-            p = get(N.ha,'currentpoint'); p = p(1,1:2)';
-            polymark = [get(hl(2),'xdata'); get(hl(2),'ydata')];
-            seldimsnum = N.seldims-'w';
-            selectionmarks = N.SI.selection.getselset(seldimsnum).singleset;
-            switch get(N.hf,'selectiontype')
+            [flag_pt, flag_lin] = fn_flags({'handle', 'line'}, flag);
+            p = get(N.ha, 'currentpoint');
+            p = p(1, 1:2)';
+            polymark = [get(hl(2), 'xdata');
+            get(hl(2), 'ydata')];
+            sel_dimsnum = N.sel_dims - 'w';
+            selection_marks = N.SI.selection.getselset(sel_dimsnum).singleset;
+            switch get(N.hf, 'selectiontype')
                 case 'normal'               % MOVE POINT
-                    shapetype = selectionmarks(idx).type;
+                    shapetype = selection_marks(idx).type;
                     switch shapetype
-                        case {'poly2D' 'mixed' 'line2D' 'openpoly2D'}
+                        case {'poly2D', 'mixed', 'line2D', 'openpoly2D'}
                             % note that first and last point in polygon are
                             % the same!
-                            if flagpt
+                            if flag_pt
                                 % closest point
-                                dist = sum(fn_add(polymark,-p).^2);
-                                [dum idx] = min(dist); idx = idx(1); %#ok<*ASGLU>
-                                if idx==1 && ~fn_ismemberstr(shapetype,{'line2D' 'openpoly2D'})
+                                dist = sum(fn_add(polymark, -p).^2);
+                                [dum, idx] = min(dist);
+                                idx = idx(1); %#ok<*ASGLU>
+                                if idx==1 && ~fn_ismemberstr(shapetype, {'line2D', 'openpoly2D'})
                                     % need to move both the first and last point (which is a repetition of the first)
-                                    idx=[1 size(polymark,2)]; 
+                                    idx=[1, size(polymark, s2)]; 
                                 end 
                             else
                                 % closest segment (in fact, closest line)
-                                a = polymark(:,1:end-1);
-                                b = polymark(:,2:end);
-                                ab = b-a;
+                                a = polymark(:, 1:end-1);
+                                b = polymark(:, 2:end);
+                                ab = b - a;
                                 ab2 = sum(ab.^2);
-                                ap = fn_add(p,-a);
-                                abap = ab(1,:).*ap(2,:)-ab(2,:).*ap(1,:);
+                                ap = fn_add(p, -a);
+                                abap = ab(1, :).*ap(2, :) - ab(2, :).*ap(1, :);
                                 dist = abs(abap) ./ ab2;
-                                [dum idx] = min(dist); idx = idx(1);
-                                polymark = [a(:,1:idx) p b(:,idx:end)];
-                                set(hl,'xdata',polymark(1,:),'ydata',polymark(2,:))
-                                idx = idx+1;
+                                [dum, idx] = min(dist);
+                                idx = idx(1);
+                                polymark = [a(:, 1:idx), p, b(:, idx:end)];
+                                set(hl, 'xdata', polymark(1, :), 'ydata', polymark(2, :))
+                                idx = idx + 1;
                             end
-                            fn_moveobject(hl,'point',idx)
-                            seleditupdateslice(N,idx)
+                            fn_moveobject(hl, 'point', idx)
+                            sel_edit_update_slice(N, idx)
                         case 'rect2D'
-                            desc = getappdata(hl(2),'description');
-                            x = desc(1); y = desc(2);
-                            w = desc(3); h = desc(4);
-                            x2 = x+w; y2 = y+h;
-                            if flagpt
+                            desc = get_app_data(hl(2), 'description');
+                            x = desc(1);
+                            y = desc(2);
+                            w = desc(3);
+                            h = desc(4);
+                            x2 = x + w;
+                            y2 = y + h;
+                            if flag_pt
                                 % move corner
-                                pol = [x x2 x2 x; y y y2 y2]; % anti-clockwise from (x,y)
-                                dist = sum(fn_add(pol,-p).^2);
-                                [dum idx] = min(dist); idx = idx(1);
+                                pol = [x, x2, x2, x; y, y, y2, y2]; % anti-clockwise from (x,y)
+                                dist = sum(fn_add(pol, -p).^2);
+                                [dum, idx] = min(dist);
+                                idx = idx(1);
                             else
                                 % move edge
-                                dist = abs([p(2)-y p(1)-x2 p(2)-y2 p(1)-x]);
-                                [dum idx] = min(dist);
+                                dist = abs([p(2)-y, p(1)-x2, p(2)-y2, p(1)-x]);
+                                [dum, idx] = min(dist);
                             end
-                            col = get(hl(1),'color');
-                            set(hl,'color',.5*[1 1 1])
-                            chgrectangle(N.ha,hl,flagpt,idx,desc)
-                            fn_buttonmotion({@chgrectangle,N.ha,hl,flagpt,idx,desc},N.hf);
-                            set(hl,'color',col)
-                            seleditupdateslice(N,idx)
-                        case {'ellipse2D' 'ring2D'}
-                            desc = getappdata(hl(2),'description');
-                            if flagpt
+                            col = get(hl(1), 'color');
+                            set(hl, 'color', .5*[1, 1, 1])
+                            chg_rectangle(N.ha, hl, flag_pt, idx,desc)
+                            fn_buttonmotion({@chg_rectangle, N.ha, hl, flag_pt, idx, desc}, N.hf);
+                            set(hl, 'color', col)
+                            sel_edit_update_slice(N, idx)
+                        case {'ellipse2D', 'ring2D'}
+                            desc = get_app_data(hl(2), 'description');
+                            if flag_pt
                                 % closest of two anchor points
-                                dist = sum(fn_add(polymark,-p).^2);
-                                [dum idx] = min(dist); idx = idx(1);
-                            elseif strcmp(shapetype,'ellipse2D')
+                                dist = sum(fn_add(polymark, -p).^2);
+                                [dum, idx] = min(dist);
+                                idx = idx(1);
+                            elseif strcmp(shapetype, 'ellipse2D')
                                 % eccentricity
                                 idx = 0;
                             else
                                 % eccentricity or secondary radius?
-                                polygon = [get(hl(1),'xdata'); get(hl(1),'ydata')];
+                                polygon = [get(hl(1), 'xdata'); get(hl(1), 'ydata')];
                                 dist = sum(fn_add(polygon,-p).^2);
-                                [dum idx] = min(dist);
-                                if idx<length(polygon)/2
+                                [dum, idx] = min(dist);
+                                if idx < length(polygon)/2
                                     % eccentricity
                                     idx = 0;
                                 else
@@ -1185,100 +1198,102 @@ classdef displaynavigation < xplr.graphnode
                                     idx = -1;
                                 end
                             end
-                            col = get(hl(1),'color');
-                            set(hl,'color',.5*[1 1 1])
-                            chgellipse(N.ha,hl,idx,desc)
-                            fn_buttonmotion({@chgellipse,N.ha,hl,idx,desc},N.hf);
-                            set(hl,'color',col)
-                            seleditupdateslice(N,idx)
+                            col = get(hl(1), 'color');
+                            set(hl, 'color', .5*[1, 1, 1])
+                            chg_ellipse(N.ha, hl, idx, desc)
+                            fn_buttonmotion({@chg_ellipse, N.ha, hl, idx, desc}, N.hf);
+                            set(hl, 'color', col)
+                            sel_edit_update_slice(N, idx)
                         otherwise
                             error programming
                     end
                 case 'extend'               % MOVE SHAPE
-                    if flagpt
+                    if flag_pt
                         dp = fn_moveobject(htl);
-                        seleditupdateslice(N,idx,dp)
-                    elseif flaglin
+                        sel_edit_update_slice(N, idx, dp)
+                    elseif flag_lin
                         dp = fn_moveobject([N.seldisp{:}]);
-                        seleditupdateslice(N,1:length(N.seldisp),dp) % move all shapes
+                        sel_edit_update_slice(N, 1:length(N.seldisp), dp) % move all shapes
                     end
                 case 'alt'                  % REMOVE
-                    if fn_ismemberstr(selectionmarks(idx).type, ...
-                            {'poly2D','mixed'}) && flagpt
+                    if fn_ismemberstr(selection_marks(idx).type, ...
+                            {'poly2D', 'mixed'}) && flag_pt
                         % closest point -> remove vertex
-                        dist = sum(fn_add(polymark,-p).^2);
-                        [dum idx] = min(dist); idx = idx(1);
-                        if idx==1, idx=[1 size(polymark,2)]; end
-                        polymark(:,idx) = [];
-                        selax = selectionND('poly2D',polymark);
-                        sel = AX2IJ(N.SI,selax);
-                        updateselection(N.SI,'change',idx,sel)
+                        dist = sum(fn_add(polymark, -p).^2);
+                        [dum, idx] = min(dist);
+                        idx = idx(1);
+                        if idx == 1, idx = [1, size(polymark, 2)]; end
+                        polymark(:, idx) = [];
+                        sel_ax = SelectionNd('poly2D', polymark);
+                        sel = AX2IJ(N.SI, sel_ax);
+                        update_selection(N.SI, 'change', idx,sel)
                     else
                         % replace the whole shape
-                        set(hl,'visible','off')
-                        mouseselmode = fn_switch(N.shapemode, ...
-                            {'poly' 'openpoly'},'polypt','freeline','free', ...
+                        set(hl, 'visible', 'off')
+                        mouse_sel_mode = fn_switch(N.shapemode, ...
+                            {'poly', 'openpoly'}, 'polypt', 'freeline', 'free', ...
                             N.shapemode);
-                        TYPE = fn_switch(N.shapemode,{'poly','free'},'poly2D','rect','rect2D', ...
-                            'ellipse','ellipse2D','ring','ring2D', ...
-                            'segment','line2D',{'openpoly','freeline'},'openpoly2D');
-                        polyax = fn_mouse(N.ha,mouseselmode,'select new shape');
-                        selax = selectionND(TYPE,polyax);
-                        sel = AX2IJ(N.SI,selax);
-                        updateselection(N.SI,'change',idx,sel)
-                        set(hl,'visible','on')
+                        TYPE = fn_switch(N.shapemode, {'poly', 'free'}, 'poly2D', 'rect', 'rect2D', ...
+                            'ellipse', 'ellipse2D', 'ring', 'ring2D', ...
+                            'segment', 'line2D', {'openpoly', 'freeline'}, 'openpoly2D');
+                        poly_ax = fn_mouse(N.ha, mouse_sel_mode, 'select new shape');
+                        sel_ax = SelectionNd(TYPE, poly_ax);
+                        sel = AX2IJ(N.SI, sel_ax);
+                        update_selection(N.SI, 'change', idx,sel)
+                        set(hl, 'visible', 'on')
                     end
             end
         end
-        function selection_context_menu(N,idx)
+        function selection_context_menu(N, idx)
             % init context menu
             if isempty(N.selection_context)
                 % create context menu for the first time
                 N.selection_context = uicontextmenu(N.D.V.hf);
             end
             m = N.selection_context;
-            delete(get(m,'children'))
+            delete(get(m, 'children'))
             
             % remove selection
-            uimenu(m,'label','remove selection', ...
-                'callback',@(u,e)N.selectionfilter.updateSelection('remove',idx))
+            uimenu(m, 'label', 'remove selection', ...
+                'callback', @(u,e)N.selection_filter.update_selection('remove', idx))
             
             % replace selection
-            uimenu(m,'label','re-draw selection', ...
-                'callback',@(u,e)N.selection_edit(idx,'redraw'))
+            uimenu(m, 'label', 're-draw selection', ...
+                'callback', @(u,e)N.selection_edit(idx, 'redraw'))
             
             % change selection number
-            nsel = N.selectionfilter.nsel;
+            nsel = N.selection_filter.nsel;
             if idx ~= 1
-                uimenu(m,'label','make this selection first', ...
-                    'callback',@(u,e)N.selectionfilter.updateSelection('perm',[idx setdiff(1:nsel,idx)]))
+                uimenu(m, 'label', 'make this selection first', ...
+                    'callback', @(u,e)N.selection_filter.update_selection('perm', [idx, setdiff(1:nsel, idx)]))
             end
             if idx ~= nsel
-                uimenu(m,'label','make this selection last', ...
-                    'callback',@(u,e)N.selectionfilter.updateSelection('perm',[setdiff(1:nsel,idx) idx]))
+                uimenu(m, 'label', 'make this selection last', ...
+                    'callback', @(u,e)N.selection_filter.update_selection('perm', [setdiff(1:nsel,idx), idx]))
             end
             
             % make menu visible
-            p = get(N.D.V.hf,'currentpoint'); p = p(1,1:2);
-            set(m,'Position',p,'Visible','on')
+            p = get(N.D.V.hf, 'currentpoint');
+            p = p(1, 1:2);
+            set(m, 'Position', p, 'Visible', 'on')
         end
-        function selectionsave(N,fname)
-            if nargin<2 || isempty(fname)
+        function selection_save(N, f_name)
+            if nargin<2 || isempty(f_name)
                 prompt = 'Select file for saving selections';
-                fname = fn_savefile('*.xpls',prompt,N.selectionsavefile);
-                if isequal(fname,0), return, end
+                f_name = fn_savefile('*.xpls', prompt, N.selection_save_file);
+                if isequal(f_name,0), return, end
             end
-            N.selectionfilter.savetofile(fname);
-            N.selectionsavefile = fname;
+            N.selection_filter.save_to_file(f_name);
+            N.selection_save_file = f_name;
         end
-        function selectionload(N,fname)
-            if nargin<2
-                fname = fn_getfile('*.xpls','Select selections file'); 
-                if isequal(fname,0), return, end
+        function selection_load(N, f_name)
+            if nargin < 2
+                f_name = fn_getfile('*.xpls', 'Select selections file'); 
+                if isequal(f_name,0), return, end
             end
             try
-                N.selectionfilter.loadfromfile(fname);
-                N.selectionsavefile = fname;
+                N.selection_filter.load_from_file(f_name);
+                N.selection_save_file = f_name;
             catch ME
                 errordlg(ME.message)
             end
@@ -1287,26 +1302,27 @@ classdef displaynavigation < xplr.graphnode
 
     % Slider and scroll wheel callbacks: change zoom
     methods
-        function chgzoom(N,f,obj)
-            dim = N.D.activedim.(f);
+        function chg_zoom(N, f, obj)
+            dim = N.D.active_dim.(f);
             if isempty(dim), return, end
             % linked object
-            Z = N.D.zoomfilters(dim);
+            Z = N.D.zoom_filters(dim);
             % prevent unnecessary update of slider display
             c = disableListener(N.sliders.(f));
             % set value
-            if isequal(obj.value,obj.minmax)
-                setZoom(Z,':')
+            if isequal(obj.value, obj.min_max)
+                set_zoom(Z,':')
             else
-                setZoom(Z,obj.value)
+                set_zoom(Z, obj.value)
             end
         end
-        function Scroll(N,nscroll)
-            p = get(N.D.ha,'currentpoint'); p = p(1,1:2);
-            origin = row(N.graph.graph2slice(p)); % current point in data coordinates
-            zoomfactor = 1.5^nscroll;
+        function Scroll(N, nscroll)
+            p = get(N.D.ha, 'currentpoint');
+            p = p(1, 1:2);
+            origin = row(N.graph.graph_2_slice(p)); % current point in data coordinates
+            zoom_factor = 1.5^nscroll;
             
-            zoomdim = N.D.internal_dim;            
+            zoom_dim = N.D.internal_dim;            
             
             % This commented code had been put to replace the line below,
             % but it seems that the effect is less intuitive. Let's go back
@@ -1318,46 +1334,46 @@ classdef displaynavigation < xplr.graphnode
             %                 % constraints
             %                 dim(N.graph.filling(dim)<1) = [];
             %             end
-            %             zoom = N.graph.getZoom(dim); %,'effective');
-            zoom = N.graph.getZoom(zoomdim,'effective');
-            newzoom = fn_add(origin(zoomdim), fn_mult(zoomfactor,fn_subtract(zoom,origin(zoomdim))));
-            %fprintf('%.2f -> %.2f\n',diff(zoom),diff(newzoom))
-            N.D.zoomslicer.setZoom(zoomdim,newzoom)
+            %             zoom = N.graph.get_zoom(dim); %,'effective');
+            zoom = N.graph.get_zoom(zoom_dim, 'effective');
+            new_zoom = fn_add(origin(zoom_dim), fn_mult(zoom_factor, fn_subtract(zoom, origin(zoom_dim))));
+            %fprintf('%.2f -> %.2f\n',diff(zoom),diff(new_zoom))
+            N.D.zoom_slicer.set_zoom(zoom_dim, new_zoom)
         end
     end
 
     % Update upon changes in active dim and zoom
     methods
-        function connectZoomFilter(N,f)
+        function connect_zoom_filter(N, f)
             % both x and y?
-            if nargin<2
-                connectZoomFilter(N,'x')
-                connectZoomFilter(N,'y')
+            if nargin < 2
+                connect_zoom_filter(N, 'x')
+                connect_zoom_filter(N, 'y')
                 return
             end
             % slider object and corresponding data dimension
             obj = N.sliders.(f);
-            d = N.D.activedim.(f);
-            % disconnect from previous zoomfilters
-            Zold = N.zoomfilters.(f);
-            if ~isempty(Zold), N.disconnect(Zold), end
+            d = N.D.active_dim.(f);
+            % disconnect from previous zoom_filters
+            z_old = N.zoom_filters.(f);
+            if ~isempty(z_old), N.disconnect(z_old), end
             % no active dim?
             if isempty(d)
-                set(obj,'visible','off')
+                set(obj, 'visible', 'off')
                 return
             end
             % update slider display to reflect zoom in the specified
             % dimension
-            Z = N.D.zoomfilters(d);
-            N.zoomfilters.(f) = Z;
-            set(obj,'visible','on','minmax',[.5 Z.headerin.n+.5],'value',Z.zoomvalue)
+            Z = N.D.zoom_filters(d);
+            N.zoom_filters.(f) = Z;
+            set(obj, 'visible', 'on', 'min_max', [.5, Z.header_in.n + .5], 'value', Z.zoom_value)
             % watch changes in zoom
-            function zoomchange(u,e)
+            function zoom_change(u,e)
                 if strcmp(e.type,'zoom')
-                    set(obj,'value',Z.zoomvalue)
+                    set(obj,'value',Z.zoom_value)
                 end
             end
-            N.addListener(Z,'ChangedOperation',@zoomchange);
+            N.add_listener(Z, 'changed_operation', @zoom_change);
         end
     end
     
@@ -1368,36 +1384,36 @@ classdef displaynavigation < xplr.graphnode
         % test if its between minimal and maximal values for all dimensions
         %
         % @param point: 2xn double 
-        % @param perdim: whether to return a single logical value per point
+        % @param per_dim: whether to return a single logical value per point
         %                (point is/isn't inside slice, default behavior)
-        %                or a vector (for each dimension, if perdim=true)
+        %                or a vector (for each dimension, if per_dim=true)
         % @return output: 1xn boolean
-        function output = isPointOutOfDisplay(N, point, perdim)
-            if nargin<3, perdim = false; end
+        function output = is_point_out_of_display(N, point, per_dim)
+            if nargin<3, per_dim = false; end
             
             % get slice indices corresponding to the point
-            ijk = N.graph.graph2slice(point,'invertible',true)'; % n x ndim
+            ijk = N.graph.graph_2_slice(point, 'invertible', true)'; % n x ndim
             
-            output = isIndexOutOfDisplay(N, ijk, perdim);
+            output = is_index_out_of_display(N, ijk, per_dim);
         end
-        function output = isIndexOutOfDisplay(N, ijk, perdim) 
+        function output = is_index_out_of_display(N, ijk, per_dim) 
             % input
-            if nargin<3, perdim = false; end
-            if isvector(ijk) && size(ijk,2) ~= N.D.slice.nd
+            if nargin<3, per_dim = false; end
+            if isvector(ijk) && size(ijk, 2) ~= N.D.slice.nd
                 ijk = row(ijk);
             end
             
             % get the min and max slice values of the data displayed
-            zoomSliceValues = N.graph.getZoom('displaylimit'); % 2 x ndim
+            zoom_slice_values = N.graph.get_zoom('displaylimit'); % 2 x ndim
             
             % set the ouput to zeros (they will be set to one if one of the
             % dimension if it's out of display)
-            if perdim
-                output = bsxfun(@lt,ijk,zoomSliceValues(1,:)) ...
-                    | bsxfun(@gt,ijk,zoomSliceValues(2,:)); % n x ndim
+            if per_dim
+                output = bsxfun(@lt, ijk, zoom_slice_values(1, :)) ...
+                    | bsxfun(@gt, ijk, zoom_slice_values(2, :)); % n x ndim
             else
-                output = min(ijk,1)<zoomSliceValues(1,:) ...
-                    | max(ijk,1)>zoomSliceValues(2,:); % 1 x ndim
+                output = min(ijk, 1) < zoom_slice_values(1, :) ...
+                    | max(ijk, 1) > zoom_slice_values(2, :); % 1 x ndim
             end
         end
     end
@@ -1408,11 +1424,11 @@ end
 
 
 %--- 
-% Matlab's struct2array is only provided with some of the toolboxes, so
+% Matlab's struct_2_array is only provided with some of the toolboxes, so
 % let's write our own
-function x = struct2array(s)
+function x = struct_2_array(s)
 
-c = struct2cell(s);
-x = [c{:}];
+    c = struct2cell(s);
+    x = [c{:}];
 
 end

@@ -1,7 +1,7 @@
-classdef selectionnd < xplr.graphnode
-    % function sel = selectionnd('type',data[,sizes])
+classdef SelectionNd < xplr.GraphNode
+    % function sel = SelectionNd('type', data[, sizes])
     %---
-    % selectionnd class defines selection in an formal manner, i.e. by
+    % selection_nd class defines selection in an formal manner, i.e. by
     % defining the shape that makes the selection. This shape can
     % thereafter be converted to the indices of the data points they cover
     % once the sizes of the data are provided. Yet shape do not rely on
@@ -22,18 +22,18 @@ classdef selectionnd < xplr.graphnode
     % If 'sizes' is specified, indices are computed according to this data
     % sizes. 'sizes' is mandatory for 'indices' selections.
     % 
-    % 'selectionnd' is a handle class to make a = b faster (no copy), but
+    % 'selection_nd' is a handle class to make a = b faster (no copy), but
     % be careful when using it.
     % 
-    % See xplr.shelectionshape for details on the 'data' argument.
+    % See xplr.SelectionShape for details on the 'data' argument.
     % 
-    % See also xplr.selectionshape
+    % See also xplr.SelectionShape
 
     properties (SetAccess='private')
         nd
-        shapes = xplr.selectionshape.empty(1,0);
-        datasizes = [];
-        dataind = [];  % not computed yet, to not be mistaken with zeros(1,0) = empty selection
+        shapes = xplr.SelectionShape.empty(1,0);
+        data_sizes = [];
+        data_ind = [];  % not computed yet, to not be mistaken with zeros(1,0) = empty selection
         polygon = []; % lines(1D)/polygon(2D) to display, not computed yet, to not be mistaken with zeros(2,0) = empty selection
     end
     properties (Dependent, SetAccess='private')
@@ -43,8 +43,8 @@ classdef selectionnd < xplr.graphnode
     
     % Constructor + Load + Display
     methods
-        function sel = selectionnd(type,data,sizes)
-            % function sel = selectionnd('type',data[,sizes])
+        function sel = SelectionNd(type, data, sizes)
+            % function sel = SelectionNd('type', data[, sizes])
             
             % initialize a single object or an array thereof, invalid(s)
             % for the moment
@@ -54,72 +54,72 @@ classdef selectionnd < xplr.graphnode
             elseif isnumeric(type)
                 n = type;
                 if n == 0
-                    sel = xplr.selectionnd.empty(1,0);
+                    sel = xplr.SelectionNd.empty(1,0);
                 else
-                    sel(n) = xplr.selectionnd;
+                    sel(n) = xplr.SelectionNd;
                 end
                 return
             end
             
             % number of dimension
-            if fn_ismemberstr(type, {'empty' 'all'})
-                % the syntax selectionnd('empty',nd) is not public but
+            if fn_ismemberstr(type, {'empty', 'all'})
+                % the syntax SelectionNd('empty', nd) is not public but
                 % corresponds to the internal encoding of type
                 sel.nd = data;
                 data = [];
             elseif regexp(type, '^(empty|all)\d+D$')
                 [type, nd] = fn_regexptokens(type, '^(empty|all)(\d+)D$');
                 sel.nd = str2double(nd);
-            elseif strfind(type,'1D')
+            elseif strfind(type, '1D')
                 sel.nd = 1;
-            elseif strfind(type,'2D')
+            elseif strfind(type, '2D')
                 sel.nd = 2;
             elseif strcmp(type, 'indices')
                 % two syntaxes are accepted:
-                % xplr.selectionnd('indices',indices,datasize)
-                % xplr.selectionnd('indices',{datasize indices})
+                % xplr.SelectionNd('indices', indices,datasize)
+                % xplr.SelectionNd('indices', {datasize indices})
                 if nargin==2 && iscell(data)
                     sizes = data{1};
                 elseif nargin==3 && ~iscell(data)
                     indices = row(data);
-                    data = {sizes indices};
+                    data = {sizes, indices};
                 else
                     error argument
                 end
                 sel.nd = length(sizes);
             else
-                error('unknown selection type ''%s''',type)
+                error('unknown selection type ''%s''', type)
             end
             
             % shape
-            if ~strcmp(type,'empty')
-                sel.shapes = xplr.selectionshape(type,data);
+            if ~strcmp(type, 'empty')
+                sel.shapes = xplr.SelectionShape(type, data);
             end
                         
             % indices
             if nargin==3
-                sel = ComputeInd(sel,sizes);
+                sel = ComputeInd(sel, sizes);
             end
         end
         function disp(sel)
-            warning('off','MATLAB:structOnObject')
+            warning('off', 'MATLAB:structOnObject')
             if isempty(sel)
-                disp('empty selectionnd object')
+                disp('empty selection_nd object')
             elseif ~isscalar(sel)
                 s = size(sel);
                 str = cellstr(num2str(s'))';
-                [str{2,:}] = deal('x');
-                str = [str{1:end-1} ' selectionnd object'];
-                fprintf('%s\n\nProperties:\n',str)
+                [str{2, :}] = deal('x');
+                str = [str{1:end-1}, ' selection_nd object'];
+                fprintf('%s\n\nProperties:\n', str)
                 F = fieldnames(sel);
                 nF = length(F);
                 for k=1:nF
-                    fprintf('    %s\n',F{k});
+                    fprintf('    %s\n', F{k});
                 end
             else
                 strucdisp(struct(sel))
             end
-            warning('on','MATLAB:structOnObject')
+            warning('on', 'MATLAB:structOnObject')
         end
     end
     
@@ -128,14 +128,14 @@ classdef selectionnd < xplr.graphnode
         function b = vide(sel)
             b = isempty(sel.shapes);
         end
-        function b = ispoint(sel,tol)
+        function b = ispoint(sel, tol)
             if ~isscalar(sel.shapes)
                 error('''ispoint'' method cannot be applied only on non-empty and non-composite selection')
             end
             if nargin<2, tol = 0; end
             b = ispoint(sel.shapes,tol);
         end
-        function checkpoint(sel,tol)
+        function checkpoint(sel, tol)
             if sel.ispoint(tol)
                 sel.shapes = sel.shapes.topoint();
             end
@@ -146,7 +146,7 @@ classdef selectionnd < xplr.graphnode
             else
                 t = sel.shapes(1).type;
                 for i=2:length(sel.shapes)
-                    if ~strcmp(sel.shapes(i).type,t)
+                    if ~strcmp(sel.shapes(i).type, t)
                         t = 'mixed';
                         return
                     end
@@ -154,11 +154,11 @@ classdef selectionnd < xplr.graphnode
             end
         end
         function m = get.mask(sel)
-            if isempty(sel.datasizes)
+            if isempty(sel.data_sizes)
                 m = [];
             else
-                m = false([sel.datasizes 1]);
-                m(sel.dataind) = true;
+                m = false([sel.data_sizes 1]);
+                m(sel.data_ind) = true;
             end
         end
     end
@@ -167,108 +167,108 @@ classdef selectionnd < xplr.graphnode
     % (note: specialized operations are in functions outside the classdef)
     methods
         function sel2 = copy(sel)
-            sel2 = xplr.selectionnd('empty',sel.nd);
+            sel2 = xplr.SelectionNd('empty', sel.nd);
             sel2.shapes = sel.shapes;
-            sel2.datasizes = sel.datasizes;
-            sel2.dataind = sel.dataind;
+            sel2.data_sizes = sel.data_sizes;
+            sel2.data_ind = sel.data_ind;
             sel2.polygon = sel.polygon;
         end
-        function sel = union(sel1,sel2)
+        function sel = union(sel1, sel2)
             % function sel = union(sel1,sel2)
             sel = copy(sel1(1));
             seladd = sel1(2:end);
-            if nargin==2, seladd = [seladd sel2]; end
-            dounion(sel,seladd)
+            if nargin == 2, seladd = [seladd, sel2]; end
+            dounion(sel, seladd)
         end
-        function dounion(sel1,sel2)
-            % function dounion(sel1,sel2)
+        function dounion(sel1, sel2)
+            % function dounion(sel1, sel2)
             %--
             % add the content of sel2 to the content of sel1
             
             % checks
-            if any(diff([sel1.nd sel2.nd]))
+            if any(diff([sel1.nd, sel2.nd]))
                 error 'dimension mismatch'
             end
-            siz = cat(1,sel1.datasizes,sel2.datasizes);
+            siz = cat(1, sel1.data_sizes, sel2.data_sizes);
             if any(any(diff(siz)))
                 error 'selections don''t have the same data sizes'
             end
             
             % shapes
-            sel1.shapes = simplify([sel1.shapes sel2.shapes]);
+            sel1.shapes = simplify([sel1.shapes, sel2.shapes]);
             
             % indices
             if ~isempty(siz)
-                if all(strcmp(sel1.shapes.type,'indices'))
-                    sel1.dataind = unique([sel1.shapes.special]);
+                if all(strcmp(sel1.shapes.type, 'indices'))
+                    sel1.data_ind = unique([sel1.shapes.special]);
                 else
-                    sel1.dataind = union(sel1.dataind,sel2.dataind);
+                    sel1.data_ind = union(sel1.data_ind, sel2.data_ind);
                 end
             end
             
             % invalidate polygon
             sel1.polygon = [];
         end
-        function sel2 = applyaffinity(sel1,affinity,datasizesnew)
-            % function sel2 = applyaffinity(sel,mat[,datasizesnew])
+        function sel2 = applyaffinity(sel1, affinity, data_sizesnew)
+            % function sel2 = applyaffinity(sel, mat[, data_sizesnew])
             %---
-            % affinity is an xplr.affinitynd object
+            % affinity is an xplr.AffinityNd object
             
             if isempty(sel1)
-                sel2 = xplr.selectionnd.empty(size(sel1));
+                sel2 = xplr.SelectionNd.empty(size(sel1));
                 return
             elseif nargin<3
-                datasizesnew = sel1.datasizes;
+                data_sizesnew = sel1.data_sizes;
             end
             
             % multiple object
             if ~isscalar(sel1)
                 sel2 = sel1; % now sel and sel1 contain same objects, but elements of sel will be changed
-                for i=1:length(sel1), sel2(i) = applyaffinity(sel1(i),affinity,datasizesnew); end 
+                for i=1:length(sel1), sel2(i) = applyaffinity(sel1(i), affinity, data_sizesnew); end
                 return
             end
             
-            sel2 = xplr.selectionnd('empty',sel1.nd);
+            sel2 = xplr.SelectionNd('empty', sel1.nd);
             
             % perform operation 
-            if ~isa(affinity,'xplr.affinitynd')
+            if ~isa(affinity, 'xplr.AffinityNd')
                 error('argument ''afinity'' is expected to be an affinitynd instance')
             end
-            sel2.shapes = applyaffinity(sel1.shapes,affinity);
+            sel2.shapes = applyaffinity(sel1.shapes, affinity);
             
             % compute indices
-            if ~isempty(datasizesnew)
-                sel2.datasizes = []; % forces new indices computation even if datasizes did not change, see 'ComputeInd' function
-                sel2 = ComputeInd(sel2,datasizesnew);
+            if ~isempty(data_sizesnew)
+                sel2.data_sizes = []; % forces new indices computation even if data_sizes did not change, see 'ComputeInd' function
+                sel2 = ComputeInd(sel2, data_sizesnew);
             else
-                sel2.datasizes = [];
-                sel2.dataind = [];
+                sel2.data_sizes = [];
+                sel2.data_ind = [];
             end
             
             % invalidate polygon
             sel2.polygon = [];
             
         end
-        function sel2 = ComputeInd(sel,datasizes)
-            % find indices of an array of size 'datasizes' which are inside
+        function sel2 = ComputeInd(sel, data_sizes)
+            % find indices of an array of size 'data_sizes' which are inside
             % the selection described by 'sel'
 
             % multiple object
             if ~isscalar(sel)
                 sel2 = sel;
-                for i=1:length(sel), sel2(i) = ComputeInd(sel(i),datasizes); end
+                for i=1:length(sel), sel2(i) = ComputeInd(sel(i), data_sizes); end
                 return
             end
             
             % check
-            if length(datasizes)~=sel.nd
+            if length(data_sizes) ~= sel.nd
                 error('wrong number of data sizes')
             end
-            if isequal(sel.datasizes,datasizes)
+            if isequal(sel.data_sizes, data_sizes)
                 % indices already computed - no need to continue
                 sel2 = sel;
                 return
-            elseif isempty(sel.datasizes)
+            elseif isempty(sel.data_sizes)
                 % it is ok to have the change to apply on sel as well
                 sel2 = sel;
             else
@@ -277,19 +277,19 @@ classdef selectionnd < xplr.graphnode
                 sel2 = copy(sel);
             end
             
-            % set datasizes
-            sel2.datasizes = datasizes;
+            % set data_sizes
+            sel2.data_sizes = data_sizes;
             
             % indices
-            if all(strcmp(sel2.type,'indices'))
-                data = cat(1,sel2.shapes.special); % first column: sizes, second column: indices
-                sel2.dataind = unique([data{:,2}]);
+            if all(strcmp(sel2.type, 'indices'))
+                data = cat(1, sel2.shapes.special); % first column: sizes, second column: indices
+                sel2.data_ind = unique([data{:, 2}]);
             else
                 switch sel.nd
                     case 1
-                        sel2.dataind = indices1D(sel2.shapes,datasizes);
+                        sel2.data_ind = indices1D(sel2.shapes, data_sizes);
                     case 2
-                        sel2.dataind = indices2D(sel2.shapes,datasizes);
+                        sel2.data_ind = indices2D(sel2.shapes, data_sizes);
                 end
             end
         end     
@@ -306,14 +306,14 @@ classdef selectionnd < xplr.graphnode
             end
             polygon = sel.polygon;
         end
-        function sel2 = convert(sel,type,datasizes)
-            % function sel2 = convert(sel,'indices',datasizes)
+        function sel2 = convert(sel, type, data_sizes)
+            % function sel2 = convert(sel, 'indices', data_sizes)
             
             % multiple selections
             if ~isscalar(sel)
-                sel2 = xplr.selectionnd(length(sel));
+                sel2 = xplr.SelectionNd(length(sel));
                 for i = 1:length(sel)
-                    sel2(i) = convert(sel(i),type,datasizes);
+                    sel2(i) = convert(sel(i), type, data_sizes);
                 end
                 return
             end
@@ -321,10 +321,10 @@ classdef selectionnd < xplr.graphnode
             % conversion
             switch type
                 case 'indices'
-                    if nargin<3, datasizes = sel.datasizes; end
-                    sel2 = ComputeInd(sel,datasizes);
-                    if ~strcmp(sel2.type,'indices')
-                        sel2 = xplr.selectionnd('indices',{datasizes sel.dataind});
+                    if nargin<3, data_sizes = sel.data_sizes; end
+                    sel2 = ComputeInd(sel, data_sizes);
+                    if ~strcmp(sel2.type, 'indices')
+                        sel2 = xplr.SelectionNd('indices', {data_sizes, sel.data_ind});
                     end
                 otherwise
                     error 'invalid correction type'
@@ -332,4 +332,3 @@ classdef selectionnd < xplr.graphnode
         end
     end
 end
-

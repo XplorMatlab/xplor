@@ -1,4 +1,4 @@
-classdef eventinfo < event.EventData & dynamicprops
+classdef EventInfo < event.EventData & dynamicprops
     % function obj = eventinfo(type,arguments...)
     % type: 'filter'
     % arguments:
@@ -48,29 +48,29 @@ classdef eventinfo < event.EventData & dynamicprops
         type
     end
     methods
-        function obj = eventinfo(type,varargin)
+        function obj = EventInfo(type, varargin)
             obj.type = type;
             switch type
                 case 'point'
-                    F = {'chgij' 'chgnout'};
+                    F = {'chgij', 'chgnout'};
                 case 'data'
-                    F = {'flag' 'dim' 'ind'};
+                    F = {'flag', 'dim', 'ind'};
                 case 'filter'
-                    F = {'flag' 'ind' 'value'};
+                    F = {'flag', 'ind', 'value'};
                 case 'zoom'
-                    F = {'chgnout' 'dim'};
-                case {'bin' 'operation'}
+                    F = {'chgnout', 'dim'};
+                case {'bin', 'operation'}
                     F = {};
                 case 'clip'
-                    F = {'flag' 'value'};
+                    F = {'flag', 'value'};
                 otherwise
-                    error('unknown event type ''%s''',type)
+                    error('unknown event type ''%s''', type)
             end
-            for i=1:length(F)
-                addprop(obj,F{i});
+            for i = 1:length(F)
+                addprop(obj, F{i});
             end
-            for i=1:length(varargin)
-                obj.(F{i})=varargin{i};
+            for i = 1:length(varargin)
+                obj.(F{i}) = varargin{i};
             end
         end
     end

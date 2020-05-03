@@ -1,4 +1,4 @@
-classdef xdata < xplr.graphnode
+classdef XData < xplr.GraphNode
     % function x = xdata(dat[,head[,name]])
     %
     % A container for data, associated with header information.
@@ -16,7 +16,7 @@ classdef xdata < xplr.graphnode
     
     properties (SetAccess='private')
         data        % ND array
-        header = xplr.dimheader.empty(1,0);
+        header = xplr.DimHeader.empty(1, 0);
         name = '';
     end
     
@@ -26,54 +26,54 @@ classdef xdata < xplr.graphnode
     end
     
     events
-        ChangedData % sent with info xplr.eventinfo('data',chghead)
+        changed_data % sent with info xplr.eventinfo('data',chghead)
     end
     
     % Constructor and simple access
     methods
-        function x = xdata(dat,head,name,dimIDs)
-            if nargin==0, return, end % default empty data
+        function x = XData(dat, head, name, dim_ids)
+            if nargin == 0, return, end % default empty data
             
             % create xplr.header objects
-            if nargin<2 || isempty(head)
+            if nargin < 2 || isempty(head)
                 % open user edition window to edit headers
-                head = xplr.editHeader(dat);
+                head = xplr.EditHeader(dat);
             elseif ischar(head)
                 head = {head};
             end
             if iscell(head)
                 % create xplr.header objects from labels
                 labels = head;
-                head = xplr.dimheader.empty(1,0);
+                head = xplr.DimHeader.empty(1, 0);
                 for i=1:length(labels)
                     if iscell(labels{i})
-                        head(i) = xplr.header(labels{i}{:});
+                        head(i) = xplr.Header(labels{i}{:});
                     else
-                        head(i) = xplr.header(labels{i},size(dat,i));
+                        head(i) = xplr.Header(labels{i}, size(dat,i));
                     end
                 end
             end
             
-            % convert to xplr.dimheader objects
-            if isa(head,'xplr.dimheader')
+            % convert to xplr.DimHeader objects
+            if isa(head,'xplr.DimHeader')
                 if nargin>=4
-                    error 'cannot set dimIDs when header are already dimheader objects'
+                    error 'cannot set dim_ids when header are already dimheader objects'
                 end
             else
-                if nargin<4
-                    dimIDs = rand(1,length(head));
+                if nargin < 4
+                    dim_ids = rand(1, length(head));
                 end
-                head = xplr.dimheader(head,dimIDs);
+                head = xplr.DimHeader(head, dim_ids);
             end
             
             % set object
-            x.updateDataDim('global',[],dat,head)
-            if nargin>=3
+            x.update_data_dim('global', [], dat, head)
+            if nargin >= 3
                 x.name = name;
             end
         end
         function y = copy(x)
-            y = xplr.xdata(x.data,x.header);
+            y = xplr.XData(x.data, x.header);
         end
         function nd = get.nd(x)
             nd = length(x.header);
@@ -81,25 +81,25 @@ classdef xdata < xplr.graphnode
         function s = get.sz(x)
             s = [x.header.n];
         end
-        function [dim, dimID] = dimensionNumberAndID(x,d)
-            % function [dim, dimID] = dimensionNumberAndID(x,d)
+        function [dim, dim_id] = dimension_number_and_id(x, d)
+            % function [dim, dim_id] = dimension_number_and_id(x,d)
             %---
             % Convert any of dimension numbers, identifiers or labels
             % to both dimension numbers and identifiers.
             % Returns [] if some dimension was not found.
-            [dim, dimID] = dimensionNumberAndID(x.header,d);
+            [dim, dim_id] = dimension_number_and_id(x.header, d);
         end
-        function dimID = dimensionID(x,d)
-            [~, dimID] = x.dimensionNumberAndID(d);
+        function dim_id = dimensionID(x, d)
+            [~, dim_id] = x.dimension_number_and_id(d);
         end
-        function dim = dimensionNumber(x,d)
-            [dim, ~] = x.dimensionNumberAndID(d);
+        function dim = dimension_number(x, d)
+            [dim, ~] = x.dimension_number_and_id(d);
         end
-        function label = dimensionLabel(x,d)
-            label = x.header.dimensionLabel(d);
+        function label = dimension_label(x, d)
+            label = x.header.dimension_label(d);
         end
-        function head = headerByID(x,dimID)
-            d = x.dimensionNumber(dimID);
+        function head = header_by_id(x, dim_id)
+            d = x.dimension_number(dim_id);
             head = x.header(d);
         end
         function head = non_singleton_header(x)
@@ -110,131 +110,132 @@ classdef xdata < xplr.graphnode
     % Modification of an xdata object and raising of the corresponding
     % notification
     methods
-        function setName(x,name)
-            if strcmp(name,x.name), return, end
+        function set_name(x, name)
+            if strcmp(name, x.name), return, end
             x.name = name;
-            notify(x,'ChangedData',xplr.eventinfo('data','name'))             
+            notify(x, 'changed_data', xplr.EventInfo('data', 'name'))
         end
-        function chgData(x,data)
-            if isequal(data,x.data), return, end
+        function chgData(x, data)
+            if isequal(data, x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
-            datasz = strictsize(data,x.nd);
-            if length(datasz)>x.nd, error 'Cannot increase number of dimensions. Use updateData to change both data and headers.', end
-            chgsz = (datasz~=x.sz);
-            if any([x.header(chgsz).iscategoricalwithvalues]), error 'Cannot change data size in categorical dimensions. Use updateData to change both data and headers', end
+            data_sz = strictsize(data, x.nd);
+            if length(data_sz) > x.nd, error 'Cannot increase number of dimensions. Use update_data to change both data and headers.', end
+            chg_sz = (data_sz ~= x.sz);
+            if any([x.header(chg_sz).is_categorical_with_values]), error 'Cannot change data size in categorical dimensions. Use update_data to change both data and headers', end
             % set data
             if ~isreal(data), error 'data cannot be complex', end
             x.data = data;
-            if ~any(chgsz)
-                notify(x,'ChangedData',xplr.eventinfo('data','chgdata'))
+            if ~any(chg_sz)
+                notify(x, 'changed_data', xplr.EventInfo('data', 'chgdata'))
                 return
             end
             % update dimension headers if necessary
-            for i=find(chgsz)
-                x.header(i) = updateMeasureHeader(x.header(i),datasz(i));
+            for i=find(chg_sz)
+                x.header(i) = update_measure_header(x.header(i), data_sz(i));
             end
-            notify(x,'ChangedData',xplr.eventinfo('data','chgdim',find(chgsz))) %#ok<FNDSB>
+            notify(x, 'changed_data', xplr.EventInfo('data', 'chgdim', find(chg_sz))) %#ok<FNDSB>
         end
-        function updateData(x,flag,d,ind,value,newhead)
-            % function updateData(x,flag,dim,ind,value,newhead)
+        function update_data(x, flag, d, ind, value, new_head)
+            % function update_data(x,flag,dim,ind,value,new_head)
             %---
-            % arguments value and newhead are supposed to be only the
+            % arguments value and new_head are supposed to be only the
             % updated parts, i.e.:
             % - for flags 'new' and 'chg', value is the data only for
             %   indices ind
-            % - newhead is only the header in dimension dim
+            % - new_head is only the header in dimension dim
             % however giving the full updated data for value, or the full
-            % header for newhead, is tolerated
+            % header for new_head, is tolerated
             
-            dim = x.dimensionNumber(d);
+            dim = x.dimension_number(d);
             if isempty(dim), error('dimension %g absent from data', d); end
             
             % check that value is real
-            if nargin>=5 && ~isreal(value), error 'data cannot be complex', end
+            if nargin >= 5 && ~isreal(value), error 'data cannot be complex', end
             
             % check that header is a dimheader
-            if ~isa(newhead,'xplr.dimheader'), error 'new header must be a dimheader object', end
+            if ~isa(new_head, 'xplr.DimHeader'), error 'new header must be a dimheader object', end
             
             % update header
             if nargin>=6
-                if length(newhead)==x.nd
+                if length(new_head) == x.nd
                     % giving the full headers instead of only the updated one
-                    newhead = newhead(dim);
+                    new_head = new_head(dim);
                 end
-                checkHeaderUpdate(x.header(dim),flag,ind,newhead)
+                check_header_update(x.header(dim), flag, ind, new_head)
             else
-                newhead = updateHeader(x.header(dim),flag,ind);
+                new_head = update_header(x.header(dim), flag, ind);
             end
-            if strcmp(flag,'all') && isequal(newhead,x.header(dim))
+            if strcmp(flag, 'all') && isequal(new_head, x.header(dim))
                 % flag 'chgdata' might be preferable to 'all' to indicate
                 % that header did not change
                 flag = 'chgdata';
             end
-            tmp = newhead; newhead = x.header; newhead(dim) = tmp; clear tmp
+            tmp = new_head;
+            new_head = x.header;
+            new_head(dim) = tmp;
+            clear tmp
             % update data
-            if ~fn_ismemberstr(flag,{'chgdata' 'all' 'chgdim'})
-                s = substruct('()',repmat({':'},1,x.nd));
+            if ~fn_ismemberstr(flag, {'chgdata', 'all', 'chgdim'})
+                s = substruct('()', repmat({':'}, 1, x.nd));
                 s.subs{dim} = ind;
             end
             switch flag
-                case {'all' 'chgdata' 'chgdim'}
-                    newdata = value;
-                case {'chg' 'new' 'chg&new' 'chg&rm'}
-                    if size(value,dim)==newhead(dim).n
+                case {'all', 'chgdata', 'chgdim'}
+                    new_data = value;
+                case {'chg', 'new', 'chg&new', 'chg&rm'}
+                    if size(value,dim) == new_head(dim).n
                         % giving the full data instead of only the updated part
-                        newdata = value;
+                        new_data = value;
                     else
-                        if strcmp(flag,'chg&new')
+                        if strcmp(flag, 'chg&new')
                             s.subs{dim} = [ind{:}];
-                        elseif strcmp(flag,'chg&rm')
+                        elseif strcmp(flag, 'chg&rm')
                             s.subs{dim} = ind{1};
                         end
-                        newdata = subsasgn(x.data,s,value);
-                        if strcmp(flag,'chg&rm')
+                        new_data = subsasgn(x.data, s, value);
+                        if strcmp(flag, 'chg&rm')
                             s.subs{dim} = ind{2};
-                            newdata = subsasgn(newdata,s,[]);
+                            new_data = subsasgn(new_data, s, []);
                         end
                     end
                 case 'remove'
-                    newdata = subsasgn(x.data,s,[]);
+                    new_data = subsasgn(x.data, s, []);
                 case 'perm'
-                    newdata = subsref(x.data,s);
+                    new_data = subsref(x.data, s);
                 otherwise
-                    error('invalid flag ''%s'' for xdata updateData method')
+                    error('invalid flag ''%s'' for xdata update_data method')
             end
-            if ~isequal(strictsize(newdata,length(newhead)),[newhead.n])
+            if ~isequal(strictsize(new_data, length(new_head)), [new_head.n])
                 error 'new data size does not match header(s)'
             end
             % really update data only now (after all checks occured)
-            x.header = newhead;
-            x.data = newdata;
+            x.header = new_head;
+            x.data = new_data;
             % notification
-            notify(x,'ChangedData',xplr.eventinfo('data',flag,dim,ind))
+            notify(x, 'changed_data', xplr.EventInfo('data', flag, dim, ind))
         end
-        function updateDataDim(x,flag,dim,newdata,newhead)
+        function update_data_dim(x, flag, dim, new_data, new_head)
             % update header
-            if ~isa(newhead,'xplr.dimheader'), error 'new header must be a dimheader object', end
+            if ~isa(new_head,'xplr.DimHeader'), error 'new header must be a dimheader object', end
             switch flag
                 case 'global'
-                    x.header = newhead;
+                    x.header = new_head;
                 case 'chgdim'
-                    if length(dim)~=length(newhead), error 'length of new header does not match number of new dimensions', end
-                    x.header(dim) = newhead;
+                    if length(dim) ~= length(new_head), error 'length of new header does not match number of new dimensions', end
+                    x.header(dim) = new_head;
                 otherwise
-                    error('invalid flag ''%s'' for xdata updateDataDim method')
+                    error('invalid flag ''%s'' for xdata update_data_dim method')
             end
             % update data
-            if ~isreal(newdata), error 'data cannot be complex', end
-            if x.nd==1 && isvector(newdata), newdata = newdata(:); end % don't generate an error for a row vector input
-            if ~isequal(strictsize(newdata,x.nd),x.sz)
+            if ~isreal(new_data), error 'data cannot be complex', end
+            if x.nd == 1 && isvector(new_data), new_data = new_data(:); end % don't generate an error for a row vector input
+            if ~isequal(strictsize(new_data, x.nd), x.sz)
                 error 'new data size does not match new header'
             end
-            x.data = newdata;
+            x.data = new_data;
             % notification
-            notify(x,'ChangedData',xplr.eventinfo('data',flag,[x.header(dim).dimID]))
+            notify(x, 'changed_data', xplr.EventInfo('data', flag, [x.header(dim).dim_id]))
         end
     end
     
 end
-
-

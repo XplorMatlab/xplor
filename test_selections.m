@@ -10,7 +10,7 @@ x = V.slice.data(:,:,1);
 
 X = fourd(x,'2d');
 
-addlistener(X.SI,'ChangeView',@changeview);
+add_listener(X.SI,'ChangeView',@changeview);
 
     function changeview(u,e)
 

@@ -1,4 +1,4 @@
-classdef slicer < xplr.graphnode
+classdef Slicer < xplr.GraphNode
     % function S = slicer(data[,dims,filters])
     % Compute and automatically update operations applied to an initial
     % 'data', resulting in an output data called 'slice'.
@@ -7,242 +7,242 @@ classdef slicer < xplr.graphnode
     % dimension, or the filter is empty.
     
     % In general, data dimensions are identified by their unique identifier
-    % (dimID) rather than by their number, but some methods accept both
+    % (dim_id) rather than by their number, but some methods accept both
     % identification methods (dimension numbers can easily be distinguished
     % from dimension identifiers because the former are >=1, the latter are
     % <1 ; conversion of either number, identifier or label to identifier
-    % is performed by the xplr.xdata.dimensionID method).
+    % is performed by the xplr.xdata.dimension_id method).
     
     properties 
         V
         data
         slice
-        filters = struct('active',[],'dimID',cell(1,0),'obj',[]);
+        filters = struct('active', [], 'dim_id', cell(1,0), 'obj', []);
     end
     properties (SetAccess='protected')
-        slicingchain = xplr.xdata.empty(1,0); % intermediary and last steps of slicing, length is same as S.activefilters
-        pendingrmfilter = false; % remember when some dimensions were removed but reslice did not occur yet
+        slicing_chain = xplr.XData.empty(1, 0); % intermediary and last steps of slicing, length is same as S.active_filters
+        pend_ing_rm_filter = false; % remember when some dimensions were removed but reslice did not occur yet
     end
     properties (Dependent, SetAccess='private')
-        nddata
-        ndslice
-        nactivefilt
-        activefilters
+        nd_data
+        nd_slice
+        n_active_filt
+        active_filters
     end
     
     % Constructor, destructor, basic access and get/set dependent
     methods
-        function S = slicer(V,data,dimID,filters)
+        function S = Slicer(V, data, dim_id, filters)
             % link to parent view
             S.V = V;
-            xplr.debuginfo('TODO','can a slicer exist without being aware of its possessing view?')
+            xplr.debug_info('TODO','can a slicer exist without being aware of its possessing view?')
             % set data
             S.data = data;
-            S.addListener(data,'ChangedData',@(u,e)datachange(S,e));
+            S.add_listener(data, 'ChangedData', @(u,e)data_change(S,e));
             % without any filter, slice is identical data
             S.slice = data.copy();
 
             % set filters
-            if nargin>=3 && ~isempty(filters)
-                addFilter(S,dimID,filters)
+            if nargin >= 3 && ~isempty(filters)
+                add_filter(S, dim_id, filters)
             end
         end
-        function n = get.nddata(S)
+        function n = get.nd_data(S)
             n = S.data.nd;
         end
-        function n = get.ndslice(S)
+        function n = get.nd_slice(S)
             n = S.slice.nd;
         end
-        function n = get.nactivefilt(S)
+        function n = get.n_active_filt(S)
             n = sum([S.filters.active]);
         end
-        function filters = get.activefilters(S)
+        function filters = get.active_filters(S)
             filters = S.filters([S.filters.active]);
         end
     end
 
     % Changing filters
     methods
-        function insertFilter(S,idx,dimID,newfilt,active)
-            % function insertFilter(S,idx,dimID,newfilt[active])
-            dimID = S.data.dimensionID(dimID);
-            if nargin<5, active = true; end
+        function insert_filter(S, id_x, dim_id, new_filt, active)
+            % function insert_filter(S,id_x,dim_id,new_filt[active])
+            dim_id = S.data.dimension_id(dim_id);
+            if nargin < 5, active = true; end
             
             % check filter
-            if ~isa(newfilt,'xplr.dataOperand'), error 'filter must be a dataOperand object', end
+            if ~isa(new_filt, 'xplr.DataOperand'), error 'filter must be a dataOperand object', end
             
             % check dimensions and headers
-            if ~iscell(dimID)
-                if isscalar(newfilt), dimID = {dimID}; else dimID = num2cell(dimID); end
+            if ~iscell(dim_id)
+                if isscalar(new_filt), dim_id = {dim_id}; else dim_id = num2cell(dim_id); end
             end
-            nadd = length(dimID);
-            dimIDadd = [dimID{:}];
-            if length(unique(dimIDadd))<length(dimIDadd)
+            nadd = length(dim_id);
+            dim_id_add = [dim_id{:}];
+            if length(unique(dim_id_add)) < length(dim_id_add)
                 error 'same dimension appears in multiple filters'
-            elseif any(ismember(dimIDadd,[S.filters.dimID]))
+            elseif any(ismember(dim_id_add, [S.filters.dim_id]))
                 error 'some filter is already applied in at least one of the specified dimensions'
-            elseif ~isequal([newfilt.headerin],S.data.headerByID(dimIDadd))
+            elseif ~isequal([new_filt.header_in], S.data.headerByID(dim_id_add))
                 error 'some filter header does not match data'
             end
             % check header
             % add filters
-            if isempty(idx), idx = length(S.filters)+1; end
-            S.filters = [S.filters(1:idx-1) struct('active',num2cell(active),'dimID',dimID,'obj',num2cell(newfilt)) S.filters(idx:end)];
+            if isempty(id_x), id_x = length(S.filters) + 1; end
+            S.filters = [S.filters(1:id_x-1), struct('active',num2cell(active),'dim_id',dim_id,'obj',num2cell(new_filt)), S.filters(id_x:end)];
             % remove invalid part of the slicing chain
-            nok = sum([S.filters(1:idx-1).active]);
-            S.slicingchain(nok+1:end) = [];
+            nok = sum([S.filters(1:id_x-1).active]);
+            S.slicing_chain(nok+1:end) = [];
             % install listeners
             for i=1:nadd
-                S.addListener(newfilt(i),'ChangedOperation',@(u,e)filterchange(S,newfilt(i),dimID{i},e));
+                S.add_listener(new_filt(i), 'changed_operation', @(u,e)filter_change(S, new_filt(i), dim_id{i}, e));
             end
             % update slice
-            if ~S.pendingrmfilter && isscalar(newfilt) && newfilt.ndout==newfilt.ndin
-                doslice(S,'slicer','chgdim',dimIDadd)
+            if ~S.pend_ing_rm_filter && isscalar(new_filt) && new_filt.nd_out == new_filt.nd_in
+                do_slice(S,'slicer', 'chg_dim',dim_id_add)
             else
-                doslice(S,'slicer','global')
-                S.pendingrmfilter = false;
+                do_slice(S, 'slicer', 'global')
+                S.pend_ing_rm_filter = false;
             end
         end
-        function addFilter(S,dimID,newfilt,active)
-            % function addFilter(S,dimID,newfilt[,active])
-            if nargin<4, active = true; end
-            insertFilter(S,[],dimID,newfilt,active)
+        function add_filter(S, dim_id, new_filt, active)
+            % function add_filter(S,dim_id,new_filt[,active])
+            if nargin < 4, active = true; end
+            insert_filter(S, [], dim_id, new_filt, active)
         end
-        function rmFilter(S,idx,doslicing)
-            % function rmFilter(S,idx[,doslicing])
-            if nargin<3, doslicing = true; end
-            filtrm = [S.filters(idx).obj];
-            S.disconnect(filtrm)
+        function rm_filter(S, id_x, do_slicing)
+            % function rm_filter(S,id_x[,do_slicing])
+            if nargin < 3, do_slicing = true; end
+            filt_rm = [S.filters(id_x).obj];
+            S.disconnect(filt_rm)
             % among the dimensions for which filters will be removed, which
             % are those where the filters were really active
-            active = [S.filters(idx).active];
-            idxactive = idx(active);
-            chgdimID = [S.filters(idxactive).dimID];
+            active = [S.filters(id_x).active];
+            id_xactive = id_x(active);
+            chg_dim_id = [S.filters(id_xactive).dim_id];
             % remove invalid part of slicing chain
-            if ~isempty(idxactive)
-                nok = sum([S.filters(1:idxactive(1)-1).active]);
-                S.slicingchain(nok+1:end) = [];
+            if ~isempty(id_xactive)
+                nok = sum([S.filters(1:id_xactive(1)-1).active]);
+                S.slicing_chain(nok+1:end) = [];
             end
             % remove the filters
-            S.filters(idx) = [];
+            S.filters(id_x) = [];
             % update slice
-            if isempty(idxactive), return, end
-            if doslicing
-                if all(isvalid(filtrm)) && all([filtrm(active).ndout]==[filtrm(active).ndin])
-                    doslice(S,'slicer','chgdim',chgdimID)
+            if isempty(id_xactive), return, end
+            if do_slicing
+                if all(isvalid(filt_rm)) && all([filt_rm(active).nd_out] == [filt_rm(active).nd_in])
+                    do_slice(S, 'slicer','chg_dim',chg_dim_id)
                 else
-                    doslice(S,'slicer','global')
+                    do_slice(S, 'slicer', 'global')
                 end
             else
                 % remember that reslice did not occur after removing filter
-                S.pendingrmfilter = true;
+                S.pend_ing_rm_filter = true;
             end
         end
-        function rmFilterDim(S,dimID,doslicing)
-            % function rmFilterDim(S,dimID[,doslicing])
-            dimID = S.data.dimensionID(dimID);
-            if nargin<3, doslicing = true; end
+        function rm_filter_dim(S, dim_id, do_slicing)
+            % function rm_filter_dim(S,dim_id[,do_slicing])
+            dim_id = S.data.dimension_id(dim_id);
+            if nargin < 3, do_slicing = true; end
             % remove filters
-            idxrm = S.getFilterIndex(dimID);
-            if ~any(idxrm)
-                fprintf('there is already no filter in dimension %i! aborting rmFilterDim\n',dimID)
+            id_xrm = S.get_filter_index(dim_id);
+            if ~any(id_xrm)
+                fprintf('there is already no filter in dimension %i! aborting rm_filter_dim\n', dim_id)
                 return
             end
-            rmFilter(S,idxrm,doslicing)
+            rm_filter(S, id_xrm, do_slicing)
         end
-        function replaceFilter(S,idxs,dimIDs,newfilt)
-            % function replaceFilter(S,idxs,dimIDs,newfilt)
+        function replace_filter(S, id_xs, dim_ids, new_filt)
+            % function replace_filter(S,id_xs,dim_ids,new_filt)
             
-            % there can be several filters: dimIDs must be a cell array
-            dimIDs = S.data.dimensionID(dimIDs);
-            if ~iscell(dimIDs)
-                if ~isscalar(newfilt), dimIDs = num2cell(dimIDs); else, dimIDs = {dimIDs}; end
+            % there can be several filters: dim_ids must be a cell array
+            dim_ids = S.data.dimension_id(dim_ids);
+            if ~iscell(dim_ids)
+                if ~isscalar(new_filt), dim_ids = num2cell(dim_ids); else, dim_ids = {dim_ids}; end
             end    
-            if any(diff([length(idxs), length(dimIDs), length(newfilt)])), error 'length mismatch', end
+            if any(diff([length(id_xs), length(dim_ids), length(new_filt)])), error 'length mismatch', end
 
             % replace filter(s)
-            ndout_changed = false;
-            chgdim = zeros(1,0);
-            for i = 1:length(dimIDs)
-                dimID = dimIDs{i};
-                F = newfilt(i);
-                idx = idxs(i);
+            nd_out_changed = false;
+            chg_dim = zeros(1, 0);
+            for i = 1:length(dim_ids)
+                dim_id = dim_ids{i};
+                F = new_filt(i);
+                id_x = id_xs(i);
                 % replace filter
-                prevndout = S.filters(idx).obj.ndout;
-                S.disconnect(S.filters(idx).obj)
-                S.filters(idx).obj = F;
-                S.filters(idx).dimID = dimID;
-                S.addListener(F,'ChangedOperation',@(u,e)filterchange(S,F,dimID,e));
+                prev_nd_out = S.filters(id_x).obj.nd_out;
+                S.disconnect(S.filters(id_x).obj)
+                S.filters(id_x).obj = F;
+                S.filters(id_x).dim_id = dim_id;
+                S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
                 % no need for update if the filter is not active
-                if S.filters(idx).active
-                    if F.ndout~=prevndout, ndout_changed = true; end
-                    chgdim = [chgdim dimID]; %#ok<AGROW>
+                if S.filters(id_x).active
+                    if F.nd_out ~= prev_nd_out, nd_out_changed = true; end
+                    chg_dim = [chg_dim, dim_id]; %#ok<AGROW>
                 else
-                    S.activateConnection(F,false)
+                    S.activate_connection(F, false)
                 end
                 % remove invalid part of slicing chain
-                nok = sum([S.filters(1:idx(1)-1).active]);
-                S.slicingchain(nok+1:end) = [];
+                nok = sum([S.filters(1:id_x(1)-1).active]);
+                S.slicing_chain(nok+1:end) = [];
             end
             
             % update slice
-            if ndout_changed
-                doslice(S,'slicer','global')
+            if nd_out_changed
+                do_slice(S, 'slicer', 'global')
             else
-                doslice(S,'slicer','chgdim',chgdim)
+                do_slice(S, 'slicer', 'chg_dim', chg_dim)
             end
         end
-        function replaceFilterDim(S,dimIDs,newfilt)
-            % function replaceFilterDim(S,dims,newfilt)
+        function replace_filter_dim(S, dim_ids, new_filt)
+            % function replace_filter_dim(S,dims,new_filt)
             
-            % there can be several filters: dimIDs must be a cell array
-            dimIDs = S.data.dimensionID(dimIDs);
-            if ~iscell(dimIDs)
-                if ~isscalar(newfilt), dimIDs = num2cell(dimIDs); else, dimIDs = {dimIDs}; end
+            % there can be several filters: dim_ids must be a cell array
+            dim_ids = S.data.dimension_id(dim_ids);
+            if ~iscell(dim_ids)
+                if ~isscalar(new_filt), dim_ids = num2cell(dim_ids); else, dim_ids = {dim_ids}; end
             end               
 
             % replace filter(s)
-            ndout_changed = false;
-            chgdim = zeros(1,0);
-            for i = 1:length(dimIDs)
-                dimID = dimIDs{i};
-                F = newfilt(i);
+            nd_out_changed = false;
+            chg_dim = zeros(1, 0);
+            for i = 1:length(dim_ids)
+                dim_id = dim_ids{i};
+                F = new_filt(i);
                 % replace filter
-                idx = fn_find(dimID,{S.filters.dimID});
-                if isempty(idx), error 'there is no filter in the specified dimension', end
-                prevndout = S.filters(idx).obj.ndout;
-                S.disconnect(S.filters(idx).obj)
-                S.filters(idx).obj = F;
-                S.addListener(F,'ChangedOperation',@(u,e)filterchange(S,F,dimID,e));
+                id_x = fn_find(dim_id, {S.filters.dim_id});
+                if isempty(id_x), error 'there is no filter in the specified dimension', end
+                prev_nd_out = S.filters(id_x).obj.nd_out;
+                S.disconnect(S.filters(id_x).obj)
+                S.filters(id_x).obj = F;
+                S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
                 % no need for update if the filter is not active
-                if S.filters(idx).active
-                    if F.ndout~=prevndout, ndout_changed = true; end
-                    chgdim = [chgdim dimID]; %#ok<AGROW>
+                if S.filters(id_x).active
+                    if F.nd_out~=prev_nd_out, nd_out_changed = true; end
+                    chg_dim = [chg_dim, dim_id]; %#ok<AGROW>
                 else
-                    S.activateConnection(F,false)
+                    S.activate_connection(F, false)
                 end
                 % remove invalid part of slicing chain
-                nok = sum([S.filters(1:idx(1)-1).active]);
-                S.slicingchain(nok+1:end) = [];
+                nok = sum([S.filters(1:id_x(1)-1).active]);
+                S.slicing_chain(nok+1:end) = [];
             end
             
             % update slice
-            if ndout_changed
-                doslice(S,'slicer','global')
+            if nd_out_changed
+                do_slice(S, 'slicer', 'global')
             else
-                doslice(S,'slicer','chgdim',chgdim)
+                do_slice(S, 'slicer', 'chg_dim', chg_dim)
             end
         end
-        function permFilters(S,perm)
-            % function permFilters(S,perm)
+        function perm_filters(S, perm)
+            % function perm_filters(S,perm)
             % modify the order in which filters are applied
             
             % check
             if ~isequal(sort(perm),1:length(S.filters))
                 error 'argument is not a valid permutation'
             end
-            idxfirst = find(perm~=1:length(S.filters),1,'first');
-            if isempty(idxfirst)
+            id_xfirst = find(perm~=1:length(S.filters), 1, 'first');
+            if isempty(id_xfirst)
                 % no permutation at all!
                 return
             end
@@ -252,301 +252,298 @@ classdef slicer < xplr.graphnode
             
             % update slice: note that all output header will remain the
             % same, so best is to signal the change as a change in the data
-            nok = sum([S.filters(1:idxfirst-1).active]);
-            S.slicingchain(nok+1:end) = [];
-            doslice(S,'slicer','chgdata')
+            nok = sum([S.filters(1:id_xfirst-1).active]);
+            S.slicing_chain(nok+1:end) = [];
+            do_slice(S, 'slicer', 'chgdata')
         end
-        function chgFilterActive(S,idx,val)
-            % function chgFilterActive(S,idx,val)
+        function chg_filter_active(S, id_x, val)
+            % function chg_filter_active(S,id_x,val)
             val = boolean(val);
-            for i = idx
+            for i = id_x
                 S.filters(i).active = val;
-                S.activateConnection(S.filters(i).obj,val)
+                S.activate_connection(S.filters(i).obj, val)
             end
-            nok = sum([S.filters(1:min(idx)-1).active]);
-            S.slicingchain(nok+1:end) = [];
-            doslice(S,'slicer','global')
+            nok = sum([S.filters(1:min(id_x)-1).active]);
+            S.slicing_chain(nok+1:end) = [];
+            do_slice(S, 'slicer', 'global')
         end
-        function applyPending(S)
-            if S.pendingrmfilter
-                S.doslice('slicer','global')
-                S.pendingrmfilter = false;
+        function applyPend_ing(S)
+            if S.pend_ing_rm_filter
+                S.do_slice('slicer', 'global')
+                S.pend_ing_rm_filter = false;
             end
         end
     end
 
     % Get filter
     methods
-        function F = getFilterByDim(S,dimID)
-            dimID = S.data.dimensionID(dimID);
-            idx = fn_find(dimID,{S.filters.dimID});
-            F = [S.filters(idx).obj];
+        function F = get_filter_by_dim(S, dim_id)
+            dim_id = S.data.dimension_id(dim_id);
+            id_x = fn_find(dim_id, {S.filters.dim_id});
+            F = [S.filters(id_x).obj];
         end
-        function idx = getFilterIndex(S,F_or_dim)
-            % function idx = getFilterIndex(S,[F|dim|dimID])
+        function id_x = get_filter_index(S, F_or_dim)
+            % function id_x = get_filter_index(S,[F|dim|dim_id])
             if isnumeric(F_or_dim)
-                dimID = S.data.dimensionID(F_or_dim);
-                idx = false(1,length(S.filters));
+                dim_id = S.data.dimension_id(F_or_dim);
+                id_x = false(1, length(S.filters));
                 for i=1:length(S.filters)
-                    idx(i) = any(ismember(S.filters(i).dimID,dimID));
+                    id_x(i) = any(ismember(S.filters(i).dim_id, dim_id));
                 end
-                idx = find(idx);
+                id_x = find(id_x);
             else
                 F = F_or_dim;
                 if ~isscalar(F), error 'input filter must be scalar', end
-                idx = fn_find(F,[S.filters.obj],'first');
+                id_x = fn_find(F, [S.filters.obj], 'first');
             end
         end
     end
     
     % Slicing
     methods (Access='protected')
-        function doslice(S,chgorigin,chgflag,chgdim,chgind,chgfilter)
-            % function doslice(S,chgorigin,flag[,chgdim[,ind[,filter]]])
+        function do_slice(S, chg_origin, chg_flag, chg_dim, chg_ind, chg_filter)
+            % function do_slice(S,chg_origin,flag[,chg_dim[,ind[,filter]]])
             %---
             % Apply filters successively to get a slice out of the data.
             % "Smart updates" apply when the flag (for example 'new')
             % indicates that only a part of the data will need to be
             % re-calculated (for example with 'new', all the existing slice
             % will be preserved, but some additional part will be added
-            % corresponding to the original increase in data or filter).
+            % correspond_ing to the original increase in data or filter).
 
-            if nargin<4, chgdim = []; end
-            if nargin<5, chgind = []; end
-            if nargin<6, chgfilter = []; end
+            if nargin < 4, chg_dim = []; end
+            if nargin < 5, chg_ind = []; end
+            if nargin < 6, chg_filter = []; end
             
-            nactivefilters = sum([S.filters.active]);
+            n_active_filters = sum([S.filters.active]);
             
             % 1) Smart update of the existing part of the slicing chain
             % dimension number
-            [chgdim, chgdimID] = S.data.dimensionNumberAndID(chgdim);
+            [chg_dim, chg_dim_id] = S.data.dimension_number_and_id(chg_dim);
             % indices of the change
-            switch chgflag
-                case {'new' 'chg'}
-                    ind1 = chgind;
+            switch chg_flag
+                case {'new', 'chg'}
+                    ind1 = chg_ind;
                 case 'chg&new'
-                    ind1 = [chgind{:}];
+                    ind1 = [chg_ind{:}];
                 case 'chg&rm'
-                    ind1 = chgind{1};
+                    ind1 = chg_ind{1};
                 otherwise
                     ind1 = [];
             end
             % where to start, and get the relevant sub-part of the data
             % needed for smart update calculations
-            switch chgorigin
+            switch chg_origin
                 case 'data'
-                    kstart = 1;
-                    if fn_ismemberstr(chgflag,{'all' 'chgdata' 'global' 'chgdim'})
+                    k_start = 1;
+                    if fn_ismemberstr(chg_flag,{'all', 'chgdata', 'global', 'chg_dim'})
                         % smart update is not possible
-                        S.slicingchain(:) = [];
+                        S.slicing_chain(:) = [];
                     else
-                        if ~isscalar(chgdim), error 'programming', end
-                        % original data has changed in dimension dimID
-                        headdim = S.data.header(chgdim);
-                        subs = substruct('()',repmat({':'},1,S.data.nd));
-                        subs.subs{chgdim} = ind1;
+                        if ~isscalar(chg_dim), error 'programming', end
+                        % original data has changed in dimension dim_id
+                        head_dim = S.data.header(chg_dim);
+                        subs = substruct('()', repmat({':'},1,S.data.nd));
+                        subs.subs{chg_dim} = ind1;
                         % part of the data that will be used for new
                         % calculations, while preserving some of the
                         % existing calculations
-                        datasub = subsref(S.data.data,subs); 
+                        data_sub = subsref(S.data.data, subs);
                         % the 'smart' update however will not be possible
                         % once there will be another filter applied in the
                         % same dimension dim
-                        for k=1:length(S.slicingchain)
-                            filterk = S.activefilters(k);
-                            if filterk.active && any(intersect(filterk.dimID,chgdimID))
-                                S.slicingchain(k:end) = [];
+                        for k=1:length(S.slicing_chain)
+                            filter_k = S.active_filters(k);
+                            if filter_k.active && any(intersect(filter_k.dim_id, chg_dim_id))
+                                S.slicing_chain(k:end) = [];
                                 break
                             end
                         end
                     end
                 case 'filter'
-                    % filtering in dimension(s) dimID has changed
-                    kfilt = fn_find(chgfilter,[S.activefilters.obj],'first');
-                    if isempty(kfilt)
+                    % filtering in dimension(s) dim_id has changed
+                    k_filt = fn_find(chg_filter, [S.active_filters.obj], 'first');
+                    if isempty(k_filt)
                         % filter is not active
-                        if ~any(chgfilter == [S.filters.obj]), error programming, end
+                        if ~any(chg_filter == [S.filters.obj]), error programming, end
                         return
                     end
-                    if strcmp(chgflag,'all')
+                    if strcmp(chg_flag, 'all')
                         % no smart update possible: filter has been
                         % completely replaced
-                        S.slicingchain(kfilt:end) = [];
-                        kstart = kfilt;
+                        S.slicing_chain(k_filt:end) = [];
+                        k_start = k_filt;
                     else
                         % smart update is possible: do the smart update for
                         % this filter here                      
-                        filtk = S.activefilters(kfilt).obj;
+                        filt_k = S.active_filters(k_filt).obj;
                         % starting point data, and on which dimensions to
                         % operate
-                        if kfilt == 1
-                            datastart = S.data;
+                        if k_filt == 1
+                            data_start = S.data;
                         else
-                            datastart = S.slicingchain(kfilt-1);
+                            data_start = S.slicing_chain(k_filt-1);
                         end
                         % perform operation to obtain only the new part of
                         % the data that needed to be calculated
                         if isempty(ind1)
                             % no new calculation necessary: only removals
                             % and permutations
-                            datasub = [];
+                            data_sub = [];
                         else
-                            datasub = filtk.slicing(datastart.data,datastart.dimensionNumber(chgdimID),ind1);
+                            data_sub = filt_k.slicing(data_start.data, data_start.dimension_number(chg_dim_id), ind1);
                         end
                         % update the xdata object
-                        chgdimID = filtk.getdimIDout(chgdimID); % dimension identifier in the data -> in the slice
-                        headdim = xplr.dimheader(filtk.headerout,chgdimID);                        
-                        S.slicingchain(kfilt).updateData(chgflag,chgdimID,chgind,datasub,headdim)
-                        % if S.slicingchain(kfilt) is S.slice, we are done
-                        if kfilt == nactivefilters
+                        chg_dim_id = filt_k.get_dim_idout(chg_dim_id); % dimension identifier in the data -> in the slice
+                        head_dim = xplr.DimHeader(filt_k.headerout, chg_dim_id);                        
+                        S.slicing_chain(k_filt).update_data(chg_flag, chg_dim_id, chg_ind, data_sub, head_dim)
+                        % if S.slicing_chain(k_filt) is S.slice, we are done
+                        if k_filt == n_active_filters
                         	return
                         end
-                        kstart = kfilt+1;
+                        k_start = k_filt + 1;
                     end
                 case 'slicer'
                     % normally the invalid part of the slicing chain has
                     % already been removed, continue from there; no smart
                     % update is possible because the change is about filter
                     % addition, removal or replacement
-                    kstart = length(S.slicingchain)+1;
+                    k_start = length(S.slicing_chain) + 1;
             end
             % starting point
-            if kstart == 1
+            if k_start == 1
                 res = S.data;
             else
-                res = S.slicingchain(kstart-1);
+                res = S.slicing_chain(k_start - 1);
             end
             % smart updates for successive filters that can allow it
-            for k = kstart:length(S.slicingchain)
+            for k = k_start:length(S.slicing_chain)
                 % propagate changes in data along the slicing chain
-                switch chgflag
-                    case {'remove' 'perm'}
+                switch chg_flag
+                    case {'remove', 'perm'}
                         % easy
-                        S.slicingchain(k).updateData(chgflag,chgdimID,chgind,[],headdim)
-                    case {'new' 'chg' 'chg&new' 'chg&rm'}
+                        S.slicing_chain(k).update_data(chg_flag, chg_dim_id, chg_ind, [], head_dim)
+                    case {'new', 'chg', 'chg&new', 'chg&rm'}
                         % do a new slicing for a subset of the data
-                        dimIDk = S.activefilters(k).dimID;
-                        filtk = S.activefilters(k).obj;
+                        dim_idk = S.active_filters(k).dim_id;
+                        filt_k = S.active_filters(k).obj;
                         % slice and update
-                        dimk = res.dimensionNumber(dimIDk);
-                        datasub = filtk.slicing(datasub,dimk);
-                        S.slicingchain(k).updateData(chgflag,chgdimID,chgind,datasub,headdim) % last element is the slice
+                        dimk = res.dimension_number(dim_idk);
+                        data_sub = filt_k.slicing(data_sub, dimk);
+                        S.slicing_chain(k).update_data(chg_flag, chg_dim_id, chg_ind, data_sub, head_dim) % last element is the slice
                     otherwise
-                        error('datachangeSmart cannot be called with flag ''%s''',chgflag)
+                        error('data_changeSmart cannot be called with flag ''%s''', chg_flag)
                 end
-                if k == nactivefilters
+                if k == n_active_filters
                     % the slice has been updated, we are done
                     return
                 end 
-                res = S.slicingchain(k);
+                res = S.slicing_chain(k);
             end
             
             % 2) Regular slicing for the remaining part of the chain
             % separate end 
-            if ~isempty(S.slicingchain) && res==S.slice
+            if ~isempty(S.slicing_chain) && res == S.slice
                 % res was previously the end of the chain and therefore
                 % equal to the slice; but now a new filter has been
                 % inserted after and we need the two xdata objects to be
-                % different, otherwise the updateDataDim/chgData calls
+                % different, otherwise the update_data_dim/chgData calls
                 % applied to the slice below will also apply to this chain
                 % element and this will lead to awkward results
                 res = S.slice.copy();
-                S.slicingchain(end) = res;
+                S.slicing_chain(end) = res;
             end
             % apply active filters one by one
-            for k = length(S.slicingchain)+1:nactivefilters
-                filtk = S.activefilters(k);
-                dimIDk = filtk.dimID;
-                objk = filtk.obj;
-                if ~isempty(chgdimID) && any(ismember(dimIDk,chgdimID))
-                    % dimension identified by chgdimID in the data
+            for k = length(S.slicing_chain)+1:n_active_filters
+                filt_k = S.active_filters(k);
+                dim_idk = filt_k.dim_id;
+                objk = filt_k.obj;
+                if ~isempty(chg_dim_id) && any(ismember(dim_idk, chg_dim_id))
+                    % dimension identified by chg_dim_id in the data
                     % disappears in the slice; get the identifier of the
-                    % corresponding dimension in the slice
-                    chgdimID = objk.getdimIDout(dimIDk);
+                    % correspond_ing dimension in the slice
+                    chg_dim_id = objk.get_dim_idout(dim_idk);
                 end
-                res = objk.operation(res,dimIDk);
-                S.slicingchain(k) = res;
+                res = objk.operation(res, dim_idk);
+                S.slicing_chain(k) = res;
             end
             % update slice 
-            switch chgflag
+            switch chg_flag
                 case 'global'
-                    S.slice.updateDataDim('global',[],res.data,res.header)
-                case 'chgdim'
-                    chgdimout = res.dimensionNumber(chgdimID);
-                    S.slice.updateDataDim(chgflag,chgdimout,res.data,res.header(chgdimout))
+                    S.slice.update_data_dim('global', [], res.data, res.header)
+                case 'chg_dim'
+                    chg_dim_out = res.dimension_number(chg_dim_id);
+                    S.slice.update_data_dim(chg_flag, chg_dim_out, res.data, res.header(chg_dim_out))
                 case 'chgdata'
                     S.slice.chgData(res.data)
                 otherwise
-                    chgdimout = res.dimensionNumber(chgdimID);
-                    S.slice.updateData(chgflag,chgdimout,chgind,res.data,res.header(chgdimout))
+                    chg_dim_out = res.dimension_number(chg_dim_id);
+                    S.slice.update_data(chg_flag, chg_dim_out, chg_ind, res.data, res.header(chg_dim_out))
             end
             % replace last chain element by slice (except if chain is
-            % empty), so updateData calls to this last chain element
+            % empty), so update_data calls to this last chain element
             % directly affect the slice (as occurs in the cases above code
-            % blocks ending with 'return')
-            if nactivefilters > 0
-                S.slicingchain(end) = S.slice;
+            % blocks end_ing with 'return')
+            if n_active_filters > 0
+                S.slicing_chain(end) = S.slice;
             end
             
         end
     end
     methods
-        function datachange(S,e)
+        function data_change(S,e)
             switch e.flag
-                case {'global' 'chgdim' 'all' 'new' 'chg' 'remove' 'chg&new' 'chg&rm' 'perm'}
-                    % header in dimension dimID has changed (not necessarily,
+                case {'global', 'chg_dim', 'all', 'new', 'chg', 'remove', 'chg&new', 'chg&rm', 'perm'}
+                    % header in dimension dim_id has changed (not necessarily,
                     % but potentially also in the case 'chg'), therefore
                     % filter in that dimension is not valid anymore
-                    S.slicingchain(:) = []; % data has changed, all previous slicing steps became invalid
+                    S.slicing_chain(:) = []; % dRata has changed, all previous slicing steps became invalid
                     % check which filters remain valid
-                    keepfilter = false(1,length(S.filters));
+                    keep_filter = false(1, length(S.filters));
                     switch e.flag
                         case 'global'
                             % remove all filters
-                        case 'chgdim'
+                        case 'chg_dim'
                             % remove filters intersecting with e.dim or
                             % whose dimension of application is not present
                             % in the data any more
-                            idxvalid = S.getFilterIndex([S.data.header.dimID]);
-                            keepfilter(idxvalid) = true;
-                            idxdim = S.getFilterIndex(e.dim);                            
-                            keepfilter(idxdim) = false;
+                            id_x_valid = S.get_filter_index([S.data.header.dim_id]);
+                            keep_filter(id_x_valid) = true;
+                            id_x_dim = S.get_filter_index(e.dim);                            
+                            keep_filter(id_x_dim) = false;
                         otherwise
                             % remove filters intersecting with e.dim
-                            keepfilter(:) = true;
-                            idxdim = S.getFilterIndex(e.dim);                            
-                            keepfilter(idxdim) = false;
+                            keep_filter(:) = true;
+                            id_x_dim = S.get_filter_index(e.dim);                            
+                            keep_filter(id_x_dim) = false;
                     end
                     % remove invalid filters: we must call viewcontrol
                     % method so that filter display is updated as well;
                     % TODO: better way of synchronizing slicer and
                     % viewcontrol's filters display
-                    rmdim = [S.filters(~keepfilter).dimID];
-                    S.V.C.dimaction('rmfilter',rmdim)
+                    rmdim = [S.filters(~keep_filter).dim_id];
+                    S.V.C.dimaction('rm_filter',rmdim)
                     % reslice
-                    doslice(S,'data','global')
+                    do_slice(S,'data','global')
                 case 'chgdata'
                     % header was not changed, it is possible therefore to
                     % keep all existing filters
-                    S.slicingchain(:) = [];
-                    doslice(S,'data','chgdata',[],[])
+                    S.slicing_chain(:) = [];
+                    do_slice(S,'data','chgdata',[],[])
                 case 'name'
                     % name is not passed to the slice, so nothing to do
                 otherwise
                     error 'not implemented yet'
             end
         end
-        function filterchange(S,F,dimID,e)
+        function filter_change(S,F,dim_id,e)
             if ~strcmp(e.type,'filter'), return, end
-            doslice(S,'filter',e.flag,dimID,e.ind,F)
+            do_slice(S,'filter',e.flag,dim_id,e.ind,F)
         end
         function reslice(S)
-            S.slicingchain(:) = [];
-            doslice(S,'data','chgdim',1:S.nddata,[])
+            S.slicing_chain(:) = [];
+            do_slice(S,'data','chg_dim',1:S.nd_data,[])
         end
     end
     
 end
-
-
-
