@@ -14,8 +14,8 @@ classdef displaylabels < xplr.graphnode
         listeners = struct('slice',[]);
         prevorgSetpos     % last organization seen by setPositions
     end
-    properties
-        doImmediateDisplay = false;
+    properties (SetObservable=true)
+        doImmediateDisplay = true;
     end
     properties (Dependent, Access='private')
         ha

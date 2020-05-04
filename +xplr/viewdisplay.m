@@ -233,6 +233,10 @@ classdef viewdisplay < xplr.graphnode
                 end
             end            
             
+            % when moving dimension label, immediate display update?
+            fn_propcontrol(D.labels,'doImmediateDisplay','menu', ...
+                {'parent',m,'label','Immediate display update when moving dimensions','separator','on'});
+            
             % reset display
             uimenu(m,'label','Reset display','separator','on', ...
                 'callback',@(u,e)D.resetDisplay())
