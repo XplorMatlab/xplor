@@ -351,11 +351,16 @@ classdef displaylabels < xplr.graphnode
                         view_control.remove_inoperant_filter(dimID)
                     end
                 end
+                % immediate display update
+                immediate_display = L.doImmediateDisplay;
                 % update organization and object location
                 newlayoutID = layoutID_d;
                 if pfig(1) < -2
                     % nothing to do: newlayoutID is already the current
                     % layout without dimension d
+                    % however we cannot perform a complete display update
+                    % because the slice is not recomputed yet
+                    immediate_display = false;
                 elseif p(2)<=0 && p(2)<=p(1)
                     % insert in x
                     idx = find(p(1)>=xthr,1,'last'); % never empty thanks to the -Inf
@@ -417,7 +422,7 @@ classdef displaylabels < xplr.graphnode
                 % update)
                 if ~isequal(newlayoutID,layoutID)
                     layoutID = newlayoutID;
-                    L.D.setLayoutID(layoutID,L.doImmediateDisplay)
+                    L.D.setLayoutID(layoutID,immediate_display)
                 end
                 drawnow update
             end

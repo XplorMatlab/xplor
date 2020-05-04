@@ -1,4 +1,5 @@
 
+%% Download data
 disp 'Load coronavirus data from opendata.ecdc.europa.eu'
 % url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
 url = 'https://opendata.ecdc.europa.eu/covid19/casedistribution/csv';
