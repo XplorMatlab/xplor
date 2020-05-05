@@ -114,7 +114,7 @@ classdef DimHeader < xplr.Header
                 end
             end
         end
-        function dim_id = dimensionID(H, d)
+        function dim_id = dimension_id(H, d)
             [~, dim_id] = H.dimension_number_and_id(d);
         end
         function dim = dimensionNumber(H, d)

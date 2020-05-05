@@ -39,7 +39,7 @@ classdef GraphNode < matlab.mixin.SetGet
     % Listeners
     methods
         function add_listener(self, other, varargin)
-            % function add_listener(self, other, varargin)
+            % function add_listener(self,other,add_listener arguments...)
             % function add_listener(self, other, listener)
             %---
             % Adding a listener on object other by using self.add_listener
@@ -51,9 +51,7 @@ classdef GraphNode < matlab.mixin.SetGet
                 listener = varargin{1};
             else
                 % create listener here
-                % the recursivity is bugged for now
-                %listener = self.add_listener(other, varargin{:});
-                listener = varargin{1};
+                listener = addlistener(other, varargin{:});
             end
             self.listening(end + 1) = struct('object', other, 'listener', listener);
         end

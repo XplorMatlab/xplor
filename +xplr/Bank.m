@@ -149,7 +149,7 @@ classdef Bank < handle
             head = B.recent_headers(same_length);
             % add also recent enumeration headers, even though they might
             % be of different length
-            enum = B.recent_headers(~same_length & [B.recent_headers.isenum]);
+            enum = B.recent_headers(~same_length & [B.recent_headers.is_enum]);
             [~, idx] = unique({enum.label}, 'stable');
             head = [head, enum(idx)];
             if nargin >= 2, head(num_max+1:end) = []; end

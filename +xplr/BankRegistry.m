@@ -47,7 +47,7 @@ classdef BankRegistry < handle
                         idx = R.n + 1;
                         R.content(idx) = struct('key', key{1}, 'value', R1, 'users', {cell(1, 0)});
                         % watch for it to become empty
-                        add_listener(R1, 'Empty', @(u,e)unregister(R, key{1}));
+                        addlistener(R1, 'Empty', @(u,e)unregister(R,key{1}));
                     elseif ~isa(R1, 'xplr.BankRegistry')
                         error 'key is invalid: encountered a leave instead of a sub-registry'
                     end
@@ -69,7 +69,7 @@ classdef BankRegistry < handle
                 users = cell(2, 0);
             else
                 if isobject(user)
-                    hld = add_listener(user, 'ObjectBeingDestroyed', @(u,e)R.unregister(key, user));
+                    hld = addlistener(user, 'ObjectBeingDestroyed', @(u,e)R.unregister(key, user));
                 else
                     hld = [];
                 end
@@ -187,7 +187,7 @@ classdef BankRegistry < handle
                 xplr.debug_info('registry', 'key %s add user %s', ...
                     fn_hash(R.content(idx).key, 3), char(new_user))
                 if isobject(new_user)
-                    hld = add_listener(new_user,'ObjectBeingDestroyed', ...
+                    hld = addlistener(new_user,'ObjectBeingDestroyed', ...
                         @(u,e)R.unregister(key,new_user));
                 else
                     hld = [];

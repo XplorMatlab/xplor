@@ -94,7 +94,7 @@ classdef ZoomSlicer < xplr.Slicer
                         % binning), so we can propagate the smart update
                         % information from the slice to the zslice, where
                         % the concerned dimension will share the same dim_id
-                        % (xplr.dataOperand.changedimensionID)
+                        % (xplr.dataOperand.changedimension_id)
                         
                         % replace filter (as in slicer.replace_filter_dim)
                         cur_key = cur_filt.link_key;

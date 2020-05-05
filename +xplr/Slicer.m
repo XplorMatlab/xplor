@@ -35,10 +35,10 @@ classdef Slicer < xplr.GraphNode
         function S = Slicer(V, data, dim_id, filters)
             % link to parent view
             S.V = V;
-            xplr.debug_info('TODO','can a slicer exist without being aware of its possessing view?')
+            xplr.debug_info('TODO', 'can a slicer exist without being aware of its possessing view?')
             % set data
             S.data = data;
-            S.add_listener(data, 'ChangedData', @(u,e)data_change(S,e));
+            S.add_listener(data, 'changed_data', @(u,e)data_change(S,e));
             % without any filter, slice is identical data
             S.slice = data.copy();
 
@@ -81,7 +81,7 @@ classdef Slicer < xplr.GraphNode
                 error 'same dimension appears in multiple filters'
             elseif any(ismember(dim_id_add, [S.filters.dim_id]))
                 error 'some filter is already applied in at least one of the specified dimensions'
-            elseif ~isequal([new_filt.header_in], S.data.headerByID(dim_id_add))
+            elseif ~isequal([new_filt.header_in], S.data.header_by_id(dim_id_add))
                 error 'some filter header does not match data'
             end
             % check header
@@ -457,14 +457,14 @@ classdef Slicer < xplr.GraphNode
             for k = length(S.slicing_chain)+1:n_active_filters
                 filt_k = S.active_filters(k);
                 dim_idk = filt_k.dim_id;
-                objk = filt_k.obj;
+                obj_k = filt_k.obj;
                 if ~isempty(chg_dim_id) && any(ismember(dim_idk, chg_dim_id))
                     % dimension identified by chg_dim_id in the data
                     % disappears in the slice; get the identifier of the
                     % correspond_ing dimension in the slice
-                    chg_dim_id = objk.get_dim_idout(dim_idk);
+                    chg_dim_id = obj_k.get_dim_idout(dim_idk);
                 end
-                res = objk.operation(res, dim_idk);
+                res = obj_k.operation(res, dim_idk);
                 S.slicing_chain(k) = res;
             end
             % update slice 

@@ -10,7 +10,7 @@ properties
     nd
     
     % header under construction
-    cur_head = struct('sublabels', cell(1,0), 'label', [], ...
+    cur_head = struct('sub_labels', cell(1,0), 'label', [], ...
         'unit', [], 'start', [], 'scale', [], 'values', [], ...
          'colors', [], 'isvalid', [], ...
         'confirmed', [], 'guessaction', '', 'all_guess', []);
@@ -67,22 +67,22 @@ function E = HeaderEdit(data, callback)
         clear candidates2
         for j = 1:length(candidates)
             head_j = candidates(j);
-            sublabels = {head_j.sublabels.label};
+            sub_labels = {head_j.sub_labels.label};
             values = head_j.values;
             colors = [];
-            kcolor = strcmp(sublabels, 'ViewColor');
+            kcolor = strcmp(sub_labels, 'ViewColor');
             if any(kcolor)
                 colors = cell2mat(values(:, kcolor));
-                sublabels(kcolor) = [];
+                sub_labels(kcolor) = [];
                 values(:, kcolor) = [];
             end
-            if isscalar(sublabels) && strcmp(sublabels{1}, head_j.label)
-                % show sublabels only if they are different from the
+            if isscalar(sub_labels) && strcmp(sub_labels{1}, head_j.label)
+                % show sub_labels only if they are different from the
                 % summary label
-                sublabels = [];
+                sub_labels = [];
             end
             candidates2(j) = struct( ...
-                    'sublabels', {sublabels}, 'label', head_j.label, ...
+                    'sub_labels', {sub_labels}, 'label', head_j.label, ...
                     'unit', head_j.unit, 'start', head_j.start, 'scale', ...
                     head_j.scale, 'values', {values}, 'colors', colors, ...
                     'isvalid', true, 'confirmed', [], 'guessaction', ...
@@ -360,14 +360,14 @@ function update_label(E, i)
     tokens = regexp(str, '^(.*[^ ]) *\((.*)\)$', 'tokens');
     if ~isempty(tokens)
         % form 'label (label1*label2)'
-        [head.label, sublabels] = deal(tokens{1}{:});
-        head.sublabels = fn_strcut(sublabels, '*');
+        [head.label, sub_labels] = deal(tokens{1}{:});
+        head.sub_labels = fn_strcut(sub_labels, '*');
     elseif any(str == '*')
         head.label = str;
-        head.sublabels = fn_strcut(str, '*');
+        head.sub_labels = fn_strcut(str, '*');
     else
         head.label = str;
-        head.sublabels = [];
+        head.sub_labels = [];
     end
     E.cur_head(i) = head;
 end
@@ -426,7 +426,7 @@ function check_valid(E, i)
     head = E.cur_head(i);
     % number of labels
     [n_label, n_column] = deal( ...
-        length(head.sublabels), size(head.values, 2) ...
+        length(head.sub_labels), size(head.values, 2) ...
         );
     if n_label == 0
         okv = (n_column <= 1);
@@ -535,18 +535,18 @@ function done(E)
         end
         if isempty(head.scale)
             % categorical
-            if isempty(head.sublabels)
-                head.sublabels = {head.label};
+            if isempty(head.sub_labels)
+                head.sub_labels = {head.label};
             end
             if ~isempty(head.colors)
-                head.sublabels{end+1} = 'ViewColor';
+                head.sub_labels{end+1} = 'ViewColor';
                 head.values(:, end+1) = num2cell(head.colors, 2);
             end
             if isempty(head.values)
                 E.header(i) = xplr.Header(head.label, E.sz(i));
             else
                 E.header(i) = xplr.Header(head.label, ...
-                    head.sublabels, head.values);
+                    head.sub_labels, head.values);
             end
         else
             % measure
@@ -697,10 +697,10 @@ end
 function [label, unit, scale_value, color] = display_headerinfo(head)
 
     % label
-    if isempty(head.sublabels)
+    if isempty(head.sub_labels)
         label = head.label;
     else
-        autolabel = fn_strcat(head.sublabels, '*');
+        autolabel = fn_strcat(head.sub_labels, '*');
         if strcmp(autolabel, head.label)
             label = head.label;
         else

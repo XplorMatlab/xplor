@@ -89,7 +89,7 @@ classdef XData < xplr.GraphNode
             % Returns [] if some dimension was not found.
             [dim, dim_id] = dimension_number_and_id(x.header, d);
         end
-        function dim_id = dimensionID(x, d)
+        function dim_id = dimension_id(x, d)
             [~, dim_id] = x.dimension_number_and_id(d);
         end
         function dim = dimension_number(x, d)
