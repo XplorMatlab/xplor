@@ -167,7 +167,7 @@ classdef displaylabels < xplr.graphnode
                         case 'xy'
                             newpos = [0 1+1.5*L.height];
                         case 'yx'
-                            newpos = [-(length(org.y)+2)*L.rotheight 1];
+                            newpos = [1+2.2*L.rotheight 1];
                     end
                     if doloose
                         pos = get(L.h(d),'position');
@@ -402,14 +402,14 @@ classdef displaylabels < xplr.graphnode
                     else
                         newlayoutID.y = [newlayoutID.y(1:idx-1) dimID newlayoutID.y(idx:end)];
                     end
-                else
-                    % xy or yx
-                    if p(1)>=p(2) || p(1)>=(1-p(2))
-                        % xy arrangement is more usual than yx, therefore
-                        % give it more 'space
-                        newlayoutID.xy = dimID; newlayoutID.yx = [];
+                elseif any(p>=1)
+                    % xy and yx
+                    if p(2)>=p(1)
+                        % (zone above the graph)
+                        [newlayoutID.xy, newlayoutID.yx] = deal(dimID,[]);
                     else
-                        newlayoutID.xy = []; newlayoutID.yx = dimID;
+                        % (zone to the right of the graph)
+                        [newlayoutID.xy, newlayoutID.yx] = deal([],dimID);
                     end
                     if xydimID
                         % move away dimension that was occupying xy or yx
@@ -417,6 +417,12 @@ classdef displaylabels < xplr.graphnode
                         tmp = newlayoutID.(dlayout);
                         newlayoutID.(dlayout) = [tmp(1:didx-1) xydimID tmp(didx:end)];
                     end
+                else
+                    % no change in layout, return
+                    % note that there is no more zone for yx!, meaning that
+                    % this display option is no longer accessible, it
+                    % seemed to be too useless
+                    return
                 end
                 % update organization (-> will trigger automatic display
                 % update)
