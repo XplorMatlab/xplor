@@ -142,7 +142,7 @@ classdef displaygraph < xplr.graphnode
                     nrow = fn_coerce(round(sqrt(nelem/elemratio/xavail*yavail*axisratio)),[1 nelem]);
                     ncol = ceil(nelem/nrow);
                 end
-                st.xyncol = ncol;
+                [st.xyncol, st.xynrow] = deal(ncol,nrow);
                 
                 % set grid positions
                 st.xyoffsets = zeros(2,nelem);
@@ -512,8 +512,7 @@ classdef displaygraph < xplr.graphnode
             
             % build ytick and ytickvalues
             if st.xydim
-                nxycol = st.xyncol;
-                nxyrow = ceil(sz(st.xydim)/nxycol);
+                [nxycol, nxyrow] = deal(st.xyncol,st.xynrow);
             else
                 [nxycol, nxyrow] = deal(1);
             end
@@ -523,7 +522,14 @@ classdef displaygraph < xplr.graphnode
                 for ky = 1:ny
                     % middle of the ticks
                     yidx = row(fn_indices(sz(org.y),ky,'g2i'));
-                    yoffset = st.xyoffsets(2,1+(krow-1)*nxycol) + sum(st.yoffset) + sum(st.ystep .* yidx);
+                    if ~isempty(org.xy)
+                        yrowoffset = st.xyoffsets(2,1+(krow-1)*nxycol);
+                    elseif ~isempty(org.yx)
+                        yrowoffset = st.xyoffsets(2,krow);
+                    else
+                        yrowoffset = 0;
+                    end
+                    yoffset = yrowoffset + sum(st.yoffset) + sum(st.ystep .* yidx);
                     % tick values
                     if any(isnan(startextent(:,ky))), continue, end % happens when data itself consists only of NaNs
                     valuestart = startextent(1,ky);
@@ -636,8 +642,7 @@ classdef displaygraph < xplr.graphnode
             
             % xy
             if ~isempty(st.xydim)
-                ncol = st.xyncol;
-                nrow = ceil(sz(st.xydim)/ncol);
+                [nxycol, nxyrow] = deal(st.xyncol,st.xynrow);
                 xpos = -.5 + (1:ncol-1)/ncol;
                 ypos = -.5 + (1:nrow-1)/nrow;
                 linewidth = lwmax+.5;
