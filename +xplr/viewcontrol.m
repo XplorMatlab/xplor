@@ -610,7 +610,6 @@ classdef viewcontrol < xplr.graphnode
             
             % and put back at original position when we release the mouse
             % button!
-            fprintf('active %i\n',active)
             if active
                 set(label,'pos',pos0)
             else

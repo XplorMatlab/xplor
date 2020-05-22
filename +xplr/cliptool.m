@@ -2,14 +2,22 @@ classdef cliptool < xplr.graphnode
 % cliptool 
     
     % properties controlled by (and as seen from) the menu
+    properties (SetAccess='private')
+        D
+    end
     properties (SetObservable=true, AbortSet, SetAccess='private')
-        autoclipmode = 'minmax';
+        autoclipmode = 'minmax'
     end
     properties (SetObservable=true, AbortSet)
         autoclipmodeNocenter = 'minmax'     % 
         center = []                         % [], 0 or 1
-        adjust = 'none'                     % 'none', 'mean'
-        span = 'local'                      % 'curview', 'local' or 'shared (sharename)'
+        independent_dimID_mem = []          % dimension ID of dimensions along which clipping is not uniform
+        align_signals = ''                  % '', 'nmean', 'nmedian'
+        adjust_to_view = false
+    end
+    properties (Dependent, SetAccess='private')
+        independent_dim
+        linked_dim
     end
 
     properties (SetAccess='private')
@@ -17,34 +25,22 @@ classdef cliptool < xplr.graphnode
         menu                                % 
     end
     
-    events
-        ChangedClip
-    end
-   
+    % Constructor, menu
     methods
-        function C = cliptool(hf)
+        function C = cliptool(D)
             % constructor
-            if nargin==0
-                hf = figure(826);
-                clf(hf)
-                set(hf,'handlevisibility','off')
-            end
-            buildmenu(C,hf)
+            C.D = D;
+            C.menu = uimenu('parent',D.V.hf,'label','Clipping', ...
+                'callback',@(u,e)clip_menu(C));
         end
         function delete(C)
             delete@xplr.graphnode(C)
             if ~isprop(C,'menu'), return, end
             deleteValid(C.menu)
         end
-        function buildmenu(C,hf)
-            if isempty(C.menu)
-                m = uimenu('parent',hf,'label','Clipping');
-                C.menu = m;
-            else
-                m = C.menu;
-                if nargin>=2 && get(m,'parent')~=hf, error 'existing menu does not have the same parent figure', end
-                delete(get(m,'children'))
-            end
+        function clip_menu(C)
+            m = C.menu;
+            delete(get(m,'children'))
             % auto-clip specifications
             % (create a submenu whose label will update automatically)
             P = fn_propcontrol(C,'autoclipmode', ...
@@ -63,28 +59,77 @@ classdef cliptool < xplr.graphnode
             fn_propcontrol(C,'center', ...
                 {'menugroup' {0 1 []} {'center on 0' 'center on 1'}}, ...
                 m1);
-            % set clip
-            uimenu(m,'label','Set Clip Manually...','callback',@(u,e)setManualclip(C))
-            uimenu(m,'label','Do Auto-Clip','callback',@(u,e)notify(C,'ChangedClip',xplr.eventinfo('clip','automode')))
-            % adjust
-            fn_propcontrol(C,'adjust', ...
-                {'menuval' {'none' 'mean'} {'None' 'Adjust each Element by its Mean Value'} {'None' 'Mean'}}, ...
-                m,'label','Adjust','separator','on');
-            % span
-            fn_propcontrol(C,'span', ...
-                {'menuval' {'curview' 'local' 'chgshare'} {'Local, Adjust to Current View' 'Local' 'Shared...'} {'Current View' 'Local' ''}}, ...
-                m,'label','Span');
+            % auto-clip
+            if ~isempty(C.independent_dim)
+                uimenu(m,'label','Do Auto-Clip (current cell(s) only)','callback',@(u,e)C.D.autoClip(false))
+                uimenu(m,'label','Do Auto-Clip (all cells)','callback',@(u,e)C.D.autoClip(true))
+            else
+                uimenu(m,'label','Do Auto-Clip','callback',@(u,e)C.D.autoClip(true))
+            end
+            % adjust options
+            fn_propcontrol(C,'adjust_to_view','menu', ...
+                {'parent',m,'label','Always adjust clipping to current view','separator','on'});
+            external_dim = C.D.external_dim;
+            if ~isempty(external_dim)
+                if isscalar(external_dim)
+                    checked = ismember(external_dim,C.independent_dim);
+                    uimenu(m,'label','Independent clipping range for each grid cell', ...
+                        'checked',checked, ...
+                        'callback',@(u,e)setIndependentDim(C,external_dim,~checked))
+                else
+                    m1 = uimenu('parent',m,'label','Independent clipping range for dimension(s)');
+                    for dimID = external_dim
+                        checked = ismember(dimID,C.independent_dim);
+                        uimenu(m1,'label',C.D.slice.dimensionLabel(dimID), ...
+                            'checked',checked, ...
+                            'callback',@(u,e)setIndependentDim(C,dimID,~checked))
+                    end
+                    uimenu(m1,'label','(all)','separator','on', ...
+                        'callback',@(u,e)setIndependentDim(C,external_dim,true))
+                    uimenu(m1,'label','(none)', ...
+                        'callback',@(u,e)setIndependentDim(C,external_dim,false))
+                end
+            end
+            if strcmp(C.D.displaymode,'time courses')
+                fn_propcontrol(C,'align_signals', ...
+                    {'menuval' {'' 'nmean' 'nmedian'} {'(do not center)' 'on their mean' 'on their median'} {'(none)' 'mean' 'median'}}, ...
+                    {'parent',m,'label','Align signals'});
+            end
+            % manual clip
+            if ~isempty(C.independent_dim)
+                uimenu(m,'label','Set Clip Manually... (current cell(s) only)','separator','on', ...
+                    'callback',@(u,e)C.setManualclip([],false))
+                uimenu(m,'label','Set Clip Manually... (all cells)', ...
+                    'callback',@(u,e)C.setManualclip([],true))
+            else
+                uimenu(m,'label','Set Clip Manually...','separator','on', ...
+                    'callback',@(u,e)C.setManualclip([],true))
+            end
+        end
+    end
+    
+    % Get dependent
+    methods
+        function dim = get.independent_dim(C)
+            indp_dim = C.D.slice.dimensionNumber(C.independent_dimID_mem);
+            dim = intersect(C.D.external_dim, indp_dim);
+        end
+        function dim = get.linked_dim(C)
+            indp_dim = C.D.slice.dimensionNumber(C.independent_dimID_mem);
+            dim = setdiff(C.D.external_dim, indp_dim);
         end
     end
     
     % Setting clip manually
     methods
-        function setManualclip(C,clip)
-            if nargin<2
+        function setManualclip(C,clip,all_cells)
+            if nargin<2 || isempty(clip)
                 clip = fn_input('Enter min and max',[0 1]);
                 if length(clip)~=2, return, end % value not valid, do not use it
             end
-            notify(C,'ChangedClip',xplr.eventinfo('clip','clip',clip))
+            % update display
+            if nargin<3, all_cells = true; end
+            C.D.setClip(clip,all_cells)
         end
     end
     
@@ -118,8 +163,8 @@ classdef cliptool < xplr.graphnode
             % add the centering information to final autoclip mode
             C.autoclipmode = C.autoclipmodeNocenter;
             if ~isempty(C.center), C.autoclipmode = [C.autoclipmode '[' num2str(C.center) ']']; end
-            % notify the change
-            notify(C,'ChangedClip',xplr.eventinfo('clip','automode'))
+            % update display
+            C.D.autoClip(true)
         end
         function set.center(C,center)
             % set property
@@ -127,30 +172,33 @@ classdef cliptool < xplr.graphnode
             % update autoclip mode
             C.autoclipmode = C.autoclipmodeNocenter;
             if ~isempty(C.center), C.autoclipmode = [C.autoclipmode '[' num2str(C.center) ']']; end
-            % notify the change
-            notify(C,'ChangedClip',xplr.eventinfo('clip','automode'))
+            % update display
+            C.D.autoClip(true)
         end
     end
     
     % Adjusting
     methods
-        function set.adjust(C,adj)
-            C.adjust = adj;
-            notify(C,'ChangedClip',xplr.eventinfo('clip','adjust'))
-        end
-    end
-    
-    % Sharing
-    methods
-        function set.span(C,span)
-            if strcmp(span,'chgshare')
-                C.sharename = fn_input('Clip sharing name','#1');
-                C.span = ['Shared (' C.sharename ')']; %#ok<*MCSUP>
+        function setIndependentDim(C,dimID,independent)
+            dimID = C.D.slice.dimensionID(dimID);
+            if independent
+                C.independent_dimID_mem = union(C.independent_dimID_mem,dimID);
             else
-                C.span = span;
+                C.independent_dimID_mem = setdiff(C.independent_dimID_mem,dimID);
             end
-            notify(C,'ChangedClip',xplr.eventinfo('clip','span'))
-            % shared clipping not really handled yet
+            % update display
+            C.D.autoClip(true)
+        end
+        function set.adjust_to_view(C,value)
+            C.adjust_to_view = value;
+            % update display
+            if value
+                C.D.autoClip(true)
+            end
+        end
+        function set.align_signals(C,value)
+            C.align_signals = value;
+            C.D.autoClip(true)
         end
     end
 end

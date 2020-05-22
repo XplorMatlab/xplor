@@ -147,15 +147,13 @@ classdef displaynavigation < xplr.graphnode
         function moveclip(N)
             switch get(N.hf,'selectiontype')
                 case 'normal'       % change clip
-                    clip0 = N.D.clip;
+                    clip0 = row(N.D.current_clip);
                     e0 = diff(clip0);
-                    clipcenter = N.D.clipping.center;
-                    switch N.D.clipping.adjust
-                        case 'none'
-                            % nothing
-                        otherwise
-                            clipcenter = 0;
-                    end
+%                     if strcmp(N.D.clipping.adjust,'mean')
+%                         clipcenter = 0;
+%                     else
+                        clipcenter = N.D.clipping.center;
+%                     end
                     if ~isempty(clipcenter), clip0 = clipcenter + [-.5 .5]*e0; end
                     p0 = get(N.hf,'currentpoint');
                     ht = uicontrol('style','text','position',[2 2 200 17],'parent',N.hf);
@@ -189,9 +187,10 @@ classdef displaynavigation < xplr.graphnode
         end
         function cliprange(N,flag)
             % current clip extent
-            clip = N.D.clip;
+            clip = N.D.current_clip;
             m = mean(clip);
             e = diff(clip);
+            if e == 0, return, end % well, we have a problem with the current clip...
             
             % round it to a nice value
             e10 = 10^floor(log10(e));
@@ -224,7 +223,6 @@ classdef displaynavigation < xplr.graphnode
             if nargin<2, flag = ''; end
             pointonly = strcmp(flag,'pointonly');
             point =  get(N.D.ha,'CurrentPoint'); point = point(1,[1 2])';
-            activedim = [N.D.activedim.x N.D.activedim.y];
             switch get(N.hf,'SelectionType')
                 case 'normal'
                     % zoom in or select point
@@ -235,23 +233,10 @@ classdef displaynavigation < xplr.graphnode
                         dozoom = any(any(abs(diff(rect,1,2))>1e-2));
                     end
                     if dozoom
-                        % determine in which dimension to zoom as the most
-                        % exterior dimension(s) where at least 2
-                        % elements are selected
-                        zijk = N.graph.graph2zslice(rect);
-                        ijk = N.graph.graph2slice(rect);
-                        nonsingleton = logical(diff(round(zijk),1,2)); % nd*1 vector
-                        org = N.D.layout;
-                        xydim = [org.xy org.yx];
-                        if nonsingleton(xydim)
-                            zoom_dim = xydim;
-                        else
-                            xdim = org.x(find(nonsingleton(org.x),1,'last'));
-                            ydim = org.y(find(nonsingleton(org.y),1,'last'));
-                            zoom_dim = [xdim ydim];
-                        end
-                        zoom = ijk(zoom_dim,:)';
-                        for i=1:length(zoom_dim), zoom(:,i) = sort(zoom(:,i)); end
+                        % apply some rules to guess in which dimension the
+                        % user intended to zoom, and which value he wanted
+                        % to zoom in
+                        [zoom_dim, zoom] = N.zoom_in_rect(rect);
                         N.D.zoomslicer.setZoom(zoom_dim,zoom)
                     else
                         N.manualclickmovecross(point);
@@ -337,13 +322,72 @@ classdef displaynavigation < xplr.graphnode
             N.crossCenter = N.graph.slice2graph(ijk);
             update_cross_visibility(N);
         end
-        function ijk = getPointIndexPosition(N)
+        function ijk = getPointIndexPosition(N,varargin)
+            % function ijk = getPointIndexPosition(N[,subdimflag][,'global|round'])
+            %---
+            % Position in slice of point selected by the point filters.
+            % Argument subdimflag serves to subselect dimensions of
+            % interest and is any of the following: 'all'
+            % [default],'internal','external','overlap','overlap+external'.
+            % Values for non-selected dimensions will be replaced by ones.
+            % If 'global' flag is set, returns global index instead of
+            % per-dimensions coordinates. Warning: this global index is to
+            % be considered inside an array with only the selected
+            % dimensions.
+            %
+            % Example:
+            % slice size is 10*5*4*3, display mode 'time courses',
+            % dimension positions {'x', 'mergeddata', 'y', 'x'}, current
+            % point [8.1; 5; 3; 2]
+            % getPointIndexPosition(N)  returns [8.1; 5; 3; 2]
+            % getPointIndexPosition(N,'internal')   returns 8.1
+            % getPointIndexPosition(N,'external')   returns [3; 2]
+            % getPointIndexPosition(N,'overlap')    returns 5   
+            % getPointIndexPosition(N,'overlap+external')   returns [5; 3; 2]
+            % getPointIndexPosition(N,'round')      returns [8; 5; 3; 2]
+            % getPointIndexPosition(N,'global')     returns 348
+            % getPointIndexPosition(N,'internal','global')  returns 8
+            % getPointIndexPosition(N,'external','global')  returns 7
+            
             nd = N.D.slice.nd;
             ijk = ones(nd, 1);
-            for d = 1:nd
+
+            % Which dimensions to consider (note that in every case they
+            % will be sorted)
+            dim = 1:nd; doglobal = false; doround = false;
+            for i = 1:length(varargin)
+                switch varargin{i}
+                    case 'all'
+                        dim = 1:nd;
+                    case 'internal'
+                        dim = N.D.internal_dim;
+                    case 'external'
+                        dim = N.D.external_dim;
+                    case 'overlap'
+                        dim = N.D.overlap_dim;
+                    case 'overlap+external'
+                        dim = unique([N.D.overlap_dim N.D.external_dim]);
+                    case 'global'
+                        doround = true;
+                        doglobal = true;
+                    case 'round'
+                        doround = true;
+                    otherwise
+                        error('unknown flag')
+                end
+            end
+            for d = dim
                 P = N.pointfilters{d};
                 if isempty(P), continue, end
                 ijk(d) = P.index0;
+            end
+            
+            % Global index?
+            if doround
+                ijk = fn_coerce(round(ijk),1,N.D.slice.sz');
+            end
+            if doglobal
+                ijk = fn_indices(N.D.slice.sz(dim),ijk(dim),'i2g');
             end
         end
         function repositionCross(N)
@@ -516,8 +560,7 @@ classdef displaynavigation < xplr.graphnode
             N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
         end
         function updateValueDisplay(N)            
-            ijk = getPointIndexPosition(N);
-            idx = fn_indices(N.D.slice.sz, round(ijk));
+            idx = getPointIndexPosition(N, 'global');
             value = N.D.slice.data(idx);
 
             % Test to display the value as "val(d1,d2,d3,...)=value"
@@ -1282,7 +1325,7 @@ classdef displaynavigation < xplr.graphnode
         end
    end
 
-    % Slider and scroll wheel callbacks: change zoom
+    % Zoom (left mouse, slider and scroll wheel)
     methods
         function zoom_dim = pointed_dimension(N, point)
             % automatic determination of the intended dimensions for
@@ -1301,6 +1344,58 @@ classdef displaynavigation < xplr.graphnode
             if isempty(zoom_dim)
                 zoom_dim = [org.xy org.yx];
             end
+        end
+        function [zoom_dim, zoom] = zoom_in_rect(N, rect)
+            % determine in which dimension to zoom and zoom values 
+            % 
+            % Input: 
+            % - rect    nd*2 array, first and second point selected by the
+            %           mouse
+            %
+            % Ouput:
+            % - zoom_dim    dimension(s) in which to zoom in
+            % - zoom        zoom values in this(these) dimension(s)
+            
+            zijk = N.graph.graph2zslice(rect);  % nd*2
+
+            % a valid zoom-in selection in dimension d must be a segment of
+            % length greater than 1
+            valid_dim = (abs(diff(zijk,1,2))>1);
+            
+            % yet for grid display it is more complicated because we want a
+            % selection whose size is greater than 1 in both x and y
+            org = N.D.layout;
+            xydim = [org.xy org.yx];
+            if ~isempty(xydim)
+                st = N.D.graph.steps;
+                valid_dim(xydim) = all(abs(diff(rect,1,2)) > 1./[st.xynrow; st.xyncol]);
+            end
+            
+            % zoom_dim will be the most exterior valid dimension for
+            % zooming in
+            if valid_dim(xydim)
+                % zoom into 'grid dimension'
+                zoom_dim = xydim;
+                % we want to zoom only on grid elements that are strictly
+                % inside the rectangle
+                zoom = zijk(zoom_dim,:)';
+            else
+                % zoom into 'regular dimension'
+                xdim = org.x(find(valid_dim(org.x),1,'last'));
+                ydim = org.y(find(valid_dim(org.y),1,'last'));
+                zoom_dim = [xdim ydim];
+                % zoom value in zslice: rounding if exterior dimensions;
+                % rounding is achieved by setting edges at an "integer +
+                % .5" value that will be rounded later to "integer + 1" and
+                % an "integet + .5 - 1e-6" that will be rounded later to
+                % "integer"
+                zoom = sort(zijk(zoom_dim,:),2)'; % 2*nzd
+                external_dim = ~ismember(zoom_dim,N.D.internal_dim);
+                zoom(:,external_dim) = round(zoom(:,external_dim)-.5) + [.5; .5-1e-6];
+            end
+            
+            % convert from zslice to slice
+            zoom = N.graph.zslice2slice(zoom',false,zoom_dim)'; % 2*nzd
         end
         function chgzoom(N,f,obj)
             dim = N.D.activedim.(f);

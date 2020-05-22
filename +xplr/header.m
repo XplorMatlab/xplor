@@ -100,7 +100,7 @@ classdef header < hgsetget
                 % categorical
                 % input: is a global name given? is table empty?
                 if nargin==2
-                    [lab table_or_n] = deal(varargin{:});
+                    [lab, table_or_n] = deal(varargin{:});
                     if ischar(lab) && isscalar(table_or_n) && isnumeric(table_or_n)
                         % only a number of samples, no table description
                         table = cell(table_or_n,0);
@@ -108,10 +108,11 @@ classdef header < hgsetget
                         lab = {};
                     else
                         table = table_or_n;
+                        if isnumeric(table), table = num2cell(table); end
                         name = [];
                     end
                 elseif nargin==3
-                    [name lab table] = deal(varargin{:});
+                    [name, lab, table] = deal(varargin{:});
                 else
                     error 'not enough input arguments'
                 end

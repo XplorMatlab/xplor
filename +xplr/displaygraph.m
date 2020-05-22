@@ -29,8 +29,7 @@ classdef displaygraph < xplr.graphnode
         filling     % how much of the space available for each dimension if filled (vector of values <=1)
         steps
     end
-        
-    
+          
     % Constructor, Get dependent
     methods
         function G = displaygraph(D)
@@ -44,7 +43,7 @@ classdef displaygraph < xplr.graphnode
     
     % Pre-computations
     methods (Access='private')
-        function [st sz fill xpair ypair] = computeStepsPrivate(G,orgin)
+        function [st, sz, fill, xpair, ypair] = computeStepsPrivate(G,orgin)
             % actual steps computation occurs here
             % size and organization
             dosignal = strcmp(G.D.displaymode,'time courses'); % slight difference for x between time courses and images
@@ -54,7 +53,7 @@ classdef displaygraph < xplr.graphnode
             xlayout = orgin.x;         ylayout = orgin.y;
             nx = length(xlayout);      ny = length(ylayout);
             zoom = G.getZoom('value');              % the 'true' coordinates (i.e. in data before zooming) of space edges
-            [idxoffset bin] = G.getZoom('off&bin'); % coordinates conversions between original and zoomed data
+            [idxoffset, bin] = G.getZoom('off&bin'); % coordinates conversions between original and zoomed data
             
             % zooming
             % It shall be noted that while the zoom specification are
@@ -449,6 +448,11 @@ classdef displaygraph < xplr.graphnode
             % enough space on y-axis to show values?
             org = G.D.layout;
             st = G.steps;
+            if st.xydim
+                [nxycol, nxyrow] = deal(st.xyncol,st.xynrow);
+            else
+                [nxycol, nxyrow] = deal(1);
+            end
             minimumspacing = G.ticksMinimumSpacing(2);
             if ~isempty([org.y st.xydim]), minimumspacing = minimumspacing/2; end
 %             if st.yavailable < targetspacing
@@ -457,70 +461,55 @@ classdef displaygraph < xplr.graphnode
 %                 return
 %             end
             
-            % replace min/max clip definitions by min/extent
-            startextent = G.D.gridclip;
-            startextent(2,:) = startextent(2,:) - startextent(1,:);
-            
-            % check every 'external' dimension for which we might have
-            % several displays on the same y lines (i.e. dimensions at
-            % location x, mergeddata or xy/yx); do these display have the same
-            % clip values?
-            subs0 = substruct('()',repmat({':'},1,1+G.D.nd));
-            samecliprow = true;     % time courses on the same row have the same clipping range
-            for d = 1:G.D.nd
-                if any(d == [org.mergeddata org.x(2:end) G.steps.xydim])
-                    % check whether clip values are the same along this
-                    % dimension
-                    test = diff(startextent,1,1+d);
-                    samecliprow = samecliprow && ~any(row(test));
-                    if ~samecliprow
-                        sameextentrow = ~any(row(test(2,:)));
-                        if ~sameextentrow
-                            set(G.D.ha,'ytick',[])
-                            ylabel(G.D.ha,'')
-                        end
-                    end
-                    % remove this dimension
-                    subs = subs0; subs.subs{1+d} = 1;
-                    startextent = subsref(startextent,subs);
-                elseif any(d == org.y)
-                    % nothing to do, keep this dimension
+            % do clipping ranges and baselines differ along 'horizontal'
+            % dimensions (i.e. dimensions at location x, mergeddata or
+            % xy/yx)?
+            h_aligned_dims = [org.mergeddata org.x(2:end)];
+            h_aligned_dims(G.D.slice.sz(h_aligned_dims)==1) = [];
+            y_dims = org.y;
+            xyok = false;
+            if ~isempty(G.steps.xydim) 
+                if G.steps.xyncol==1
+                    xyok = true;
+                    y_dims(end+1) = G.steps.xydim;
                 else
-                    % there should be only 1 value in this dimension,
-                    % nothing to do
-                    if size(startextent,1+d) > 1
-                        error 'programming: dimension is not present in the ''external'' layout but gridclip indicates multiple values!'
-                    end
+                    h_aligned_dims(end+1) = G.steps.xydim;
                 end
             end
-            
-%             % go back to clip definitions
-%             if samecliprow
-%                 gridclip(2,:) = gridclip(1,:) + gridclip(2,:);
-%             else
-%                 gridclip(:,:) = fn_mult([-.5; .5], gridclip(2,:));
-%             end
-            
-            % now gridclip is nonsingleon only in the org.y dimensions;
-            % permute dimensions
-            startextent = permute(startextent,[1 1+org.y 1+setdiff(1:G.D.nd,org.y)]);
-            
-            % if not same clip but some extent, clip becomes +/- extent/2
+            samecliprow = ~any(ismember(h_aligned_dims,G.D.clipping.independent_dim));
             if ~samecliprow
-                startextent(1,:) = -startextent(2,:)/2;
+                % not same clipping for different cells aligned
+                % horizontally: not possible to display value ticks
+                set(G.D.ha,'ytick',[])
+                ylabel(G.D.ha,'')
+                return
+            end
+            samebaseline = isempty(G.D.signals_baseline) || isempty(h_aligned_dims);
+
+            % remove these dimensions and get back to original signals'
+            % clipping range by adding baseline if possible
+            gridclip = subsref_dim(G.D.gridclip,1+h_aligned_dims,ones(1,length(h_aligned_dims)));
+            if ~isempty(G.D.signals_baseline) && samebaseline
+                signals_baseline = subsref_dim(G.D.signals_baseline,h_aligned_dims,1);
+                gridclip = fn_add(gridclip, shiftdim(signals_baseline,-1));
+            end
+            
+            % now gridclip is nonsingleon only in the y_dims dimensions;
+            % permute dimensions (put these dimensions first)
+            gridclip = permute(gridclip,[1 1+y_dims 1+setdiff(1:G.D.nd,y_dims)]);
+            if xyok
+                gridclip = reshape(gridclip,[2 prod(sz(org.y)) nxyrow]);
+            else
+                gridclip = reshape(gridclip,[2 prod(sz(org.y))]);
+                gridclip = repmat(gridclip,[1 1 nxyrow]);
             end
             
             % build ytick and ytickvalues
-            if st.xydim
-                [nxycol, nxyrow] = deal(st.xyncol,st.xynrow);
-            else
-                [nxycol, nxyrow] = deal(1);
-            end
             ny = prod(sz(org.y));
             [ytick, ytickvalues, yticklabels] = deal(cell([ny nxyrow]));
             for krow = 1:nxyrow
                 for ky = 1:ny
-                    % middle of the ticks
+                    % vertical center of the row
                     yidx = row(fn_indices(sz(org.y),ky,'g2i'));
                     if ~isempty(org.xy)
                         yrowoffset = st.xyoffsets(2,1+(krow-1)*nxycol);
@@ -531,15 +520,15 @@ classdef displaygraph < xplr.graphnode
                     end
                     yoffset = yrowoffset + sum(st.yoffset) + sum(st.ystep .* yidx);
                     % tick values
-                    if any(isnan(startextent(:,ky))), continue, end % happens when data itself consists only of NaNs
-                    valuestart = startextent(1,ky);
-                    valueextent = startextent(2,ky);
-                    minimumsubstep = minimumspacing * valueextent/st.yavailable;
-                    [tickvalues, ticklabels] = G.nicevalues(valuestart, valuestart+valueextent, minimumsubstep);
-                    yscale = st.yavailable / valueextent;
-                    valuemiddle = valuestart + valueextent/2;
+                    clipk = gridclip(:,ky,krow);
+                    if any(isnan(clipk)), continue, end % happens when data itself consists only of NaNs
+                    clipextent = diff(clipk);
+                    minimumsubstep = minimumspacing * clipextent/st.yavailable;
+                    [tickvalues, ticklabels] = G.nicevalues(clipk(1), clipk(2), minimumsubstep);
+                    yscale = st.yavailable / clipextent;
+                    clipcenter = mean(clipk);
                     ytickvalues{ky,krow} = tickvalues;
-                    ytick{ky,krow} = yoffset + (tickvalues-valuemiddle)*yscale;
+                    ytick{ky,krow} = yoffset + (tickvalues-clipcenter)*yscale;
                     yticklabels{ky,krow} = ticklabels;
                 end
             end
@@ -548,17 +537,18 @@ classdef displaygraph < xplr.graphnode
             ytick = [ytick{end:-1:1}];
             ytickvalues = [ytickvalues{end:-1:1}];
             yticklabel = [yticklabels{end:-1:1}];
-            if ~samecliprow
-                % indicate that values are relative to mean
-                [yticklabel{ytickvalues==0}] = deal('(mean)');
+            % if baselines were not the same (so clip values could not be
+            % corrected), indicate that clip values are relative to
+            % baselines
+            if ~samebaseline
+                [yticklabel{ytickvalues==0}] = deal(['(' G.D.clipping.align_signals(2:end) ')']);
                 idxp = (ytickvalues>0 & ~fn_isemptyc(yticklabel));
                 yticklabel(idxp) = fn_map(@(str)['+' str],yticklabel(idxp),'cell');
             end
-            
+
             % set ticks
             set(G.D.ha,'ytick',ytick,'yticklabel',yticklabel)
             ylabel(G.D.ha,'values')
-                
             
         end
     end
@@ -929,6 +919,32 @@ classdef displaygraph < xplr.graphnode
                 ijk = ijk(subdim,:);
             end
         end
+        function zijk = slice2zslice(G,ijk,do_vector,subdim)
+            if nargin<3, do_vector = false; end
+            [idxoffset, bin] = G.getZoom('off&bin');
+            if nargin>=4
+                idxoffset = idxoffset(subdim);
+                bin = bin(subdim);
+            end
+            if do_vector
+                zijk = fn_div(ijk,bin(:));
+            else
+                zijk = fn_div(fn_subtract(ijk, idxoffset(:))-.5,bin(:)) + .5;
+            end
+        end
+        function ijk = zslice2slice(G,zijk,do_vector,subdim)
+            if nargin<3, do_vector = false; end
+            [idxoffset, bin] = G.getZoom('off&bin');
+            if nargin>=4
+                idxoffset = idxoffset(subdim);
+                bin = bin(subdim);
+            end
+            if do_vector
+                ijk = fn_mult(zijk, bin');
+            else
+                ijk = fn_add(idxoffset', .5+fn_mult(zijk-.5,bin'));
+            end
+        end
         function xy = slice2graph(G,ijk,varargin)
             % function xy = slice2graph(G,ijk[,options...])
             %---
@@ -966,12 +982,7 @@ classdef displaygraph < xplr.graphnode
             end
             
             % first convert from slice to zoomed slice
-            if strcmp(mode,'vector')
-                error 'case not handled yet'
-            else
-                [idxoffset, bin] = G.getZoom('off&bin');
-                zijk = fn_div(fn_subtract(ijk, idxoffset(:))-.5,bin(:)) + .5;
-            end
+            zijk = G.slice2zslice(ijk,strcmp(mode,'vector'));
             
             % then convert to graph coordinates
             if length(subdim)<G.D.nd && isempty(ijk0)
@@ -1001,12 +1012,7 @@ classdef displaygraph < xplr.graphnode
             
             % convert to before zooming
             [subdim, ~, mode] = G.conversionOptions(np,varargin{:});
-            [idxoffset, bin] = G.getZoom('off&bin');
-            if strcmp(mode,'vector')
-                ijk = fn_mult(zijk, bin(subdim)');
-            else
-                ijk = fn_add(idxoffset(subdim)', .5+fn_mult(zijk-.5,bin(subdim)'));
-            end
+            ijk = G.zslice2slice(zijk,strcmp(mode,'vector'),subdim);
         end
 	end
 
@@ -1216,8 +1222,7 @@ classdef displaygraph < xplr.graphnode
                     lines(1,beyondleft) = zoom(1);
                     lines(2,beyondright) = zoom(2);
                     % convert from slice to zslice coordinates
-                    [idxoffset, bin] = G.getZoom(dim, 'off&bin');
-                    lines = (lines-idxoffset-.5)/bin + .5;
+                    lines = G.slice2zslice(lines,false,dim);
                     % display selections as rectangles (for 'x' and 'y'
                     % locations), or as more complex polygon (for 'xy' and
                     % 'yx')

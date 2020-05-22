@@ -13,9 +13,10 @@ classdef viewdisplay < xplr.graphnode
         menu        % general display menu
         % display
         nodisplay = false   % data is too large, cancel display
-        htransform  % containers for line/images that will be translated/scaled
+        grid  % containers for line/images that will be translated/scaled
         hdisplay    % handles of line/images
-        gridclip    % clipping for each grid element
+        gridclip    % clipping for each grid cell
+        signals_baseline    % subtracted baseline value for every signal if any
         hlegend     % handle of legend axes
         labels      % xplr.displaylabel object
         graph       % xplr.displaygraph object
@@ -41,7 +42,6 @@ classdef viewdisplay < xplr.graphnode
         layoutIDall                           % layout, including singleton dimensions; set with function setLayoutID
         activedimID = struct('x',[],'y',[])   % dimensions on which zooming mouse actions and sliders apply; change with function makeDimActive(D,d)
         colordimID = [];                      % set with setColorDim
-        clip = [0 1]                          % set with setClip, auto-clip with autoClip, other clip settings with sub-object cliptool
     end
     
     % Shortcuts (dependent)
@@ -55,6 +55,11 @@ classdef viewdisplay < xplr.graphnode
         layout
         internal_dim
         internal_dimID
+        external_dim
+        external_dimID
+        external_size
+        overlap_dim
+        current_clip
     end
     
     % Constructor, destructor
@@ -92,8 +97,7 @@ classdef viewdisplay < xplr.graphnode
             D.menu = uimenu(D.V.hf,'label','Display','callback',@(u,e)display_menu(D));
             
             % clipping tool
-            D.clipping = D.addComponent(xplr.cliptool(V.hf)); % creates a menu
-            D.addListener(D.clipping,'ChangedClip',@(u,e)clipchange(D,e));
+            D.clipping = D.addComponent(xplr.cliptool(D)); % creates a menu
             
             % colormap tool
             D.colormap = D.addComponent(xplr.colormaptool(D)); % creates a menu
@@ -165,12 +169,33 @@ classdef viewdisplay < xplr.graphnode
                 elseif ~isempty(org.mergeddata)
                     dim = [dim org.mergeddata];
                 end
-            else
             end
+            dim = sort(dim);
         end
         function dimID = get.internal_dimID(D)
-            dim = D.internal_dim();
+            dim = D.internal_dim;
             dimID = [D.slice.header(dim).dimID];
+        end
+        function dim = get.external_dim(D)
+            org = D.layout;
+            dim = [org.x(2:end) org.y(1+strcmp(D.displaymode,'image'):end) org.xy org.yx];
+            dim = sort(dim);
+        end
+        function dimID = get.external_dimID(D)
+            dim = D.external_dim;
+            dimID = [D.slice.header(dim).dimID];
+        end
+        function sz = get.external_size(D)
+            sz = [D.slice.header(D.external_dim).n];
+        end
+        function dim = get.overlap_dim(D)
+            % 'overlap' dimensions are those where several time course
+            % signals can appear superimposed within a single grid cell
+            if strcmp(D.displaymode,'time courses')
+                dim = D.layout.mergeddata;
+            else
+                dim = zeros(1,0);
+            end
         end
     end
     
@@ -429,9 +454,9 @@ classdef viewdisplay < xplr.graphnode
             % whether newlayout is actually new or not (this allows finishing
             % a previous incomplete update with doImmediateDisplay set to
             % false)
+            if isequal(newlayoutID,D.layoutIDall), return, end
             c = disableListener(D.listeners.axsiz); %#ok<NASGU> % prevent display update following automatic change of axis position
             if nargin<3
-                if isequal(newlayoutID,D.layoutIDmem), return, end
                 doImmediateDisplay = true;
             end
             D.layoutIDall = newlayoutID;
@@ -573,44 +598,54 @@ classdef viewdisplay < xplr.graphnode
     
     % Clipping
     methods
-        function setClip(D,clip,doupdatedisplay)
+        function clip = get.current_clip(D)
+            % get clipping range of the current grid cell
+            ijk = D.navigation.getPointIndexPosition('external','round');
+            ijk = row(round(D.graph.slice2zslice(ijk)));
+            clip = subsref_dim(D.gridclip,2:1+D.nd,ijk);
+            % center if 'adjust by the mean' mode
+            if strcmp(D.displaymode,'time courses') && ~isempty(D.clipping.align_signals)
+                clip = clip - feval(D.clipping.align_signals,clip,1);
+            end
+        end
+        function setClip(D,clip,all_cells)
+            % input
             if ~isnumeric(clip) || length(clip)~=2 || diff(clip)<=0 || any(isnan(clip)|isinf(clip))
                 xplr.debuginfo('stop','clip value is not valid')
                 return
             end
-            if all(clip==D.clip), return, end
-            if nargin<3, doupdatedisplay = true; end
+            if nargin<3, all_cells = false; end
             % set property
-            D.clip = double(clip);
-            % update display
-            if doupdatedisplay, updateDisplay(D,'clip'), end
-        end
-        function autoClip(D,doupdatedisplay)
-            if nargin<2, doupdatedisplay = true; end
-            try
-                val = fn_clip(D.zslice.data(:),D.clipping.autoclipmode,'getrange');
-                if isinf(val(1)), val(1) = -1e6; end
-                if isinf(val(2)), val(2) = 1e6; end
-                if ~any(isnan(val)), setClip(D,val,doupdatedisplay), end
-            catch ME
-                disp(ME)
+            if all_cells
+                D.gridclip(1,:) = clip(1);
+                D.gridclip(2,:) = clip(2);
+            else
+                ijk = D.navigation.getPointIndexPosition('external','round');
+                ijk = row(round(D.graph.slice2zslice(ijk)));
+                dim_indp = D.clipping.independent_dim;
+                D.gridclip = subsasgn_dim(D.gridclip,[1 1+dim_indp],[1 ijk(dim_indp)],clip(1));
+                D.gridclip = subsasgn_dim(D.gridclip,[1 1+dim_indp],[2 ijk(dim_indp)],clip(2));
             end
+            % update display; note that this might also modify D.gridclip
+            % if D.cliping.align_signals is not empty
+            updateDisplay(D,'clip')
         end
-        function clipchange(D,e)
-            switch e.flag
-                case 'clip'
-                    D.setClip(e.value)
-                case 'automode'
-                    D.autoClip()
-                case 'adjust'
-                    D.updateDisplay('clip')
-                case 'span'
-                    if strcmp(D.clipping.span,'curview')
-                        D.autoClip()
-                    end
-                otherwise
-                    error('invalid ChangedClip flag ''%s''',e.flag)
+        function autoClip(D, all_cells)
+            if nargin<2, all_cells = false; end
+            if all_cells
+                D.gridclip(:) = NaN;
+            else
+                ijk = D.navigation.getPointIndexPosition('external','round');
+                ijk = row(round(D.graph.slice2zslice(ijk)));
+                dim_indp = D.clipping.independent_dim;
+                D.gridclip = subsasgn_dim(D.gridclip,1+dim_indp,ijk(dim_indp),NaN);
             end
+            updateDisplay(D,'clip')            
+        end
+        function clip = get_clip_range(D,data)
+            clip = fn_clip(data(:),D.clipping.autoclipmode,'getrange');
+            if isinf(clip(1)), clip(1) = -1e6; end
+            if isinf(clip(2)), clip(2) = 1e6; end
         end
     end
     
@@ -701,7 +736,7 @@ classdef viewdisplay < xplr.graphnode
             % Is data too large for being displayed?
             if D.nodisplay
                 % too many grid elements: cancel display!
-                deleteValid(D.htransform) % this will also delete children D.hdisplay
+                deleteValid(D.grid) % this will also delete children D.hdisplay
                 D.gridclip = [];
                 delete(findall(D.ha,'type','text','tag','xytick'))
                 set(D.ha,'xtick',[],'ytick',[])
@@ -724,7 +759,12 @@ classdef viewdisplay < xplr.graphnode
             % To really run fast, avoid accessing object properties
             % repeatedly: access them once for all here
             dotimecourses = strcmp(D.displaymode,'time courses');
-            clipadjust = D.clipping.adjust;
+            sz = D.zslice.sz;
+            org = D.layout; % convert from dim ID to dim numbers
+            internaldim = D.internal_dim;
+            externaldim = D.external_dim;
+            overlapdim = D.overlap_dim;
+            elementsdim = sort([overlapdim externaldim]);
             
             % What to do
             if nargin<2, flag = 'global'; end
@@ -732,80 +772,33 @@ classdef viewdisplay < xplr.graphnode
                 error 'flag not handled'
             end
             doreset = strcmp(flag,'global');
+            dim_external = ismember(dim,externaldim);
             donew = strcmp(flag,'new');
             doremove = strcmp(flag,'remove');
             doposition = ~fn_ismemberstr(flag,{'chg' 'chgdata' 'clip' 'color'});
             dodataall = fn_ismemberstr(flag,{'clip' 'global' 'chgdata' 'chgdata&blocksize' 'perm' 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
             dodataselect = fn_ismemberstr(flag,{'new' 'chg'});
             dodata = dodataall || dodataselect;
+            dodataselect_grid = dodataselect && dim_external;
+            dodataselect_overlap = dodataselect && ~dim_external;
+            if dodataselect, assert(dodataselect_grid || dodataselect_overlap), end
             dochgx = strcmp(flag,'chgdata&blocksize');
-            docolor = dotimecourses && ~fn_ismemberstr(flag,{'chgdata' 'chgdata&blocksize' 'clip'});
+            docolor = dotimecourses && ~fn_ismemberstr(flag,{'chg' 'chgdata' 'chgdata&blocksize' 'clip'});
             
-            % Reshape slice data adequately: after reshape, dimensions in x
-            % will alternate between external and internal dimensions
-            sz = D.zslice.sz;
-            org = D.layout; % convert from dim ID to dim numbers
-            if ~isempty(org.x)
-                xlayout0 = D.layout.x(1);
-            else
-                % no dimension displayed in x; mimick an additional
-                % dimension displayed in x
-                xlayout0 = length(sz)+1;
-                sz(end+1) = 1;
-            end
-            % build a 3-element vector of 'internal' dimensions; some of
-            % them might be fake dimensions, the idea is to have in any
-            % case 3 internal dimensions to avoid handling multiple
-            % separate cases
-            if dotimecourses
-                internaldim = [xlayout0 length(sz)+(1:2)];
-                sz(end+(1:2)) = 1;
-            else
-                if ~isempty(org.y)
-                    ylayout0 = org.y(1);
-                else
-                    ylayout0 = length(sz)+1;
-                    sz(end+1) = 1;
-                end
-                if ~isempty(org.mergeddata)
-                    channeldim = org.mergeddata;
-                else
-                    channeldim = length(sz)+1;
-                    sz(end+1) = 1;
-                end
-                internaldim = [xlayout0 ylayout0 channeldim];
-            end
-            % prepare the dimensions permutation after extracting each
-            % sub-signal/sub-image
-            [internaldim_sort, perm_xi2slice] = sort(internaldim);
-            perm_slice2xi = [0 0 0 1 3 5 7];
-            perm_slice2xi(perm_xi2slice) = [2 4 6];
-            if ~dotimecourses
-                % for image, XPLOR dimension order is x-y, but Matlab is
-                % y-x, so we permute the two before displaying images
-                perm_slice2xi(1:2) = perm_slice2xi([2 1]);
-            end
-            % size of reshape
-            szr = zeros(1,7);
-            for i = 1:3
-                if i==1
-                    szr(2*i-1) = prod(sz(1:internaldim_sort(1)-1));
-                else
-                    szr(2*i-1) = prod(sz(internaldim_sort(i-1)+1:internaldim_sort(i)-1));
-                end
-                szr(2*i) = sz(internaldim_sort(i));
-            end
-            szr(7) = prod(sz(internaldim_sort(3)+1:end));
-            % reshape
-            x = reshape(D.zslice.data, szr);
-            % size of remaining external dimensions
-            szo = szr(1:2:end);
-
-            % Check that current htransform and hdisplay are valid
-            sz1 = sz; sz1(internaldim) = 1;
-            sz1prev = sz1;
-            if ~isempty(dim), sz1prev(dim) = sz1prev(dim)+(doremove-donew)*length(ind); end
-            if ~isequal(strictsize(D.htransform,length(sz1)),sz1prev) || ~all(ishandle(D.htransform(:)))
+            % Grid size
+            grid_size = sz; 
+            grid_size([internaldim overlapdim]) = 1;        % only externaldim is considered
+            grid_size(end+1:2) = 1; % useful for calls, e.g. to gobjects(grid_size)
+            overlap_size = sz; 
+            overlap_size([internaldim externaldim]) = 1;    % only overlapdim is considered
+            overlap_size(end+1:2) = 1; % useful for calls, e.g. to gobjects(grid_size)
+            hdisplay_size = max(grid_size,overlap_size);    % both overlapdim and externaldim are considered
+            
+            % Check that current grid are valid
+            prev_size_check = grid_size;
+            if ~isempty(dim), prev_size_check(dim) = prev_size_check(dim)+(doremove-donew)*length(ind); end
+            if ~isequal(strictsize(D.grid,length(grid_size)),prev_size_check) ...
+                    || ~all(ishandle(D.grid(:)))
                 [doreset, doposition, dodataall] = deal(true);
                 docolor = dotimecourses;
                 dodataselect = false;
@@ -832,137 +825,225 @@ classdef viewdisplay < xplr.graphnode
             end
             
             % Prepare display and grid
-            sz1 = sz; sz1(internaldim) = 1;
             if doreset          % reset display and grid elements
-                deleteValid(D.htransform) % this will also delete children D.hdisplay
-                [D.htransform, D.hdisplay] = deal(gobjects([sz1 1]));
-                D.gridclip = zeros([2 sz1 1]);
+                deleteValid(D.grid) % this will also delete children D.hdisplay
+                D.grid = gobjects(grid_size);
+                D.gridclip = NaN([2 grid_size]);
+                D.hdisplay = gobjects(hdisplay_size);
                 [doposition, dodataall] = deal(true);
             elseif donew      	% new grid elements
-                subs = substruct('()',repmat({':'},1,D.zslice.nd));
-                subs.subs{dim} = ind;
-                D.htransform = subsasgn(D.htransform,subs,gobjects);
-                D.hdisplay = subsasgn(D.hdisplay,subs,gobjects);
-                subs.subs = [{':'} subs.subs];
-                D.gridclip = subsasgn(D.gridclip,subs,0);
+                if ismember(dim,externaldim)
+                    D.grid = subsasgn_dim(D.grid,dim,ind,gobjects);
+                    D.gridclip = subsasgn_dim(D.gridclip,1+dim,ind,NaN);
+                end
+                D.hdisplay = subsasgn_dim(D.hdisplay,dim,ind,gobjects);
             elseif doremove     % remove grid elements
-                subs = substruct('()',repmat({':'},1,D.zslice.nd));
-                subs.subs{dim} = ind;
-                deleteValid(subsref(D.htransform,subs)) % this also deletes the children hdisplay objects
-                D.htransform = subsasgn(D.htransform,subs,[]);
-                D.hdisplay = subsasgn(D.hdisplay,subs,[]);
-                subs.subs = [{':'} subs.subs];
-                D.gridclip = subsasgn(D.gridclip,subs,[]);
+                if ismember(dim,externaldim)
+                    deleteValid(subsref_dim(D.grid,dim,ind)) % this also deletes the children hdisplay objects
+                    D.grid = subsasgn_dim(D.grid,dim,ind,[]);
+                    D.gridclip = subsasgn_dim(D.gridclip,1+dim,ind,[]);
+                end
+                deleteValid(subsref_dim(D.hdisplay,dim,ind)) % this also deletes the children hdisplay objects
+                D.hdisplay = subsasgn_dim(D.hdisplay,dim,ind,[]);
             end
             
-            % Prepare clipping
-            clip0 = D.clip;
-            clipextent = diff(clip0);
-            
-            % Prepare several list of indices beforehand to avoid repeated
-            % calls to functions such as ind2sub
-            idxlist = 1:prod(sz1);
-            if dodataselect && ~doposition
-                % not all grid elements need to be visited ('chg' flag)
-                idxlist = reshape(idxlist,sz1);
-                subs = substruct('()',repmat({':'},1,D.zslice.nd));
-                subs.subs{dim} = ind;
-                idxlist = row(subsref(idxlist,subs));
-            end
-            ijklist = fn_indices(sz1,idxlist,'g2i');
-            [i1, i2, i3, i4] = ind2sub(szo,idxlist);
-            
-            % Prepare dispatch
-            if doposition
-                M = D.graph.gettransform(ijklist);
-            end
-            
-            % Go! Loop on grid elements
-            for u = 1:length(idxlist)
-                idx = idxlist(u);
-                ijk = ijklist(:,u);
-                dodatacur = dodataall || (dodataselect && any(ind==ijk(dim)));
-                docreatecur = doreset || (donew && dodatacur);
-                % container
-                if doposition
-                    if docreatecur
-                        D.htransform(idx) = hgtransform('parent',D.ha,'matrix',M(:,:,idx),'HitTest','off');
+            % Update clipping: if clipping is independent for each element,
+            % postpone clip computation to when these elements will be
+            % extracted and displayed. Otherwise compute now.
+            if dodata
+                displayed_data = D.zslice.data;
+                % correct data to align signals on their mean or median?
+                if strcmp(D.displaymode,'time courses')
+                    align_signals = D.clipping.align_signals;
+                else
+                    align_signals = false;
+                end
+                if align_signals
+                    D.signals_baseline = displayed_data;
+                    if ~isempty(org.x)
+                        D.signals_baseline = feval(align_signals,D.signals_baseline,org.x(1)); 
+                        displayed_data = fn_subtract(displayed_data, D.signals_baseline);
+                    end
+                else
+                    D.signals_baseline = [];
+                end
+                % invalidate clip values that need to be recomputed
+                if D.clipping.adjust_to_view && ~strcmp(flag,'clip')
+                    if ismember(dim,D.clipping.independent_dim)
+                        D.gridclip = subsasgn_dim(D.gridclip,1+dim,ind,NaN);
                     else
-                        set(D.htransform(idx),'matrix',M(:,:,idx))
+                        D.gridclip(:) = NaN;
                     end
                 end
-                % line/image
-                if docreatecur || dodatacur
-                    % get the data and adjust clipping if requested
-                    xi = x(i1(u),:,i2(u),:,i3(u),:,i4(u));
-                    xi = permute(xi, perm_slice2xi);
-                    switch clipadjust
-                        case 'none'
-                            clipi = clip0;
-                        case 'mean'
-                            % adjustment by the mean
-                            clipi = nmean(xi(:)) + [-.5 +.5] * clipextent;
-                        otherwise
-                            error('unknown clipping adjustment flag ''%s''',clipadjust)
+                % compute clip
+                dim_indpc = D.clipping.independent_dim; % dimensions with independent clipping
+                clip_all_independent = all(ismember(elementsdim, dim_indpc));
+                if strcmp(flag,'perm')
+                    % mere permutation
+                    D.gridclip = subsref_dim(D.gridclip,dim,ind);
+                elseif clip_all_independent
+                    % every element will be clipped independently: postpone
+                    % clip computation to when elements will be extracted,
+                    % to avoid unneeded repetitive extractions
+                else
+                    % compute clip independently in sub-parts of the data
+                    sz_indpc = ones(1,D.nd); sz_indpc(dim_indpc) = sz(dim_indpc);
+                    for idx_indpc = 1:prod(sz_indpc)
+                        ijk_indpc = row(fn_indices(sz_indpc(dim_indpc),idx_indpc,'g2i'));
+                        dat_part = subsref_dim(displayed_data,dim_indpc,ijk_indpc);
+                        clip_part = subsref_dim(D.gridclip,1+dim_indpc,ijk_indpc);
+                        idx = find(~isnan(clip_part(1,:)),1);
+                        if isempty(idx)
+                            % need to recompute
+                            clip = D.get_clip_range(dat_part);
+                        else
+                            % use current clip value where it is not
+                            % defined
+                            clip = clip_part(:,idx);
+                        end
+                        D.gridclip = subsasgn_dim(D.gridclip,[1 1+dim_indpc],[1 ijk_indpc],clip(1));
+                        D.gridclip = subsasgn_dim(D.gridclip,[1 1+dim_indpc],[2 ijk_indpc],clip(2));
                     end
-                    xi = fn_float(xi);
-                    clipi = clipi;
-                    % store clipping values
-                    D.gridclip(:,idx) = clipi;                    
-                    % display it
-                    if dotimecourses
-                        xi = (xi-clipi(1))/clipextent;
-                        nt = sz(internaldim(1));
-                        if nt==1
-                            lineopt = {'linestyle','none','marker','.'};
-                        else
-                            lineopt = {'linestyle','-','marker','none'};
-                        end
-                        if docreatecur
-                            hl = line(1:nt,xi, ...
-                                'parent',D.htransform(idx),'HitTest','off',lineopt{:});
-                            D.hdisplay(idx) = hl;
-                            if docolor, set(hl,'color',cmap(ijk(cdim),:)), end
-                        else
-                            hl = D.hdisplay(idx);
-                            if dochgx
-                                set(hl,'xdata',1:nt,lineopt{:})
-                            end
-                            set(hl,'ydata',xi)
-                            if docolor, set(hl,'color',cmap(ijk(cdim),:)), end
-                        end
+                end
+            end
+            
+            % Create or modify grid containers
+            if doposition
+                % (list of grid cell indices)
+                idx_grid_list = 1:prod(grid_size);
+                if dodataselect_grid && ~doposition
+                    % not all grid elements need to be visited ('chg' flag)
+                    idx_grid_list = reshape(idx_grid_list,grid_size);
+                    subs = substruct('()',repmat({':'},1,D.zslice.nd));
+                    subs.subs{dim} = ind;
+                    idx_grid_list = row(subsref(idx_grid_list,subs));
+                end
+                ijk_grid_list = fn_indices(grid_size,idx_grid_list,'g2i');
+                % (prepare dispatch)
+                M = D.graph.gettransform(ijk_grid_list);
+                % (loop on grid cells)
+                for u = 1:length(idx_grid_list)
+                    idx_grid = idx_grid_list(u);
+                    ijk_grid = ijk_grid_list(:,u);
+                    dodata_cell = dodata && (~dodataselect_grid || any(ind==ijk_grid(dim)));
+                    docreatecur = doreset || (donew && dodata_cell);
+                    if docreatecur
+                        D.grid(idx_grid) = hgtransform('parent',D.ha,'matrix',M(:,:,idx_grid),'HitTest','off');
                     else
-                        % size in color dimension must be 1, 3 or 4;
-                        % correct if it is not the case
-                        alpha = [];
-                        nc = sz(internaldim(3));
-                        if nc > 4
-                            xi = xi(:,:,1:3);
+                        set(D.grid(idx_grid),'matrix',M(:,:,idx_grid))
+                    end
+                end
+            end
+            
+            % Create or modify individual signals/images
+            if dodata
+                % list of all signals/images indices
+                idx_hdisplay_list = reshape(1:prod(hdisplay_size),hdisplay_size);
+                if dodataselect
+                    % not all objects need to be visited
+                    subs = substruct('()',repmat({':'},1,D.nd));
+                    subs.subs{dim} = ind;
+                    idx_hdisplay_list = subsref(idx_hdisplay_list,subs);
+                end
+                % (reorganize list as: rows=different grid cells, columns=overlapped elements inside same grid cell)
+                idx_hdisplay_list = fn_reshapepermute(idx_hdisplay_list,{externaldim overlapdim internaldim});
+                [ngrid, noverlap] = size(idx_hdisplay_list); % can be smaller than total numbers of grids/overlaps
+                ijk_hdisplay_list = fn_indices(hdisplay_size,idx_hdisplay_list(:),'g2i');
+                ijk_hdisplay_list = reshape(ijk_hdisplay_list,[D.nd ngrid noverlap]);
+                % (corresponding grid cells) 
+                ijk_grid_list = ijk_hdisplay_list(:,:,1);
+                ijk_grid_list(overlapdim,:) = 1;
+                idx_grid_list = fn_indices(grid_size,ijk_grid_list,'i2g');
+                
+                % subs structure for slicing
+                subs = substruct('()',repmat({':'},1,length(sz)));
+                % (and permutation that follows)
+                internalperm = zeros(1,D.nd);
+                if strcmp(D.displaymode,'image')
+                    % reorder dimensions as y-x-channel-others
+                    if ~isempty(org.y), internalperm(1) = org.y(1); end
+                    if ~isempty(org.x), internalperm(2) = org.x(1); end
+                    if ~isempty(org.mergeddata), internalperm(3) = org.mergeddata; end
+                else
+                    % reorder dimensions as x-others
+                    if ~isempty(org.x), internalperm(1) = org.x(1); end
+                end
+                internalperm(~internalperm) = setdiff(1:D.nd,internaldim);
+                
+                % go! loop on grid cells and on elements inside these cells
+                for u = 1:ngrid
+                    idx_grid = idx_grid_list(u);
+                    for v = 1:noverlap
+                        idx_hdisplay = idx_hdisplay_list(u,v);
+                        ijk_hdisplay = ijk_hdisplay_list(:,u,v);
+
+                        % get the data and compute clipping if necessary
+                        [subs.subs{elementsdim}] = dealc(ijk_hdisplay(elementsdim));
+                        xi = subsref(displayed_data, subs);
+                        xi = permute(xi, internalperm);
+                        xi = fn_float(xi);
+                        clipi = D.gridclip(:,idx_grid);
+                        if any(isnan(clipi))
+                            if ~clip_all_independent, error 'programming', end
+                            % independent clip for this element
+                            clipi = D.get_clip_range(xi);
+                            D.gridclip(:,idx_grid) = clipi;
                         end
-                        im = D.colormap.color_image(xi, clipi);
-                        if nc == 2
-                            % add a third blue channel set to zero
-                            im(:,:,3) = 0;
-                        elseif nc == 4
-                            [im, alpha] = deal(im(:,:,1:3), im(:,:,4));
-                        end
-                        if docreatecur
-                            % y coordinates are negative to orient the
-                            % image downward (see also comment inside of
-                            % displaygaph.gettransform method, where the
-                            % y-scale of the hgtransform cannot be set
-                            % negative)
-                            D.hdisplay(idx) = surface([.5 size(im,2)+.5],[-.5 -.5-size(im,1)],zeros(2), ...
-                                'parent',D.htransform(idx), ...
-                                'EdgeColor','none','FaceColor','texturemap', ...
-                                'CDataMapping','scaled','FaceAlpha','texturemap', ...
-                                'CData',im,'AlphaData',alpha, ...
-                                'HitTest','off');
-                        elseif dochgx
-                            set(D.hdisplay(idx),'xdata',[.5 size(im,2)+.5],'ydata',[-.5 -.5-size(im,1)], ...
-                                'CData',im,'AlphaData',alpha)
+                        
+                        % display it
+                        if dotimecourses
+                            xi = (xi-clipi(1))/diff(clipi);
+                            nt = size(xi,1);
+                            if nt==1
+                                lineopt = {'linestyle','none','marker','.'};
+                            else
+                                lineopt = {'linestyle','-','marker','none'};
+                            end
+                            if ~ishandle(D.hdisplay(idx_hdisplay))
+                                hl = line(1:nt,xi, ...
+                                    'parent',D.grid(idx_grid),'HitTest','off',lineopt{:});
+                                D.hdisplay(idx_hdisplay) = hl;
+                            else
+                                hl = D.hdisplay(idx_hdisplay);
+                                if dochgx
+                                    set(hl,'xdata',1:nt,lineopt{:})
+                                end
+                                set(hl,'ydata',xi)
+                            end
+                            if docolor, set(hl,'color',cmap(ijk_hdisplay(cdim),:)), end
                         else
-                            set(D.hdisplay(idx),'CData',im,'AlphaData',alpha)
+                            % size in color dimension must be 1, 3 or 4;
+                            % correct if it is not the case
+                            alpha = [];
+                            nc = size(xi,3);
+                            if nc > 4
+                                xi = xi(:,:,1:3);
+                            end
+                            im = D.colormap.color_image(xi, clipi);
+                            if nc == 2
+                                % add a third blue channel set to zero
+                                im(:,:,3) = 0;
+                            elseif nc == 4
+                                [im, alpha] = deal(im(:,:,1:3), im(:,:,4));
+                            end
+                            if ~ishandle(D.hdisplay(idx_hdisplay))
+                                % y coordinates are negative to orient the
+                                % image downward (see also comment inside of
+                                % displaygaph.gettransform method, where the
+                                % y-scale of the hgtransform cannot be set
+                                % negative)
+                                D.hdisplay(idx_hdisplay) = surface([.5 size(im,2)+.5],[-.5 -.5-size(im,1)],zeros(2), ...
+                                    'parent',D.grid(idx_grid), ...
+                                    'EdgeColor','none','FaceColor','texturemap', ...
+                                    'CDataMapping','scaled','FaceAlpha','texturemap', ...
+                                    'CData',im,'AlphaData',alpha, ...
+                                    'HitTest','off');
+                            elseif dochgx
+                                set(D.hdisplay(idx_hdisplay),'xdata',[.5 size(im,2)+.5],'ydata',[-.5 -.5-size(im,1)], ...
+                                    'CData',im,'AlphaData',alpha)
+                            else
+                                set(D.hdisplay(idx_hdisplay),'CData',im,'AlphaData',alpha)
+                            end
                         end
                     end
                 end
@@ -977,7 +1058,7 @@ classdef viewdisplay < xplr.graphnode
             % (fater to have only one call to uistack rather than after
             % creating each element)
             if doreset || donew
-                uistack(D.htransform(:), 'bottom')
+                uistack(D.grid(:), 'bottom')
             end
 
         end
@@ -1039,10 +1120,6 @@ classdef viewdisplay < xplr.graphnode
                 D.graph.setTicks()
             end
             
-            % Update clipping
-            chgclip = strcmp(flag,'global') || strcmp(D.clipping.span,'curview');
-            if chgclip, autoClip(D,false), end
-            
             % Update display
             if fn_ismemberstr(flag,{'global' 'chgdim'})
                 % Reset display
@@ -1062,15 +1139,13 @@ classdef viewdisplay < xplr.graphnode
                         flag = 'chgdata&blocksize';
                     end
                     updateDisplay(D,flag)
-                elseif ~chgclip
+                else
                     % the grid arrangement changes
                     switch flag
-                        case 'chg'  % check this case first because it is this one that occurs when going fast through a list
-                            updateDisplay(D,'chg',chgdim,e.ind)
-                        case {'new' 'remove' 'perm'}
+                        case {'chg' 'new' 'remove' 'perm'}
                             updateDisplay(D,flag,chgdim,e.ind)
                         case 'all'
-                            ncur = size(D.htransform,chgdim);
+                            ncur = size(D.grid,chgdim);
                             n = D.zslice.sz(chgdim);
                             if n==ncur
                                 updateDisplay(D,'chgdata')
@@ -1089,19 +1164,6 @@ classdef viewdisplay < xplr.graphnode
                             updateDisplay(D,'remove',chgdim,e.ind{2})
                         otherwise
                             error('flag ''%s'' is not handled','flag')
-                    end
-                elseif chgclip
-                    % all grid elements need to be updated
-                    ncur = size(D.htransform,chgdim);
-                    n = D.zslice.sz(chgdim);
-                    if n==ncur
-                        updateDisplay(D,'chgdata')
-                    elseif n>ncur
-                        updateDisplay(D,'chgdata')
-                        updateDisplay(D,'new',chgdim,ncur+1:n)
-                    else
-                        updateDisplay(D,'remove',chgdim,n+1:ncur)
-                        updateDisplay(D,'chgdata')
                     end
                 end
             end
