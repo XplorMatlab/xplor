@@ -69,25 +69,25 @@ classdef cliptool < xplr.graphnode
             % adjust options
             fn_propcontrol(C,'adjust_to_view','menu', ...
                 {'parent',m,'label','Always adjust clipping to current view','separator','on'});
-            external_dim = C.D.external_dim;
-            if ~isempty(external_dim)
-                if isscalar(external_dim)
-                    checked = ismember(external_dim,C.independent_dim);
+            clip_dim = C.D.clip_dim;
+            if ~isempty(clip_dim)
+                if isscalar(clip_dim)
+                    checked = ismember(clip_dim,C.independent_dim);
                     uimenu(m,'label','Independent clipping range for each grid cell', ...
                         'checked',checked, ...
-                        'callback',@(u,e)setIndependentDim(C,external_dim,~checked))
+                        'callback',@(u,e)setIndependentDim(C,clip_dim,~checked))
                 else
                     m1 = uimenu('parent',m,'label','Independent clipping range for dimension(s)');
-                    for dimID = external_dim
+                    for dimID = clip_dim
                         checked = ismember(dimID,C.independent_dim);
                         uimenu(m1,'label',C.D.slice.dimensionLabel(dimID), ...
                             'checked',checked, ...
                             'callback',@(u,e)setIndependentDim(C,dimID,~checked))
                     end
                     uimenu(m1,'label','(all)','separator','on', ...
-                        'callback',@(u,e)setIndependentDim(C,external_dim,true))
+                        'callback',@(u,e)setIndependentDim(C,clip_dim,true))
                     uimenu(m1,'label','(none)', ...
-                        'callback',@(u,e)setIndependentDim(C,external_dim,false))
+                        'callback',@(u,e)setIndependentDim(C,clip_dim,false))
                 end
             end
             if strcmp(C.D.displaymode,'time courses')
@@ -112,11 +112,11 @@ classdef cliptool < xplr.graphnode
     methods
         function dim = get.independent_dim(C)
             indp_dim = C.D.slice.dimensionNumber(C.independent_dimID_mem);
-            dim = intersect(C.D.external_dim, indp_dim);
+            dim = intersect(C.D.clip_dim, indp_dim);
         end
         function dim = get.linked_dim(C)
             indp_dim = C.D.slice.dimensionNumber(C.independent_dimID_mem);
-            dim = setdiff(C.D.external_dim, indp_dim);
+            dim = setdiff(C.D.clip_dim, indp_dim);
         end
     end
     
@@ -186,8 +186,10 @@ classdef cliptool < xplr.graphnode
             else
                 C.independent_dimID_mem = setdiff(C.independent_dimID_mem,dimID);
             end
-            % update display
-            C.D.autoClip(true)
+            % update clip if some dimensions are no more independent
+            if ~independent
+                C.D.autoClip(true)
+            end
         end
         function set.adjust_to_view(C,value)
             C.adjust_to_view = value;

@@ -59,6 +59,7 @@ classdef viewdisplay < xplr.graphnode
         external_dimID
         external_size
         overlap_dim
+        clip_dim
         current_clip
     end
     
@@ -196,6 +197,13 @@ classdef viewdisplay < xplr.graphnode
             else
                 dim = zeros(1,0);
             end
+        end
+        function dim = get.clip_dim(D)
+            % mergeddata and external dimensions together: these are the
+            % dimensions where clipping range can be defined independently
+            org = D.layout;
+            dim = [org.x(2:end) org.y(1+strcmp(D.displaymode,'image'):end) org.xy org.yx org.mergeddata];
+            dim = sort(dim);
         end
     end
     
@@ -600,9 +608,9 @@ classdef viewdisplay < xplr.graphnode
     methods
         function clip = get.current_clip(D)
             % get clipping range of the current grid cell
-            ijk = D.navigation.getPointIndexPosition('external','round');
+            ijk = D.navigation.getPointIndexPosition('clip','round');
             ijk = row(round(D.graph.slice2zslice(ijk)));
-            clip = subsref_dim(D.gridclip,2:1+D.nd,ijk);
+            clip = subsref_dim(D.gridclip,1+D.clip_dim,ijk(D.clip_dim));
             % center if 'adjust by the mean' mode
             if strcmp(D.displaymode,'time courses') && ~isempty(D.clipping.align_signals)
                 clip = clip - feval(D.clipping.align_signals,clip,1);
@@ -620,7 +628,7 @@ classdef viewdisplay < xplr.graphnode
                 D.gridclip(1,:) = clip(1);
                 D.gridclip(2,:) = clip(2);
             else
-                ijk = D.navigation.getPointIndexPosition('external','round');
+                ijk = D.navigation.getPointIndexPosition('clip','round');
                 ijk = row(round(D.graph.slice2zslice(ijk)));
                 dim_indp = D.clipping.independent_dim;
                 D.gridclip = subsasgn_dim(D.gridclip,[1 1+dim_indp],[1 ijk(dim_indp)],clip(1));
@@ -635,7 +643,7 @@ classdef viewdisplay < xplr.graphnode
             if all_cells
                 D.gridclip(:) = NaN;
             else
-                ijk = D.navigation.getPointIndexPosition('external','round');
+                ijk = D.navigation.getPointIndexPosition('clip','round');
                 ijk = row(round(D.graph.slice2zslice(ijk)));
                 dim_indp = D.clipping.independent_dim;
                 D.gridclip = subsasgn_dim(D.gridclip,1+dim_indp,ijk(dim_indp),NaN);
@@ -764,6 +772,7 @@ classdef viewdisplay < xplr.graphnode
             internaldim = D.internal_dim;
             externaldim = D.external_dim;
             overlapdim = D.overlap_dim;
+            clipdim = D.clip_dim;
             elementsdim = sort([overlapdim externaldim]);
             
             % What to do
@@ -786,13 +795,12 @@ classdef viewdisplay < xplr.graphnode
             docolor = dotimecourses && ~fn_ismemberstr(flag,{'chg' 'chgdata' 'chgdata&blocksize' 'clip'});
             
             % Grid size
-            grid_size = sz; 
-            grid_size([internaldim overlapdim]) = 1;        % only externaldim is considered
-            grid_size(end+1:2) = 1; % useful for calls, e.g. to gobjects(grid_size)
-            overlap_size = sz; 
-            overlap_size([internaldim externaldim]) = 1;    % only overlapdim is considered
-            overlap_size(end+1:2) = 1; % useful for calls, e.g. to gobjects(grid_size)
-            hdisplay_size = max(grid_size,overlap_size);    % both overlapdim and externaldim are considered
+            grid_size = ones(1,max(D.nd,2)); 
+            grid_size(externaldim) = sz(externaldim);
+            hdisplay_size = ones(1,max(D.nd,2)); 
+            hdisplay_size(elementsdim) = sz(elementsdim);
+            gridclip_size = ones(1,max(D.nd,2)); 
+            gridclip_size(clipdim) = sz(clipdim);
             
             % Check that current grid are valid
             prev_size_check = grid_size;
@@ -828,23 +836,35 @@ classdef viewdisplay < xplr.graphnode
             if doreset          % reset display and grid elements
                 deleteValid(D.grid) % this will also delete children D.hdisplay
                 D.grid = gobjects(grid_size);
-                D.gridclip = NaN([2 grid_size]);
+                D.gridclip = NaN([2 gridclip_size]);
                 D.hdisplay = gobjects(hdisplay_size);
                 [doposition, dodataall] = deal(true);
             elseif donew      	% new grid elements
                 if ismember(dim,externaldim)
                     D.grid = subsasgn_dim(D.grid,dim,ind,gobjects);
-                    D.gridclip = subsasgn_dim(D.gridclip,1+dim,ind,NaN);
                 end
+                D.gridclip = subsasgn_dim(D.gridclip,1+dim,ind,NaN);
                 D.hdisplay = subsasgn_dim(D.hdisplay,dim,ind,gobjects);
             elseif doremove     % remove grid elements
                 if ismember(dim,externaldim)
                     deleteValid(subsref_dim(D.grid,dim,ind)) % this also deletes the children hdisplay objects
                     D.grid = subsasgn_dim(D.grid,dim,ind,[]);
-                    D.gridclip = subsasgn_dim(D.gridclip,1+dim,ind,[]);
                 end
+                D.gridclip = subsasgn_dim(D.gridclip,1+dim,ind,[]);
                 deleteValid(subsref_dim(D.hdisplay,dim,ind)) % this also deletes the children hdisplay objects
                 D.hdisplay = subsasgn_dim(D.hdisplay,dim,ind,[]);
+            elseif strcmp(flag,'chgdata&blocksize') && strcmp(D.displaymode,'image') && ismember(dim,org.mergeddata)
+                % D.gridclip might need to be changed in dimension
+                % org.mergeddata for images
+                % TODO: we have too many cases with this mergeddata, need
+                % to simplify somehow...
+                n_prev = min(size(D.gridclip,1+dim),4);
+                n_cur = min(sz(dim),4);
+                if n_cur > n_prev
+                    D.gridclip = subsasgn_dim(D.gridclip, 1+dim, n_prev+1:n_cur, NaN);
+                elseif n_cur < n_prev
+                    D.gridclip = subsasgn_dim(D.gridclip, 1+dim, n_cur+1:n_prev, []);
+                end
             end
             
             % Update clipping: if clipping is independent for each element,
@@ -877,11 +897,11 @@ classdef viewdisplay < xplr.graphnode
                 end
                 % compute clip
                 dim_indpc = D.clipping.independent_dim; % dimensions with independent clipping
-                clip_all_independent = all(ismember(elementsdim, dim_indpc));
+                clip_at_elements_level = isequal(elementsdim, dim_indpc);
                 if strcmp(flag,'perm')
                     % mere permutation
                     D.gridclip = subsref_dim(D.gridclip,dim,ind);
-                elseif clip_all_independent
+                elseif clip_at_elements_level
                     % every element will be clipped independently: postpone
                     % clip computation to when elements will be extracted,
                     % to avoid unneeded repetitive extractions
@@ -982,14 +1002,14 @@ classdef viewdisplay < xplr.graphnode
                         xi = subsref(displayed_data, subs);
                         xi = permute(xi, internalperm);
                         xi = fn_float(xi);
-                        clipi = D.gridclip(:,idx_grid);
+                        clipi = subsref_dim(D.gridclip,1+elementsdim,ijk_hdisplay(elementsdim));
                         if any(isnan(clipi))
-                            if ~clip_all_independent, error 'programming', end
+                            if ~clip_at_elements_level, error 'programming', end
                             % independent clip for this element
                             clipi = D.get_clip_range(xi);
-                            D.gridclip(:,idx_grid) = clipi;
+                            clipi = repmat(clipi(:),[1 size(xi,3)]); 
+                            D.gridclip = subsasgn_dim(D.gridclip,1+elementsdim,ijk_hdisplay(elementsdim),clipi);
                         end
-                        
                         % display it
                         if dotimecourses
                             xi = (xi-clipi(1))/diff(clipi);
@@ -1017,7 +1037,7 @@ classdef viewdisplay < xplr.graphnode
                             alpha = [];
                             nc = size(xi,3);
                             if nc > 4
-                                xi = xi(:,:,1:3);
+                                xi = xi(:,:,1:4);
                             end
                             im = D.colormap.color_image(xi, clipi);
                             if nc == 2
@@ -1138,7 +1158,7 @@ classdef viewdisplay < xplr.graphnode
                     else
                         flag = 'chgdata&blocksize';
                     end
-                    updateDisplay(D,flag)
+                    updateDisplay(D,flag,chgdim,e.ind)
                 else
                     % the grid arrangement changes
                     switch flag

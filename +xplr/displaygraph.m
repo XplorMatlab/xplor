@@ -816,7 +816,7 @@ classdef displaygraph < xplr.graphnode
             % Input points
             if isvector(xy), xy = xy(:); end
             np = size(xy,2);
-            ijk = zeros(G.D.nd,np);
+            ijk = ones(G.D.nd,np);
             
             % Parse options
             [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
