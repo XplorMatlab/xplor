@@ -169,6 +169,9 @@ classdef displaynavigation < xplr.graphnode
                 p = get(N.hf,'currentpoint');
                 dp = p-p0;
                 if ~isempty(clipcenter), dp = [-1 1]*(dp(2)-dp(1))/2; end
+                % (tolerance to detect motion)
+                tol = 2;
+                dp = dp - (sign(dp) .* min(tol,abs(dp)));
                 FACT = 1/100;
                 clip = clip0 + dp*(e0*FACT);
                 % it might be that we have diff(clip)<=0 here! apply some
@@ -179,6 +182,11 @@ classdef displaynavigation < xplr.graphnode
                     %e = thr*exp(e/thr-1); % goes from thr for e=thr to 0 for e=-Inf
                     e = thr^2 / (2*thr-e); % goes from thr for e=thr to 0 for e=-Inf
                     clip = mean(clip) + [-.5 .5]*e;
+                    if clip(1) < clip0(1)
+                        clip = clip0(1) + [0 1]*e;
+                    elseif clip(2) > clip0(2)
+                        clip = clip0(2) + [-1 0]*e;
+                    end
                 end     
                 % update display
                 set(ht,'string',sprintf('min: %.3f,  max: %.3f',clip(1),clip(2)))
@@ -344,6 +352,7 @@ classdef displaynavigation < xplr.graphnode
             % getPointIndexPosition(N,'external')   returns [3; 2]
             % getPointIndexPosition(N,'overlap')    returns 5   
             % getPointIndexPosition(N,'overlap+external')   returns [5; 3; 2]
+            % getPointIndexPosition(N,'clip')       returns [5; 3; 2]
             % getPointIndexPosition(N,'round')      returns [8; 5; 3; 2]
             % getPointIndexPosition(N,'global')     returns 348
             % getPointIndexPosition(N,'internal','global')  returns 8
@@ -367,6 +376,8 @@ classdef displaynavigation < xplr.graphnode
                         dim = N.D.overlap_dim;
                     case 'overlap+external'
                         dim = unique([N.D.overlap_dim N.D.external_dim]);
+                    case 'clip'
+                        dim = unique(N.D.clip_dim);
                     case 'global'
                         doround = true;
                         doglobal = true;
