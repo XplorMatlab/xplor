@@ -978,7 +978,8 @@ classdef viewdisplay < xplr.graphnode
                 % subs structure for slicing
                 subs = substruct('()',repmat({':'},1,length(sz)));
                 % (and permutation that follows)
-                internalperm = zeros(1,D.nd);
+                ndperm = max(3,D.nd);
+                internalperm = zeros(1,ndperm);
                 if strcmp(D.displaymode,'image')
                     % reorder dimensions as y-x-channel-others
                     if ~isempty(org.y), internalperm(1) = org.y(1); end
@@ -988,7 +989,7 @@ classdef viewdisplay < xplr.graphnode
                     % reorder dimensions as x-others
                     if ~isempty(org.x), internalperm(1) = org.x(1); end
                 end
-                internalperm(~internalperm) = setdiff(1:D.nd,internaldim);
+                internalperm(~internalperm) = setdiff(1:ndperm,internaldim);
                 
                 % go! loop on grid cells and on elements inside these cells
                 for u = 1:ngrid

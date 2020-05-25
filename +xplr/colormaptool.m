@@ -45,7 +45,9 @@ classdef colormaptool < xplr.graphnode
             
             % List of possible color maps
             mapnames = {'gray' 'jet' 'parula' 'hot' 'mapgeog' 'mapgeogclip' 'mapclip' 'mapcliphigh' ...
-                'mapcliplow' 'vdaq' 'green' 'red' 'black_red' 'black_green' 'white_red' 'white_green' 'white_black' 'maporient'};
+                'mapcliplow' 'red' 'green' 'blue' ...
+                'black_red' 'black_green' 'black_blue' 'white_red' 'white_green' 'white_blue' ...
+                'white_black' 'maporient'};
             fn_propcontrol(C,'cmapdef',['menugroup' mapnames 'user...'],m);
             
             % Apply non-linear function to values before coloring

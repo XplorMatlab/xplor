@@ -436,7 +436,7 @@ classdef filter < xplr.dataOperand
     methods
         function context_menu(F,m)
             delete(get(m,'children'))
-            funstr = {'mean' 'nmean' 'median' 'min' 'max' 'std'};
+            funstr = {'mean' 'nmean' 'median' 'nmedian' 'sum' 'nsum' 'min' 'max' 'std'};
             fn_propcontrol(F,'slicefunstr', ...
                 {'menuval' funstr [funstr {'other...'}]}, ...
                 {'parent', m, 'label', 'Filter operation'});

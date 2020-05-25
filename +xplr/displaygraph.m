@@ -282,7 +282,23 @@ classdef displaygraph < xplr.graphnode
             ntick = length(tickvalues);
             ticklabels = cell(1,ntick);
             dolabel = (mod(tickvalues,step)==0);
-            ticklabels(dolabel) = fn_num2str(tickvalues(dolabel),'cell');
+            % use thousand/million suffixes
+            M =  max(abs([valuestart valuestop]));
+            if M > 1e6 && step >= 1e4
+                suffix = 'M';
+                mult = 1e-6;
+            elseif M > 1e3 && step >= 10
+                suffix = 'k';
+                mult = 1e-3;
+            else
+                suffix = '';
+                mult = 1;
+            end
+            if isempty(suffix)
+                ticklabels(dolabel) = fn_num2str(tickvalues(dolabel),'cell');
+            else
+                ticklabels(dolabel) = fn_num2str(tickvalues(dolabel)*mult,'cell',['%g' suffix]);
+            end
         end
     end
     methods
