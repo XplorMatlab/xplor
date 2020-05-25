@@ -31,12 +31,12 @@ test_view
 %---
 function test_header %#ok<*DEFNU>
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
+header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 1 0},{'cond' {'a' 'b' 'a' 'b'}});
 
 %---
 function test_xdata
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
+header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 1 0},{'cond' {'a' 'b' 'a' 'b'}});
 x = reshape(1:120,[3 2 5 4]);
 data = xplr.xdata(x,header);
 disp(data)
@@ -44,7 +44,7 @@ disp(data)
 %---
 function test_filterAndPoint
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
+header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 1 0},{'cond' {'a' 'b' 'a' 'b'}});
 x = reshape(1:120,[3 2 5 4]);
 data = xplr.xdata(x,header);
 F = xplr.filterAndPoint(header(1));
@@ -54,7 +54,7 @@ slice = F.operation(data,1);
 %---
 function test_view
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
+header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 1 0},{'cond' {'a' 'b' 'a' 'b'}});
 x = reshape(1:120,[3 2 5 4]);
 data = xplr.xdata(x,header);
 V = xplr.view(data);
@@ -65,8 +65,8 @@ function test_zoomcentral
 
 % two displays with y coordinate not sampled the same way
 load 'clown';
-x1 = xplr.xdata(X,{{'x' 'px' 200} {'y' 'cm' 320 -1+1/320 2/320}});
-x2 = xplr.xdata(X(:,1:2:end),{{'x' 'px' 200} {'y' 'cm' 160 -1+1/160 2/160}});
+x1 = xplr.xdata(X,{{'x' 'px'} {'y' 'cm' -1+1/320 2/320}});
+x2 = xplr.xdata(X(:,1:2:end),{{'x' 'px'} {'y' 'cm' -1+1/160 2/160}});
 
 V1 = xplor(x1);
 V2 = xplor(x2);

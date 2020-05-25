@@ -510,7 +510,7 @@ classdef headerEdit < hgsetget
                     else
                         dimlabel = xplr.dimensionlabel(head.label,'numeric',measure.units);
                     end
-                    E.header(i) = xplr.header(dimlabel,E.sz(i),head.start*conversion,head.scale*conversion);
+                    E.header(i) = xplr.header(dimlabel,E.sz(i),head.scale*conversion,head.start*conversion);
                 end
             end
             

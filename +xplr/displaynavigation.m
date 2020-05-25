@@ -820,8 +820,6 @@ classdef displaynavigation < xplr.graphnode
             end
         end
         function set.selectiondimID(N,dimID)
-            % function setselectiondimID(N,dimID)
-            %---
             % Select the dimension(s) for which selections are displayed and
             % made in the display
             

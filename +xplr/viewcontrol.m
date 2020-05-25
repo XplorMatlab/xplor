@@ -227,6 +227,9 @@ classdef viewcontrol < xplr.graphnode
             % function dimaction(C,'addfilter',dimIDs[,key[,active]])
             % function dimaction(C,'rmfilter|showfilter',dimID)
             % function dimaction(C,'setactive',dimID,value)
+            % function dimaction(C,'viewdim',dimID)
+            % function dimaction(C,'newwindow',dimID)
+            % function dimaction(C,'newwindow_action',dimID,arg...)
             %---
             % if flag is 'addfilter', dims can be a cell array, to defined
             % several filters at once for example
