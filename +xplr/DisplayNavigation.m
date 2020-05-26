@@ -23,19 +23,19 @@ classdef DisplayNavigation < xplr.GraphNode
 
     properties (SetAccess='private')
         D                                       % parent xplr.viewdisplay
-        ha = g_objects
-        hf = g_objects
+        ha = gobjects
+        hf = gobjects
         graph
         cross_center
         cross_data_value                          % data value at cross position
-        cross = g_objects                        % display cross selector
+        cross = gobjects                        % display cross selector
         sliders = struct('x', [], 'y', []);        % slider objects
         zoom_filters = struct('x', [], 'y', []);    % connected zoom filters
         point_filters = {};
     end
     properties
         selection_filter         % filter being modified by the selections
-        selection_display        % displays of SelectionNd: for each selection, 2 lines and a text
+        selection_display        % displays of SelectionND: for each selection, 2 lines and a text
         selection_save_file       % name of file for saving current selection
         selection_context       
     end
@@ -47,7 +47,7 @@ classdef DisplayNavigation < xplr.GraphNode
         selection_2d_shape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
         selection_round_1d_measure = true; 
         selection_show = 'shape+name';
-        selection_edit = false
+        selection_do_edit = false
         selection_prompt_name = false
         selection_at_most_one = false
     end
@@ -55,7 +55,7 @@ classdef DisplayNavigation < xplr.GraphNode
         selection_dim            % dimension(s) to which selections apply, identified by its(their) number
     end
     properties (Dependent, SetAccess='private')
-        selection               % list of SelectionNd object from the filter
+        selection               % list of SelectionND object from the filter
     end
 
     % Constructor
@@ -243,8 +243,8 @@ classdef DisplayNavigation < xplr.GraphNode
                         % determine in which dimension to zoom as the most
                         % exterior dimension(s) where at least 2
                         % elements are selected
-                        zijk = N.graph.graph_2_zslice(rect);
-                        ijk = N.graph.graph_2_slice(rect);
+                        zijk = N.graph.graph_to_zslice(rect);
+                        ijk = N.graph.graph_to_slice(rect);
                         non_single_ton = logical(diff(round(zijk), 1, 2)); % nd*1 vector
                         org = N.D.layout;
                         xy_dim = [org.xy, org.yx];
@@ -316,10 +316,10 @@ classdef DisplayNavigation < xplr.GraphNode
                 end
                 % get filter from bank or create one for the header in this
                 % dimension
-                P = xplr.Bank.getPointFilter(link_key, head, N); % FilterAndPoint filter
+                P = xplr.Bank.get_point_filter(link_key, head, N); % FilterAndPoint filter
                 N.point_filters{d} = P;
                 % listen to the point filter event
-                N.add_listener(P, 'changed_operation', @(u,e)moved_point(N, e))
+                N.add_listener(P, 'ChangedOperation', @(u,e)moved_point(N, e))
             end
         end
         function disconnect_point_filter(N, dim)
@@ -336,7 +336,7 @@ classdef DisplayNavigation < xplr.GraphNode
         function moved_point(N, e)
             if ~strcmp(e.type, 'point'), return, end
             ijk = get_point_index_position(N);
-            N.cross_center = N.graph.slice_2_graph(ijk);
+            N.cross_center = N.graph.slice_to_graph(ijk);
             update_cross_visibility(N);
         end
         function ijk = get_point_index_position(N)
@@ -345,12 +345,12 @@ classdef DisplayNavigation < xplr.GraphNode
             for d = 1:nd
                 P = N.point_filters{d};
                 if isempty(P), continue, end
-                ijk(d) = P.index0;
+                ijk(d) = P.index_exact;
             end
         end
         function reposition_cross(N)
             ijk = get_point_index_position(N);
-            N.cross_center = N.graph.slice_2_graph(ijk);
+            N.cross_center = N.graph.slice_to_graph(ijk);
             update_cross_visibility(N);
         end
         function display_cross(N)
@@ -374,7 +374,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % re-display cross if it was deleted (happens upon
             % D.resetDisplay)
             if ~all(isvalid(N.cross))
-                deleteValid(N.cross)
+                delete_valid(N.cross)
                 N.display_cross()
             end
             
@@ -463,7 +463,7 @@ classdef DisplayNavigation < xplr.GraphNode
         end        
         function manual_click_move_cross(N, point)
             % move the cross to the selected point
-            ijk = N.graph.graph_2_slice(point, 'invertible', true);
+            ijk = N.graph.graph_to_slice(point, 'invertible', true);
             
             % round indices values in dimensions with categorical headers
             categorical = [N.D.slice.header.categorical];
@@ -474,7 +474,7 @@ classdef DisplayNavigation < xplr.GraphNode
             for d = find(~is_point_out_of_display(N, point, true))
                 P = N.point_filters{d};
                 if ~isempty(P)
-                    P.index = ijk(d);
+                    P.index_exact = ijk(d);
                 end
             end
         end        
@@ -560,10 +560,10 @@ classdef DisplayNavigation < xplr.GraphNode
             % Set selection dimension
             % (no active control? -> propose selection in the 'internal' dimensions)
             if isempty(N.selection_dim_id) && ~isempty([layout.x, layout.y])
-                if ~isempty(layout.x) && (strcmp(N.D.displaymode, 'time courses') || isempty(layout.y)) 
+                if ~isempty(layout.x) && (strcmp(N.D.display_mode, 'time courses') || isempty(layout.y))
                     % time courses (or image without y dimension) -> 1D selection
                     prop_dim = layout.x(1);
-                elseif strcmp(N.D.displaymode, 'image') && isempty(layout.x)
+                elseif strcmp(N.D.display_mode, 'image') && isempty(layout.x)
                     % image but no x dimension -> 1D vertical selection
                     prop_dim = layout.y(1);
                 else
@@ -659,7 +659,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 {'parent', m, 'label', 'Display mode', 'separator', 'on'});       
             % selection edit mode not ready yet!!! (need first to convert
             % selection from slice to graph)
-            %             fn_propcontrol(N,'selection_edit','menu', ...
+            %             fn_propcontrol(N,'selection_do_edit','menu', ...
             %                 {'parent',m,'label','Selections modifyable'});
 
             % Load/save selections
@@ -725,20 +725,20 @@ classdef DisplayNavigation < xplr.GraphNode
 
                 % convert to slice indices in the selected
                 % dimension
-                ijk0 = round(N.graph.graph_2_slice(poly_ax(:, 1)));
-                poly_slice = N.graph.graph_2_slice(poly_ax, 'subdim', sel_dim, 'ijk0', ijk0);
+                ijk0 = round(N.graph.graph_to_slice(poly_ax(:, 1)));
+                poly_slice = N.graph.graph_to_slice(poly_ax, 'subdim', sel_dim, 'ijk0', ijk0);
                 poly_slice = sort(poly_slice);
 
                 % create selection in slice indices coordinates
                 sz = N.D.slice.sz(sel_dim); % size of data in the dimension where selection is made
                 if N.D.slice.header(sel_dim).categorical
-                    sel_slice = xplr.SelectionNd('indices', round(poly_slice(1)):round(poly_slice(2)), sz);
+                    sel_slice = xplr.SelectionND('indices', round(poly_slice(1)):round(poly_slice(2)), sz);
                 elseif diff(poly_slice)==0
-                    sel_slice = xplr.SelectionNd('point1D', poly_slice(1));
+                    sel_slice = xplr.SelectionND('point1D', poly_slice(1));
                 elseif N.selection_round_1d_measure
-                    sel_slice = xplr.SelectionNd('line1D', round(poly_slice) + [-.5, .5]);
+                    sel_slice = xplr.SelectionND('line1D', round(poly_slice) + [-.5, .5]);
                 else
-                    sel_slice = xplr.SelectionNd('line1D', poly_slice);
+                    sel_slice = xplr.SelectionND('line1D', poly_slice);
                 end
             elseif selnd == 2
                 % user interaction
@@ -753,12 +753,12 @@ classdef DisplayNavigation < xplr.GraphNode
                 poly_ax = fn_mouse(N.D.ha, [mouse_sel_mode popt], msgopt{:});
 
                 % create selection in graph coordinates
-                sel_ax = xplr.SelectionNd(sel_type, poly_ax);
+                sel_ax = xplr.SelectionND(sel_type, poly_ax);
                 % if selection is too small, convert it to a single point
-                sel_ax.checkpoint(.005)
+                sel_ax.check_point(.005)
                 
                 % convert to slice coordinates
-                sel_slice = N.graph.selection_2_slice(sel_dim, sel_ax);
+                sel_slice = N.graph.selection_to_slice(sel_dim, sel_ax);
             end
         end
         function sel = get.selection(N)
@@ -825,7 +825,7 @@ classdef DisplayNavigation < xplr.GraphNode
             N.selection_filter = F;
             
             % watch changes in filter to update display!
-            N.add_listener(F, 'changed_operation', @(u,e)selection_filter_change(N, e));
+            N.add_listener(F, 'ChangedOperation', @(u,e)selection_filter_change(N, e));
             
             % update display
             N.display_selection()
@@ -858,7 +858,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % function display_selection(N,'perm',perm)
            
             if isempty(N.selection_dim_id)
-                deleteValid(N.selection_display)
+                delete_valid(N.selection_display)
                 N.selection_display = [];
                 return
             end
@@ -867,7 +867,7 @@ classdef DisplayNavigation < xplr.GraphNode
             selection_axis = [N.D.layout_id.dim_locations{N.selection_dim}];
             if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
                 disp('selections cannot be displayed')
-                deleteValid(N.selection_display)
+                delete_valid(N.selection_display)
                 N.selection_display = [];
                 return
             end
@@ -879,7 +879,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 case {'all', 'reset', 'new'}
                     % delete current display
                     if fn_ismemberstr(flag, {'all', 'reset'})
-                        deleteValid(N.selection_display)
+                        delete_valid(N.selection_display)
                         N.selection_display = [];
                     end
                     % draw new selections
@@ -899,7 +899,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     for k = 1:length(N.selection), display_one_sel(N, k, 'pos'), end
                 case 'remove'
                     % delete selected selections
-                    deleteValid(N.selection_display(ind))
+                    delete_valid(N.selection_display(ind))
                     N.selection_display(ind) = [];
                     % index (and therefore displayed name) of some other selections have changed
                     for k = min(ind):length(N.selection), display_one_sel(N, k, 'name'), end
@@ -941,7 +941,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 % selection shape
                 [polygon, center] = N.D.graph.selection_mark(sel_dim, sel_ij);
                 % additional points for when in selection edit mode
-                if N.selection_edit
+                if N.selection_do_edit
                     switch sel_ij.type
                         case {'poly2D', 'mixed', 'point2D', 'line2D'} % TODO: not sure about 'point2D'
                             shape_edit_poly = polygon(:, 1:end-1); % the last point is a repetition of the 1st one
@@ -987,11 +987,11 @@ classdef DisplayNavigation < xplr.GraphNode
                         'LineStyle', 'none', 'Marker', '+', 'MarkerSize', 4);
                 end
                 % handles to modify selection
-                if N.selection_edit
+                if N.selection_do_edit
                     hl.handles = line(shape_edit_poly(1, :), shape_edit_poly(2, :), 'Parent', N.D.ha, ...
                         'LineStyle', 'none', 'marker', '.', 'UserData', shape_edit_info);
                 end
-                set(struct_2_array(hl), 'Color', col, ...
+                set(struct_to_array(hl), 'Color', col, ...
                     'ButtonDownFcn', @(u,e)N.selection_clicked(u));
                 if isempty(N.selection_display)
                     if k ~= 1, error 'attempting to create N.selection_display at initial index different from 1', end
@@ -1005,29 +1005,29 @@ classdef DisplayNavigation < xplr.GraphNode
                     set(hl.label, 'position', center)
                     set(hl.shape, 'xdata', polygon(1, :), 'ydata', polygon(2, :))
                     set(hl.cross, 'xdata', center(1), 'ydata', center(2))
-                    if N.selection_edit
+                    if N.selection_do_edit
                         set(hl.handles, 'xdata', shape_edit_poly(1, :), 'ydata', shape_edit_poly(2, :), ...
                             'UserData', shape_edit_info);
                     end
                 elseif flag_name
                     set(hl.label, 'string', name, 'rotation', namerotation)
-                    set(struct_2_array(hl), 'color', col)
+                    set(struct_to_array(hl), 'color', col)
                 end
             end
         end
         function set.selection_show(N, value)
             N.selection_show = value;
             % we must see the shape when selection edit is active
-            if N.selection_edit && ~any(strfind(N.selection_show, 'shape'))
-                N.selection_edit = false;
+            if N.selection_do_edit && ~any(strfind(N.selection_show, 'shape'))
+                N.selection_do_edit = false;
             else
                 N.display_selection('all')
             end
         end
-        function set.selection_edit(N, value)
-            N.selection_edit = value;
+        function set.selection_do_edit(N, value)
+            N.selection_do_edit = value;
             % we must see the shape when selection edit is active
-            if N.selection_edit && ~any(strfind(N.selection_show,'shape'))
+            if N.selection_do_edit && ~any(strfind(N.selection_show,'shape'))
                 N.selection_show = 'shape+name';
             else
                 N.display_selection('all')
@@ -1051,7 +1051,7 @@ classdef DisplayNavigation < xplr.GraphNode
             %   execute normal axes callback
             
             % first get index of the clicked selection
-            idx = fn_find(@(hl)any(struct_2_array(hl) == u), N.selection_display, 'first');
+            idx = fn_find(@(hl)any(struct_to_array(hl) == u), N.selection_display, 'first');
             
             click_type = get(N.D.V.hf, 'SelectionType');
             if strcmp(click_type, 'alt')
@@ -1059,7 +1059,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 % move, show the context menu instead of creating a point
                 % selection
                 sel_slice = N.selection_mouse();
-                if ~ispoint(sel_slice)
+                if ~is_point(sel_slice)
                     % prompt for selection name
                     options = {};
                     if N.selection_prompt_name
@@ -1078,7 +1078,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     % context menu
                     N.selection_context_menu(idx)
                 end
-            elseif N.selection_edit
+            elseif N.selection_do_edit
                 flag = '';
                 if u == N.selection_display{idx}(1)
                     flag = 'line';
@@ -1086,7 +1086,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     flag = 'handle';
                 end
                 if ~isempty(flag)
-                    N.selection_edit(N, idx, flag)
+                    N.selection_do_edit(N, idx, flag)
                 else
                     N.axes_click()
                 end
@@ -1224,7 +1224,7 @@ classdef DisplayNavigation < xplr.GraphNode
                         idx = idx(1);
                         if idx == 1, idx = [1, size(polymark, 2)]; end
                         polymark(:, idx) = [];
-                        sel_ax = SelectionNd('poly2D', polymark);
+                        sel_ax = SelectionND('poly2D', polymark);
                         sel = AX2IJ(N.SI, sel_ax);
                         update_selection(N.SI, 'change', idx,sel)
                     else
@@ -1237,7 +1237,7 @@ classdef DisplayNavigation < xplr.GraphNode
                             'ellipse', 'ellipse2D', 'ring', 'ring2D', ...
                             'segment', 'line2D', {'openpoly', 'freeline'}, 'openpoly2D');
                         poly_ax = fn_mouse(N.ha, mouse_sel_mode, 'select new shape');
-                        sel_ax = SelectionNd(TYPE, poly_ax);
+                        sel_ax = SelectionND(TYPE, poly_ax);
                         sel = AX2IJ(N.SI, sel_ax);
                         update_selection(N.SI, 'change', idx,sel)
                         set(hl, 'visible', 'on')
@@ -1308,9 +1308,9 @@ classdef DisplayNavigation < xplr.GraphNode
             % linked object
             Z = N.D.zoom_filters(dim);
             % prevent unnecessary update of slider display
-            c = disableListener(N.sliders.(f));
+            c = disable_listener(N.sliders.(f));
             % set value
-            if isequal(obj.value, obj.min_max)
+            if isequal(obj.value, obj.minmax)
                 set_zoom(Z,':')
             else
                 set_zoom(Z, obj.value)
@@ -1319,7 +1319,7 @@ classdef DisplayNavigation < xplr.GraphNode
         function Scroll(N, nscroll)
             p = get(N.D.ha, 'currentpoint');
             p = p(1, 1:2);
-            origin = row(N.graph.graph_2_slice(p)); % current point in data coordinates
+            origin = row(N.graph.graph_to_slice(p)); % current point in data coordinates
             zoom_factor = 1.5^nscroll;
             
             zoom_dim = N.D.internal_dim;            
@@ -1366,14 +1366,14 @@ classdef DisplayNavigation < xplr.GraphNode
             % dimension
             Z = N.D.zoom_filters(d);
             N.zoom_filters.(f) = Z;
-            set(obj, 'visible', 'on', 'min_max', [.5, Z.header_in.n + .5], 'value', Z.zoom_value)
+            set(obj, 'visible', 'on', 'minmax', [.5, Z.header_in.n + .5], 'value', Z.zoom_value)
             % watch changes in zoom
             function zoom_change(u,e)
                 if strcmp(e.type,'zoom')
                     set(obj,'value',Z.zoom_value)
                 end
             end
-            N.add_listener(Z, 'changed_operation', @zoom_change);
+            N.add_listener(Z, 'ChangedOperation', @zoom_change);
         end
     end
     
@@ -1392,7 +1392,7 @@ classdef DisplayNavigation < xplr.GraphNode
             if nargin<3, per_dim = false; end
             
             % get slice indices corresponding to the point
-            ijk = N.graph.graph_2_slice(point, 'invertible', true)'; % n x ndim
+            ijk = N.graph.graph_to_slice(point, 'invertible', true)'; % n x ndim
             
             output = is_index_out_of_display(N, ijk, per_dim);
         end
@@ -1424,9 +1424,9 @@ end
 
 
 %--- 
-% Matlab's struct_2_array is only provided with some of the toolboxes, so
+% Matlab's struct_to_array is only provided with some of the toolboxes, so
 % let's write our own
-function x = struct_2_array(s)
+function x = struct_to_array(s)
 
     c = struct2cell(s);
     x = [c{:}];

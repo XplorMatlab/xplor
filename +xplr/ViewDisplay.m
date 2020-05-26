@@ -48,7 +48,7 @@ classdef ViewDisplay < xplr.GraphNode
     properties (Dependent, SetAccess='private')
         nd
         slice
-        z_slice
+        zslice
         zoom_filters
         active_dim
         color_dim
@@ -65,7 +65,7 @@ classdef ViewDisplay < xplr.GraphNode
             D.hp = V.panels.display;
             set(D.hp, 'deletefcn', @(u,e)delete(V))
             
-            % zoom slicer zooms into "slice" to yield "z_slice"
+            % zoom slicer zooms into "slice" to yield "zslice"
             D.zoom_slicer = xplr.ZoomSlicer(V.slicer.slice, D);
             
             % axes
@@ -96,7 +96,7 @@ classdef ViewDisplay < xplr.GraphNode
             D.add_listener(D.clipping, 'ChangedClip', @(u,e)clip_change(D,e));
             
             % color_map tool
-            D.color_map = D.add_component(xplr.colorMapTool(D)); % creates a menu
+            D.color_map = D.add_component(xplr.ColorMapTool(D)); % creates a menu
             D.add_listener(D.color_map, 'ChangedColorMap', @(u,e)D.update_display('clip'));
             
             % navigation (sliders, mouse actions)
@@ -104,12 +104,12 @@ classdef ViewDisplay < xplr.GraphNode
             
             % set organization, connect sliders, display data and labels
             D.slice_change_event = struct('flag', 'global');
-            z_slice_change(D)
+            zslice_change(D)
             
             % listeners
             D.add_listener(D.slice, 'ChangedData', @(u,e)set(D, 'slice_change_event', e)); % mark that slice has changed, but treat it only later
             D.add_listener(D.zoom_slicer, 'ChangedZoom', @(u,e)zoom_change(D,e));
-            D.add_listener(D.z_slice, 'ChangedData', @(u,e)z_slice_change(D,e));
+            D.add_listener(D.zslice, 'ChangedData', @(u,e)zslice_change(D,e));
             
             % problem: c won't be deleted automatically (and ax_siz listener
             % might not be re-enabled) because the workspace continue to
@@ -134,7 +134,7 @@ classdef ViewDisplay < xplr.GraphNode
         function x = get.slice(D)
             x = D.V.slicer.slice;
         end
-        function x = get.z_slice(D)
+        function x = get.zslice(D)
             x = D.zoom_slicer.slice;
         end
         function zoom_filters = get.zoom_filters(D)
@@ -432,8 +432,8 @@ classdef ViewDisplay < xplr.GraphNode
             end
             D.layout_id_all = new_layout_id;
             D.layout_id = new_layout_id.current_layout(); % keep only dimensions actually displayed
-            % is z_slice too large for being displayed
-            D.check_z_slice_size()
+            % is zslice too large for being displayed
+            D.check_zslice_size()
             % first update graph (new positionning will be needed for both
             % labels and data display)
             D.graph.compute_steps()
@@ -584,7 +584,7 @@ classdef ViewDisplay < xplr.GraphNode
         function auto_clip(D, do_update_display)
             if nargin < 2, do_update_display = true; end
             try
-                val = fn_clip(D.z_slice.data(:), D.clipping.auto_clip_mode, 'getrange');
+                val = fn_clip(D.zslice.data(:), D.clipping.auto_clip_mode, 'getrange');
                 if isinf(val(1)), val(1) = -1e6; end
                 if isinf(val(2)), val(2) = 1e6; end
                 if ~any(isnan(val)), set_clip(D,val,do_update_display), end
@@ -655,7 +655,7 @@ classdef ViewDisplay < xplr.GraphNode
             if fn_ismemberstr(flag, {'global'})
                 D.check_active_dim(false, true)
                 D.navigation.connect_zoom_filter()
-            elseif fn_ismemberstr(flag, {'chgdata', 'chg'})
+            elseif fn_ismemberstr(flag, {'chg_data', 'chg'})
                 % slice size did not change
             else
                 D.check_active_dim(false)
@@ -667,7 +667,7 @@ classdef ViewDisplay < xplr.GraphNode
             
             % Assign point filters to each updated dimension
             switch flag
-                case 'chgdata'
+                case 'chg_data'
                     % nothing to do: only the data has changed
                 case 'global'
                     D.navigation.connect_point_filter()
@@ -681,7 +681,7 @@ classdef ViewDisplay < xplr.GraphNode
             % Check whether current dimension for selections display is
             % still valid, i.e. whether the connected filter still fits the
             % dimension in the new slice (if it is still valid, note that
-            % selection display update will occur in D.z_slice_change)
+            % selection display update will occur in D.zslice_change)
             D.navigation.check_selection_filter()
             
             % Se previous headers to current headers
@@ -694,7 +694,7 @@ classdef ViewDisplay < xplr.GraphNode
             % Is data too large for being displayed?
             if D.no_display
                 % too many grid elements: cancel display!
-                deleteValid(D.h_transform) % this will also delete children D.h_display
+                delete_valid(D.h_transform) % this will also delete children D.h_display
                 D.grid_clip = [];
                 delete(findall(D.ha, 'type', 'text', 'tag', 'xytick'))
                 set(D.ha, 'xtick', [], 'ytick', [])
@@ -721,22 +721,22 @@ classdef ViewDisplay < xplr.GraphNode
             
             % What to do
             if nargin < 2, flag = 'global'; end
-            if ~fn_ismemberstr(flag, {'clip', 'global', 'chgdata', 'chgdata&blocksize', 'new', 'remove', 'chg', 'perm', 'pos', 'color'})
+            if ~fn_ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'new', 'remove', 'chg', 'perm', 'pos', 'color'})
                 error 'flag not handled'
             end
             do_reset = strcmp(flag, 'global');
             do_new = strcmp(flag, 'new');
             do_remove = strcmp(flag, 'remove');
-            do_position = ~fn_ismemberstr(flag, {'chg', 'chgdata', 'clip', 'color'});
-            do_data_all = fn_ismemberstr(flag, {'clip', 'global', 'chgdata', 'chgdata&blocksize', 'perm', 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
+            do_position = ~fn_ismemberstr(flag, {'chg', 'chg_data', 'clip', 'color'});
+            do_data_all = fn_ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'perm', 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
             do_data_select = fn_ismemberstr(flag, {'new', 'chg'});
             do_data = do_data_all || do_data_select;
-            do_chg_x = strcmp(flag, 'chgdata&blocksize');
-            do_color = do_time_courses && ~fn_ismemberstr(flag, {'chgdata', 'chgdata&blocksize', 'clip'});
+            do_chg_x = strcmp(flag, 'chg_data&blocksize');
+            do_color = do_time_courses && ~fn_ismemberstr(flag, {'chg_data', 'chg_data&blocksize', 'clip'});
             
             % Reshape slice data adequately: after reshape, dimensions in x
             % will alternate between external and internal dimensions
-            sz = D.z_slice.sz;
+            sz = D.zslice.sz;
             org = D.layout; % convert from dim ID to dim numbers
             if ~isempty(org.x)
                 x_layout_0 = D.layout.x(1);
@@ -770,13 +770,13 @@ classdef ViewDisplay < xplr.GraphNode
             end
             % prepare the dimensions permutation after extracting each
             % sub-signal/sub-image
-            [internal_dim_sort, perm_xi_2_slice] = sort(internal_dim);
-            perm_slice_2_xi = [0, 0, 0, 1, 3, 5, 7];
-            perm_slice_2_xi(perm_xi_2_slice) = [2, 4, 6];
+            [internal_dim_sort, perm_xi_to_slice] = sort(internal_dim);
+            perm_slice_to_xi = [0, 0, 0, 1, 3, 5, 7];
+            perm_slice_to_xi(perm_xi_to_slice) = [2, 4, 6];
             if ~do_time_courses
                 % for image, XPLOR dimension order is x-y, but Matlab is
                 % y-x, so we permute the two before displaying images
-                perm_slice_2_xi(1:2) = perm_slice_2_xi([2, 1]);
+                perm_slice_to_xi(1:2) = perm_slice_to_xi([2, 1]);
             end
             % size of reshape
             szr = zeros(1, 7);
@@ -790,12 +790,12 @@ classdef ViewDisplay < xplr.GraphNode
             end
             szr(7) = prod(sz(internal_dim_sort(3)+1:end));
             % reshape
-            x = reshape(D.z_slice.data, szr);
+            x = reshape(D.zslice.data, szr);
             % size of remaining external dimensions
             szo = szr(1:2:end);
 
             % Check that current h_transform and h_display are valid
-            nd = D.z_slice.nd;
+            nd = D.zslice.nd;
             sz1 = sz;
             sz1(internal_dim) = 1;
             sz1prev = sz1;
@@ -809,12 +809,12 @@ classdef ViewDisplay < xplr.GraphNode
             % Prepare color
             if do_color
                 c_dim = D.color_dim;
-                color_head = D.z_slice.header(c_dim);
+                color_head = D.zslice.header(c_dim);
                 if isempty(D.color_dim)
                     if ~do_reset, set(D.h_display(:), 'color', [0, 0, 0, D.line_alpha]), end
                     do_color = false;
                 else
-                    k_color = strcmp({color_head.sublabels.label}, 'ViewColor');
+                    k_color = strcmp({color_head.sub_labels.label}, 'ViewColor');
                     if any(k_color)
                         c_map = cell2mat(color_head.values(:,k_color));
                     else
@@ -830,21 +830,21 @@ classdef ViewDisplay < xplr.GraphNode
             sz1 = sz;
             sz1(internal_dim) = 1;
             if do_reset          % reset display and grid elements
-                deleteValid(D.h_transform) % this will also delete children D.h_display
-                [D.h_transform, D.h_display] = deal(g_objects([sz1, 1]));
+                delete_valid(D.h_transform) % this will also delete children D.h_display
+                [D.h_transform, D.h_display] = deal(gobjects([sz1, 1]));
                 D.grid_clip = zeros([2, sz1, 1]);
                 [do_position, do_data_all] = deal(true);
             elseif do_new      	% new grid elements
-                subs = substruct('()', repmat({':'}, 1, D.z_slice.nd));
+                subs = substruct('()', repmat({':'}, 1, D.zslice.nd));
                 subs.subs{dim} = ind;
-                D.h_transform = subsasgn(D.h_transform, subs, g_objects);
-                D.h_display = subsasgn(D.h_display, subs, g_objects);
+                D.h_transform = subsasgn(D.h_transform, subs, gobjects);
+                D.h_display = subsasgn(D.h_display, subs, gobjects);
                 subs.subs = [{':'}, subs.subs];
                 D.grid_clip = subsasgn(D.grid_clip,subs, 0);
             elseif do_remove     % remove grid elements
-                subs = substruct('()', repmat({':'}, 1, D.z_slice.nd));
+                subs = substruct('()', repmat({':'}, 1, D.zslice.nd));
                 subs.subs{dim} = ind;
-                deleteValid(subsref(D.h_transform, subs)) % this also deletes the children h_display objects
+                delete_valid(subsref(D.h_transform, subs)) % this also deletes the children h_display objects
                 D.h_transform = subsasgn(D.h_transform,subs,[]);
                 D.h_display = subsasgn(D.h_display,subs,[]);
                 subs.subs = [{':'} subs.subs];
@@ -856,17 +856,17 @@ classdef ViewDisplay < xplr.GraphNode
             clip_extent = diff(clip_0);
             
             % Prepare several list of indices beforehand to avoid repeated
-            % calls to functions such as ind_2_sub
+            % calls to functions such as ind2sub
             idx_list = 1:prod(sz1);
             if do_data_select && ~do_position
                 % not all grid elements need to be visited ('chg' flag)
                 idx_list = reshape(idx_list, sz1);
-                subs = substruct('()', repmat({':'}, 1, D.z_slice.nd));
+                subs = substruct('()', repmat({':'}, 1, D.zslice.nd));
                 subs.subs{dim} = ind;
                 idx_list = row(subsref(idx_list, subs));
             end
             ijk_list = fn_indices(sz1, idx_list, 'g2i');
-            [i1, i2, i3, i4] = ind_2_sub(szo, idx_list);
+            [i1, i2, i3, i4] = ind2sub(szo, idx_list);
             
             % Prepare dispatch
             if do_position
@@ -891,7 +891,7 @@ classdef ViewDisplay < xplr.GraphNode
                 if do_create_cur || do_data_cur
                     % get the data and adjust clipping if requested
                     xi = x(i1(u), :, i2(u), :, i3(u), :, i4(u));
-                    xi = permute(xi, perm_slice_2_xi);
+                    xi = permute(xi, perm_slice_to_xi);
                     switch clip_adjust
                         case 'none'
                             clip_i = clip_0;
@@ -977,8 +977,8 @@ classdef ViewDisplay < xplr.GraphNode
             end
 
         end
-        function check_z_slice_size(D)
-            D.no_display = ~D.test_displayable(D.z_slice.sz, D.display_mode, D.layout);
+        function check_zslice_size(D)
+            D.no_display = ~D.test_displayable(D.zslice.sz, D.display_mode, D.layout);
         end
     end
     methods
@@ -988,15 +988,15 @@ classdef ViewDisplay < xplr.GraphNode
             % re-display everything
 %             D.slice_change_event = struct('flag','global');
             D.navigation.display_selection('reset')
-            z_slice_change(D) % this will automatically re-create the cross, but not the selection displays
+            zslice_change(D) % this will automatically re-create the cross, but not the selection displays
         end
     end
     
     % Callbacks (i.e. handle specific changes in slice, properties, etc.)
     methods
-        function z_slice_change(D, e)
+        function zslice_change(D, e)
             if nargin < 2, flag = 'global'; else flag = e.flag; end
-            xplr.debug_info('viewdisplay', 'z_slice_change %s', flag)
+            xplr.debug_info('viewdisplay', 'zslice_change %s', flag)
             c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             
             % Did slice change as well?
@@ -1007,14 +1007,14 @@ classdef ViewDisplay < xplr.GraphNode
             
             % Dimension(s) where change occured
             if nargin >= 2
-                [chg_dim, chg_dim_id] = D.z_slice.dimension_number_and_id(e.dim);
+                [chg_dim, chg_dim_id] = D.zslice.dimension_number_and_id(e.dim);
             end
             
-            % Is z_slice too large for being displayed
-            D.check_z_slice_size()
+            % Is zslice too large for being displayed
+            D.check_zslice_size()
             
             % Update graph (will be needed by both labels and data display)
-            prevsz = D.graph.z_slicesz;
+            prevsz = D.graph.zslice_sz;
             D.graph.compute_steps()
             
             % Update labels and ticks (do the labels first because ticks
@@ -1031,7 +1031,7 @@ classdef ViewDisplay < xplr.GraphNode
                         D.labels.update_labels()
                 end
             end
-            if ~(strcmp(flag,'chgdata') || (strcmp(flag, 'chg') && ~any(chg_dim == [D.active_dim.x, D.active_dim.y])))
+            if ~(strcmp(flag,'chg_data') || (strcmp(flag, 'chg') && ~any(chg_dim == [D.active_dim.x, D.active_dim.y])))
                 D.graph.set_ticks()
             end
             
@@ -1043,19 +1043,19 @@ classdef ViewDisplay < xplr.GraphNode
             if fn_ismemberstr(flag, {'global', 'chg_dim'})
                 % Reset display
                 update_display(D, 'global')
-            elseif strcmp(flag, 'chgdata')
+            elseif strcmp(flag, 'chg_data')
                 % No change in size, all data need to be redisplayed
-                update_display(D, 'chgdata')
+                update_display(D, 'chg_data')
             else
                 % Smart display update
                 if ismember(chg_dim_id, D.internal_dim_id)
                     % changes are within elements (the grid arrangement
                     % remains the same)
                     if fn_ismemberstr(flag, {'perm', 'chg'}) ...
-                            || (strcmp(flag, 'all') && D.z_slice.header(chg_dim).n == prevsz(chg_dim))
-                        flag = 'chgdata'; % no change in size
+                            || (strcmp(flag, 'all') && D.zslice.header(chg_dim).n == prevsz(chg_dim))
+                        flag = 'chg_data'; % no change in size
                     else
-                        flag = 'chgdata&blocksize';
+                        flag = 'chg_data&blocksize';
                     end
                     update_display(D, flag)
                 elseif ~chg_clip
@@ -1067,9 +1067,9 @@ classdef ViewDisplay < xplr.GraphNode
                             update_display(D, flag, chg_dim, e.ind)
                         case 'all'
                             n_cur = size(D.h_transform, chg_dim);
-                            n = D.z_slice.sz(chg_dim);
+                            n = D.zslice.sz(chg_dim);
                             if n == n_cur
-                                update_display(D, 'chgdata')
+                                update_display(D, 'chg_data')
                             elseif n > n_cur
                                 update_display(D, 'new', chg_dim, n_cur+1:n)
                                 update_display(D, 'chg', chg_dim, 1:n_cur)
@@ -1089,15 +1089,15 @@ classdef ViewDisplay < xplr.GraphNode
                 elseif chg_clip
                     % all grid elements need to be updated
                     n_cur = size(D.h_transform, chg_dim);
-                    n = D.z_slice.sz(chg_dim);
+                    n = D.zslice.sz(chg_dim);
                     if n==n_cur
-                        update_display(D, 'chgdata')
+                        update_display(D, 'chg_data')
                     elseif n>n_cur
-                        update_display(D, 'chgdata')
+                        update_display(D, 'chg_data')
                         update_display(D, 'new', chg_dim, n_cur+1:n)
                     else
                         update_display(D, 'remove', chg_dim, n+1:n_cur)
-                        update_display(D, 'chgdata')
+                        update_display(D, 'chg_data')
                     end
                 end
             end
@@ -1111,7 +1111,7 @@ classdef ViewDisplay < xplr.GraphNode
             % Update legend
             if strcmp(flag, 'global')
                 D.color_dim_id = [];
-            elseif ~strcmp(flag, 'chgdata') && isequal(chg_dim, D.color_dim)
+            elseif ~strcmp(flag, 'chg_data') && isequal(chg_dim, D.color_dim)
                 display_color_legend(D)
             end
         end
@@ -1122,7 +1122,7 @@ classdef ViewDisplay < xplr.GraphNode
             % be updated here
             if ~e.chg_n_out
                 c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
-                D.check_z_slice_size % is z_slice too large for being displayed
+                D.check_zslice_size % is zslice too large for being displayed
                 D.graph.compute_steps()
                 D.graph.set_ticks()
                 D.graph.set_value_ticks()
@@ -1157,7 +1157,7 @@ classdef ViewDisplay < xplr.GraphNode
                 D.set_layout_id(new_layout_id) % this automatically updates display among other things
             else
                 % update display
-                D.check_z_slice_size() % is z_slice too large for being displayed
+                D.check_zslice_size() % is zslice too large for being displayed
                 D.graph.compute_steps() %#ok<MCSUP>
                 D.graph.set_ticks() %#ok<MCSUP>
                 D.labels.update_labels() %#ok<MCSUP>

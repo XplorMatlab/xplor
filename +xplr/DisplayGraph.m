@@ -25,7 +25,7 @@ classdef DisplayGraph < xplr.GraphNode
     % pre-computations
     properties (SetAccess='private')
         layout
-        z_slice_sz    % current size of the zoomed slice
+        zslice_sz    % current size of the zoomed slice
         filling     % how much of the space available for each dimension if filled (vector of values <=1)
         steps
     end
@@ -48,7 +48,7 @@ classdef DisplayGraph < xplr.GraphNode
             % actual steps computation occurs here
             % size and organization
             do_signal = strcmp(G.D.display_mode, 'time courses'); % slight difference for x between time courses and images
-            header = G.D.z_slice.header;
+            header = G.D.zslice.header;
             sz = [header.n];
             nd = length(sz);
             sz_orig = G.D.slice.sz;
@@ -101,7 +101,7 @@ classdef DisplayGraph < xplr.GraphNode
             % (in addition, a small correction is applied for signals,
             % whose edges will be at 1 and n instead of .5 and n+.5 for
             % images and grid cells)
-            if do_signal && nx > =1 && sz(x_layout(1)) > 1
+            if do_signal && nx >=1 && sz(x_layout(1)) > 1
                 ze(x_layout(1)) = ze(x_layout(1)) - 1;
             end 
 
@@ -252,7 +252,7 @@ classdef DisplayGraph < xplr.GraphNode
             % compute steps
             if nargout > 0, prev_steps = G.steps; end
             G.layout = G.D.layout;
-            [G.steps, G.z_slice_sz, G.filling, x_pair] = compute_steps_private(G, G.layout); 
+            [G.steps, G.zslice_sz, G.filling, x_pair] = compute_steps_private(G, G.layout);
             
             % any change
             if nargout>0
@@ -293,7 +293,7 @@ classdef DisplayGraph < xplr.GraphNode
             st = G.steps;
             
             % remove previous xy ticks
-            deleteValid(G.xy_ticks)
+            delete_valid(G.xy_ticks)
             G.xy_ticks = [];
             
             % stop if data is too large for being displayed
@@ -317,14 +317,14 @@ classdef DisplayGraph < xplr.GraphNode
                         case 'y'
                             % note that method set_value_ticks, which is
                             % normally called AFTER set_ticks, might set
-                            % y_ticks later
-                            set(G.D.ha, 'y_tick', [])
+                            % yticks later
+                            set(G.D.ha, 'ytick', [])
                     end
                     continue
                 end
                 
                 % header
-                head = G.D.z_slice.header(d);
+                head = G.D.zslice.header(d);
                 n = head.n;
 
                 % conversion between data coordinates and graph
@@ -401,7 +401,7 @@ classdef DisplayGraph < xplr.GraphNode
                     % system
                     if do_grid
                         xy = fn_add([0; -st.xy_steps(2)/2], st.xy_offsets);
-                        G.xy_ticks = g_objects(1, n);
+                        G.xy_ticks = gobjects(1, n);
                         for i=1:n
                             G.xy_ticks(i) = text(xy(1, i), xy(2, i), tick_labels{i}, ...
                                 'parent', G.ha, 'hittest', 'off', ...
@@ -417,7 +417,7 @@ classdef DisplayGraph < xplr.GraphNode
                 if strcmp(f, 'x')
                     set(G.ha, 'xtick', tick, 'xticklabel', tick_labels)
                 else
-                    set(G.ha, 'y_tick', fliplr(tick), 'y_tick_label', fliplr(tick_labels))
+                    set(G.ha, 'ytick', fliplr(tick), 'yticklabel', fliplr(tick_labels))
                 end
             end
             
@@ -437,10 +437,10 @@ classdef DisplayGraph < xplr.GraphNode
             end
             
             % clip values available?
-            if isempty(G.D.gridclip)
-                error 'programming: set_value_ticks should be called after viewdisplay.updateDisplay, so gridclip should be set'
+            if isempty(G.D.grid_clip)
+                error 'programming: set_value_ticks should be called after viewdisplay.updateDisplay, so grid_clip should be set'
             end
-            sz = size(G.D.gridclip);
+            sz = size(G.D.grid_clip);
             sz(1) = [];
             
             % enough space on y-axis to show values?
@@ -449,13 +449,13 @@ classdef DisplayGraph < xplr.GraphNode
             target_spacing = G.ticks_target_spacing(2);
             if ~isempty([org.y st.xy_dim]), target_spacing = target_spacing/2; end
 %             if st.y_available < target_spacing
-%                 set(G.D.ha,'y_tick',[])
+%                 set(G.D.ha,'ytick',[])
 %                 ylabel(G.D.ha,'')
 %                 return
 %             end
             
             % replace min/max clip definitions by min/extent
-            start_extent = G.D.gridclip;
+            start_extent = G.D.grid_clip;
             start_extent(2, :) = start_extent(2, :) - start_extent(1, :);
             
             % check every 'external' dimension for which we might have
@@ -473,7 +473,7 @@ classdef DisplayGraph < xplr.GraphNode
                     if ~same_clip_row
                         same_extent_row = ~any(row(test(2, :)));
                         if ~same_extent_row
-                            set(G.D.ha, 'y_tick', [])
+                            set(G.D.ha, 'ytick', [])
                             ylabel(G.D.ha, '')
                         end
                     end
@@ -487,19 +487,19 @@ classdef DisplayGraph < xplr.GraphNode
                     % there should be only 1 value in this dimension,
                     % nothing to do
                     if size(start_extent, 1 + d) > 1
-                        error 'programming: dimension is not present in the ''external'' layout but gridclip indicates multiple values!'
+                        error 'programming: dimension is not present in the ''external'' layout but grid_clip indicates multiple values!'
                     end
                 end
             end
             
 %             % go back to clip definitions
 %             if same_clip_row
-%                 gridclip(2,:) = gridclip(1,:) + gridclip(2,:);
+%                 grid_clip(2,:) = grid_clip(1,:) + grid_clip(2,:);
 %             else
-%                 gridclip(:,:) = fn_mult([-.5; .5], gridclip(2,:));
+%                 grid_clip(:,:) = fn_mult([-.5; .5], grid_clip(2,:));
 %             end
             
-            % now gridclip is nonsingleon only in the org.y dimensions;
+            % now grid_clip is nonsingleon only in the org.y dimensions;
             % permute dimensions
             start_extent = permute(start_extent, [1, 1 + org.y, 1 + setdiff(1:G.D.nd, org.y)]);
             
@@ -548,7 +548,7 @@ classdef DisplayGraph < xplr.GraphNode
             end
             
             % set ticks
-            set(G.D.ha, 'y_tick', y_tick, 'y_tick_label', y_tick_label)
+            set(G.D.ha, 'ytick', y_tick, 'yticklabel', y_tick_label)
             ylabel(G.D.ha, 'values')
                 
             
@@ -568,14 +568,14 @@ classdef DisplayGraph < xplr.GraphNode
         function draw_separations(G)
             % no 'smart update', always delete all existing separation
             % lines and redisplay new ones
-            deleteValid(G.separation_lines)
+            delete_valid(G.separation_lines)
             G.separation_lines = [];
             if ~G.show_separation, return, end
             
             % some properties
             org = G.D.layout;
-            nd = G.D.z_slice.nd;
-            sz = G.D.z_slice.sz;
+            nd = G.D.zslice.nd;
+            sz = G.D.zslice.sz;
             st = G.steps;
             
             % some variables
@@ -658,7 +658,7 @@ classdef DisplayGraph < xplr.GraphNode
             % Options (name/value pairs) for slice/graph conversions:
             % - 'invertible'  [default false] if set to true, exterior
             %               coordinates are rounded, this make the
-            %               conversion invertible by calling slice_2_graph
+            %               conversion invertible by calling slice_to_graph
             % - 'sub_dim'    [default all dims] dimensions in ijk for which
             %               we perform the conversion; other dimensions
             %               will be assigned to the fixed default values in
@@ -737,16 +737,16 @@ classdef DisplayGraph < xplr.GraphNode
                     end
                 case 'off&bin'
                     offset = zeros(1, length(dim));
-                    for i=1:length(dim), offset(i) = z_filters(i).indicesin(1) - 1; end
+                    for i=1:length(dim), offset(i) = z_filters(i).indices_in(1) - 1; end
                     zoom = offset;          % first output: offset
                     bin = [z_filters.bin];   % second output: bin
             end
         end
-        function xy = z_slice_2_graph(G, ijk, varargin)
-            % function xy = z_slice_2_graph(G,ijk[,options...])
+        function xy = zslice_to_graph(G, ijk, varargin)
+            % function xy = zslice_to_graph(G,ijk[,options...])
             %---
             % Input:
-            % - ijk         index coordinates in the z_slice data
+            % - ijk         index coordinates in the zslice data
             % - options (name/value pairs): see xplr.DisplayGraph.conversion_options
             %
             % Output:
@@ -763,7 +763,7 @@ classdef DisplayGraph < xplr.GraphNode
             if strcmp(mode, 'vector')
                 error 'case not handled yet'
             elseif invertible
-                warning 'z_slice_2_graph conversion is always invertible, no need to use ''invertible'' flag!'
+                warning 'zslice_to_graph conversion is always invertible, no need to use ''invertible'' flag!'
             end
             if length(sub_dim) < G.D.nd
                 % do not consider all dimensions
@@ -806,15 +806,15 @@ classdef DisplayGraph < xplr.GraphNode
                 xy(:, ~inside) = NaN;
             end
         end
-        function ijk = graph_2_z_slice(G, xy, varargin)
-            % function ijk = graph_2_z_slice(G,xy,options...)
+        function ijk = graph_to_zslice(G, xy, varargin)
+            % function ijk = graph_to_zslice(G,xy,options...)
             %---
             % Input:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
             % - options (name/value pairs): see xplr.DisplayGraph.conversion_options
             %
             % Output:
-            % - ijk         index coordinates in the z_slice data
+            % - ijk         index coordinates in the zslice data
             %
             % See also xplr.DisplayGraph.conversion_options
 
@@ -827,7 +827,7 @@ classdef DisplayGraph < xplr.GraphNode
             [sub_dim, ijk0, mode, invertible] = conversion_options(G, np, varargin{:});
             if length(sub_dim) < G.D.nd && isempty(ijk0)
                 % Define ijk0 using the first point
-                ijk0 = graph_2_z_slice(G, xy(:, 1), 'invertible', true);
+                ijk0 = graph_to_zslice(G, xy(:, 1), 'invertible', true);
                 if np == 1, ijk = ijk0(sub_dim); return, end
             end
             
@@ -840,13 +840,13 @@ classdef DisplayGraph < xplr.GraphNode
                     && sum(ismember(sub_dim, org.x)) <= 1 ...
                     && sum(ismember(sub_dim, org.y)) <= 1;
                 if ~ok
-                    error 'vector conversion not possible in graph_2_z_slice for this set of dimensions'
+                    error 'vector conversion not possible in graph_to_zslice for this set of dimensions'
                 end
             end          
                         
             % xy/yx
             st = G.steps;
-            sz = G.z_slice_sz;
+            sz = G.zslice_sz;
             if strcmp(mode, 'point') && ~isempty(st.xy_dim)
                 % take advantage on the fact that the grid spans the full
                 % axis
@@ -906,7 +906,7 @@ classdef DisplayGraph < xplr.GraphNode
             end
             
             % we want an output that can be invertible by calling
-            % z_slice_2_graph, this means that we should not give the
+            % zslice_to_graph, this means that we should not give the
             % conversion "per dimension" but in a global fashion where
             % dimensions "exterior" to the dimensions of interest are
             % rounded
@@ -927,11 +927,11 @@ classdef DisplayGraph < xplr.GraphNode
                 ijk = ijk(sub_dim, :);
             end
         end
-        function xy = slice_2_graph(G, ijk, varargin)
-            % function xy = slice_2_graph(G,ijk[,options...])
+        function xy = slice_to_graph(G, ijk, varargin)
+            % function xy = slice_to_graph(G,ijk[,options...])
             %---
             % Input:
-            % - ijk         index coordinates in the z_slice data
+            % - ijk         index coordinates in the zslice data
             % - options (name/value pairs): see xplr.DisplayGraph.conversion_options
             %
             % Output:
@@ -945,7 +945,7 @@ classdef DisplayGraph < xplr.GraphNode
             if strcmp(mode, 'vector')
                 error 'case not handled yet'
             elseif invertible
-                warning 'z_slice_2_graph conversion is always invertible, no need to use ''invertible'' flag!'
+                warning 'zslice_to_graph conversion is always invertible, no need to use ''invertible'' flag!'
             end
             if length(sub_dim) < G.D.nd
                 if isempty(ijk0)
@@ -973,16 +973,16 @@ classdef DisplayGraph < xplr.GraphNode
             
             % then convert to graph coordinates
             if length(sub_dim) < G.D.nd && isempty(ijk0)
-                % let z_slice_2_graph estimate zijk0
-                xy = z_slice_2_graph(G, zijk, 'mode', mode, 'sub_dim', sub_dim);
+                % let zslice_to_graph estimate zijk0
+                xy = zslice_to_graph(G, zijk, 'mode', mode, 'sub_dim', sub_dim);
             else
                 % ijk and zijk values in other dimensions than sub_dim have
                 % already be assigned using ijk0
-                xy = z_slice_2_graph(G, zijk, 'mode', mode);
+                xy = zslice_to_graph(G, zijk, 'mode', mode);
             end
         end
-        function ijk = graph_2_slice(G, xy, varargin)
-            % function ijk = graph_2_slice(G,xy,options...)
+        function ijk = graph_to_slice(G, xy, varargin)
+            % function ijk = graph_to_slice(G,xy,options...)
             %---
             % Input:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
@@ -995,7 +995,7 @@ classdef DisplayGraph < xplr.GraphNode
 
             % coordinates in zoomed slice
             np = size(xy, 2);
-            zijk = graph_2_z_slice(G, xy, varargin{:});
+            zijk = graph_to_zslice(G, xy, varargin{:});
             
             % convert to before zooming
             [sub_dim, ~, mode] = G.conversion_options(np, varargin{:});
@@ -1213,7 +1213,7 @@ classdef DisplayGraph < xplr.GraphNode
                     % clip lines to current view
                     lines(1, beyond_left) = zoom(1);
                     lines(2, beyond_right) = zoom(2);
-                    % convert from slice to z_slice coordinates
+                    % convert from slice to zslice coordinates
                     [idx_offset, bin] = G.get_zoom(dim, 'off&bin');
                     lines = (lines - idx_offset - .5)/bin + .5;
                     % display selections as rectangles (for 'x' and 'y'
@@ -1222,7 +1222,7 @@ classdef DisplayGraph < xplr.GraphNode
                     st = G.steps;
                     dim_location = G.D.layoutID.dim_locations{dim};
 					if ismember(dim_location, {'x', 'y'})
-						% convert from z_slice to graph coordinates:
+						% convert from zslice to graph coordinates:
 						% ignore dimensions that are more internal than dim
 						% take value 1 for dimensiont that are more external than dim
 						dim_layout = org.(dim_location);
@@ -1271,7 +1271,7 @@ classdef DisplayGraph < xplr.GraphNode
                         hh = abs(st.xy_steps(2)) *.46; % half height of the frame around a single grid element
                         polygon = cell(1, 2*n_line - 1);
                         for i = 1:n_line
-                            % corners: convert from z_slice to graph coordinates
+                            % corners: convert from zslice to graph coordinates
                             r_line = round(lines(:, i) + [1; -1]*.01);
                             c = st.xy_offsets(:, r_line); % 2*2, i.e. x/y * start/stop
                             c(1, :) = c(1, :) + st.xy_steps(1) * (lines(:, i) - r_line)';
@@ -1299,7 +1299,7 @@ classdef DisplayGraph < xplr.GraphNode
                         
                         % center: will be better pKosition if we average
                         % after conversion from indices to graph positions
-                        center = mean(G.slice_2_graph(sel.dataind, 'sub_dim', dim), 2);
+                        center = mean(G.slice_to_graph(sel.dataind, 'sub_dim', dim), 2);
                     else
                         error 'not implemented yet'
                         center = [nmean(polygon(1, :)), nmean(polygon(2, :))];
@@ -1318,8 +1318,8 @@ classdef DisplayGraph < xplr.GraphNode
                         center_slice(:) = NaN;
                     end
                     % convert to graph
-                    polygon = G.slice_2_graph(poly_slice, 'sub_dim', dim);
-                    center = G.slice_2_graph(center_slice, 'sub_dim', dim);
+                    polygon = G.slice_to_graph(poly_slice, 'sub_dim', dim);
+                    center = G.slice_to_graph(center_slice, 'sub_dim', dim);
 				otherwise
 					error 'case not handled yet'
 			end
@@ -1418,7 +1418,7 @@ classdef DisplayGraph < xplr.GraphNode
                 output(:, setdiff(1:end, insertion_indexes)) = poly_slice;
                 output(:, insertion_indexes) = boundaries_values;
         end
-        function sel_slice = selection_2_slice(G, dim, sel_ax)
+        function sel_slice = selection_to_slice(G, dim, sel_ax)
             % More or less the symmetric of the previous function: convert
             % selection definition in graph coordinates to slice
             % coordinates in the dimensions dim
@@ -1427,15 +1427,15 @@ classdef DisplayGraph < xplr.GraphNode
             
             if length(dim)~=2, error 'number of dimensions must be 2', end
             
-            % use the first point as the origin, work in the z_slice to
+            % use the first point as the origin, work in the zslice to
             % avoid difficulties due to binning
             xy0 = sel_ax.shapes(1).points(:, 1);
-            zijk0 = round(G.graph_2_z_slice(xy0));
+            zijk0 = round(G.graph_to_zslice(xy0));
 
-            % infer the affinity matrix graph->z_slice
+            % infer the affinity matrix graph->zslice
             % (first the linear part)
             xy_test = fn_add(xy0, [0, 1, 0; 0, 0, 1]);
-            zijk_test = G.graph_2_z_slice(xy_test, 'sub_dim', dim, 'ijk0', zijk0);
+            zijk_test = G.graph_to_zslice(xy_test, 'sub_dim', dim, 'ijk0', zijk0);
             linear_part = [zijk_test(:, 2) - zijk_test(:, 1), zijk_test(:, 3) - zijk_test(:, 1)];
             % (then the offset)
             offset = zijk_test(:, 1) - linear_part * xy0;
@@ -1446,10 +1446,10 @@ classdef DisplayGraph < xplr.GraphNode
             offset = idx_offset(dim)' + .5 + (offset - .5) .* bin(dim)';
             
             % construct affinitynd object
-            affinity = xplr.AffinityNd(linear_part,offset);
+            affinity = xplr.AffinityND(linear_part,offset);
             
             % use the selectionnd method
-            sel_slice = sel_ax.applyaffinity(affinity, G.D.slice.sz(dim));
+            sel_slice = sel_ax.apply_affinity(affinity, G.D.slice.sz(dim));
         end
         %         function [dim, ij] = pointed_dim(G, xy)
         %             % function [dim, ij] = pointed_dim(G, xy)

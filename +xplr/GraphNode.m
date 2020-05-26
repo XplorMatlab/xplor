@@ -24,7 +24,7 @@ classdef GraphNode < matlab.mixin.SetGet
             % trigger actions on it
             for i = 1:length(self.listening)
                 s = self.listening(i);
-                deleteValid(s.listener)                
+                delete_valid(s.listener)
             end
         end
         function str = char(self)
@@ -68,14 +68,14 @@ classdef GraphNode < matlab.mixin.SetGet
             % the second listener that will need to be inhibited is not
             % defined yet)
             if ~iscell(event1), event1 = {event1}; end
-            listener1 = add_listener(self, event1{:}, @disp);
+            listener1 = addlistener(self, event1{:}, @disp);
             other.listening(end+1) = struct('object', self, 'listener', listener1);
             % listener other -> self
             if ~iscell(event2), event2 = {event2}; end
-            listener2 = add_listener(other, event2{:}, @(u,e)do_one_way_call_back(callback2, u, e, listener1));
+            listener2 = addlistener(other, event2{:}, @(u,e)do_one_way_callback(callback2, u, e, listener1));
             self.listening(end+1) = struct('object', other, 'listener', listener2);
             % now we can define the callback of the first listener
-            listener1.Callback = @(u,e)do_one_way_call_back(callback1, u, e, listener2);
+            listener1.Callback = @(u,e)do_one_way_callback(callback1, u, e, listener2);
         end
         function disconnect(self, other)
             if ~isscalar(other)
@@ -92,7 +92,7 @@ classdef GraphNode < matlab.mixin.SetGet
                 s = self.listening(i);
                 if s.object == other
                     rm(i) = true;
-                    deleteValid(s.listener)
+                    delete_valid(s.listener)
                 end
             end
             self.listening(rm) = [];
@@ -105,7 +105,7 @@ classdef GraphNode < matlab.mixin.SetGet
                 s = other.listening(i);
                 if s.object == self
                     rm(i) = true;
-                    deleteValid(s.listener)
+                    delete_valid(s.listener)
                 end
             end
             other.listening(rm) = [];
@@ -158,16 +158,16 @@ classdef GraphNode < matlab.mixin.SetGet
                 end
             end
                
-            % use disableListener function (in brick)
-            c = disableListener(hl);
+            % use disable_listener function (in brick)
+            c = disable_listener(hl);
         end
     end
     
     % Composition (i.e. components that exist iff object exists)
     methods
         function component = add_component(self, component)
-            add_listener(self, 'ObjectBeingDestroyed', @(u,e)delete(component));
-            add_listener(component, 'ObjectBeingDestroyed', @(u,e)delete(self));
+            addlistener(self, 'ObjectBeingDestroyed', @(u,e)delete(component));
+            addlistener(component, 'ObjectBeingDestroyed', @(u,e)delete(self));
             if nargout==0, clear component, end
         end
     end
@@ -185,7 +185,7 @@ end
 
 function do_one_way_callback(callback, u, e, wayback_listener)
 % Execute a callback, but first inhibit temporarily a given listener
-    c = disableListener(wayback_listener);
+    c = disable_listener(wayback_listener);
     callback(u,e)
     % waybacklistener will be enable when c destroyed
 end

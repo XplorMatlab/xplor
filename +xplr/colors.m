@@ -1,6 +1,6 @@
 function colors = colors(name, k)
 % function colors = colors(colorname)
-% function colors = colors(setname, k)
+% function colors = colors(set_name, k)
 %---
 % Returns specified color, or at indices k from specific map. 
 % Available maps are 'link_key'. Some maps are infinite: they start with a
@@ -33,8 +33,8 @@ if nargin == 1
 end
 
 % color map
-% tokens = regexp(setname,'^([^\d]*)(\d*)$','tokens');
-% setname = tokens{1}{1};
+% tokens = regexp(set_name,'^([^\d]*)(\d*)$','tokens');
+% set_name = tokens{1}{1};
 % ncol = str2double(tokens{1}{2});
 infinite_map = false;
 switch name

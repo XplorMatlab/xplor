@@ -92,7 +92,7 @@ classdef SelectionShape
                     S.points = c;
                     S.vectors = u;
                     S.logic = logic;
-                    S.special = ellipse_vector_2_sym(u, logic(1));
+                    S.special = ellipse_vector_to_sym(u, logic(1));
                 case 'all'
                     % nothing more needs to be set!
                 case 'indices'
@@ -346,7 +346,7 @@ classdef SelectionShape
     % Affinity
     methods
         function S = apply_affinity(S, affinity)
-            if ~isa(affinity, 'xplr.AffinityNd')
+            if ~isa(affinity, 'xplr.AffinityND')
                 error('argument ''afinity'' is expected to be an affinitynd instance')
             end
             for k=1:length(S)
@@ -411,12 +411,12 @@ function [u, e, A] = ellipse_affinity(u, e, A, M)
     % ellipse equation becomes, for y=Mx: (y-Mc)'(M^-1' A M^-1)(y-Mc) = 1
     M1 = M^-1;
     A = M1'*A*M1;
-    [u, e] = ellipse_sym_2_vector(A);
+    [u, e] = ellipse_sym_to_vector(A);
 
 end
 
 %---
-function A = ellipse_vector_2_sym(u,e)
+function A = ellipse_vector_to_sym(u,e)
 
     % (U,c) is the referential of the ellipse, x->y=U'(x-c) returns coordinates
     % in this referential, in which the ellipse equation is
@@ -429,7 +429,7 @@ function A = ellipse_vector_2_sym(u,e)
 end
 
 %---
-function [u, e] = ellipse_sym_2_vector(A)
+function [u, e] = ellipse_sym_to_vector(A)
 
     % eigenvalue decomposition returns U, r and e as above
     [U, D] = svd(A); % better use svd than eig because output is real even if A is not exactly symmetric

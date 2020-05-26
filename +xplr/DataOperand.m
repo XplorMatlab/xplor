@@ -26,7 +26,7 @@ classdef DataOperand < xplr.GraphNode
     % a time cursor its position (operation definition) has changed, but
     % not the pixel it selects (underlying slicing operation is unchanged).
     events
-        changed_operation
+        ChangedOperation
     end
     
     % Constructor
@@ -89,7 +89,7 @@ classdef DataOperand < xplr.GraphNode
             % will be created when applying the operation to some
             % dimensions (identified by dim_id_in) of an xdata object.
             if O.change_dimension_id()
-                dim_id_out = mod(sum(dim_id_in) + O.idGraphNode + (0:O.nd_out-1)*pi, 1);
+                dim_id_out = mod(sum(dim_id_in) + O.id_graph_node + (0:O.nd_out-1)*pi, 1);
             else
                 dim_id_out = dim_id_in;
             end
@@ -136,12 +136,12 @@ classdef DataOperand < xplr.GraphNode
                 end
                 
                 % new label?
-                idx = find(strcmp(label, {F.header_out.sublabels.label}), 1);
+                idx = find(strcmp(label, {F.header_out.sub_labels.label}), 1);
                 if isempty(idx)
                     % create new label
                     label_type = xplr.DimensionLabel.infer_type(values{1});
-                    F.header_out = addLabel(F.header_out, xplr.DimensionLabel(label, label_type));
-                    idx = find(strcmp(label, {F.header_out.sublabels.label}), 1);
+                    F.header_out = F.header_out.add_label(xplr.DimensionLabel(label, label_type));
+                    idx = find(strcmp(label, {F.header_out.sub_labels.label}), 1);
                 end
                 
                 % assign values
@@ -150,8 +150,8 @@ classdef DataOperand < xplr.GraphNode
             end
         end
         function augment_header(F, new_label, label_type)
-            if any(strcmp(new_label,{F.header_out.sublabels.label})), return, end
-            F.header_out = addLabel(F.header_out, xplr.DimensionLabel(new_label, label_type));
+            if any(strcmp(new_label,{F.header_out.sub_labels.label})), return, end
+            F.header_out = F.header_out.add_label(xplr.DimensionLabel(new_label, label_type));
         end
     end
     
@@ -159,9 +159,9 @@ classdef DataOperand < xplr.GraphNode
     % system. (world_operation is the 'operation' property of a
     % worldOperand object)
     methods (Abstract)
-        world_op = operation_data_2_space(O)       % get world operation based on opeartion definition in O
-        update_operation_data_2_space(O, WO, event)   % updates WO.operation based on operation definition in O and argument event; must take care of launching WO 'changed_operation' event
-        update_operation_space_2_data(O, world_operation, event)   % updates operation definition in O based on world operation and optional argument event
+        world_op = operation_data_to_space(O)       % get world operation based on opeartion definition in O
+        update_operation_data_to_space(O, WO, event)   % updates WO.operation based on operation definition in O and argument event; must take care of launching WO 'ChangedOperation' event
+        update_operation_space_to_data(O, world_operation, event)   % updates operation definition in O based on world operation and optional argument event
     end
     
     % Load/save

@@ -1,7 +1,7 @@
-classdef AffinityNd < handle
-    % function mov = AffinityNd(linear_part, offset)
-    % function mov = AffinityNd('translate1D|2D', offset)
-    % function mov = AffinityNd('scale1D|2D', scale)
+classdef AffinityND < handle
+    % function mov = AffinityND(linear_part, offset)
+    % function mov = AffinityND('translate1D|2D', offset)
+    % function mov = AffinityND('scale1D|2D', scale)
    
     properties (SetAccess='private')
         nd
@@ -16,7 +16,7 @@ classdef AffinityNd < handle
     
     % Constructor + Load + Display
     methods
-        function mov = AffinityNd(varargin)
+        function mov = AffinityND(varargin)
             if isnumeric(varargin{1})
                 [linear_part, offset] = deal(varargin{:});
                 mov.nd = length(offset);
@@ -88,14 +88,14 @@ classdef AffinityNd < handle
             %        |                        |
             %        V                        V
             %   shape2, ref1  -- mov --> shape2, ref2
-            if isa(aff, 'xplr.AffinityNd')
+            if isa(aff, 'xplr.AffinityND')
                 aff.mat = mov.mat*aff.mat*mov.mat^-1;
             else
                 aff = mov.mat*aff*mov.mat^-1;
             end
         end
         function selection = move_selection(mov, selection)
-            if ~isa(selection, 'xplr.SelectionNd'), error 'input ''selection'' must be an xplr.SelectionNd object', end
+            if ~isa(selection, 'xplr.SelectionND'), error 'input ''selection'' must be an xplr.SelectionND object', end
             selection = selection.apply_affinity(mov);
         end
     end

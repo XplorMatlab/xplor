@@ -56,7 +56,7 @@ classdef DisplayLabels < xplr.GraphNode
             cur_headers = L.D.zslice.header;
             switch flag
                 case 'global'
-                    deleteValid(L.h)
+                    delete_valid(L.h)
                     L.h = gobjects(1, L.D.nd);
                 otherwise
                     error('invalid flag ''%s''', flag)
@@ -74,7 +74,7 @@ classdef DisplayLabels < xplr.GraphNode
             end
         end
         function change_label(L, d)
-            % change properties that need to when data undergoes a 'chgdim'
+            % change properties that need to when data undergoes a 'chg_dim'
             % change
             
             % label
@@ -86,7 +86,7 @@ classdef DisplayLabels < xplr.GraphNode
         end
         function get_heights(L)
             % get heights
-            font_size = get(L.D.hp, 'defaultuicontrolfont_size'); % unit: points
+            font_size = get(L.D.hp, 'defaultuicontrolfontsize'); % unit: points
             hinch = 1.5*font_size/72;
             hpix = hinch*get(0, 'ScreenPixelsPerInch');
             axsiz = fn_pixelsize(L.ha);
@@ -105,7 +105,7 @@ classdef DisplayLabels < xplr.GraphNode
             sz = L.D.slice.sz; % slice size
             ok_dim = (sz > 1);
             isactive = false(1,length(sz));
-            isactive([L.D.activedim.x L.D.activedim.y]) = true;
+            isactive([L.D.active_dim.x L.D.active_dim.y]) = true;
             
             % do 'loose' update? (i.e. do not adjust position for
             % non-relevant coordinates)
@@ -149,7 +149,7 @@ classdef DisplayLabels < xplr.GraphNode
                         case 'x'
                             i = find(org.x == d, 1);
                             x_pos = .5 + L.graph.label_position(d);
-                            new_pos = [x_pos - (1.5+i)*xv_step];
+                            new_pos = [x_pos, -(1.5+i)*xv_step];
                         case 'y'
                             i = find(org.y == d, 1);
                             y_pos = .5 + L.graph.label_position(d);
@@ -196,7 +196,7 @@ classdef DisplayLabels < xplr.GraphNode
             switch flag
                 case 'global'
                     create_labels(L, 'global')
-                case 'chgdim'
+                case 'chg_dim'
                     % some specific properties need to be updated
                     for d = dim, change_label(L, d), end
                 case 'axsiz'
@@ -207,7 +207,7 @@ classdef DisplayLabels < xplr.GraphNode
                     % only mark labels as active or not
                     nd = L.D.nd;
                     isactive = false(1, nd);
-                    isactive([L.D.activedim.x, L.D.activedim.y]) = true;
+                    isactive([L.D.active_dim.x, L.D.active_dim.y]) = true;
                     for d=1:nd
                         set(L.h(d), 'EdgeColor', fn_switch(isactive(d), 'k', 'none'))
                     end
@@ -233,7 +233,7 @@ classdef DisplayLabels < xplr.GraphNode
         end
         function label_move(L, dim_id, obj)
             % prepare for changing organization
-            [prev_layout_id, layout_id_d, layout_id] = deal(L.D.layout_idall); % previous, previous without d, current
+            [prev_layout_id, layout_id_d, layout_id] = deal(L.D.layout_id_all); % previous, previous without d, current
             d_layout = layout_id.dim_location(dim_id);
             didx = find(layout_id.(d_layout) == dim_id);
             layout_id_d.(d_layout) = setdiff(layout_id.(d_layout), dim_id, 'stable');
@@ -383,7 +383,7 @@ classdef DisplayLabels < xplr.GraphNode
                 % update)
                 if ~isequal(new_layout_id, layout_id)
                     layout_id = new_layout_id;
-                    L.D.setlayout_id(layout_id, L.do_immediate_display)
+                    L.D.set_layout_id(layout_id, L.do_immediate_display)
                 end
                 drawnow update
             end
@@ -395,7 +395,7 @@ classdef DisplayLabels < xplr.GraphNode
             if ~moved
                 % label was not moved, make d the active x or y dimension
                 % if appropriate
-                makeDimActive(L.D, dim_id, 'toggle')
+                make_dim_active(L.D, dim_id, 'toggle')
             elseif isequal(layout_id, prev_layout_id)
                 % update label positions once more to put the one for dimension
                 % d in place, but keep the "non-so-meaningful" coordinate
@@ -409,7 +409,7 @@ classdef DisplayLabels < xplr.GraphNode
             else
                 % change organization (which will trigger data display
                 % update)only now
-                L.D.setlayout_id(layout_id,true); % second argument (true) is needed to force display update even though D.layout is already set to curlayout
+                L.D.set_layout_id(layout_id,true); % second argument (true) is needed to force display update even though D.layout is already set to curlayout
             end
         end
     end

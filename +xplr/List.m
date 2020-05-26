@@ -19,7 +19,7 @@ classdef List < xplr.GraphNode
     
     % Constructor and Destructor
     methods
-        function L = list(F, varargin)
+        function L = List(F, varargin)
             % options for initialization
             opt = struct( ...
                 'in',                   [] ...
@@ -37,7 +37,7 @@ classdef List < xplr.GraphNode
             L.sel_type = fn_switch(F.header_in.categorical, 'indices', 'point1D');
             
             % watch filter deletion
-            add_listener(L.F, 'ObjectBeingDestroyed', @(u,e)delete(L));
+            addlistener(L.F, 'ObjectBeingDestroyed', @(u,e)delete(L));
             
             % add 'soft_selection' label to output header
             F.augment_header('soft_selection', 'logical')
@@ -61,13 +61,13 @@ classdef List < xplr.GraphNode
             L.h_list = uicontrol('parent', L.h_p, 'style', 'listbox', 'min', 0, 'max', 2, ...
                 'callback', @(h_list, evnt)event(L, 'select'), ...
             	'keypressfcn', @(h_list, evnt)keypress(L, evnt));
-            fn_controlpositions(L.h_list, L.h_p, [0, 0, 1, 1], [8, 5, -16, -5, -21, -2])
+            fn_controlpositions(L.h_list, L.h_p, [0, 0, 1, 1], [8, 5, -16, -5-21-2])
             % (label)
             L.h_label = uicontrol('parent', L.h_p, 'style', 'text', ...
                 'string', L.F.header_out.label, ...
                 'horizontalalignment', 'center', ...
-                'backgroundcolor', xplr.Colors('link_key', L.F.link_key));
-            fn_controlpositions(L.h_label, L.h_p, [0, 1, 1, 0], [8, -21, -8, -18, 18])
+                'backgroundcolor', xplr.colors('link_key', L.F.link_key));
+            fn_controlpositions(L.h_label, L.h_p, [0, 1, 1, 0], [8, -21, -8-18, 18])
             % (close button)
             if ~new_figure
                 x = fn_printnumber(ones(18), 'x', 'pos', 'center')';
@@ -98,11 +98,11 @@ classdef List < xplr.GraphNode
             function filter_changed(~, e)
                 if strcmp(e.type, 'filter'), display_selection(L), end
             end
-            connectlistener(F, L, 'changed_operation', @filter_changed);
+            connect_listener(F, L, 'ChangedOperation', @filter_changed);
             
             % auto-delete
             set(L.h_list, 'deletefcn', @(u,e)delete(L))
-            add_listener(F, 'ObjectBeingDestroyed', @(u,e)delete(L));
+            addlistener(F, 'ObjectBeingDestroyed', @(u,e)delete(L));
 
             % update display (here, just sets the correct value)
             preformat_values(L)
@@ -163,7 +163,7 @@ classdef List < xplr.GraphNode
         function delete(L)
             delete@xplr.GraphNode(L)
             if ~isvalid(L) && ~isprop(L, 'h_list'), return, end
-            deleteValid(L.h_list,L.h_label)
+            delete_valid(L.h_list,L.h_label)
         end
     end
        
@@ -267,7 +267,7 @@ classdef List < xplr.GraphNode
             switch flag
                 case 'select'
                     if isscalar(val)
-                        L.F.index = val;
+                        L.F.P.index_exact = val;
                     end
                     if isempty(val) || (isscalar(val) && isempty(i_solid)) ...
                             || (isscalar(val) && isequal({val}, sel_inds(i_soft)))
@@ -310,16 +310,16 @@ classdef List < xplr.GraphNode
                     try
                         val = evalin('base', ['[', str{1}, ']']);
                         if ~iscell(val), val = {val}; end
-                        new_sel = xplr.SelectionNd(length(val));
+                        new_sel = xplr.SelectionND(length(val));
                         for i=1:length(val)
-                            new_sel(i) = xplr.SelectionNd(L.sel_type,val{i}, L.F.header_in.n);
+                            new_sel(i) = xplr.SelectionND(L.sel_type,val{i}, L.F.header_in.n);
                         end
                     catch
                         errordlg('Command could not be evaluated correctly')
                         return
                     end
                 case 'add'
-                    new_sel = xplr.SelectionNd('point1D', val);
+                    new_sel = xplr.SelectionND('point1D', val);
                     if n_soft, update_selection(L.F, 'remove', i_soft), end % remove all soft selections
                     if ~isempty(i_solid)
                         update_selection(L.F, 'add', i_solid(end), new_sel)
@@ -350,7 +350,7 @@ classdef List < xplr.GraphNode
                         answer = questdlg('This is not a permutation: some selections will be removed','', ...
                             'OK','Cancel','OK');
                         if strcmp(answer, 'Cancel'), return, end
-                        idx_rm = set_diff(1:n_sel, ord);
+                        idx_rm = setdiff(1:n_sel, ord);
                         update_selection(L.F, 'remove', idx_rm)
                         [~, ord_sort] = sort(ord);
                         ord(ord_sort) = 1:length(ord);
@@ -361,7 +361,7 @@ classdef List < xplr.GraphNode
                     % set empty selections rather than remove all existing
                     % ones: this can performs some clean-up when errors
                     % occured previously
-                    new_sel = xplr.SelectionNd.empty(1, 0);
+                    new_sel = xplr.SelectionND.empty(1, 0);
                     update_selection(L.F, 'all', new_sel)
                     return
                 case {'rmgroup', 'rmgroupall', 'rmuni', 'rmuniall', 'rm'}
@@ -425,15 +425,15 @@ classdef List < xplr.GraphNode
             if isempty(val), sel = []; return, end
             if do_mult_in 
                 n_sel = length(val);
-                sel = xplr.SelectionNd(n_sel);
+                sel = xplr.SelectionND(n_sel);
                 for i=1:n_sel
-                    sel(i) = xplr.SelectionNd(L.sel_type, val(i), L.F.header_in.n);
+                    sel(i) = xplr.SelectionND(L.sel_type, val(i), L.F.header_in.n);
                 end
             elseif L.F.header_in.is_measure && ~isscalar(val) && all(diff(val) == 1)
                 % selection is a segment rather than a mere list of points
-                sel = xplr.SelectionNd('line1D', val([1, end]) + [-.5, .5], L.F.header_in.n);
+                sel = xplr.SelectionND('line1D', val([1, end]) + [-.5, .5], L.F.header_in.n);
             else
-                sel = xplr.SelectionNd(L.sel_type, val, L.F.header_in.n);
+                sel = xplr.SelectionND(L.sel_type, val, L.F.header_in.n);
             end
         end
     end
@@ -509,7 +509,7 @@ classdef List < xplr.GraphNode
             set(L.h_list, 'string', str, 'ListboxTop', top)
             if n_sel == 0
                 % if no selection, highlight the point selection
-                set(L.h_list, 'value', L.F.index)
+                set(L.h_list, 'value', L.F.point_index)
             else
                 set(L.h_list, 'value', [sel_inds{soft_sel}])
             %             elseif isfield(L.F.shared,'list')

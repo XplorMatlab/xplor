@@ -60,7 +60,7 @@ classdef ZoomFilter < xplr.DataOperand
                 if bin == 0 || mod(bin,1), error 'binn_ing value must be a positive integer', end
                 z.bin = bin;
             end
-            prepare_filter(z, chg_zoom, chg_bin) % this will raise 'changed_operation' event
+            prepare_filter(z, chg_zoom, chg_bin) % this will raise 'ChangedOperation' event
         end
         function move_zoom(z, n_step)
             if strcmp(z.zoom, ':'), return, end
@@ -79,7 +79,7 @@ classdef ZoomFilter < xplr.DataOperand
             if bin == 0 || mod(bin, 1), error 'binn_ing value must be a positive integer', end
             % assign and update output
             z.bin = bin;
-            prepare_filter(z, false, true) % this will raise 'changed_operation' event
+            prepare_filter(z, false, true) % this will raise 'ChangedOperation' event
         end
         function copy_in(z, obj)
             z.set_zoom(obj.zoom, obj.bin);
@@ -118,42 +118,42 @@ classdef ZoomFilter < xplr.DataOperand
             if strcmp(z.zoom, ':') && z.bin == 1
                 % not any change
                 z.header_out = head_in;
-            elseif head_in.ismeasure
+            elseif head_in.is_measure
                 % if header is a measure, new positions are
                 % straightforward to compute
-                z.header_out = xplr.Header(head_in.sublabels, n_out, head_in.start + (z.indices_out(1)-1)*head_in.scale, head_in.scale*z.bin);
+                z.header_out = xplr.Header(head_in.sub_labels, n_out, head_in.start + (z.indices_out(1)-1)*head_in.scale, head_in.scale*z.bin);
             elseif head_in.n_column == 0
                 % no values, keep track of index
                 z.header_out = xplr.Header(head_in.label, xplr.DimensionLabel('Index', 'numeric'), num2cell(z.indices_out(:)));
             elseif z.bin == 1
                 % no binn_ing: getting values is straightforward
-                z.header_out = xplr.Header(head_in.label, head_in.sublabels, head_in.values(z.indices_in,:));
+                z.header_out = xplr.Header(head_in.label, head_in.sub_labels, head_in.values(z.indices_in,:));
             else
                 % binn_ing
                 head_value = z.header_in.trackValues(num2cell(z.indices_in,1));
-                z.header_out = xplr.Header(head_in.label, head_in.sublabels, head_value);
+                z.header_out = xplr.Header(head_in.label, head_in.sub_labels, head_value);
             end
             
             % notifications
-            chgn_out = (n_out ~= length(cur_i_out));
+            chg_n_out = (n_out ~= length(cur_i_out));
             if chg_zoom
-                notify(z, 'changed_operation', xplr.EventInfo('zoom',chgn_out))
+                notify(z, 'ChangedOperation', xplr.EventInfo('zoom',chg_n_out))
             end
             if chg_bin
-                notify(z, 'changed_operation', xplr.EventInfo('bin'))
+                notify(z, 'ChangedOperation', xplr.EventInfo('bin'))
             end
-            any_chg = chgn_out || (z.indices_out(1) ~= cur_i_out(1));
+            any_chg = chg_n_out || (z.indices_out(1) ~= cur_i_out(1));
             zoom_in = any_chg && (isempty(z.indices_out) ...
                 || ((z.bin==1) && ~isempty(cur_i_out) && (z.indices_out(1)>=cur_i_out(1)) && (z.indices_out(end)<=cur_i_out(end)) && (cur_bin==1)));
             if zoom_in
                 idx_first = find(cur_i_out==z.indices_out(1), 1, 'first');
                 idx_last = find(cur_i_out==z.indices_out(end), 1, 'last');
                 idx_rm = [1:idx_first-1, idx_last+1:length(cur_i_out)];
-                notify(z, 'changed_operation', xplr.EventInfo('filter','remove',idx_rm))
-            elseif chgn_out
-                notify(z, 'changed_operation', xplr.EventInfo('filter','all'))
+                notify(z, 'ChangedOperation', xplr.EventInfo('filter','remove',idx_rm))
+            elseif chg_n_out
+                notify(z, 'ChangedOperation', xplr.EventInfo('filter','all'))
             elseif any_chg
-                notify(z, 'changed_operation', xplr.EventInfo('filter','chg',1:n_out))
+                notify(z, 'ChangedOperation', xplr.EventInfo('filter','chg',1:n_out))
             end
         end
     end
@@ -227,19 +227,19 @@ classdef ZoomFilter < xplr.DataOperand
     
     % Link with zoom definition in real world coordinates
     methods
-        function zoom_world = operation_data_2_space(z)
+        function zoom_world = operation_data_to_space(z)
             if strcmp(z.zoom, ':')
                 zoom_world = ':';
             else
                 zoom_world = z.header_in.start + (z.zoom-1)*z.header_in.scale;
             end
         end
-        function update_operation_data_2_space(z, wo, evnt)
+        function update_operation_data_to_space(z, wo, evnt)
             if ~strcmp(evnt.type,'zoom'), return, end
-            wo.operation = z.operation_data_2_space();
-            notify(wo, 'changed_operation')
+            wo.operation = z.operation_data_to_space();
+            notify(wo, 'ChangedOperation')
         end
-        function update_operation_space_2_data(z, world_operation, ~)
+        function update_operation_space_to_data(z, world_operation, ~)
             if strcmp(world_operation, ':')
                 z.set_zoom(':')
             else
@@ -251,7 +251,7 @@ classdef ZoomFilter < xplr.DataOperand
     
     % Tools
     methods
-        function idx_1 = orig_2_zoomed(z, idx)
+        function idx_1 = orig_to_zoomed(z, idx)
             b = (idx >= z.indices_in(1)) & (idx <= z.indices_in(end));
             idx_1 = idx;
             idx_1(~b) = 0;

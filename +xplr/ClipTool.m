@@ -34,7 +34,7 @@ classdef ClipTool < xplr.GraphNode
         function delete(C)
             delete@xplr.GraphNode(C)
             if ~isprop(C, 'menu'), return, end
-            deleteValid(C.menu)
+            delete_valid(C.menu)
         end
         function build_menu(C,hf)
             if isempty(C.menu)
@@ -47,10 +47,10 @@ classdef ClipTool < xplr.GraphNode
             end
             % auto-clip specifications
             % (create a submenu whose label will update automatically)
-            P = fn_propcontrol(C, 'autoclipmode', ...
+            P = fn_propcontrol(C, 'auto_clip_mode', ...
                 {'menuval', {}}, ...
                 m, 'label', 'Auto-Clip Method');
-            m1 = P.h_parent;
+            m1 = P.hparent;
             % (some possible values)
             fn_propcontrol(C, 'auto_clip_mode_no_center', ...
                 {'menugroup', {'minmax', 'std1', 'std2', 'std3', 'std5', 'std.5', 'std.2', 'prc.1', 'prc1', 'prc5'}, ...
@@ -72,7 +72,7 @@ classdef ClipTool < xplr.GraphNode
                 m, 'label', 'Adjust', 'separator', 'on');
             % span
             fn_propcontrol(C, 'span', ...
-                {'menuval', {'curview', 'local', 'chgshare'}, {'Local, Adjust to Current View', 'Local', 'Shared...'}, {'Current View', 'Local', ''}}, ...
+                {'menuval', {'curview', 'local', 'chg_share'}, {'Local, Adjust to Current View', 'Local', 'Shared...'}, {'Current View', 'Local', ''}}, ...
                 m, 'label', 'Span');
         end
     end
@@ -143,7 +143,7 @@ classdef ClipTool < xplr.GraphNode
     % Sharing
     methods
         function set.span(C,span)
-            if strcmp(span, 'chgshare')
+            if strcmp(span, 'chg_share')
                 C.share_name = fn_input('Clip sharing name', '#1');
                 C.span = ['Shared (', C.share_name, ')']; %#ok<*MCSUP>
             else

@@ -26,13 +26,13 @@ classdef ViewControl < xplr.GraphNode
             if ~isempty(V.data.name), data_str = [data_str, ' (', V.data.name, ')']; end
             C.new_item('data', 1, ...
                 {'style', 'text', 'string', V.data.name, ...
-                'backgroundcolor', xplr.Colors('gui.controls.dataname'), ...
+                'backgroundcolor', xplr.colors('gui.controls.dataname'), ...
                 'enable', 'inactive', 'buttondownfcn', @(u,e)C.data_context_menu()})
             % (list of data dimensions)
             C.dim_list = C.new_item('dim_list', 4, ...
                 {'style', 'listbox', 'string', {V.data.header.label}, 'max', 2, ...
                 'callback', @(u,e)C.dimension_context_menu()});
-            C.context_menu = uicontext_menu(V.hf);
+            C.context_menu = uicontextmenu(V.hf);
             
             % some changes needed when data header is changed
             C.add_listener(V.data, 'ChangedData', @(u,e)data_change(C, e));
@@ -83,7 +83,7 @@ classdef ViewControl < xplr.GraphNode
             w_max = Inf;
             w = max(1, min(w_max, W-2*dx));
             x0 = (W-w)/2;
-            y_starts = [0, cum_sum([C.items.span])];
+            y_starts = [0, cumsum([C.items.span])];
             for i=row(idx)
                 yspan = C.items(i).span;
                 set(C.items(i).obj, 'units', 'pixel', 'position', [x0, H-(y_starts(i)+yspan)*(h+dy), w, yspan*h+(yspan-1)*dy])
@@ -95,7 +95,7 @@ classdef ViewControl < xplr.GraphNode
             if nargin<4 || iscell(control_prop)
                 if nargin<4, control_prop = {}; end
                 obj = uicontrol('parent', C.hp, ...
-                    'backgroundcolor', xplr.Colors('gui.controls.item'), ...
+                    'backgroundcolor', xplr.colors('gui.controls.item'), ...
                     control_prop{:});
             elseif strcmp(control_prop, 'panel')
                 obj = uipanel('parent', C.hp, 'bordertype', 'none', 'units', 'pixel');
@@ -110,7 +110,7 @@ classdef ViewControl < xplr.GraphNode
         end
         function rm_item(C, id)
             idx = fn_find(id, {C.items.id});
-            deleteValid([C.items(idx).obj])
+            delete_valid([C.items(idx).obj])
             C.items(idx) = [];
             item_positions(C)
         end
@@ -144,14 +144,14 @@ classdef ViewControl < xplr.GraphNode
             if any(dim_chg)
                 dim = find(dim_chg);
                 new_head_dim = xplr.DimHeader(new_head(dim));
-                C.V.data.update_data('chgdim', dim, [], data.data, new_head_dim)
+                C.V.data.update_data('chg_dim', dim, [], data.data, new_head_dim)
             end
         end
         function data_change(C, e)
             switch e.flag
                 case 'global'
                     error 'global data change not handled'
-                case 'chgdim'
+                case 'chg_dim'
                     % update dimension list
                     set(C.dim_list, 'string', {C.V.data.header.label})
                 otherwise
@@ -192,7 +192,7 @@ classdef ViewControl < xplr.GraphNode
             % (more options: select among available keys)
             available_keys = xplr.Bank.available_filter_keys('filterAndPoint');
             new_key = max(available_keys) + 1;
-            key_values = [set_diff(available_keys, 1), new_key];
+            key_values = [setdiff(available_keys, 1), new_key];
             m2 = uimenu(m, 'label', 'Filter with');
             if length(dim_id) == 2
                 for key_value = key_values
@@ -226,7 +226,7 @@ classdef ViewControl < xplr.GraphNode
         function dim_action(C, flag, dim_id, varargin)
             % function dim_action(C,'addfilter',dim_ids[,key[,active]])
             % function dim_action(C,'rmfilter|showfilter',dim_id)
-            % function dim_action(C,'setactive',dim_id,value)
+            % function dim_action(C,'set_active',dim_id,value)
             %---
             % if flag is 'addfilter', dims can be a cell array, to defined
             % several filters at once for example
@@ -295,9 +295,9 @@ classdef ViewControl < xplr.GraphNode
                 else
                     % add 1D filters il all dimensions that we do not want
                     % to view and that are not already filtered
-                    no_view_dim_id = set_diff([C.V.data.header.dim_id], dim_id, 'stable');
+                    no_view_dim_id = setdiff([C.V.data.header.dim_id], dim_id, 'stable');
                     cur_filt_dim_id = [C.V.slicer.filters.dim_id];
-                    dim_ids_add = set_diff(no_view_dim_id, cur_filt_dim_id, 'stable');
+                    dim_ids_add = setdiff(no_view_dim_id, cur_filt_dim_id, 'stable');
                     % among these dimensions, attempt to find pairs of
                     % measure headers with same units to set 2D filter
                     % instead of two 1D filters
@@ -310,7 +310,7 @@ classdef ViewControl < xplr.GraphNode
                         connections([i, j], :) = false;
                         connections(:, [i, j]) = false;
                     end
-                    dim_ids_add = [pairs, num2cell(set_diff(dim_ids_add, [pairs{:}], 'stable'))];
+                    dim_ids_add = [pairs, num2cell(setdiff(dim_ids_add, [pairs{:}], 'stable'))];
                 end
                 n_add = length(dim_ids_add);
                 if n_add > 0
@@ -350,7 +350,7 @@ classdef ViewControl < xplr.GraphNode
             
             % show filter, set filter active
             switch flag
-                case 'setactive'
+                case 'set_active'
                     active = varargin{1};
                     % show label(s) as enabled/disabled
                     for filter = current_filters_dim
@@ -383,8 +383,8 @@ classdef ViewControl < xplr.GraphNode
             % panel
             id = {'filter', dim_id};
             [panel, item_idx] = C.new_item(id, 1, 'panel');
-            background_color = xplr.Colors('link_key', F.link_key);
-            panel.background_color = background_color;
+            background_color = xplr.colors('link_key', F.link_key);
+            panel.BackgroundColor = background_color;
             
             % store the filter
             C.items(item_idx).F = F;
@@ -397,7 +397,7 @@ classdef ViewControl < xplr.GraphNode
                 'backgroundcolor', background_color, ...
                 'enable', fn_switch(active, 'inactive', 'off'), ...
                 'buttondownfcn', @(u,e)click_filter_item(C, dim_id, id), ...
-                'uicontext_menu', uicontext_menu(C.V.hf, 'callback', @(m, e)F.context_menu(m)));
+                'uicontextmenu', uicontextmenu(C.V.hf, 'callback', @(m, e)F.context_menu(m)));
             C.items(item_idx).label = h_lab;
             
             % change label upon operation change
@@ -407,11 +407,10 @@ classdef ViewControl < xplr.GraphNode
                     set(h_lab, 'string', label)
                 end
             end
-            hl = add_listener(F.F, 'changed_operation', @check_operation_change);
-            add_listener(h_lab, 'ObjectBeingDestroyed', @(u,e)delete(hl));
+            connect_listener(F.F,h_lab, 'ChangedOperation', @check_operation_change);
             
             % buttons
-            [ii, jj] = nd_grid(-2:2);
+            [ii, jj] = ndgrid(-2:2);
             x = min(1, abs(abs(ii) - abs(jj))*.5);
             x(x == 1) = NaN;
             x = repmat(x, [1, 1, 3]);
@@ -428,7 +427,7 @@ classdef ViewControl < xplr.GraphNode
                 'backgroundcolor', background_color, ...
                 'Style', 'checkbox', 'Value', active, ...
                 'position', [6, 6, 13, 12], ...
-                'callback', @(u,e)C.dim_action('setactive', dim_id, get(u, 'value')));
+                'callback', @(u,e)C.dim_action('set_active', dim_id, get(u, 'value')));
             
         end
         function click_filter_item(C, d, id)
@@ -450,7 +449,7 @@ classdef ViewControl < xplr.GraphNode
             % index and position of selected filter
             idx_item = fn_find(id, {C.items.id});
             idx_0 = idx_item - (idx_filter(1) - 1);
-            idx_other = set_diff(1:n_filter, idx_0);
+            idx_other = setdiff(1:n_filter, idx_0);
             obj = C.items(idx_item).obj;
             pos_0 = get(obj, 'position');
             y_step = 24;
@@ -545,7 +544,7 @@ classdef ViewControl < xplr.GraphNode
                 disp 'warning: usage of private lists display has not been tested yet'
                 combo = xplr.ListCombo(C.V.panels.list_combo);
                 C.private_lists = combo;
-                connectlistener(combo, control_org, 'Empty', @(u,e)set(control_org, 'extents', [1, 0]));
+                connect_listener(combo, control_org, 'Empty', @(u,e)set(control_org, 'extents', [1, 0]));
             end
             % Need to show it?
             if control_org.extents(2) == 0

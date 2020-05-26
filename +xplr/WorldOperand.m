@@ -19,7 +19,7 @@ properties
 end
    
 events
-    changed_operation
+    ChangedOperation
 end
     
 
@@ -34,11 +34,11 @@ methods
         wo.space_id = do.header_in.get_measure_space_id();
         % connect dataOperand and worldOperand together
         wo.add_listener_exclusive_pair(do, ...
-            'changed_operation', @(u,e)do.update_operation_space_2_data(wo.operation,e), ...
-            'changed_operation', @(u,e)do.update_operation_data_2_space(wo,e));
+            'ChangedOperation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
+            'ChangedOperation', @(u,e)do.update_operation_data_to_space(wo,e));
         do.world_operand = wo;
         % obtain world operation by running dataOperand method
-        wo.operation = do.operation_data_2_space();
+        wo.operation = do.operation_data_to_space();
     end
     function connect_data_operand(wo,do)
         % check
@@ -47,11 +47,11 @@ methods
         end
         % connect
         wo.add_listener_exclusive_pair(do, ...
-            'changed_operation', @(u,e)do.update_operation_space_2_data(wo.operation,e), ...
-            'changed_operation', @(u,e)do.update_operation_data_2_space(wo,e));
+            'ChangedOperation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
+            'ChangedOperation', @(u,e)do.update_operation_data_to_space(wo,e));
         do.world_operand = wo;
         % set data operation
-        do.update_operation_space_2_data(wo.operation)
+        do.update_operation_space_to_data(wo.operation)
     end
 end
 

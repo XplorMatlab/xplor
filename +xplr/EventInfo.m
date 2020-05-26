@@ -14,14 +14,14 @@ classdef EventInfo < event.EventData & dynamicprops
     % no argument
     %
     % type: 'point'
-    % arguments:    chgij [warning: if not set, default empty will be interpreted as false by a logical test]
+    % arguments:    chg_ij [warning: if not set, default empty will be interpreted as false by a logical test]
     %
     % type: 'data'
     % arguments:
     % * 'global'                    data is potentially completely different
     % * 'name'                      data name has changed
-    % * 'chgdata'                   data has changed but sizes and all header information remain the same
-    % * 'chgdim',dim                data has changed, header and size in dimension dim have changed (dim can be non-scalar here, but not in
+    % * 'chg_data'                   data has changed but sizes and all header information remain the same
+    % * 'chg_dim',dim                data has changed, header and size in dimension dim have changed (dim can be non-scalar here, but not in
     %                               the other options below; here and below dim can be either a dimension number or a dimension identifier!)
     % * 'all',dim                   data has changed, size and header value tables in dimension dim have changed, but not the header name (for example 'time')
     % * 'new',dim,ind               new data (and therefore header values) have been inserted along dimension dim
@@ -32,7 +32,7 @@ classdef EventInfo < event.EventData & dynamicprops
     % * 'perm',dim,ind              data has not changed but data and header values were permuted along dimension dim
     %
     % type: 'zoom'
-    % arguments:    chgnout,dim
+    % arguments:    chg_n_out,dim
     % 
     % type: 'bin'
     % no argument
@@ -52,13 +52,13 @@ classdef EventInfo < event.EventData & dynamicprops
             obj.type = type;
             switch type
                 case 'point'
-                    F = {'chgij', 'chgnout'};
+                    F = {'chg_ij', 'chg_n_out'};
                 case 'data'
                     F = {'flag', 'dim', 'ind'};
                 case 'filter'
                     F = {'flag', 'ind', 'value'};
                 case 'zoom'
-                    F = {'chgnout', 'dim'};
+                    F = {'chg_n_out', 'dim'};
                 case {'bin', 'operation'}
                     F = {};
                 case 'clip'

@@ -4,7 +4,7 @@ classdef Filter < xplr.DataOperand
     properties (SetAccess='protected')
         % input: header_in is already a property of the dataOperand mother class
         % operation:
-        selection = xplr.SelectionNd.empty(1,0);
+        selection = xplr.SelectionND.empty(1,0);
         % output: header_out is already a property of the dataOperand mother class
     end
     properties (SetObservable, AbortSet)
@@ -23,7 +23,7 @@ classdef Filter < xplr.DataOperand
 %         end
 %     end
     methods
-        function F = filter(header_in, label_out)
+        function F = Filter(header_in, label_out)
             % size and header of the input space
             if ~isa(header_in, 'xplr.Header'), error 'first argument must be an xplr.Header object', end
             F.header_in = header_in;
@@ -54,8 +54,8 @@ classdef Filter < xplr.DataOperand
         end
         function update_selection(F, varargin)
             % function update_selection(F,value)
-            % function update_selection(F,'new|all',value[,'label1',headervalues1,...])
-            % function update_selection(F,'new|all|chg|add',ind,value[,'label1',headervalues1,...])
+            % function update_selection(F,'new|all',value[,'label1',header_values1,...])
+            % function update_selection(F,'new|all|chg|add',ind,value[,'label1',header_values1,...])
             % function update_selection(F,'chg|add',ind,value)
             % function update_selection(F,'remove|perm',ind)
             % function update_selection(F,'reset')
@@ -65,7 +65,7 @@ classdef Filter < xplr.DataOperand
                 if ischar(varargin{1})
                     if strcmp(varargin{1}, 'reset')
                         flag = 'all';
-                        value = xplr.SelectionNd.empty(1, 0);
+                        value = xplr.SelectionND.empty(1, 0);
                     else
                         error 'only flag ''reset'' can be used without arguments'
                     end
@@ -106,7 +106,7 @@ classdef Filter < xplr.DataOperand
             
             % compute indices
             if fn_ismemberstr(flag, {'all', 'new', 'chg', 'add', 'chg&new', 'chg&rm'})
-                value = value.compute_ind([F.header_in.n]);
+                value = value.compute_indices([F.header_in.n]);
                 % filter definition when data is categorical can only be
                 % indices based (but not shape based)
                 if any([F.header_in.categorical])
@@ -142,7 +142,7 @@ classdef Filter < xplr.DataOperand
             % update header of output space
             if fn_ismemberstr(flag, {'all', 'new', 'chg', 'chg&new', 'chg&rm'})
                 % make a nice name for new 1D selections
-                if F.ndin == 1 && ~isempty(value) && ~any(strcmpi(add_header_info(1, :), 'name'))
+                if F.nd_in == 1 && ~isempty(value) && ~any(strcmpi(add_header_info(1, :), 'name'))
                     n = length(value);
                     names = cell(n, 1);
                     for i = 1:n
@@ -183,7 +183,7 @@ classdef Filter < xplr.DataOperand
             
             % notification
             e = xplr.EventInfo('filter', flag, ind, value);
-            notify(F, 'changed_operation', e)
+            notify(F, 'ChangedOperation', e)
         end
         function set.slice_fun_str(F, fun)
             F.slice_fun_str = fun;
@@ -223,7 +223,7 @@ classdef Filter < xplr.DataOperand
             % update property
             F.slice_fun = fun;
             % notification
-            notify(F, 'changed_operation', xplr.EventInfo('operation'))
+            notify(F, 'ChangedOperation', xplr.EventInfo('operation'))
         end
         function set_fun(F, fun)
             % convert char to function handle
@@ -246,7 +246,7 @@ classdef Filter < xplr.DataOperand
             % update slicing function
             F.slice_fun = fun;
             % notification
-            notify(F, 'changed_operation', xplr.EventInfo('filter', 'chg', 1:F.n_sel))
+            notify(F, 'ChangedOperation', xplr.EventInfo('filter', 'chg', 1:F.n_sel))
         end
         function copy_in(F, obj)
             % do not call updateing methods because there might be
@@ -256,7 +256,7 @@ classdef Filter < xplr.DataOperand
             F.selection = obj.selection;
             F.header_out = obj.header_out;
             e = xplr.EventInfo('filter', 'all', 1:length(F.selection), F.selection);
-            notify(F, 'changed_operation', e)
+            notify(F, 'ChangedOperation', e)
         end
     end
     
@@ -269,7 +269,7 @@ classdef Filter < xplr.DataOperand
             % get data indices from selections
             indices = cell(1, F.n_sel);
             for i = 1:F.n_sel
-                indices{i} = F.selection(i).compute_ind([F.header_in.n]).data_ind;
+                indices{i} = F.selection(i).compute_indices([F.header_in.n]).data_ind;
             end
         end
     end
@@ -287,7 +287,7 @@ classdef Filter < xplr.DataOperand
                 % no tracking when input space has more than one dimensions
             elseif F.header_in.n_column > 0
                 % track values: call to a xplr.Header method
-                head_value(:, 1:F.header_in.n_column) = F.header_in.trackValues(F.indices(ind));
+                head_value(:, 1:F.header_in.n_column) = F.header_in.track_values(F.indices(ind));
                 ok_column(1:F.header_in.n_column) = true;
             elseif F.header_in.categorical
                 % categorical with no values: keep track of indices
@@ -389,15 +389,15 @@ classdef Filter < xplr.DataOperand
     
     % Link with selection in real world coordinates
     methods
-        function selection_world = operation_data_2_space(F)
-            aff = xplr.AffinityNd([F.header_in.scale], [F.header_in.start] - [F.header_in.scale]);
+        function selection_world = operation_data_to_space(F)
+            aff = xplr.AffinityND([F.header_in.scale], [F.header_in.start] - [F.header_in.scale]);
             selection_world = aff.move_selection(F.selection);
         end
-        function update_operation_data_2_space(F, WO, e)
+        function update_operation_data_to_space(F, WO, e)
             if ~strcmp(e.type, 'filter'), return, end
             [flag, ind, value] = deal(e.flag, e.ind, e.value);
             if ~isempty(value)
-                aff = xplr.AffinityNd([F.header_in.scale], [F.header_in.start] - [F.header_in.scale]);
+                aff = xplr.AffinityND([F.header_in.scale], [F.header_in.start] - [F.header_in.scale]);
                 value = aff.move_selection(value);
             end
             switch flag
@@ -417,9 +417,9 @@ classdef Filter < xplr.DataOperand
                 otherwise
                     error('flag ''%s'' not handled', flag)
             end
-            notify(WO,'changed_operation',xplr.EventInfo('filter', flag, ind, value))
+            notify(WO,'ChangedOperation',xplr.EventInfo('filter', flag, ind, value))
         end
-        function update_operation_space_2_data(F, selection_world, e)
+        function update_operation_space_to_data(F, selection_world, e)
             if nargin >= 3
                 [flag, ind, value] = deal(e.flag, e.ind, e.value);
             else
@@ -428,8 +428,8 @@ classdef Filter < xplr.DataOperand
                 ind = 1:length(value);
             end
             if ~isempty(value)
-                aff = xplr.AffinityNd(1./[F.header_in.scale], 1 - [F.header_in.start]./[F.header_in.scale]);
-                value = value.applyaffinity(aff);
+                aff = xplr.AffinityND(1./[F.header_in.scale], 1 - [F.header_in.start]./[F.header_in.scale]);
+                value = value.apply_affinity(aff);
             end
             F.update_selection(flag, ind, value)
         end

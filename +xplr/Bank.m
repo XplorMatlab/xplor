@@ -138,7 +138,7 @@ classdef Bank < handle
             % place all new headers first in the list
             B.recent_headers(idx(idx ~= 0)) = [];
             B.recent_headers = [new_header, B.recent_headers];
-            n_header_max = xplr.Parameters.get('bank.nheadermax');
+            n_header_max = xplr.Parameters.get('bank.n_header_max');
             B.recent_headers(n_header_max+1:end) = [];
             save_prop(B,'recent_headers')
         end
@@ -272,7 +272,7 @@ classdef Bank < handle
                 xplr.Bank.register_filter(link_key, F, user);
                 % show filter
                 if do_show
-                    if F.n_din > 1
+                    if F.nd_in > 1
                         disp 'cannot display list for ND filter'
                     else
                         xplr.Bank.show_list(F)
@@ -282,12 +282,12 @@ classdef Bank < handle
         end
         function F = get_filter_filter(link_key, header, user)
             % function F = get_filter_filter(link_key, header[, new_user]])
-            F = xplr.Bank.get_filter('filter', link_key, header, user);
+            F = xplr.Bank.get_filter('Filter', link_key, header, user);
         end
         function P = get_point_filter(link_key, header, user)
             % function F = get_point_filter(link_key, header[, new_user]])
             for i = 1:length(header)
-                P(i) = xplr.Bank.get_filter('point', link_key, header(i), user);
+                P(i) = xplr.Bank.get_filter('Point', link_key, header(i), user);
             end
         end
         function F = get_zoom_filter(link_key, header, user)
@@ -297,7 +297,7 @@ classdef Bank < handle
         function show_list(F)
             if ~isa(F,'xplr.FilterAndPoint')
                 error 'only FilterAndPoint object can be shown'
-            elseif F.n_din > 1
+            elseif F.nd_in > 1
                 % not possible to show list if filter is not 1D, ignore
                 return
             end
@@ -307,7 +307,7 @@ classdef Bank < handle
             if isempty(B.list_combo) || ~isvalid(B.list_combo)
                 B.list_combo = xplr.ListCombo();
 %                 % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
-%                 connectlistener(B.list_combo, B, 'Empty', @(u,e)set(B, 'list_combo', []));
+%                 connect_listener(B.list_combo, B, 'Empty', @(u,e)set(B, 'list_combo', []));
             end
             
             B.list_combo.show_list(F)

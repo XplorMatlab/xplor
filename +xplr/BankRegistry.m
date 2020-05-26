@@ -104,7 +104,7 @@ classdef BankRegistry < handle
                 end
             end
             % Value index
-            idx = getIndex(R, key);
+            idx = get_index(R, key);
             if isempty(idx)
                 xplr.debug_info('registry', 'key %s was not found', fn_hash(key,3))
                 disp 'entry to unregister was not found'

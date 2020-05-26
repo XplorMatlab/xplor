@@ -14,7 +14,7 @@ classdef ColorMapTool < xplr.GraphNode
     end
     
     events
-        changed_color_map
+        ChangedColorMap
     end
    
     % Constructor, destructor, menu
@@ -28,7 +28,7 @@ classdef ColorMapTool < xplr.GraphNode
         function delete(C)
             delete@xplr.GraphNode(C)
             if ~isprop(C, 'menu'), return, end
-            deleteValid(C.menu)
+            delete_valid(C.menu)
         end
         function buildmenu(C, D)
             hf = D.V.hf;
@@ -46,18 +46,18 @@ classdef ColorMapTool < xplr.GraphNode
             % List of possible color maps
             map_names = {'gray', 'jet', 'parula', 'hot', 'mapgeog', 'mapgeogclip', 'mapclip', 'mapcliphigh', ...
                 'mapcliplow', 'vdaq', 'green', 'red', 'black_red', 'black_green', 'white_red', 'white_green', 'white_black', 'maporient'};
-            fn_propcontrol(C, 'cmapdef', ['menugroup', map_names, 'user...'], m);
+            fn_propcontrol(C, 'c_map_def', ['menugroup', map_names, 'user...'], m);
             
             % Apply non-linear function to values before coloring
             fn_propcontrol(C, 'invert_map', 'menu', ...
                 {'parent', m, 'label', 'Invert map', 'separator', 'on'});
-            fn_propcontrol(C, 'do_nonlinear', 'menu', ...
+            fn_propcontrol(C, 'do_non_linear', 'menu', ...
                 {'parent', m, 'label', 'Apply nonlinear function before coloring'});
             
             % Control visibility depending on dislay mode
-            set(C.menu, 'visible', fn_switch(D.displaymode, 'image', 'on', 'off'));
-            connectlistener(D, C, 'displaymode', 'PostSet', ...
-                @(u,e)set(C.menu, 'visible', fn_switch(D.displaymode, 'image', 'on', 'off')));
+            set(C.menu, 'visible', fn_switch(D.display_mode, 'image', 'on', 'off'));
+            connect_listener(D, C, 'display_mode', 'PostSet', ...
+                @(u,e)set(C.menu, 'visible', fn_switch(D.display_mode, 'image', 'on', 'off')));
         end
     end
     
@@ -92,9 +92,9 @@ classdef ColorMapTool < xplr.GraphNode
             if ~(isnumeric(x) && ismatrix(x) && size(x, 2) == 3 && all(x(:) >= 0 & x(:) <= 1))
                 error('not a valid color map definition')
             end
-            C.cmap = x; %#ok<MCSUP>
+            C.c_map = x; %#ok<MCSUP>
             % Set name
-            C.cmapdef = name;
+            C.c_map_def = name;
             % Notify
             notify(C, 'ChangedColorMap')
         end
@@ -104,7 +104,7 @@ classdef ColorMapTool < xplr.GraphNode
     % applying the colormap, this allows for example in a black & white
     % image to enhance low contrast in the dark range, etc.
     methods
-        function set.do_nonlinear(C, value)
+        function set.do_non_linear(C, value)
             C.do_nonlinear = logical(value);
             % is we want to apply nonlinear function, we create an object
             % of class signaleditor to control the parameters of this
@@ -114,7 +114,7 @@ classdef ColorMapTool < xplr.GraphNode
                     @(x)notify(C, 'ChangedColorMap'), 'monotonous', 'min', 0, 'max', 1);
                 % if the editor is closed, we stop applying the nonlinear
                 % function
-                C.addListener(C.nonlinear_fun_editor, 'ObjectBeingDestroyed', @(u,e)set(C, 'do_nonlinear', false))
+                C.add_listener(C.nonlinear_fun_editor, 'ObjectBeingDestroyed', @(u,e)set(C, 'do_nonlinear', false))
             else
                 notify(C, 'ChangedColorMap')
             end
@@ -143,11 +143,11 @@ classdef ColorMapTool < xplr.GraphNode
             if size(xi, 2) == 1
                 xi(idxnan) = 0;
                 if C.invert_map
-                    xi = 256 - round(xi*(size(C.cmap, 1) - 1));
+                    xi = 256 - round(xi*(size(C.c_map, 1) - 1));
                 else
-                    xi = 1 + round(xi*(size(C.cmap, 1) - 1));
+                    xi = 1 + round(xi*(size(C.c_map, 1) - 1));
                 end
-                im = C.cmap(xi(:), :);
+                im = C.c_map(xi(:), :);
             else
                 im = xi;
             end

@@ -12,12 +12,12 @@ classdef FilterAndPoint < xplr.DataOperand
     properties (SetAccess='protected', Transient)
         do_listen_point = true;
     end
-    properties (Dependent, SetAccess='protected', Transient)
-        indices     % current selection
-        index_0      % current point
+    properties (Dependent, SetAccess='protected', AbortSet=true, Transient)
+        indices             % current selection
+        point_index_exact   % current point
     end
-    properties (Dependent, Transient)
-        index       % current point
+    properties (Dependent, Transient, SetAccess='private')
+        point_index         % current point
     end
 
     % Constructor and destructor
@@ -37,14 +37,14 @@ classdef FilterAndPoint < xplr.DataOperand
             end
             
             % set filter
-            create_members = ~isa(varargin{1}, 'xplr.filter');
+            create_members = ~isa(varargin{1}, 'xplr.Filter');
             if create_members
                 F.F = xplr.Filter(varargin{:});
             else
                 F.F = varargin{1};
             end
             F.header_in = F.F.header_in;
-            connectlistener(F.F, F, 'changed_operation', @(u,e)transit_notification(F, 'filter', e))
+            connect_listener(F.F, F, 'ChangedOperation', @(u,e)transit_notification(F, 'filter', e))
             
             % set P
             if create_members
@@ -55,13 +55,13 @@ classdef FilterAndPoint < xplr.DataOperand
                 F.P = varargin{2};
                 if length(F.P) ~= F.nd_in, error 'number of point filters does not match number of input dimensions', end
                 for i=1:F.nd_in
-                    if ~is_equal(F.P(i).header_in, F.header_in(i))
+                    if ~isequal(F.P(i).header_in, F.header_in(i))
                         error 'headers of filter and point filter(s) do not match'
                     end
                 end
             end
             for i=1:F.nd_in
-                connectlistener(F.P(i), F, 'changed_operation', @(u,e)transit_notification(F, 'point', e))
+                connect_listener(F.P(i), F, 'ChangedOperation', @(u,e)transit_notification(F, 'point', e))
             end
             
             % set output header (uses filters or P depend_ing on whether
@@ -119,14 +119,13 @@ classdef FilterAndPoint < xplr.DataOperand
                 data_ind = F.F.indices;
             end
         end
-        function x = get.index_0(F)
-            x = [F.P.index_0];
+        function x = get.point_index_exact(F)
+            x = [F.P.index_exact];
         end
-        function x = get.index(F)
+        function x = get.point_index(F)
             x = [F.P.index];
         end
-        function set.index(F, x)
-            if isequal(x, F.index_0), return, end
+        function set.point_index_exact(F, x)
             
             % if there are multiple points (i.e. input space is
             % multi-dimensional), it is better to generate a single event
@@ -136,17 +135,17 @@ classdef FilterAndPoint < xplr.DataOperand
             c = onCleanup(@()set(F, 'do_listen_point', true));
             
             % update point
-            cur_ind = F.index;
-            for i=length(F.P), F.P(i).index = x(i); end
+            cur_ind = F.point_index;
+            for i=length(F.P), F.P(i).value = x(i); end
             
             % update header
             set_header_out(F)
             
             % generation of a single event
-            chg_ij = ~isequal(F.index, cur_ind);
-            notify(F, 'changed_operation', xplr.EventInfo('point', chg_ij))
+            chg_ij = ~isequal(F.point_index, cur_ind);
+            notify(F, 'ChangedOperation', xplr.EventInfo('point', chg_ij))
             if chg_ij && F.F.n_sel == 0
-                notify(F, 'changed_operation', xplr.EventInfo('filter', 'chg', 1))
+                notify(F, 'ChangedOperation', xplr.EventInfo('filter', 'chg', 1))
             end
         end
     end
@@ -184,14 +183,14 @@ classdef FilterAndPoint < xplr.DataOperand
                         % e: make a copy of it
                         e2 = xplr.EventInfo('filter', e.flag,e.ind, e.value);
                     end
-                    notify(F, 'changed_operation', e2)
+                    notify(F, 'ChangedOperation', e2)
                 case 'point'
-                    if F.do_listen_point % 'do_listen_point' property is manipulated in F.set.index
+                    if F.do_listen_point % 'do_listen_point' property is manipulated in F.set.point_index
                         % same as above: copy e
                         e2 = xplr.EventInfo('point', e.chg_ij);
-                        notify(F, 'changed_operation', e2)
+                        notify(F, 'ChangedOperation', e2)
                         if e.chg_ij && F.F.n_sel == 0
-                            notify(F, 'changed_operation', xplr.EventInfo('filter', 'chg', 1))
+                            notify(F, 'ChangedOperation', xplr.EventInfo('filter', 'chg', 1))
                         end
                     end
             end
@@ -262,13 +261,13 @@ classdef FilterAndPoint < xplr.DataOperand
     
     % Link with selection in real world coordinates
     methods
-        function selection_world = operation_data_2_space(F)
+        function selection_world = operation_data_to_space(F)
             error 'FilterAndPoint object should not be directly connected to a wordOperand object: connect rather its child point and filter'
         end
-        function update_operation_data_2_space(F, WO, e)
+        function update_operation_data_to_space(F, WO, e)
             error 'FilterAndPoint object should not be directly connected to a wordOperand object: connect rather its child point and filter'
         end
-        function update_operation_space_2_data(F, ~, e)
+        function update_operation_space_to_data(F, ~, e)
             error 'FilterAndPoint object should not be directly connected to a wordOperand object: connect rather its child point and filter'
         end
     end

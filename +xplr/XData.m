@@ -26,7 +26,7 @@ classdef XData < xplr.GraphNode
     end
     
     events
-        changed_data % sent with info xplr.eventinfo('data',chghead)
+        ChangedData % sent with info xplr.eventinfo('data',chg_head)
     end
     
     % Constructor and simple access
@@ -113,9 +113,9 @@ classdef XData < xplr.GraphNode
         function set_name(x, name)
             if strcmp(name, x.name), return, end
             x.name = name;
-            notify(x, 'changed_data', xplr.EventInfo('data', 'name'))
+            notify(x, 'ChangedData', xplr.EventInfo('data', 'name'))
         end
-        function chgData(x, data)
+        function chg_Data(x, data)
             if isequal(data, x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
             data_sz = strictsize(data, x.nd);
@@ -126,14 +126,14 @@ classdef XData < xplr.GraphNode
             if ~isreal(data), error 'data cannot be complex', end
             x.data = data;
             if ~any(chg_sz)
-                notify(x, 'changed_data', xplr.EventInfo('data', 'chgdata'))
+                notify(x, 'ChangedData', xplr.EventInfo('data', 'chg_data'))
                 return
             end
             % update dimension headers if necessary
             for i=find(chg_sz)
                 x.header(i) = update_measure_header(x.header(i), data_sz(i));
             end
-            notify(x, 'changed_data', xplr.EventInfo('data', 'chgdim', find(chg_sz))) %#ok<FNDSB>
+            notify(x, 'ChangedData', xplr.EventInfo('data', 'chg_dim', find(chg_sz))) %#ok<FNDSB>
         end
         function update_data(x, flag, d, ind, value, new_head)
             % function update_data(x,flag,dim,ind,value,new_head)
@@ -166,21 +166,21 @@ classdef XData < xplr.GraphNode
                 new_head = update_header(x.header(dim), flag, ind);
             end
             if strcmp(flag, 'all') && isequal(new_head, x.header(dim))
-                % flag 'chgdata' might be preferable to 'all' to indicate
+                % flag 'chg_data' might be preferable to 'all' to indicate
                 % that header did not change
-                flag = 'chgdata';
+                flag = 'chg_data';
             end
             tmp = new_head;
             new_head = x.header;
             new_head(dim) = tmp;
             clear tmp
             % update data
-            if ~fn_ismemberstr(flag, {'chgdata', 'all', 'chgdim'})
+            if ~fn_ismemberstr(flag, {'chg_data', 'all', 'chg_dim'})
                 s = substruct('()', repmat({':'}, 1, x.nd));
                 s.subs{dim} = ind;
             end
             switch flag
-                case {'all', 'chgdata', 'chgdim'}
+                case {'all', 'chg_data', 'chg_dim'}
                     new_data = value;
                 case {'chg', 'new', 'chg&new', 'chg&rm'}
                     if size(value,dim) == new_head(dim).n
@@ -212,7 +212,7 @@ classdef XData < xplr.GraphNode
             x.header = new_head;
             x.data = new_data;
             % notification
-            notify(x, 'changed_data', xplr.EventInfo('data', flag, dim, ind))
+            notify(x, 'ChangedData', xplr.EventInfo('data', flag, dim, ind))
         end
         function update_data_dim(x, flag, dim, new_data, new_head)
             % update header
@@ -220,7 +220,7 @@ classdef XData < xplr.GraphNode
             switch flag
                 case 'global'
                     x.header = new_head;
-                case 'chgdim'
+                case 'chg_dim'
                     if length(dim) ~= length(new_head), error 'length of new header does not match number of new dimensions', end
                     x.header(dim) = new_head;
                 otherwise
@@ -234,7 +234,7 @@ classdef XData < xplr.GraphNode
             end
             x.data = new_data;
             % notification
-            notify(x, 'changed_data', xplr.EventInfo('data', flag, [x.header(dim).dim_id]))
+            notify(x, 'ChangedData', xplr.EventInfo('data', flag, [x.header(dim).dim_id]))
         end
     end
     

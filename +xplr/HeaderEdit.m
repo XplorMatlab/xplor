@@ -294,7 +294,7 @@ function display_header(E, idx)
         % length
         t_data{i, 2} = E.sz(i);
         % header info
-        [t_data{i, [iL, iU, iV, iC]}] = display_headerinfo(head);
+        [t_data{i, [iL, iU, iV, iC]}] = display_header_info(head);
         % is guess?
         switch head.guessaction
             case ''
@@ -453,14 +453,14 @@ function cell_select(E, e)
             case 'choose'
                 % Select among the list of all guesses: build and show
                 % a menu with all possibilities
-                deleteValid(E.contextmenu)
+                delete_valid(E.contextmenu)
                 m = uicontextmenu('parent', E.hf);
                 E.contextmenu = m;
                 n_guess = length(head_i.all_guess);
                 for j=1:n_guess
                     try
                         [label, unit scale_value color] = ...
-                            display_headerinfo(head_i.all_guess(j));
+                            display_header_info(head_i.all_guess(j));
                         lab = fn_strcat( ...
                             {label, unit, scale_value color}, '; ' ...
                             );
@@ -694,7 +694,7 @@ function [type, value] = read_value(scale_value,n)
 end
 
 %---
-function [label, unit, scale_value, color] = display_headerinfo(head)
+function [label, unit, scale_value, color] = display_header_info(head)
 
     % label
     if isempty(head.sub_labels)

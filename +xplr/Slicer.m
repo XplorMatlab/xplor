@@ -38,7 +38,7 @@ classdef Slicer < xplr.GraphNode
             xplr.debug_info('TODO', 'can a slicer exist without being aware of its possessing view?')
             % set data
             S.data = data;
-            S.add_listener(data, 'changed_data', @(u,e)data_change(S,e));
+            S.add_listener(data, 'ChangedData', @(u,e)data_change(S,e));
             % without any filter, slice is identical data
             S.slice = data.copy();
 
@@ -93,7 +93,7 @@ classdef Slicer < xplr.GraphNode
             S.slicing_chain(nok+1:end) = [];
             % install listeners
             for i=1:nadd
-                S.add_listener(new_filt(i), 'changed_operation', @(u,e)filter_change(S, new_filt(i), dim_id{i}, e));
+                S.add_listener(new_filt(i), 'ChangedOperation', @(u,e)filter_change(S, new_filt(i), dim_id{i}, e));
             end
             % update slice
             if ~S.pend_ing_rm_filter && isscalar(new_filt) && new_filt.nd_out == new_filt.nd_in
@@ -172,7 +172,7 @@ classdef Slicer < xplr.GraphNode
                 S.disconnect(S.filters(id_x).obj)
                 S.filters(id_x).obj = F;
                 S.filters(id_x).dim_id = dim_id;
-                S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
+                S.add_listener(F, 'ChangedOperation', @(u,e)filter_change(S, F, dim_id, e));
                 % no need for update if the filter is not active
                 if S.filters(id_x).active
                     if F.nd_out ~= prev_nd_out, nd_out_changed = true; end
@@ -213,7 +213,7 @@ classdef Slicer < xplr.GraphNode
                 prev_nd_out = S.filters(id_x).obj.nd_out;
                 S.disconnect(S.filters(id_x).obj)
                 S.filters(id_x).obj = F;
-                S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
+                S.add_listener(F, 'ChangedOperation', @(u,e)filter_change(S, F, dim_id, e));
                 % no need for update if the filter is not active
                 if S.filters(id_x).active
                     if F.nd_out~=prev_nd_out, nd_out_changed = true; end
@@ -254,7 +254,7 @@ classdef Slicer < xplr.GraphNode
             % same, so best is to signal the change as a change in the data
             nok = sum([S.filters(1:id_xfirst-1).active]);
             S.slicing_chain(nok+1:end) = [];
-            do_slice(S, 'slicer', 'chgdata')
+            do_slice(S, 'slicer', 'chg_data')
         end
         function chg_filter_active(S, id_x, val)
             % function chg_filter_active(S,id_x,val)
@@ -336,7 +336,7 @@ classdef Slicer < xplr.GraphNode
             switch chg_origin
                 case 'data'
                     k_start = 1;
-                    if fn_ismemberstr(chg_flag,{'all', 'chgdata', 'global', 'chg_dim'})
+                    if fn_ismemberstr(chg_flag,{'all', 'chg_data', 'global', 'chg_dim'})
                         % smart update is not possible
                         S.slicing_chain(:) = [];
                     else
@@ -394,8 +394,8 @@ classdef Slicer < xplr.GraphNode
                             data_sub = filt_k.slicing(data_start.data, data_start.dimension_number(chg_dim_id), ind1);
                         end
                         % update the xdata object
-                        chg_dim_id = filt_k.get_dim_idout(chg_dim_id); % dimension identifier in the data -> in the slice
-                        head_dim = xplr.DimHeader(filt_k.headerout, chg_dim_id);                        
+                        chg_dim_id = filt_k.get_dim_id_out(chg_dim_id); % dimension identifier in the data -> in the slice
+                        head_dim = xplr.DimHeader(filt_k.header_out, chg_dim_id);
                         S.slicing_chain(k_filt).update_data(chg_flag, chg_dim_id, chg_ind, data_sub, head_dim)
                         % if S.slicing_chain(k_filt) is S.slice, we are done
                         if k_filt == n_active_filters
@@ -447,7 +447,7 @@ classdef Slicer < xplr.GraphNode
                 % res was previously the end of the chain and therefore
                 % equal to the slice; but now a new filter has been
                 % inserted after and we need the two xdata objects to be
-                % different, otherwise the update_data_dim/chgData calls
+                % different, otherwise the update_data_dim/chg_Data calls
                 % applied to the slice below will also apply to this chain
                 % element and this will lead to awkward results
                 res = S.slice.copy();
@@ -462,7 +462,7 @@ classdef Slicer < xplr.GraphNode
                     % dimension identified by chg_dim_id in the data
                     % disappears in the slice; get the identifier of the
                     % correspond_ing dimension in the slice
-                    chg_dim_id = obj_k.get_dim_idout(dim_idk);
+                    chg_dim_id = obj_k.get_dim_id_out(dim_idk);
                 end
                 res = obj_k.operation(res, dim_idk);
                 S.slicing_chain(k) = res;
@@ -474,8 +474,8 @@ classdef Slicer < xplr.GraphNode
                 case 'chg_dim'
                     chg_dim_out = res.dimension_number(chg_dim_id);
                     S.slice.update_data_dim(chg_flag, chg_dim_out, res.data, res.header(chg_dim_out))
-                case 'chgdata'
-                    S.slice.chgData(res.data)
+                case 'chg_data'
+                    S.slice.chg_Data(res.data)
                 otherwise
                     chg_dim_out = res.dimension_number(chg_dim_id);
                     S.slice.update_data(chg_flag, chg_dim_out, chg_ind, res.data, res.header(chg_dim_out))
@@ -525,11 +525,11 @@ classdef Slicer < xplr.GraphNode
                     S.V.C.dimaction('rm_filter',rmdim)
                     % reslice
                     do_slice(S,'data','global')
-                case 'chgdata'
+                case 'chg_data'
                     % header was not changed, it is possible therefore to
                     % keep all existing filters
                     S.slicing_chain(:) = [];
-                    do_slice(S,'data','chgdata',[],[])
+                    do_slice(S,'data','chg_data',[],[])
                 case 'name'
                     % name is not passed to the slice, so nothing to do
                 otherwise

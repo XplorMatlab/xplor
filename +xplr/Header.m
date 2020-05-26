@@ -306,27 +306,27 @@ classdef Header < hgsetget
     
     % Header comparisons
     methods
-        function b = is_equal(H1, H2)
+        function b = isequal(H1, H2)
             % cannot use the default isqual function, because property
             % item_names or id might be computed for one header and not for
             % the other
             if ~isscalar(H1) || ~isscalar(H2)
                 b = false;
-                if ~is_equal(size(H1),size(H2)), return, end
-                for i=1:numel(b), if ~is_equal(H1(i), H2(i)), return, end, end
+                if ~isequal(size(H1),size(H2)), return, end
+                for i=1:numel(b), if ~isequal(H1(i), H2(i)), return, end, end
                 b = true;
                 return
             end
-            b = (H1.n == H2.n) && is_equal(H1.values, H2.values) ... % start with the most likely to be unequal
-                && is_equal(H1.label, H2.label) && is_equal(H1.sub_labels, H2.sub_labels) ...
-                && is_equal({H1.categorical, H1.start, H1.scale}, {H2.categorical, H2.start, H2.scale});
+            b = (H1.n == H2.n) && isequal(H1.values, H2.values) ... % start with the most likely to be unequal
+                && isequal(H1.label, H2.label) && isequal(H1.sub_labels, H2.sub_labels) ...
+                && isequal({H1.categorical, H1.start, H1.scale}, {H2.categorical, H2.start, H2.scale});
         end
 %        function b = isequal(H1, H2)
-%            % function b = is_equal(H1,H2)
+%            % function b = isequal(H1,H2)
 %            %---
-%            % alias to is_equal, needed when both H1 and H2 are instances of
+%            % alias to isequal, needed when both H1 and H2 are instances of
 %            % subclasses of xplr.header
-%            b = is_equal(H1, H2);
+%            b = isequal(H1, H2);
 %        end
         function id = get_id(H)
             % Get a unique identifier that identifies the header (we will
@@ -346,8 +346,14 @@ classdef Header < hgsetget
             % which the data dimensions described by the header lies: this
             % is a hash number of the header's label and unit.
             if ~isscalar(H)
+                if ~all([H.is_measure])
+                    id = []; 
+                    return
+                end
                 id = zeros(size(H));
-                for i=1:numel(H), id(i) = get_measure_space_id(H(i)); end
+                for i=1:numel(H)
+                    id(i) = get_measure_space_id(H(i)); 
+                end
                 return
             end
             if H.is_measure
@@ -372,7 +378,7 @@ classdef Header < hgsetget
             connections = false(nh,nh);
             idx_measure = find([H.is_measure]);
             for i = idx_measure
-                for j = set_diff(idx_measure, i)
+                for j = setdiff(idx_measure, i)
                     connections(i, j) = strcmp(H(i).unit, H(j).unit);
                 end
             end
@@ -447,7 +453,7 @@ classdef Header < hgsetget
     methods
         function new_head = update_header(H, flag, ind, value)
             % function new_head = update_header(H,flag,ind,value)
-            if ~fn_ismemberstr(flag, {'all', 'new', 'chg', 'remove', 'chg&new', 'chg&rm', 'perm', 'chgdim'})
+            if ~fn_ismemberstr(flag, {'all', 'new', 'chg', 'remove', 'chg&new', 'chg&rm', 'perm', 'chg_dim'})
                 error('cannot update header for flag ''%s''', flag)
             end
             new_head = copy(H);
@@ -456,7 +462,7 @@ classdef Header < hgsetget
                     error 'not implemented yet (call updateMeasureUpdate?)'
                 case 'categorical'
                     switch flag
-                        case {'all', 'chgdim'}
+                        case {'all', 'chg_dim'}
                             new_head.n = length(ind);
                             if H.n_column == 0
                                 new_head.values = cell(new_head.n, 0);
@@ -511,9 +517,9 @@ classdef Header < hgsetget
             % check that the new header seems to meet with the specified
             % change
             
-            % flag 'chgdim' indicates a complete change, i.e. there is just
+            % flag 'chg_dim' indicates a complete change, i.e. there is just
             % nothing to be checked
-            if strcmp(flag, 'chgdim'), return, end
+            if strcmp(flag, 'chg_dim'), return, end
             
             % first check that sub_labels and type are the same (new_head
             % however might have more or less sub_labels)
@@ -521,7 +527,7 @@ classdef Header < hgsetget
                 error 'new header is not of the same type as current header'
             end
             nsub = min(length(H.sub_labels), length(new_head.sub_labels));
-            if ~is_equal(new_head.sub_labels(1:nsub), H.sub_labels(1:nsub))
+            if ~isequal(new_head.sub_labels(1:nsub), H.sub_labels(1:nsub))
                 error 'new header has different sublabel(s) from current header'
             end
             
@@ -554,7 +560,7 @@ classdef Header < hgsetget
                         % change is possible only if all values were
                         % changed
                         ok = (new_head.start == H.start && new_head.scale == H.scale) || (length(ind) == H.n);
-                    case {'chg&new', 'new', 'chgdata'}
+                    case {'chg&new', 'new', 'chg_data'}
                         ok = (new_head.start == H.start) && (new_head.scale == H.scale);
                     case {'remove', 'chg&rm'}
                         if strcmp(flag, 'remove'), idx_rm = ind; else idx_rm = ind{2}; end
@@ -591,8 +597,8 @@ classdef Header < hgsetget
                     case 'chg'
                         unchg = true(1, H.n);
                         unchg(ind) = false;
-                        [idx_h, idx_n] = deal(find(unchg)); % (much) faster than set_diff
-                    case {'new', 'chgdata'}
+                        [idx_h, idx_n] = deal(find(unchg)); % (much) faster than setdiff
+                    case {'new', 'chg_data'}
                         [idx_h, idx_n] = deal(1:H.n);
                     case 'chg&new'
                         unchg = true(1, H.n);
@@ -616,7 +622,7 @@ classdef Header < hgsetget
                     otherwise
                         error('in_valid flag ''%s'' for header update', flag)
                 end
-                ok = is_equal(new_head.values(idx_n, 1:H.n_column), H.values(idx_h, :));
+                ok = isequal(new_head.values(idx_n, 1:H.n_column), H.values(idx_h, :));
             end
             if ~ok, error 'New header values are not consistent with the operation', end
         end

@@ -65,11 +65,11 @@ classdef View < xplr.GraphNode
             V.C = V.add_component(xplr.ViewControl(V));
             
             % save object in base workspace
-            assign_in('base', 'V', V)
+            assignin('base', 'V', V)
         end
         function delete(V)
             if ~isprop(V,'hf'), return, end
-            deleteValid(V.hf, V.C, V.D)
+            delete_valid(V.hf, V.C, V.D)
         end
         function developer_menu(V)
             m = uimenu(V.hf, 'label', 'Developer');
@@ -110,7 +110,7 @@ classdef View < xplr.GraphNode
             set(V.panels.main, 'bordermode', 'push')
             V.panels.display = V.panels.main.setSubPanel(2);
             V.panels.all_controls = V.panels.main.setSubOrg(1, 'V', 2,[1, 1], [1, 0]);
-            connectlistener(V.panels.all_controls.hobj, V, 'Visible', 'PostSet', @(u,e)set(V, 'control_visible', get(V.panels.all_controls.hobj, 'visible')));
+            connect_listener(V.panels.all_controls.hobj, V, 'Visible', 'PostSet', @(u,e)set(V, 'control_visible', get(V.panels.all_controls.hobj, 'visible')));
             V.panels.controls_width = 120;
             V.panels.control = V.panels.all_controls.setSubPanel(1);
             V.panels.list_combo = V.panels.all_controls.setSubOrg(2, 'H');

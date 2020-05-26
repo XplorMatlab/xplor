@@ -1,9 +1,9 @@
 classdef Point < xplr.DataOperand
    
-    properties (SetAccess='protected')
-        index_0 = 1; % real value
+    properties (AbortSet=true)
+        index_exact = 1; % real value
     end
-    properties
+    properties (SetAccess='private')
         index = 1;  % integer between 1 and header_in.n
     end
     properties (Dependent, Transient)
@@ -13,7 +13,7 @@ classdef Point < xplr.DataOperand
    
     % Constructor and setting index
     methods
-        function P = point(header_in)
+        function P = Point(header_in)
             if ~isscalar(header_in)
                 P = xplr.Point.empty(1, 0);
                 for i=1:length(header_in)
@@ -25,14 +25,13 @@ classdef Point < xplr.DataOperand
             P.header_in = header_in;
             P.header_out = xplr.Header.empty(1, 0);
         end
-        function set.index(P, x)
-            if x == P.index_0, return, end %#ok<*MCSUP>
-            P.index_0 = x;
+        function set.index_exact(P, x)
+            P.index_exact = x;
             i = max(1, min(P.header_in.n,round(x)));
-            chgij = (i ~= P.index);
+            chg_ij = (i ~= P.index);
             P.index = i;
             % notification
-            notify(P, 'changed_operation', xplr.EventInfo('point', chgij))
+            notify(P, 'ChangedOperation', xplr.EventInfo('point', chg_ij))
         end
         function copy_in(P, obj)
             P.index = obj.index;
@@ -45,7 +44,7 @@ classdef Point < xplr.DataOperand
             head = P.header_in;
             switch head.type
                 case 'measure'
-                    x = head.start + head.scale*P.index_0;
+                    x = head.start + head.scale*P.index_exact;
                 case 'categorical'
                     x = head.values(P.index, :); % cell array
                     if isscalar(x), x = x{1}; end
@@ -143,14 +142,14 @@ classdef Point < xplr.DataOperand
     
     % Link with point selection in real world coordinates
     methods
-        function point_world = operation_data_2_space(P)
+        function point_world = operation_data_to_space(P)
             point_world = P.header_in.start + (P.index-1)*P.header_in.scale;
         end
-        function updateoperation_data_2_space(P, WO, ~)
-            WO.operation = P.operation_data_2_space();
-            notify(WO, 'changed_operation')
+        function update_operation_data_to_space(P, WO, ~)
+            WO.operation = P.operation_data_to_space();
+            notify(WO, 'ChangedOperation')
         end
-        function update_operation_space_2_data(P, point_world, ~)
+        function update_operation_space_to_data(P, point_world, ~)
             P.index = 1 + (point_world - P.header_in.start)/P.header_in.scale;
         end
     end

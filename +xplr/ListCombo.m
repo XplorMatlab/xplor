@@ -23,19 +23,19 @@ classdef ListCombo < hgsetget
                 
             % create new containing figure? (in this case, set auto-delete)
             if isempty(container)
-                screen_size = get(0, 'screen_size');
+                screen_size = get(0, 'screensize');
                 container = figure('integerhandle', 'off', 'handlevisibility', 'off', ...
                     'numbertitle', 'off', 'menubar', 'none', ...
                     'name', 'Shared Filters', ...
                     'position', [min(80, screen_size(3)/20), max(screen_size(4)*.6-275, 45), 150, 550]);
                 delete(findall(container, 'parent', container))
-                add_listener(C, 'Empty', @(u,e)delete(container));
+                addlistener(C, 'Empty', @(u,e)delete(container));
             end
             if ~isa(container, 'panelorganizer')
                 container = panelorganizer(container, 'H');
                 container.bordermode = 'push';
             end
-            add_listener(container, 'ObjectBeingDestroyed', @(u,e)delete(C));
+            addlistener(container, 'ObjectBeingDestroyed', @(u,e)delete(C));
             C.container = container;
             
             % display lists
@@ -59,7 +59,7 @@ classdef ListCombo < hgsetget
             C.lists(id_x) = xplr.List(filter, 'in', hp);
             
             % remove panel when list will be distroyed
-            add_listener(C.lists(id_x), 'ObjectBeingDestroyed', @(u,e)C.remove_list(hp));
+            addlistener(C.lists(id_x), 'ObjectBeingDestroyed', @(u,e)C.remove_list(hp));
             
             % memorize which filter is at this position
             C.filters(id_x) = filter;
@@ -89,11 +89,11 @@ classdef ListCombo < hgsetget
             end
             
             % remove panel
-            id_x = C.container.remove_sub_panel(hp_or_id_x);
+            id_x = C.container.removeSubPanel(hp_or_id_x);
             C.lists(id_x) = [];
             C.filters(id_x) = [];
             % signal whether there are no more list being displayed
-            if C.container.n_children == 0
+            if C.container.nchildren == 0
                 notify(C, 'Empty')
             end
         end
