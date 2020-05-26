@@ -226,7 +226,7 @@ classdef viewdisplay < xplr.graphnode
         end
     end
     
-    % General methods
+    % Display menu
     methods (Access='private')
         function display_menu(D)
             m = D.menu;
@@ -657,7 +657,7 @@ classdef viewdisplay < xplr.graphnode
         end
     end
     
-    % Update display
+    % Main display: grid of signals or images
     methods (Static)
         function ok = testDisplayable(sz,displaymode,layout)
             szgrid = sz;
@@ -673,67 +673,6 @@ classdef viewdisplay < xplr.graphnode
         end
     end
     methods (Access = 'private')
-        function slicechange(D,e)
-            % function slicechange(D,e)
-            %---
-            % function slicechange updates the 'layout' property and slider
-            % connections, but does not update display
-            % it should be called after the zoomslicer has already
-            % completed its update after slice change (hence the use of the
-            % 'sliceChangeEvent' property to delay call to slicechange)
-            
-            if nargin<2, flag = 'global'; else, flag = e.flag; end
-            xplr.debuginfo('viewdisplay','slicechange %s', flag)
-            
-            % first time?
-            if isempty(D.layoutIDall)
-                % some heuristics to choose initial layout
-                D.displaymode = fn_switch(sum(D.slice.sz>1) == 1, 'time courses', 'image');
-                D.layoutIDall = xplr.displaylayout(D);
-                D.layoutID = D.layoutIDall;
-            else
-                % keep locations of dimensions already present in
-                % D.layoutIDall, use some heuristic to choose
-                % locations of new dimensions
-                [D.layoutIDall, D.layoutID] = D.layoutIDall.updateLayout();
-            end
-            
-            % Update active dim and slider connections
-            if fn_ismemberstr(flag,{'global'})
-                D.checkActiveDim(false,true)
-                D.navigation.connectZoomFilter()
-            elseif fn_ismemberstr(flag,{'chgdata' 'chg'})
-                % slice size did not change
-            else
-                D.checkActiveDim(false)
-                D.navigation.connectZoomFilter()
-            end
-            
-            % Update color dim
-            D.checkColorDim(false)
-            
-            % Assign point filters to each updated dimension
-            switch flag
-                case 'chgdata'
-                    % nothing to do: only the data has changed
-                case 'global'
-                    D.navigation.connectPointFilter()
-                case {'all' 'chgdim' 'new' 'remove' 'chg' 'chg&new' 'chg&rm' 'perm'}
-                    dim = D.slice.dimensionNumber(e.dim);
-                    D.navigation.connectPointFilter(dim)
-                otherwise
-                    error('flag ''%s'' not handled', flag)
-            end
-            
-            % Check whether current dimension for selections display is
-            % still valid, i.e. whether the connected filter still fits the
-            % dimension in the new slice (if it is still valid, note that
-            % selection display update will occur in D.zslicechange)
-            D.navigation.checkselectionfilter()
-            
-            % Se previous headers to current headers
-            D.previousheaders = D.slice.header;
-        end
         function updateDisplay(D,flag,dim,ind)
             % function updateDisplay(D[,flag,dim,ind])
             %---
@@ -1097,7 +1036,7 @@ classdef viewdisplay < xplr.graphnode
         end
     end
     
-    % Callbacks (i.e. handle specific changes in slice, properties, etc.)
+    % Main routines: response to changes in slice, zslice, zoom, etc.
     methods
         function zslicechange(D,e)
             if nargin<2, flag = 'global'; else flag = e.flag; end
@@ -1200,6 +1139,70 @@ classdef viewdisplay < xplr.graphnode
             elseif ~strcmp(flag,'chgdata') && isequal(chgdim,D.colordim)
                 displayColorLegend(D)
             end
+        end
+        function slicechange(D,e)
+            % function slicechange(D,e)
+            %---
+            % Function slicechange takes care of changes specific to a
+            % slice change (e.g. updating the layout, slider connections).
+            % It does not take care of changes common with a zslice change,
+            % because it is called from within the zslicechange method,
+            % which will take care or them afterwards. Note that the
+            % zslicechange method itself was called following the
+            % zoomslicer update that was triggered by the slice change,
+            % which means that the zoomslicer is already set correctly.
+            
+            if nargin<2, flag = 'global'; else, flag = e.flag; end
+            xplr.debuginfo('viewdisplay','slicechange %s', flag)
+            
+            % first time?
+            if isempty(D.layoutIDall)
+                % some heuristics to choose initial layout
+                D.displaymode = fn_switch(sum(D.slice.sz>1) == 1, 'time courses', 'image');
+                D.layoutIDall = xplr.displaylayout(D);
+                D.layoutID = D.layoutIDall;
+            else
+                % keep locations of dimensions already present in
+                % D.layoutIDall, use some heuristic to choose
+                % locations of new dimensions
+                [D.layoutIDall, D.layoutID] = D.layoutIDall.updateLayout();
+            end
+            
+            % Update active dim and slider connections
+            if fn_ismemberstr(flag,{'global'})
+                D.checkActiveDim(false,true)
+                D.navigation.connectZoomFilter()
+            elseif fn_ismemberstr(flag,{'chgdata' 'chg'})
+                % slice size did not change
+            else
+                D.checkActiveDim(false)
+                D.navigation.connectZoomFilter()
+            end
+            
+            % Update color dim
+            D.checkColorDim(false)
+            
+            % Assign point filters to each updated dimension
+            switch flag
+                case 'chgdata'
+                    % nothing to do: only the data has changed
+                case 'global'
+                    D.navigation.connectPointFilter()
+                case {'all' 'chgdim' 'new' 'remove' 'chg' 'chg&new' 'chg&rm' 'perm'}
+                    dim = D.slice.dimensionNumber(e.dim);
+                    D.navigation.connectPointFilter(dim)
+                otherwise
+                    error('flag ''%s'' not handled', flag)
+            end
+            
+            % Check whether current dimension for selections display is
+            % still valid, i.e. whether the connected filter still fits the
+            % dimension in the new slice (if it is still valid, note that
+            % selection display update will occur in D.zslicechange)
+            D.navigation.checkselectionfilter()
+            
+            % Set previous headers to current headers
+            D.previousheaders = D.slice.header;
         end
         function zoomchange(D,e)
             % update graph positions: if data has changed in size,
