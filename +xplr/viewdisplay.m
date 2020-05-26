@@ -1003,7 +1003,7 @@ classdef viewdisplay < xplr.graphnode
                         xi = subsref(displayed_data, subs);
                         xi = permute(xi, internalperm);
                         xi = fn_float(xi);
-                        clipi = subsref_dim(D.gridclip,1+elementsdim,ijk_hdisplay(elementsdim));
+                        clipi = subsref_dim(D.gridclip,1+elementsdim,ijk_hdisplay(elementsdim)); % 2x1 vector, or 2xn array if color image and color channel clipped independently
                         if clip_at_elements_level && any(isnan(clipi(:)))
                             % independent clip for this element
                             clipi = D.get_clip_range(xi);
@@ -1177,11 +1177,11 @@ classdef viewdisplay < xplr.graphnode
                                 updateDisplay(D,'chg',chgdim,1:n)
                             end
                         case 'chg&new'
-                            updateDisplay(D,'chg',chgdim,e.ind{1})
                             updateDisplay(D,'new',chgdim,e.ind{2})
-                        case 'chg&rm'
                             updateDisplay(D,'chg',chgdim,e.ind{1})
+                        case 'chg&rm'
                             updateDisplay(D,'remove',chgdim,e.ind{2})
+                            updateDisplay(D,'chg',chgdim,e.ind{1})
                         otherwise
                             error('flag ''%s'' is not handled','flag')
                     end
