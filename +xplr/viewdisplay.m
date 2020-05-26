@@ -1004,7 +1004,7 @@ classdef viewdisplay < xplr.graphnode
                         xi = permute(xi, internalperm);
                         xi = fn_float(xi);
                         clipi = subsref_dim(D.gridclip,1+elementsdim,ijk_hdisplay(elementsdim));
-                        if clip_at_elements_level && any(isnan(clipi))
+                        if clip_at_elements_level && any(isnan(clipi(:)))
                             % independent clip for this element
                             clipi = D.get_clip_range(xi);
                             clipi = repmat(clipi(:),[1 size(xi,3)]); 

@@ -165,6 +165,8 @@ classdef displaygraph < xplr.graphnode
             else
                 st.xydim = [];
                 st.xyoffsets = zeros(2,1);
+                st.xysteps = ones(2,1);
+                [st.xyncol, st.xynrow] = deal(1);
             end
             
             % define steps while ensuring aspect ratio for pairs (start
@@ -304,6 +306,7 @@ classdef displaygraph < xplr.graphnode
     methods
         function setTicks(G)
             st = G.steps;
+            org = G.layout;
             
             % remove previous xy ticks
             deleteValid(G.xyticks)
@@ -312,27 +315,14 @@ classdef displaygraph < xplr.graphnode
             % stop if data is too large for being displayed
             if G.D.nodisplay, return, end
             
-            % x and y
+            % x and y ticks
             for k = 1:2
-                switch k
-                    case 1
-                        [f, ff] = deal('x','yx');
-                    case 2
-                        [f, ff] = deal('y','xy');
-                end
+                f = fn_cast(k,'x','y');
                 d = G.D.activedim.(f);
-                
-                % no active dimension -> no tick
-                if isempty(d) || G.D.V.slice.header(d).n == 1
-                    switch f
-                        case 'x'
-                            set(G.D.ha,'xtick',[])
-                        case 'y'
-                            % note that method setValueTicks, which is
-                            % normally called AFTER setTicks, might set
-                            % yticks later
-                            set(G.D.ha,'ytick',[])
-                    end
+                if isempty(d) || ~any(d == org.(f))
+                    % note that method setValueTicks, which is normally
+                    % called AFTER setTicks, might set yticks later
+                    set(G.D.ha,[f 'tick'],[])
                     continue
                 end
                 
@@ -342,55 +332,31 @@ classdef displaygraph < xplr.graphnode
 
                 % conversion between data coordinates and graph
                 domeasure = head.ismeasure;
-                dogrid = any(d==G.layout.(ff));
-                if dogrid
-                    % step for ncol (or nrow) data points
-                    ncol = find(diff(st.xyoffsets(k,:)),1);
-                    if isempty(ncol), ncol = size(st.xyoffsets,2); end
-                    f_step = st.xysteps(k); 
-                    % step for one data point
-                    f_step = f_step / ncol;
-                    f_off = st.xyoffsets(k,1) - (ncol+1)/2*f_step;
-                    domeasure = false;
-                    
-                    % no constraint on a minimumstep
-                    minimumstep = 0;
-                else
-                    jf = find(d==G.layout.(f),1);
-                    if isempty(jf), error('%s activedim must be either at ''%s'' or ''%s'' location!',f,f,ff), end
-                    switch f
-                        case 'x'
-                            f_off = st.xyoffsets(k,1) + st.xoffset(jf) + sum(st.xoffset(jf+1:end)+st.xstep(jf+1:end));
-                            f_step = st.xstep(jf);
-                        case 'y'
-                            f_off = st.xyoffsets(k,1) + st.yoffset(jf) + sum(st.yoffset(jf+1:end)+st.ystep(jf+1:end));
-                            f_step = st.ystep(jf);
-                    end
-                    
-                    % target space between ticks
-                    minimumspacing = G.ticksMinimumSpacing(k);
-                    fspan = fn_cast(k,st.xspan,st.yspan);
-                    minimumspacing = minimumspacing/min(1/fspan(jf),2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
-                    
-                    % target space in data coordinates
-                    minimumstep = minimumspacing / abs(f_step);
+                jf = find(d==G.layout.(f),1);
+                switch f
+                    case 'x'
+                        f_off = st.xyoffsets(k,1) + st.xoffset(jf) + sum(st.xoffset(jf+1:end)+st.xstep(jf+1:end));
+                        f_step = st.xstep(jf);
+                    case 'y'
+                        f_off = st.xyoffsets(k,1) + st.yoffset(jf) + sum(st.yoffset(jf+1:end)+st.ystep(jf+1:end));
+                        f_step = st.ystep(jf);
                 end
+
+                % target space between ticks
+                minimumspacing = G.ticksMinimumSpacing(k);
+                fspan = fn_cast(k,st.xspan,st.yspan);
+                minimumspacing = minimumspacing/min(1/fspan(jf),2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
+
+                % target space in data coordinates
+                minimumstep = minimumspacing / abs(f_step);
                 
-                % different display depending on whether header is
-                % measure or categorical
+                % different display depending on whether header is measure
+                % or categorical
                 if domeasure
                     [start, scale] = deal(head.start,head.scale);
                     [start, stop] = deal(start, start+(n-1)*scale);
-                    if ~dogrid %minimumstep > 2 || ismember(d,G.D.internal_dim)
-                        [ticksdata, ticklabels] = G.nicevalues(start,stop,minimumstep*scale);
-                        ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
-                    else
-                        % ticks follow data points if minimum step allows
-                        % it and we are in an external dimension
-                        ticksidx = 1:n;
-                        ticksdata = start + (0:n-1)*scale;
-                        ticklabels = fn_num2str(ticksdata,'cell');
-                    end
+                    [ticksdata, ticklabels] = G.nicevalues(start,stop,minimumstep*scale);
+                    ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
                 else
                     % ticks for each data point (display only some of
                     % them if there is not enough space for all)
@@ -412,23 +378,6 @@ classdef displaygraph < xplr.graphnode
                         end
                         ticklabels = ticklabels(ticksidx);
                     end
-                    % 2D grid: put text rather than using axes ticks
-                    % system
-                    if dogrid
-                        if isempty(st.yspan)
-                            row_height = st.yavailable;
-                        else
-                            row_height = st.yspan(end);
-                        end
-                        xy = fn_add([0; row_height/2],st.xyoffsets);
-                        G.xyticks = gobjects(1,n);
-                        for i=1:n
-                            G.xyticks(i) = text(xy(1,i),xy(2,i),ticklabels{i}, ...
-                                'parent',G.ha,'hittest','off', ...
-                                'horizontalalignment','center','verticalalignment','bottom');
-                        end
-                        ticksidx = []; ticklabels = {};
-                    end
                 end
                 tick = f_off + ticksidx*f_step;
                 
@@ -437,6 +386,30 @@ classdef displaygraph < xplr.graphnode
                     set(G.ha,'xtick',tick,'xticklabel',ticklabels)
                 else
                     set(G.ha,'ytick',fliplr(tick),'yticklabel',fliplr(ticklabels))
+                end
+            end
+            
+            % grid
+            if ~isempty(st.xydim)
+                d = st.xydim;
+                
+                % header
+                head = G.D.zslice.header(d);
+                n = head.n;
+
+                % display labels for each xy/yx grid cell
+                ticklabels = row(head.getItemNames());
+                if isempty(st.yspan)
+                    row_height = st.yavailable;
+                else
+                    row_height = st.yspan(end);
+                end
+                xy = fn_add([0; row_height/2],st.xyoffsets);
+                G.xyticks = gobjects(1,n);
+                for i=1:n
+                    G.xyticks(i) = text(xy(1,i),xy(2,i),ticklabels{i}, ...
+                        'parent',G.ha,'hittest','off', ...
+                        'horizontalalignment','center','verticalalignment','bottom');
                 end
             end
             
@@ -464,11 +437,6 @@ classdef displaygraph < xplr.graphnode
             % enough space on y-axis to show values?
             org = G.D.layout;
             st = G.steps;
-            if st.xydim
-                [nxycol, nxyrow] = deal(st.xyncol,st.xynrow);
-            else
-                [nxycol, nxyrow] = deal(1);
-            end
             minimumspacing = G.ticksMinimumSpacing(2);
             if ~isempty([org.y st.xydim]), minimumspacing = minimumspacing/2; end
 %             if st.yavailable < targetspacing
@@ -484,8 +452,8 @@ classdef displaygraph < xplr.graphnode
             h_aligned_dims(G.D.slice.sz(h_aligned_dims)==1) = [];
             y_dims = org.y;
             xyok = false;
-            if ~isempty(G.steps.xydim) 
-                if G.steps.xyncol==1
+            if ~isempty(st.xydim) 
+                if st.xyncol==1
                     xyok = true;
                     y_dims(end+1) = G.steps.xydim;
                 else
@@ -514,21 +482,21 @@ classdef displaygraph < xplr.graphnode
             % permute dimensions (put these dimensions first)
             gridclip = permute(gridclip,[1 1+y_dims 1+setdiff(1:G.D.nd,y_dims)]);
             if xyok
-                gridclip = reshape(gridclip,[2 prod(sz(org.y)) nxyrow]);
+                gridclip = reshape(gridclip,[2 prod(sz(org.y)) st.xynrow]);
             else
                 gridclip = reshape(gridclip,[2 prod(sz(org.y))]);
-                gridclip = repmat(gridclip,[1 1 nxyrow]);
+                gridclip = repmat(gridclip,[1 1 st.xynrow]);
             end
             
             % build ytick and ytickvalues
             ny = prod(sz(org.y));
-            [ytick, ytickvalues, yticklabels] = deal(cell([ny nxyrow]));
-            for krow = 1:nxyrow
+            [ytick, ytickvalues, yticklabels] = deal(cell([ny st.xynrow]));
+            for krow = 1:st.xynrow
                 for ky = 1:ny
                     % vertical center of the row
                     yidx = row(fn_indices(sz(org.y),ky,'g2i'));
                     if ~isempty(org.xy)
-                        yrowoffset = st.xyoffsets(2,1+(krow-1)*nxycol);
+                        yrowoffset = st.xyoffsets(2,1+(krow-1)*st.xyncol);
                     elseif ~isempty(org.yx)
                         yrowoffset = st.xyoffsets(2,krow);
                     else
@@ -592,19 +560,16 @@ classdef displaygraph < xplr.graphnode
             sz = G.D.zslice.sz;
             st = G.steps;
             
-            % some variables
+            % store lines in a cell array
             lines = {};
-            lwmax = 0; % maximal line-width encountered so far
             
             % x
-            kstart = 2;
-            linewidth = 0;
-            for k = kstart:length(org.x)
+            for k = 2:length(org.x)
                 d = org.x(k);                      % dimension for which we will draw vertical lines
                 dout = [org.x(k+1:end) st.xydim];  % other dimensions more external than di in x location
                 n = sz(d);
                 if n == 1, continue, end
-                szout = ones(1,nd); szout(dout) = sz(dout);
+                szout = ones(1,nd+1); szout(dout) = sz(dout); szout(nd+1) = st.xyncol;
                 nout = prod(szout);
                 xpos = zeros(n-1,nout);
                 for kout = 1:nout
@@ -613,23 +578,23 @@ classdef displaygraph < xplr.graphnode
                     % indices for dimension d
                     ijk(d,:) = 1.5:n-.5;
                     % x-positions of n-1 lines
-                    xpos(:,kout) = sum(fn_add(st.xoffset(k:end)', fn_mult(ijk(org.x(k:end),:),st.xstep(k:end)')),1);
+                    xpos(:,kout) = ...
+                        sum(fn_add(st.xoffset(k:end)', fn_mult(ijk(org.x(k:end),:),st.xstep(k:end)')),1) ...
+                        + st.xyoffsets(1) + (ijk(nd+1,:)-1)*st.xysteps(1);
                 end
-                linewidth = linewidth+.5;
-                lwmax = max(lwmax,linewidth);
+                level = ~isempty(st.xydim) + length(org.x) - k + 1;
+                color = 1 - (1-G.separationcolor)/2^level;
                 lines{end+1} = fn_lines('x',xpos(:),G.D.ha, ...
-                    'linewidth',linewidth,'color',G.separationcolor); %#ok<AGROW>
+                    'color',color); %#ok<AGROW>
             end
             
             % y
-            kstart = 1+strcmp(G.D.displaymode,'image');
-            linewidth = 0;
-            for k = kstart:length(org.y)
+            for k = (1+strcmp(G.D.displaymode,'image')):length(org.y)
                 d = org.y(k);                      % dimension for which we will draw vertical lines
                 dout = [org.y(k+1:end) st.xydim];  % other dimensions more external than di in x location
                 n = sz(d);
                 if n == 1, continue, end
-                szout = ones(1,nd); szout(dout) = sz(dout);
+                szout = ones(1,nd); szout(dout) = sz(dout); szout(nd+1) = st.xynrow;
                 nout = prod(szout);
                 ypos = zeros(n-1,nout);
                 for kout = 1:nout
@@ -638,22 +603,22 @@ classdef displaygraph < xplr.graphnode
                     % indices for dimension d
                     ijk(d,:) = 1.5:n-.5;
                     % y-positions of n-1 lines
-                    ypos(:,kout) = sum(fn_add(st.yoffset(k:end)', fn_mult(ijk(org.y(k:end),:),st.ystep(k:end)')),1);
+                    ypos(:,kout) = ...
+                        sum(fn_add(st.yoffset(k:end)', fn_mult(ijk(org.y(k:end),:),st.ystep(k:end)')),1) ...
+                        + st.xyoffsets(2) + (ijk(nd+1,:)-1)*st.xysteps(2);
                 end
-                linewidth = linewidth+.5;
-                lwmax = max(lwmax,linewidth);
+                level = ~isempty(st.xydim) + length(org.x) - k + 1;
+                color = 1 - (1-G.separationcolor)/2^level;
                 lines{end+1} = fn_lines('y',ypos(:),G.D.ha, ...
-                    'linewidth',linewidth,'color',G.separationcolor); %#ok<AGROW>
+                    'color',color); %#ok<AGROW>
             end
             
             % xy
             if ~isempty(st.xydim)
-                [nxycol, nxyrow] = deal(st.xyncol,st.xynrow);
-                xpos = -.5 + (1:ncol-1)/ncol;
-                ypos = -.5 + (1:nrow-1)/nrow;
-                linewidth = lwmax+.5;
+                xpos = -.5 + (1:st.xyncol-1)/st.xyncol;
+                ypos = -.5 + (1:st.xynrow-1)/st.xynrow;
                 lines = [lines fn_lines(xpos,ypos,G.D.ha, ...
-                    'linewidth',linewidth,'color',G.separationcolor)];
+                    'color',G.separationcolor)];
             end
             
             % put lines below other graphic elements
