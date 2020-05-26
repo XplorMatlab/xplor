@@ -36,6 +36,7 @@ classdef viewdisplay < xplr.graphnode
         displaymode = 'image';  % 'time courses' or 'image'
         showcolorlegend = false; % false by default because of bug in Matlab's legend function, which inactivates several listeners
         linealpha = 1; % lines have a small degree of transparency!
+        do_title = true;
     end    
     properties (SetAccess='private')
         layoutID                              % layout, i.e. which data dimension appear on which location; set with function setLayoutID
@@ -232,11 +233,15 @@ classdef viewdisplay < xplr.graphnode
             m = D.menu;
             delete(get(m,'children'))
             
+            % title
+            fn_propcontrol(D,'do_title','menu', ...
+                {'parent',m,'label','Display title'});
+            
             % time courses display
             if strcmp(D.displaymode,'time courses')
                 fn_propcontrol(D,'linealpha', ...
                     {'menuval', {1 .7 .4 .1}, {'none' 'mild' 'medium' 'strong' 'manual'}}, ...
-                    {'parent',m,'label','Lines transparency'});
+                    {'parent',m,'label','Lines transparency','separator','on'});
                 dosep = true;
             else
                 dosep = false;
@@ -657,6 +662,40 @@ classdef viewdisplay < xplr.graphnode
         end
     end
     
+    % Title
+    methods
+        function set.do_title(D,value)
+            D.do_title = value;
+            D.display_title()
+        end
+        function display_title(D)
+            if ~D.do_title
+                title(D.ha,'')
+                return
+            end
+            % names for singleton dimensions
+            sz = D.slice.sz;
+            singleton_dims = find(sz==1);
+            n_singleton = length(singleton_dims);
+            names = cell(1,n_singleton);
+            for i = 1:n_singleton
+                d = singleton_dims(i);
+                head = D.slice.header(d);
+                namei = head.get_item_name(1);
+                % add dimension label if name is an integer
+                if mod(str2double(namei),1)==0
+                    namei = [head.label ' ' namei];
+                end
+                names{i} = namei;
+            end
+            % add data name if any
+            if ~isempty(D.V.data.name)
+                names = [D.V.data.name names];
+            end
+            title(D.ha, {fn_strcat(names,' - ') ''})
+        end
+    end
+    
     % Main display: grid of signals or images
     methods (Static)
         function ok = testDisplayable(sz,displaymode,layout)
@@ -1030,7 +1069,7 @@ classdef viewdisplay < xplr.graphnode
             % reset axis
             cla(D.ha)
             % re-display everything
-%             D.sliceChangeEvent = struct('flag','global');
+            D.sliceChangeEvent = struct('flag','global');
             D.navigation.displayselection('reset')
             zslicechange(D) % this will automatically re-create the cross, but not the selection displays
         end
@@ -1203,6 +1242,9 @@ classdef viewdisplay < xplr.graphnode
             
             % Set previous headers to current headers
             D.previousheaders = D.slice.header;
+            
+            % Update title
+            D.display_title()
         end
         function zoomchange(D,e)
             % update graph positions: if data has changed in size,

@@ -431,7 +431,7 @@ classdef header < handle
     
     % List of labels for each item
     methods
-        function str = getItemNames(H,idx)
+        function names = getItemNames(H,idx)
             doall = (nargin<2);
             if doall, idx = 1:H.n; end
             if isempty(H.itemnames)
@@ -442,33 +442,40 @@ classdef header < handle
                     idxname = find(strcmpi({H.sublabels.label},'name'));
                     if isempty(idxname), idxname = 1; end
                     itemvalues = H.values(:,idxname);
-                    str = cell(1,nval);
+                    names = cell(1,nval);
                     for k=1:nval
                         val = itemvalues{idx(k)};
                         if isempty(val)
-                            str{k} = num2str(idx(k));
+                            names{k} = num2str(idx(k));
                         elseif ischar(val)
-                            str{k} = val;
+                            names{k} = val;
                         elseif isnumeric(val) || islogical(val)
-                            str{k} = fn_idx2str(val,':,');
-                            if length(str{k})>12, str{k} = [str{k}(1:10) '...']; end
+                            names{k} = fn_idx2str(val,':,');
+                            if length(names{k})>12, names{k} = [names{k}(1:10) '...']; end
                         elseif iscell(val)
-                            str{k} = fn_strcat(val,',');
+                            names{k} = fn_strcat(val,',');
                         else
                             error 'cannot form string from value'
                         end
                     end
                 elseif H.categorical
-                    str = fn_num2str(idx,'cell')';
+                    names = fn_num2str(idx,'cell')';
                 else % (measure)
-                    str = fn_num2str(H.start+(idx-1)*H.scale,['%.4g' H.unit],'cell')';
+                    names = fn_num2str(H.start+(idx-1)*H.scale,['%.4g' H.unit],'cell')';
                 end
-                if doall, H.itemnames = str; end
+                if doall, H.itemnames = names; end
             elseif doall
-                str = H.itemnames;
+                names = H.itemnames;
             else
-                str = H.itemnames(idx);
+                names = H.itemnames(idx);
             end
+        end
+        function name = get_item_name(H,idx)
+            if ~isscalar(idx)
+                error 'call getItemNames method for multiple indices'
+            end
+            names = H.getItemNames(idx);
+            name = names{1};
         end
     end
     
