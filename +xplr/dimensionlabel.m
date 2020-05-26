@@ -1,6 +1,6 @@
-classdef dimensionlabel
-% dimensionlabel defines a dimension
-% function L = dimensionlabel(label,type[,unit|allunits])
+classdef DimensionLabel
+% DimensionLabel defines a dimension
+% function L = DimensionLabel(label, type[, unit|all_units])
 % 
 % Input:
 % * label   a string (e.g. 'time')
@@ -8,53 +8,53 @@ classdef dimensionlabel
 % * unit    string, cell array with 2 columns, or struct with fields unit and value
 %
 % Examples:
-% tlabel = dimensionlabel('time','numeric',{'s' 1; 'ms' 1e-3; 'min' 60; 'hour' 3600};
-% clabel = dimensionlabel('condition','char');   
+% tlabel = DimensionLabel('time','numeric',{'s' 1; 'ms' 1e-3; 'min' 60; 'hour' 3600};
+% clabel = DimensionLabel('condition','char');   
     
     properties (SetAccess='private')
         label
         type
         unit
-        allunits
+        all_units
     end
     properties (Dependent, SetAccess='private', Transient)
-        defaultval
+        default_val
     end
     
     methods
-        function L = dimensionlabel(label,type,unit)
+        function L = DimensionLabel(label, type, unit)
             if ~ischar(label), error 'label must be a character array', end
             L.label = label;
-            if ~ismember(type,{'numeric' 'logical' 'char' 'mixed'}), error 'type must be either ''numeric'', ''logical'' or ''char''', end
+            if ~ismember(type, {'numeric', 'logical', 'char', 'mixed'}), error 'type must be either ''numeric'', ''logical'' or ''char''', end
             L.type = type;
             if nargin<3
                 return
-            elseif ~strcmp(type,'numeric')
+            elseif ~strcmp(type, 'numeric')
                 error 'unit can be defined only for a ''numeric'' label'
             end
             if ischar(unit)
                 L.unit = unit;
-                L.allunits = struct('unit',unit,'value',1);
+                L.all_units = struct('unit', unit, 'value', 1);
             else
                 if iscell(unit)
-                    unit = cell2struct(unit,{'unit' 'value'}); 
+                    unit = cell2struct(unit, {'unit', 'value'}); 
                 elseif ~isstruct(unit)
                     error 'invalid definition of unit(s)'
                 end
-                idxref = find([unit.value]==1,1,'first');
+                idxref = find([unit.value] == 1, 1, 'first');
                 if isempty(idxref), error 'at least one unit must have value equal to 1', end
                 L.unit = unit(idxref).unit;
                 [~, ord] = sort([unit.value]);
-                L.allunits = unit(ord);
+                L.all_units = unit(ord);
             end
         end
-        function x = get.defaultval(L)
-            x = getDefaultValue(L.type);
+        function x = get.default_val(L)
+            x = get_default_value(L.type);
         end
     end
     
     methods (Static)
-        function [type defaultval] = infertype(x)
+        function [type, default_val] = infer_type(x)
             if isnumeric(x)
                 type = 'numeric';
             elseif islogical(x)
@@ -64,7 +64,7 @@ classdef dimensionlabel
             else
                 type = 'mixed';
             end
-            if nargout>=2, defaultval = getDefaultValue(type); end
+            if nargout >= 2, default_val = get_default_value(type); end
         end
     end
     
@@ -72,11 +72,10 @@ end
 
 
 %---
-function defaultval = getDefaultValue(type)
-    defaultval = fn_switch(type, ...
+function default_val = get_default_value(type)
+    default_val = fn_switch(type, ...
         'numeric',  0, ...
         'logical',  false, ...
         'char',     '', ...
         'mixed',    []);
 end
-

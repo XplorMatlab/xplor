@@ -1,4 +1,4 @@
-classdef displaygraph < xplr.graphnode
+classdef DisplayGraph < xplr.GraphNode
     % This class takes care of conversions between slice and graph coordinates,
 	% and of x/y ticks
 
@@ -6,12 +6,12 @@ classdef displaygraph < xplr.graphnode
     properties (SetAccess='private')
         D % parent xplr.viewdisplay object
         % graphic objects
-        xyticks 
-        separationlines
+        xy_ticks 
+        separation_lines
     end
     properties (SetObservable, AbortSet=true)
-        showseparation = false;
-        separationcolor = [.8 .8 .8];
+        show_separation = false;
+        separation_color = [.8, .8, .8];
     end
     % shortcuts
     properties (Dependent, SetAccess='private')
@@ -19,13 +19,13 @@ classdef displaygraph < xplr.graphnode
     end
     % parameters
     properties (SetAccess='private')
-        xsep = .2;
-        ysep = .2;
+        x_sep = .2;
+        y_sep = .2;
     end
     % pre-computations
     properties (SetAccess='private')
         layout
-        zslicesz    % current size of the zoomed slice
+        zslice_sz    % current size of the zoomed slice
         filling     % how much of the space available for each dimension if filled (vector of values <=1)
         steps
     end
@@ -33,7 +33,7 @@ classdef displaygraph < xplr.graphnode
     
     % Constructor, Get dependent
     methods
-        function G = displaygraph(D)
+        function G = DisplayGraph(D)
             % parent xplr.viewdisplay object
             G.D = D;
         end
@@ -44,17 +44,21 @@ classdef displaygraph < xplr.graphnode
     
     % Pre-computations
     methods (Access='private')
-        function [st sz fill xpair ypair] = computeStepsPrivate(G,orgin)
+        function [st, sz, fill, x_pair, y_pair] = compute_steps_private(G, org_in)
             % actual steps computation occurs here
             % size and organization
-            dosignal = strcmp(G.D.displaymode,'time courses'); % slight difference for x between time courses and images
+            do_signal = strcmp(G.D.display_mode, 'time courses'); % slight difference for x between time courses and images
             header = G.D.zslice.header;
-            sz = [header.n]; nd = length(sz);
-            szorig = G.D.slice.sz; okdim = (szorig>1);
-            xlayout = orgin.x;         ylayout = orgin.y;
-            nx = length(xlayout);      ny = length(ylayout);
-            zoom = G.getZoom('value');              % the 'true' coordinates (i.e. in data before zooming) of space edges
-            [idxoffset bin] = G.getZoom('off&bin'); % coordinates conversions between original and zoomed data
+            sz = [header.n];
+            nd = length(sz);
+            sz_orig = G.D.slice.sz;
+            ok_dim = (sz_orig > 1);
+            x_layout = org_in.x;
+            y_layout = org_in.y;
+            nx = length(x_layout);
+            ny = length(y_layout);
+            zoom = G.get_zoom('value');              % the 'true' coordinates (i.e. in data before zooming) of space edges
+            [idx_offset, bin] = G.get_zoom('off&bin'); % coordinates conversions between original and zoomed data
             
             % zooming
             % It shall be noted that while the zoom specification are
@@ -71,7 +75,7 @@ classdef displaygraph < xplr.graphnode
             % (convert real zoom values into zoomed data coordinates)
             % we have: xtrue   = .5 + offset + (xzoomed-.5)*bin
             % and:     xzoomed = .5 + (xtrue-.5-offset)/bin
-            zm1 = .5 + (mean(zoom)-.5-idxoffset)./bin;   % zoom centers in zoomed data coordinates
+            zm1 = .5 + (mean(zoom) - .5 - idx_offset)./bin;   % zoom centers in zoomed data coordinates
             ze1 = diff(zoom)./bin;                       % zoom extents in zoomed data coordinates
             
             % Zoom method 2 "steps":
@@ -81,146 +85,152 @@ classdef displaygraph < xplr.graphnode
             %             % Choose method 2 for internal coordinates anf for "2D grid"
             %             % organization. Choose method 1 otherwise.
             %             [zm ze] = deal(zm1, ze1);
-            %             if any(orgin.xy) || any(orgin.yx)
-            %                 din = [xlayout ylayout];
+            %             if any(org_in.xy) || any(org_in.yx)
+            %                 din = [x_layout y_layout];
             %             else
-            %                 lastx = find(okdim(xlayout),1,'last'); % index of "extern" x dimension
-            %                 lasty = find(okdim(ylayout),1,'last'); % index of "extern" y dimension
-            %                 din = [xlayout(1:lastx-1) ylayout(1:lasty-1)]; % "internal" dimensions
+            %                 lastx = find(ok_dim(x_layout),1,'last'); % index of "extern" x dimension
+            %                 lasty = find(ok_dim(y_layout),1,'last'); % index of "extern" y dimension
+            %                 din = [x_layout(1:lastx-1) y_layout(1:lasty-1)]; % "internal" dimensions
             %             end
             %             zm(din) = zm2(din);
             %             ze(din) = ze2(din);
             
             % Always choose method 2
-            [zm ze] = deal(zm2, ze2);
+            [zm, ze] = deal(zm2, ze2);
             
             % (in addition, a small correction is applied for signals,
             % whose edges will be at 1 and n instead of .5 and n+.5 for
             % images and grid cells)
-            if dosignal && nx>=1 && sz(xlayout(1))>1
-                ze(xlayout(1)) = ze(xlayout(1))-1;
+            if do_signal && nx >=1 && sz(x_layout(1)) > 1
+                ze(x_layout(1)) = ze(x_layout(1)) - 1;
             end 
 
             % specific data aspect ratio for some dimensions?
-            xhead = header(xlayout);   yhead = header(ylayout);
-            [xpair ypair] = checkpairs(xhead,yhead,dosignal);
-            [w h] = fn_pixelsize(G.D.ha);
-            axisratio = h/w;
+            x_head = header(x_layout);
+            y_head = header(y_layout);
+            [x_pair, y_pair] = checkpairs(x_head, y_head, do_signal);
+            [w, h] = fn_pixelsize(G.D.ha);
+            axis_ratio = h/w;
 
             % G.filling will get values assigned both for 'grid' and
             % 'linear' arrangements
-            [fill st.xspan st.yspan] = deal(zeros(1,nd),zeros(1,nx),zeros(1,ny));
+            [fill, st.xspan, st.yspan] = deal(zeros(1, nd), zeros(1, nx), zeros(1, ny));
             
             % does one dimension have 2D grid organization
-            xavail = 1; yavail = 1; % total available x- and y-span
-            if any(orgin.xy) || any(orgin.yx)
+            x_avail = 1;
+            y_avail = 1; % total available x- and y-span
+            if any(org_in.xy) || any(org_in.yx)
                 % which dimension
-                if any(orgin.xy)
-                    st.xydim = orgin.xy;
-                    xymode = 'xy';
+                if any(org_in.xy)
+                    st.xy_dim = org_in.xy;
+                    xy_mode = 'xy';
                 else
-                    st.xydim = orgin.yx;
-                    xymode = 'yx';
+                    st.xy_dim = org_in.yx;
+                    xy_mode = 'yx';
                 end
                 
                 % TODO: the lines below are not correct, remove?
                 % % span
-                % [st.xspan(st.xydim) st.yspan(st.xydim)] = deal(xavail,yavail);
+                % [st.xspan(st.xy_dim) st.yspan(st.xy_dim)] = deal(x_avail,y_avail);
                                 
                 % determine number of column: what aspect ratio is desired
                 % for the grid elements?
-                nelem = header(st.xydim).n;
-                if nx && ny && xpair(end) && ypair(end)
-                    elemratio = abs((yhead(end).scale*yhead(end).n)/(xhead(end).scale*xhead(end).n));
+                n_elem = header(st.xy_dim).n;
+                if nx && ny && x_pair(end) && y_pair(end)
+                    elem_ratio = abs((y_head(end).scale*y_head(end).n)/(x_head(end).scale*x_head(end).n));
                 else
-                    elemratio = 1; % this value will be only loosely respected
+                    elem_ratio = 1; % this value will be only loosely respected
                 end
-                if strcmp(xymode,'xy')
-                    ncol = fn_coerce(round(sqrt(nelem*elemratio*xavail/yavail/axisratio)),[1 nelem]);
-                    nrow = ceil(nelem/ncol);
+                if strcmp(xy_mode,'xy')
+                    n_col = fn_coerce(round(sqrt(n_elem*elem_ratio*x_avail/y_avail/axis_ratio)), [1, n_elem]);
+                    n_row = ceil(n_elem/n_col);
                 else
-                    nrow = fn_coerce(round(sqrt(nelem/elemratio/xavail*yavail*axisratio)),[1 nelem]);
-                    ncol = ceil(nelem/nrow);
+                    n_row = fn_coerce(round(sqrt(n_elem/elem_ratio/x_avail*y_avail*axis_ratio)), [1, n_elem]);
+                    n_col = ceil(n_elem/n_row);
                 end
-                st.xyncol = ncol;
+                st.xyn_col = n_col;
                 
                 % set grid positions
-                st.xyoffsets = zeros(2,nelem);
-                i0 = (ncol+1)/2; x_step = xavail/ncol;
-                j0 = (nrow+1)/2; y_step = -yavail/nrow;
-                st.xysteps = [x_step y_step];
-                for k=1:nelem
-                    switch xymode
+                st.xy_offsets = zeros(2, n_elem);
+                i0 = (n_col+1)/2;
+                x_step = x_avail/n_col;
+                j0 = (n_row+1)/2;
+                y_step = -y_avail/n_row;
+                st.xy_steps = [x_step, y_step];
+                for k=1:n_elem
+                    switch xy_mode
                         case 'xy'
-                            [i j] = ind2sub([ncol nrow],k);
+                            [i, j] = ind2sub([n_col, n_row], k);
                         case 'yx'
-                            [j i] = ind2sub([nrow ncol],k);
+                            [j, i] = ind2sub([n_row, n_col], k);
                     end
-                    st.xyoffsets(:,k) = [(i-i0)*x_step; (j-j0)*y_step];
+                    st.xy_offsets(:, k) = [(i-i0)*x_step;
+                    (j-j0)*y_step];
                 end
-                if szorig(st.xydim)>1
-                    xavail = xavail/ncol/(1+G.xsep);
-                    yavail = yavail/nrow/(1+G.ysep);
+                if sz_orig(st.xy_dim)>1
+                    x_avail = x_avail/n_col/(1+G.x_sep);
+                    y_avail = y_avail/n_row/(1+G.y_sep);
                 end
-                fill(st.xydim) = 1;
+                fill(st.xy_dim) = 1;
             else
-                st.xydim = [];
-                st.xyoffsets = zeros(2,1);
+                st.xy_dim = [];
+                st.xy_offsets = zeros(2, 1);
             end
             
             % define steps while ensuring aspect ratio for pairs (start
             % from the last dimensions)
-            [st.xoffset st.xstep] = deal(zeros(1,nx)); % offsets will be adjusted so as to keep data point of "center-zoom" coordinates in the middle of the display
-            [st.yoffset st.ystep] = deal(zeros(1,ny));
-            fill([xlayout ylayout]) = 1;
-            ix = nx; iy = ny;
-            while ix>0 || iy>0
+            [st.x_offset, st.x_step] = deal(zeros(1, nx)); % offsets will be adjusted so as to keep data point of "center-zoom" coordinates in the middle of the display
+            [st.y_offset, st.y_step] = deal(zeros(1, ny));
+            fill([x_layout, y_layout]) = 1;
+            ix = nx;
+            iy = ny;
+            while ix > 0 || iy > 0
                 % go down to the next pair
-                ixnext = find(xpair(1:ix),1,'last');
-                iynext = find(ypair(1:iy),1,'last');
-                if isempty(ixnext), [ixnext iynext] = deal(1); end
+                ixnext = find(x_pair(1:ix), 1, 'last');
+                iynext = find(y_pair(1:iy), 1, 'last');
+                if isempty(ixnext), [ixnext, iynext] = deal(1); end
                 % (x)
                 for ix=ix:-1:ixnext
-                    d = xlayout(ix);
-                    st.xspan(ix) = xavail;
-                    st.xstep(ix) = xavail / ze(d);
-                    st.xoffset(ix) = -zm(d)*st.xstep(ix);   % middle of zoom should be placed at the middle of the available space
-                    if szorig(d)>1, xavail = st.xstep(ix) / (1+G.xsep); end  % available x-span for (ix-1)th dimension
+                    d = x_layout(ix);
+                    st.xspan(ix) = x_avail;
+                    st.x_step(ix) = x_avail / ze(d);
+                    st.x_offset(ix) = -zm(d)*st.x_step(ix);   % middle of zoom should be placed at the middle of the available space
+                    if sz_orig(d)>1, x_avail = st.x_step(ix) / (1+G.x_sep); end  % available x-span for (ix-1)th dimension
                 end
                 % (y)
                 for iy=iy:-1:iynext
-                    d = ylayout(iy);
-                    st.yspan(iy) = yavail;
-                    st.ystep(iy) = -yavail / ze(d);        % start from top of the screen (i.e. higher values of y) rather than bottom
-                    st.yoffset(iy) = -zm(d)*st.ystep(iy);   % middle of zoom should be placed at the middle of the available space
-                    if szorig(d)>1, yavail = abs(st.ystep(iy)) / (1+G.ysep); end % available y-span for (iy-1)th dimension
+                    d = y_layout(iy);
+                    st.yspan(iy) = y_avail;
+                    st.y_step(iy) = -y_avail / ze(d);        % start from top of the screen (i.e. higher values of y) rather than bottom
+                    st.y_offset(iy) = -zm(d)*st.y_step(iy);   % middle of zoom should be placed at the middle of the available space
+                    if sz_orig(d) > 1, y_avail = abs(st.y_step(iy)) / (1+G.y_sep); end % available y-span for (iy-1)th dimension
                 end
                 
                 % arrange values to maintain aspect ratio for the pair if
                 % there is a pair
-                if isempty(ix) || (ix==1 && ~xpair(ix)), break, end
-                curratio = abs(st.ystep(iy))/st.xstep(ix) * axisratio;
-                targetratio = abs(yhead(iy).scale/xhead(ix).scale);
+                if isempty(ix) || (ix == 1 && ~x_pair(ix)), break, end
+                curratio = abs(st.y_step(iy))/st.x_step(ix) * axis_ratio;
+                targetratio = abs(y_head(iy).scale/x_head(ix).scale);
                 correction = targetratio/curratio;
-                if correction>1
+                if correction > 1
                     % need to reduce x-span
-                    d = xlayout(ix);
+                    d = x_layout(ix);
                     st.xspan(ix) = st.xspan(ix)/correction;
-                    st.xoffset(ix) = st.xoffset(ix) + zm(d)*st.xstep(ix)*(1-1/correction);
-                    st.xstep(ix) = st.xstep(ix)/correction;
+                    st.x_offset(ix) = st.x_offset(ix) + zm(d)*st.x_step(ix)*(1-1/correction);
+                    st.x_step(ix) = st.x_step(ix)/correction;
                     fill(d) = 1/correction;
-                    xavail = xavail/correction;
-                elseif correction<1
+                    x_avail = x_avail/correction;
+                elseif correction < 1
                     % need to reduce y-span
-                    d = ylayout(iy);
+                    d = y_layout(iy);
                     st.yspan(iy) = st.yspan(iy)*correction;
-                    st.yoffset(iy) = st.yoffset(iy) + zm(d)*st.ystep(iy)*(1-1*correction);
-                    st.ystep(iy) = st.ystep(iy)*correction;
+                    st.y_offset(iy) = st.y_offset(iy) + zm(d)*st.y_step(iy)*(1-1*correction);
+                    st.y_step(iy) = st.y_step(iy)*correction;
                     fill(d) = correction;
-                    yavail = yavail*correction;
+                    y_avail = y_avail*correction;
                 end
-                ix = ix-1;
-                iy = iy-1;
+                ix = ix - 1;
+                iy = iy - 1;
             end
             
             % available space inside the most interior dimensions (this
@@ -228,87 +238,87 @@ classdef displaygraph < xplr.graphnode
             % dimensions in the x- or y-axis, i.e. available space is 1;
             % 2) for time courses display, as "data value" becomes as a new
             % dimension below the most interior dimension in the y-axis.
-            st.xavailable = xavail;
-            st.yavailable = yavail;
+            st.x_available = x_avail;
+            st.y_available = y_avail;
         end
     end
     methods
-        function anychg = computeSteps(G)
-            % function anychg = computeSteps(G)
+        function any_chg = compute_steps(G)
+            % function any_chg = compute_steps(G)
             %---
-            % sets G properties xoffset xstep yoffset ystep and tells
+            % sets G properties x_offset x_step y_offset y_step and tells
             % whether they were changed
             
             % compute steps
-            if nargout>0, prevsteps = G.steps; end
+            if nargout > 0, prev_steps = G.steps; end
             G.layout = G.D.layout;
-            [G.steps, G.zslicesz, G.filling, xpair] = computeStepsPrivate(G,G.layout); 
+            [G.steps, G.zslice_sz, G.filling, x_pair] = compute_steps_private(G, G.layout);
             
             % any change
             if nargout>0
-                 anychg = ~isequal(G.steps,prevsteps);
+                 any_chg = ~isequal(G.steps, prev_steps);
             end
         end
     end
     
     % Ticks
     methods (Access='private')
-        function targetspacing = ticksTargetSpacing(G,k)
+        function target_spacing = ticks_target_spacing(G, k)
             % k = 1 for 'x', 2 for 'y'
-            axsiz = fn_pixelsize(G.ha);
-            axsizinch = axsiz/get(0,'ScreenPixelsPerInch');
-            targetspacinginch = .5; % optimal space between ticks in inches
+            ax_siz = fn_pixelsize(G.ha);
+            ax_siz_inch = ax_siz/get(0, 'ScreenPixelsPerInch');
+            target_spacing_inch = .5; % optimal space between ticks in inches
             
             % target space between ticks
-            targetspacing = targetspacinginch / axsizinch(k);   % target spacing in axes coordinates
+            target_spacing = target_spacing_inch / ax_siz_inch(k);   % target spacing in axes coordinates
         end
-        function [tickvalues, ticklabels] = nicevalues(G,valuestart,valuestop,targetstep)
+        function [tick_values, tick_labels] = nice_values(G, value_start, value_stop, target_step)
             % actual step that will be used
-            t10 = log10(abs(targetstep));
-            tests = [1 2 5 10];
-            [~, idx] = min(abs(mod(t10,1)-log10(tests)));
-            step = sign(targetstep) * 10^floor(t10) * tests(idx);
+            t10 = log10(abs(target_step));
+            tests = [1, 2, 5, 10];
+            [~, idx] = min(abs(mod(t10, 1) - log10(tests)));
+            step = sign(target_step) * 10^floor(t10) * tests(idx);
             substep = step/2;
             % tick values for all substeps
-            tickvalues = substep * (ceil(valuestart/substep):floor(valuestop/substep)); % data coordinates
+            tick_values = substep * (ceil(value_start/substep):floor(value_stop/substep)); % data coordinates
             % tick labels only for steps
-            ntick = length(tickvalues);
-            ticklabels = cell(1,ntick);
-            dolabel = (mod(tickvalues,step)==0);
-            ticklabels(dolabel) = fn_num2str(tickvalues(dolabel),'cell');
+            n_tick = length(tick_values);
+            tick_labels = cell(1, n_tick);
+            do_label = (mod(tick_values,step) == 0);
+            tick_labels(do_label) = fn_num2str(tick_values(do_label), 'cell');
         end
     end
     methods
-        function setTicks(G)
+        function set_ticks(G)
             st = G.steps;
             
             % remove previous xy ticks
-            deleteValid(G.xyticks)
-            G.xyticks = [];
+            delete_valid(G.xy_ticks)
+            G.xy_ticks = [];
             
             % stop if data is too large for being displayed
-            if G.D.nodisplay, return, end
+            if G.D.no_display, return, end
             
             % x and y
             for k = 1:2
                 switch k
                     case 1
-                        [f, ff] = deal('x','yx');
+                        [f, ff] = deal('x', 'yx');
                     case 2
-                        [f, ff] = deal('y','xy');
+                        [f, ff] = deal('y', 'xy');
                 end
-                d = G.D.activedim.(f);
+                d = G.D.active_dim.(f);
                 
                 % no active dimension -> no tick
                 if isempty(d) || G.D.V.slice.header(d).n == 1
                     switch f
                         case 'x'
-                            set(G.D.ha,'xtick',[])
+                            set(G.D.ha, 'xtick', [])
                         case 'y'
-                            % note that method setValueTicks, which is
-                            % normally called AFTER setTicks, might set
+                            % note that method set_value_ticks, which is
+                            % normally called AFTER set_ticks, might set
                             % yticks later
-                            set(G.D.ha,'ytick',[])
+                            set(G.D.ha, 'ytick', [])
                     end
                     continue
                 end
@@ -318,225 +328,228 @@ classdef displaygraph < xplr.graphnode
                 n = head.n;
 
                 % conversion between data coordinates and graph
-                domeasure = head.ismeasure;
-                dogrid = (d==G.layout.(ff));
-                if dogrid
-                    % step for ncol (or nrow) data points
-                    ncol = find(diff(st.xyoffsets(k,:)),1);
-                    if isempty(ncol), ncol = size(st.xyoffsets,2); end
-                    f_step = st.xysteps(k); 
+                do_measure = head.is_measure;
+                do_grid = (d == G.layout.(ff));
+                if do_grid
+                    % step for n_col (or n_row) data points
+                    n_col = find(diff(st.xy_offsets(k, :)), 1);
+                    if isempty(n_col), n_col = size(st.xy_offsets,2); end
+                    f_step = st.xy_steps(k); 
                     % step for one data point
-                    f_step = f_step / ncol;
-                    f_off = st.xyoffsets(k,1) - (ncol+1)/2*f_step;
-                    domeasure = false;
+                    f_step = f_step / n_col;
+                    f_off = st.xy_offsets(k, 1) - (n_col + 1)/2*f_step;
+                    do_measure = false;
                 else
-                    jf = find(d==G.layout.(f),1);
-                    if isempty(jf), error('%s activedim must be either at ''%s'' or ''%s'' location!',f,f,ff), end
+                    jf = find(d == G.layout.(f), 1);
+                    if isempty(jf), error('%s active_dim must be either at ''%s'' or ''%s'' location!', f, f, ff), end
                     switch f
                         case 'x'
-                            f_off = st.xyoffsets(k,1) + st.xoffset(jf) + sum(st.xoffset(jf+1:end)+st.xstep(jf+1:end));
-                            f_step = st.xstep(jf);
+                            f_off = st.xy_offsets(k, 1) + st.x_offset(jf) + sum(st.x_offset(jf + 1:end) + st.x_step(jf + 1:end));
+                            f_step = st.x_step(jf);
                         case 'y'
-                            f_off = st.xyoffsets(k,1) + st.yoffset(jf) + sum(st.yoffset(jf+1:end)+st.ystep(jf+1:end));
-                            f_step = st.ystep(jf);
+                            f_off = st.xy_offsets(k, 1) + st.y_offset(jf) + sum(st.y_offset(jf + 1:end) + st.y_step(jf + 1:end));
+                            f_step = st.y_step(jf);
                     end
                 end
 
                 % different display depending on whether header is
                 % measure or categorical
-                if domeasure
+                if do_measure
                     % target space between ticks
-                    targetspacing = G.ticksTargetSpacing(k);
-                    fspan = fn_cast(k,st.xspan,st.yspan);
-                    targetspacing = targetspacing/min(1/fspan(jf),2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
+                    target_spacing = G.ticks_target_spacing(k);
+                    fspan = fn_cast(k, st.xspan, st.yspan);
+                    target_spacing = target_spacing/min(1/fspan(jf), 2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
                     % target space in data coordinates
-                    [start, scale] = deal(head.start,head.scale);
-                    [start, stop] = deal(start-.5*scale, start+(n-.5)*scale);
-                    targetstep = targetspacing / abs(f_step) * scale;
+                    [start, scale] = deal(head.start, head.scale);
+                    [start, stop] = deal(start - .5*scale, start + (n - .5)*scale);
+                    target_step = target_spacing / abs(f_step) * scale;
                     % tick values
-                    [ticksdata, ticklabels] = G.nicevalues(start,stop,targetstep);
-                    ticksidx = 1 + (ticksdata-start)/scale; % data indices coordinates
+                    [ticks_data, tick_labels] = G.nice_values(start, stop, target_step);
+                    ticks_idx = 1 + (ticks_data - start)/scale; % data indices coordinates
                     % tick labels
                 else
                     % ticks for each data point (display only some of
                     % them if there is not enough space for all)
-                    if dogrid
+                    if do_grid
                         % display all ticks anyway for grid mode
-                        ntickmax = Inf;
+                        n_tick_max = Inf;
                     else
                         % check the available space in centimeters and
                         % set a maximal number of ticks
-                        axes_size = G.D.getSize('centimeters', f);
-                        ntickmax = axes_size * fn_switch(f, 'x', 1, 'y', 2);
+                        axes_size = G.D.get_size('centimeters', f);
+                        n_tick_max = axes_size * fn_switch(f, 'x', 1, 'y', 2);
                     end
-                    ticklabels = row(head.getItemNames());
-                    if n <= ntickmax                           
-                        ticksidx = 1:n;
+                    tick_labels = row(head.get_item_names());
+                    if n <= n_tick_max                           
+                        ticks_idx = 1:n;
                     else
-                        step = fn_smartstep(n / ntickmax);
-                        if strcmp(ticklabels{1}, '1')
+                        step = fn_smartstep(n / n_tick_max);
+                        if strcmp(tick_labels{1}, '1')
                             % it seems that we have a mere enumeration,
                             % use a smart step
-                            ticksidx = step:step:n;
+                            ticks_idx = step:step:n;
                         else
                             % make both the first and last appear
-                            ticksidx = 1:step:n;
-                            if ticksidx(end) ~= n
-                                ticksidx(end) = n;
+                            ticks_idx = 1:step:n;
+                            if ticks_idx(end) ~= n
+                                ticks_idx(end) = n;
                             end
                         end
-                        ticklabels = ticklabels(ticksidx);
+                        tick_labels = tick_labels(ticks_idx);
                     end
                     % 2D grid: put text rather than using axes ticks
                     % system
-                    if dogrid
-                        xy = fn_add([0; -st.xysteps(2)/2],st.xyoffsets);
-                        G.xyticks = gobjects(1,n);
+                    if do_grid
+                        xy = fn_add([0; -st.xy_steps(2)/2], st.xy_offsets);
+                        G.xy_ticks = gobjects(1, n);
                         for i=1:n
-                            G.xyticks(i) = text(xy(1,i),xy(2,i),ticklabels{i}, ...
-                                'parent',G.ha,'hittest','off', ...
-                                'horizontalalignment','center'); %,'verticalalignment','top')
+                            G.xy_ticks(i) = text(xy(1, i), xy(2, i), tick_labels{i}, ...
+                                'parent', G.ha, 'hittest', 'off', ...
+                                'horizontalalignment', 'center'); %,'verticalalignment','top')
                         end
-                        ticksidx = []; ticklabels = {};
+                        ticks_idx = [];
+                        tick_labels = {};
                     end
                 end
-                tick = f_off + ticksidx*f_step;
+                tick = f_off + ticks_idx*f_step;
                 
                 % set ticks!
-                if strcmp(f,'x')
-                    set(G.ha,'xtick',tick,'xticklabel',ticklabels)
+                if strcmp(f, 'x')
+                    set(G.ha, 'xtick', tick, 'xticklabel', tick_labels)
                 else
-                    set(G.ha,'ytick',fliplr(tick),'yticklabel',fliplr(ticklabels))
+                    set(G.ha, 'ytick', fliplr(tick), 'yticklabel', fliplr(tick_labels))
                 end
             end
             
             % show separations
-            if G.showseparation
+            if G.show_separation
                 G.draw_separations()
             end
             
         end
-        function setValueTicks(G)
+        function set_value_ticks(G)
             % do we show value ticks?
-            if ~strcmp(G.D.displaymode,'time courses') ...
-                    || (~isempty(G.D.activedim.y) && ~isequal(G.D.activedim.y,G.steps.xydim)) ...
-                    || G.D.nodisplay
-                ylabel(G.D.ha,'')
+            if ~strcmp(G.D.display_mode, 'time courses') ...
+                    || (~isempty(G.D.active_dim.y) && ~isequal(G.D.active_dim.y, G.steps.xy_dim)) ...
+                    || G.D.no_display
+                ylabel(G.D.ha, '')
                 return
             end
             
             % clip values available?
-            if isempty(G.D.gridclip)
-                error 'programming: setValueTicks should be called after viewdisplay.updateDisplay, so gridclip should be set'
+            if isempty(G.D.grid_clip)
+                error 'programming: set_value_ticks should be called after viewdisplay.updateDisplay, so grid_clip should be set'
             end
-            sz = size(G.D.gridclip); sz(1) = [];
+            sz = size(G.D.grid_clip);
+            sz(1) = [];
             
             % enough space on y-axis to show values?
             org = G.D.layout;
             st = G.steps;
-            targetspacing = G.ticksTargetSpacing(2);
-            if ~isempty([org.y st.xydim]), targetspacing = targetspacing/2; end
-%             if st.yavailable < targetspacing
+            target_spacing = G.ticks_target_spacing(2);
+            if ~isempty([org.y st.xy_dim]), target_spacing = target_spacing/2; end
+%             if st.y_available < target_spacing
 %                 set(G.D.ha,'ytick',[])
 %                 ylabel(G.D.ha,'')
 %                 return
 %             end
             
             % replace min/max clip definitions by min/extent
-            startextent = G.D.gridclip;
-            startextent(2,:) = startextent(2,:) - startextent(1,:);
+            start_extent = G.D.grid_clip;
+            start_extent(2, :) = start_extent(2, :) - start_extent(1, :);
             
             % check every 'external' dimension for which we might have
             % several displays on the same y lines (i.e. dimensions at
-            % location x, mergeddata or xy/yx); do these display have the same
+            % location x, merged_data or xy/yx); do these display have the same
             % clip values?
-            subs0 = substruct('()',repmat({':'},1,1+G.D.nd));
-            samecliprow = true;     % time courses on the same row have the same clipping range
+            subs0 = substruct('()', repmat({':'}, 1, 1 + G.D.nd));
+            same_clip_row = true;     % time courses on the same row have the same clipping range
             for d = 1:G.D.nd
-                if any(d == [org.mergeddata org.x(2:end) G.steps.xydim])
+                if any(d == [org.merged_data, org.x(2:end), G.steps.xy_dim])
                     % check whether clip values are the same along this
                     % dimension
-                    test = diff(startextent,1,1+d);
-                    samecliprow = samecliprow && ~any(row(test));
-                    if ~samecliprow
-                        sameextentrow = ~any(row(test(2,:)));
-                        if ~sameextentrow
-                            set(G.D.ha,'ytick',[])
-                            ylabel(G.D.ha,'')
+                    test = diff(start_extent, 1, 1 + d);
+                    same_clip_row = same_clip_row && ~any(row(test));
+                    if ~same_clip_row
+                        same_extent_row = ~any(row(test(2, :)));
+                        if ~same_extent_row
+                            set(G.D.ha, 'ytick', [])
+                            ylabel(G.D.ha, '')
                         end
                     end
                     % remove this dimension
-                    subs = subs0; subs.subs{1+d} = 1;
-                    startextent = subsref(startextent,subs);
+                    subs = subs0;
+                    subs.subs{1 + d} = 1;
+                    start_extent = subsref(start_extent, subs);
                 elseif any(d == org.y)
                     % nothing to do, keep this dimension
                 else
                     % there should be only 1 value in this dimension,
                     % nothing to do
-                    if size(startextent,1+d) > 1
-                        error 'programming: dimension is not present in the ''external'' layout but gridclip indicates multiple values!'
+                    if size(start_extent, 1 + d) > 1
+                        error 'programming: dimension is not present in the ''external'' layout but grid_clip indicates multiple values!'
                     end
                 end
             end
             
 %             % go back to clip definitions
-%             if samecliprow
-%                 gridclip(2,:) = gridclip(1,:) + gridclip(2,:);
+%             if same_clip_row
+%                 grid_clip(2,:) = grid_clip(1,:) + grid_clip(2,:);
 %             else
-%                 gridclip(:,:) = fn_mult([-.5; .5], gridclip(2,:));
+%                 grid_clip(:,:) = fn_mult([-.5; .5], grid_clip(2,:));
 %             end
             
-            % now gridclip is nonsingleon only in the org.y dimensions;
+            % now grid_clip is nonsingleon only in the org.y dimensions;
             % permute dimensions
-            startextent = permute(startextent,[1 1+org.y 1+setdiff(1:G.D.nd,org.y)]);
+            start_extent = permute(start_extent, [1, 1 + org.y, 1 + setdiff(1:G.D.nd, org.y)]);
             
             % if not same clip but some extent, clip becomes +/- extent/2
-            if ~samecliprow
-                startextent(1,:) = -startextent(2,:)/2;
+            if ~same_clip_row
+                start_extent(1, :) = -start_extent(2, :)/2;
             end
             
-            % build ytick and ytickvalues
-            if st.xydim
-                nxycol = st.xyncol;
-                nxyrow = ceil(sz(st.xydim)/nxycol);
+            % build y_tick and y_tick_values
+            if st.xy_dim
+                n_xy_col = st.xyn_col;
+                n_xy_row = ceil(sz(st.xy_dim)/n_xy_col);
             else
-                [nxycol, nxyrow] = deal(1);
+                [n_xy_col, n_xy_row] = deal(1);
             end
             ny = prod(sz(org.y));
-            [ytick, ytickvalues, yticklabels] = deal(cell([ny nxyrow]));
-            for krow = 1:nxyrow
-                for ky = 1:ny
+            [y_tick, y_tick_values, y_tick_labels] = deal(cell([ny, n_xy_row]));
+            for k_row = 1:n_xy_row
+                for k_y = 1:ny
                     % middle of the ticks
-                    yidx = ind2sub(sz(org.y),ky);
-                    yoffset = st.xyoffsets(2,1+(krow-1)*nxycol) + sum(st.yoffset) + sum(st.ystep .* yidx);
+                    y_idx = ind2sub(sz(org.y), k_y);
+                    y_offset = st.xy_offsets(2, 1 + (k_row - 1)*n_xy_col) + sum(st.y_offset) + sum(st.y_step .* y_idx);
                     % tick values
-                    if any(isnan(startextent(:,ky))), continue, end % happens when data itself consists only of NaNs
-                    valuestart = startextent(1,ky);
-                    valueextent = startextent(2,ky);
-                    targetstep = targetspacing * valueextent/st.yavailable;
-                    [tickvalues, ticklabels] = G.nicevalues(valuestart, valuestart+valueextent, targetstep);
-                    yscale = st.yavailable / valueextent;
-                    valuemiddle = valuestart + valueextent/2;
-                    ytickvalues{ky,krow} = tickvalues;
-                    ytick{ky,krow} = yoffset + (tickvalues-valuemiddle)*yscale;
-                    yticklabels{ky,krow} = ticklabels;
+                    if any(isnan(start_extent(:, k_y))), continue, end % happens when data itself consists only of NaNs
+                    value_start = start_extent(1, k_y);
+                    value_extent = start_extent(2, k_y);
+                    target_step = target_spacing * value_extent/st.y_available;
+                    [tick_values, tick_labels] = G.nice_values(value_start, value_start+value_extent, target_step);
+                    y_scale = st.y_available / value_extent;
+                    value_middle = value_start + value_extent/2;
+                    y_tick_values{k_y, k_row} = tick_values;
+                    y_tick{k_y, k_row} = y_offset + (tick_values-value_middle)*y_scale;
+                    y_tick_labels{k_y, k_row} = tick_labels;
                 end
             end
-            % yoffset are descending, so read ytick in reverse order to
+            % y_offset are descending, so read y_tick in reverse order to
             % have only increasing values
-            ytick = [ytick{end:-1:1}];
-            ytickvalues = [ytickvalues{end:-1:1}];
-            yticklabel = [yticklabels{end:-1:1}];
-            if ~samecliprow
+            y_tick = [y_tick{end:-1:1}];
+            y_tick_values = [y_tick_values{end:-1:1}];
+            y_tick_label = [y_tick_labels{end:-1:1}];
+            if ~same_clip_row
                 % indicate that values are relative to mean
-                [yticklabel{ytickvalues==0}] = deal('(mean)');
-                idxp = (ytickvalues>0 & ~fn_isemptyc(yticklabel));
-                yticklabel(idxp) = fn_map(@(str)['+' str],yticklabel(idxp),'cell');
+                [y_tick_label{y_tick_values==0}] = deal('(mean)');
+                idxp = (y_tick_values>0 & ~fn_isemptyc(y_tick_label));
+                y_tick_label(idxp) = fn_map(@(str)['+', str], y_tick_label(idxp), 'cell');
             end
             
             % set ticks
-            set(G.D.ha,'ytick',ytick,'yticklabel',yticklabel)
-            ylabel(G.D.ha,'values')
+            set(G.D.ha, 'ytick', y_tick, 'yticklabel', y_tick_label)
+            ylabel(G.D.ha, 'values')
                 
             
         end
@@ -544,20 +557,20 @@ classdef displaygraph < xplr.graphnode
 
     % Separations mark for 'external' dimensions
     methods
-        function set.showseparation(G, value)
-            G.showseparation = value;
+        function set.show_separation(G, value)
+            G.show_separation = value;
             G.draw_separations()
         end
-        function set.separationcolor(G, value)
-            G.separationcolor = value;
-            set(G.separationlines,'color',value)
+        function set.separation_color(G, value)
+            G.separation_color = value;
+            set(G.separation_lines, 'color', value)
         end
         function draw_separations(G)
             % no 'smart update', always delete all existing separation
             % lines and redisplay new ones
-            deleteValid(G.separationlines)
-            G.separationlines = [];
-            if ~G.showseparation, return, end
+            delete_valid(G.separation_lines)
+            G.separation_lines = [];
+            if ~G.show_separation, return, end
             
             % some properties
             org = G.D.layout;
@@ -567,112 +580,114 @@ classdef displaygraph < xplr.graphnode
             
             % some variables
             lines = {};
-            lwmax = 0; % maximal line-width encountered so far
+            lw_max = 0; % maximal line-width encountered so far
             
             % x
-            kstart = 2;
-            linewidth = 0;
-            for k = kstart:length(org.x)
+            k_start = 2;
+            line_width = 0;
+            for k = k_start:length(org.x)
                 d = org.x(k);                      % dimension for which we will draw vertical lines
-                dout = [org.x(k+1:end) st.xydim];  % other dimensions more external than di in x location
+                d_out = [org.x(k+1:end), st.xy_dim];  % other dimensions more external than di in x location
                 n = sz(d);
                 if n == 1, continue, end
-                szout = ones(1,nd); szout(dout) = sz(dout);
-                nout = prod(szout);
-                xpos = zeros(n-1,nout);
-                for kout = 1:nout
+                sz_out = ones(1, nd);
+                sz_out(d_out) = sz(d_out);
+                n_out = prod(sz_out);
+                x_pos = zeros(n-1, n_out);
+                for k_out = 1:n_out
                     % indices of external dimensions
-                    ijk = repmat(fn_indices(szout,kout,'g2i'),[1 n-1]);
+                    ijk = repmat(fn_indices(sz_out, k_out, 'g2i'), [1, n-1]);
                     % indices for dimension d
-                    ijk(d,:) = 1.5:n-.5;
+                    ijk(d, :) = 1.5:n-.5;
                     % x-positions of n-1 lines
-                    xpos(:,kout) = sum(fn_add(st.xoffset(k:end)', fn_mult(ijk(org.x(k:end),:),st.xstep(k:end)')),1);
+                    x_pos(:, k_out) = sum(fn_add(st.x_offset(k:end)', fn_mult(ijk(org.x(k:end), :), st.x_step(k:end)')), 1);
                 end
-                linewidth = linewidth+.5;
-                lwmax = max(lwmax,linewidth);
-                lines{end+1} = fn_lines('x',xpos(:),G.D.ha, ...
-                    'linewidth',linewidth,'color',G.separationcolor); %#ok<AGROW>
+                line_width = line_width + .5;
+                lw_max = max(lw_max, line_width);
+                lines{end+1} = fn_lines('x', x_pos(:), G.D.ha, ...
+                    'line_width', line_width, 'color', G.separation_color); %#ok<AGROW>
             end
             
             % y
-            kstart = 1+strcmp(G.D.displaymode,'image');
-            linewidth = 0;
-            for k = kstart:length(org.y)
+            k_start = 1 + strcmp(G.D.display_mode, 'image');
+            line_width = 0;
+            for k = k_start:length(org.y)
                 d = org.y(k);                      % dimension for which we will draw vertical lines
-                dout = [org.y(k+1:end) st.xydim];  % other dimensions more external than di in x location
+                d_out = [org.y(k+1:end), st.xy_dim];  % other dimensions more external than di in x location
                 n = sz(d);
                 if n == 1, continue, end
-                szout = ones(1,nd); szout(dout) = sz(dout);
-                nout = prod(szout);
-                ypos = zeros(n-1,nout);
-                for kout = 1:nout
+                sz_out = ones(1,nd);
+                sz_out(d_out) = sz(d_out);
+                n_out = prod(sz_out);
+                y_pos = zeros(n-1, n_out);
+                for k_out = 1:n_out
                     % indices of external dimensions
-                    ijk = repmat(fn_indices(szout,kout,'g2i'),[1 n-1]);
+                    ijk = repmat(fn_indices(sz_out, k_out, 'g2i'), [1, n-1]);
                     % indices for dimension d
-                    ijk(d,:) = 1.5:n-.5;
+                    ijk(d, :) = 1.5:n-.5;
                     % y-positions of n-1 lines
-                    ypos(:,kout) = sum(fn_add(st.yoffset(k:end)', fn_mult(ijk(org.y(k:end),:),st.ystep(k:end)')),1);
+                    y_pos(:, k_out) = sum(fn_add(st.y_offset(k:end)', fn_mult(ijk(org.y(k:end), :), st.y_step(k:end)')), 1);
                 end
-                linewidth = linewidth+.5;
-                lwmax = max(lwmax,linewidth);
-                lines{end+1} = fn_lines('y',ypos(:),G.D.ha, ...
-                    'linewidth',linewidth,'color',G.separationcolor); %#ok<AGROW>
+                line_width = line_width + .5;
+                lw_max = max(lw_max, line_width);
+                lines{end+1} = fn_lines('y', y_pos(:), G.D.ha, ...
+                    'line_width', line_width, 'color', G.separation_color); %#ok<AGROW>
             end
             
             % xy
-            if ~isempty(st.xydim)
-                ncol = st.xyncol;
-                nrow = ceil(sz(st.xydim)/ncol);
-                xpos = -.5 + (1:ncol-1)/ncol;
-                ypos = -.5 + (1:nrow-1)/nrow;
-                linewidth = lwmax+.5;
-                lines = [lines fn_lines(xpos,ypos,G.D.ha, ...
-                    'linewidth',linewidth,'color',G.separationcolor)];
+            if ~isempty(st.xy_dim)
+                n_col = st.xyn_col;
+                n_row = ceil(sz(st.xy_dim)/n_col);
+                x_pos = -.5 + (1:n_col-1)/n_col;
+                y_pos = -.5 + (1:n_row-1)/n_row;
+                line_width = lw_max + .5;
+                lines = [lines, fn_lines(x_pos, y_pos, G.D.ha, ...
+                    'line_width', line_width, 'color', G.separation_color)];
             end
             
             % put lines below other graphic elements
-            G.separationlines = fn_map(@row,lines,'array'); % single vector of graphic handles
-            uistack(G.separationlines,'bottom')
+            G.separation_lines = fn_map(@row, lines, 'array'); % single vector of graphic handles
+            uistack(G.separation_lines, 'bottom')
             
         end
     end
     
     % Coordinates conversions
     methods (Access='private')
-        function [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin)
+        function [sub_dim, ijk0, mode, invertible] = conversion_options(G, np, varargin)
             % Options (name/value pairs) for slice/graph conversions:
             % - 'invertible'  [default false] if set to true, exterior
             %               coordinates are rounded, this make the
-            %               conversion invertible by calling slice2graph
-            % - 'subdim'    [default all dims] dimensions in ijk for which
+            %               conversion invertible by calling slice_to_graph
+            % - 'sub_dim'    [default all dims] dimensions in ijk for which
             %               we perform the conversion; other dimensions
             %               will be assigned to the fixed default values in
             %               ijk0
-            % - 'ijk0'      [required if subdim is set] default values for
+            % - 'ijk0'      [required if sub_dim is set] default values for
             %               dimensions where no conversion is requested
             % - 'mode'      value is 'point' or 'vector' [default]
 
             p = inputParser;
-            p.addParameter('subdim',[],@isnumeric)
-            p.addParameter('ijk0',[],@isnumeric)
-            p.addParameter('mode','point',@(s)ismember(s,{'point', 'vector'}))
-            p.addParameter('invertible',false,@islogical)
-            parse(p,varargin{:})
+            p.addParameter('sub_dim', [], @isnumeric)
+            p.addParameter('ijk0', [], @isnumeric)
+            p.addParameter('mode', 'point', @(s)ismember(s, {'point', 'vector'}))
+            p.addParameter('invertible', false, @islogical)
+            parse(p, varargin{:})
             s = p.Results;
-            [subdim, ijk0, mode, invertible] = ...
-                deal(s.subdim, s.ijk0, s.mode, s.invertible);
-            if isempty(subdim)
-                subdim = 1:G.D.nd;
-            elseif ~isempty(ijk0) && size(ijk0,2)==1 && np>1
-                ijk0 = repmat(ijk0,[1 np]);
+            [sub_dim, ijk0, mode, invertible] = ...
+                deal(s.sub_dim, s.ijk0, s.mode, s.invertible);
+            if isempty(sub_dim)
+                sub_dim = 1:G.D.nd;
+            elseif ~isempty(ijk0) && size(ijk0, 2) == 1 && np>1
+                ijk0 = repmat(ijk0, [1, np]);
             end
 
         end
     end
     methods
-        function [zoom, bin] = getZoom(G,varargin)
-            % function zoom = getZoom(G[,dim][,'value|effective|indices'])
-            % function [offset bin] = getZoom(G[,dim],'off&bin')
+        function [zoom, bin] = get_zoom(G, varargin)
+            % function zoom = get_zoom(G[,dim][,'value|effective|indices'])
+            % function [offset bin] = get_zoom(G[,dim],'off&bin')
             %---
             % Get zoom value for specified dimensions. 
             % Different modes affect the returned value:
@@ -702,245 +717,248 @@ classdef displaygraph < xplr.graphnode
             end
             
             % output
-            zfilters = G.D.zoomfilters(dim);
+            z_filters = G.D.zoom_filters(dim);
             switch mode
-                case {'value' 'effective'}
-                    zoom = cat(1,zfilters.zoomvalue)';
+                case {'value', 'effective'}
+                    zoom = cat(1, z_filters.zoom_value)';
                     if strcmp(mode,'effective')
-                        zoom = fn_add(mean(zoom), fn_mult([-.5; .5],diff(zoom)./G.filling(dim)));
+                        zoom = fn_add(mean(zoom), fn_mult([-.5; .5], diff(zoom)./G.filling(dim)));
                     end
-                case {'indices' 'displaylimit'}
-                    zoom = zeros(2,length(dim));
-                    for i=1:length(dim), zoom(:,i) = zfilters(i).indicesout([1 end]); end
-                    if strcmp(mode,'displaylimit') 
-                        if strcmp(G.D.displaymode,'time courses') && ~isempty(G.layout.x)
-                            externalxdim = (dim~=G.layout.x(1));
-                            zoom(:,externalxdim) = fn_add(zoom(:,externalxdim),[-.5; .5]);                            
+                case {'indices', 'displaylimit'}
+                    zoom = zeros(2, length(dim));
+                    for i=1:length(dim), zoom(:, i) = z_filters(i).indices_out([1, end]); end
+                    if strcmp(mode, 'displaylimit') 
+                        if strcmp(G.D.display_mode, 'time courses') && ~isempty(G.layout.x)
+                            external_x_dim = (dim ~= G.layout.x(1));
+                            zoom(:, external_x_dim) = fn_add(zoom(:, external_x_dim), [-.5; .5]);                            
                         else
-                            zoom = fn_add(zoom,[-.5; .5]);
+                            zoom = fn_add(zoom, [-.5; .5]);
                         end
                     end
                 case 'off&bin'
-                    offset = zeros(1,length(dim));
-                    for i=1:length(dim), offset(i) = zfilters(i).indicesin(1)-1; end
+                    offset = zeros(1, length(dim));
+                    for i=1:length(dim), offset(i) = z_filters(i).indices_in(1) - 1; end
                     zoom = offset;          % first output: offset
-                    bin = [zfilters.bin];   % second output: bin
+                    bin = [z_filters.bin];   % second output: bin
             end
         end
-        function xy = zslice2graph(G,ijk,varargin)
-            % function xy = zslice2graph(G,ijk[,options...])
+        function xy = zslice_to_graph(G, ijk, varargin)
+            % function xy = zslice_to_graph(G,ijk[,options...])
             %---
             % Input:
             % - ijk         index coordinates in the zslice data
-            % - options (name/value pairs): see xplr.displaygraph.conversionOptions
+            % - options (name/value pairs): see xplr.DisplayGraph.conversion_options
             %
             % Output:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
             %
-            % See also xplr.displaygraph.conversionOptions
+            % See also xplr.DisplayGraph.conversion_options
 
             org = G.layout;
             st = G.steps;
             
             % Input points
-            np = size(ijk,2);
-            [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
-            if strcmp(mode,'vector')
+            np = size(ijk, 2);
+            [sub_dim, ijk0, mode, invertible] = conversion_options(G, np, varargin{:});
+            if strcmp(mode, 'vector')
                 error 'case not handled yet'
             elseif invertible
-                warning 'zslice2graph conversion is always invertible, no need to use ''invertible'' flag!'
+                warning 'zslice_to_graph conversion is always invertible, no need to use ''invertible'' flag!'
             end
-            if length(subdim) < G.D.nd
+            if length(sub_dim) < G.D.nd
                 % do not consider all dimensions
                 % - for ignored dimensions that are "more exterior" than
-                %   dimensions in subdim, we must choose some fixed value
+                %   dimensions in sub_dim, we must choose some fixed value
                 %   (we choose 1 by default)
                 % - ignored dimensions that are "more interior" than 
-                %   dimensions in subdim can be totally ignored
-                if isempty(ijk0), ijk0 = ones(G.D.nd,np); end
+                %   dimensions in sub_dim can be totally ignored
+                if isempty(ijk0), ijk0 = ones(G.D.nd, np); end
                 ijk_ = ijk0;
-                if size(ijk,1) == length(subdim)
-                    ijk_(subdim,:) = ijk;
-                elseif size(ijk,1) == G.D.nd
-                    ijk_(subdim,:) = ijk(subdim,:);
+                if size(ijk, 1) == length(sub_dim)
+                    ijk_(sub_dim, :) = ijk;
+                elseif size(ijk, 1) == G.D.nd
+                    ijk_(sub_dim, :) = ijk(sub_dim, :);
                 else
-                    error('expected %i or %i number of dimensions, but entry points have %i', length(subdim), G.D.nd, size(ijk,1))
+                    error('expected %i or %i number of dimensions, but entry points have %i', length(sub_dim), G.D.nd, size(ijk,1))
                 end
                 ijk = ijk_;
-                orgxok = find(ismember(org.x,subdim),1,'first'):length(org.x); % dimensions on x layout to consider; can be empty
-                orgyok = find(ismember(org.y,subdim),1,'first'):length(org.y); % dimensions on x layout to consider; can be empty
+                org_x_ok = find(ismember(org.x, sub_dim), 1, 'first'):length(org.x); % dimensions on x layout to consider; can be empty
+                org_y_ok = find(ismember(org.y, sub_dim), 1, 'first'):length(org.y); % dimensions on x layout to consider; can be empty
             else
-                orgxok = 1:length(org.x);
-                orgyok = 1:length(org.y);
+                org_x_ok = 1:length(org.x);
+                org_y_ok = 1:length(org.y);
             end
             
             % "exterior" dimensions must be rounded
-            doround = true(1, G.D.nd);
-            if ~isempty(orgxok), doround(org.x(orgxok(1))) = false; end
-            if ~isempty(orgyok), doround(org.y(orgyok(1))) = false; end
-            ijk(doround,:) = round(ijk(doround,:));
+            do_round = true(1, G.D.nd);
+            if ~isempty(org_x_ok), do_round(org.x(org_x_ok(1))) = false; end
+            if ~isempty(org_y_ok), do_round(org.y(org_y_ok(1))) = false; end
+            ijk(do_round, :) = round(ijk(do_round, :));
             
-            x = sum(fn_add(st.xoffset(orgxok)', fn_mult(ijk(org.x(orgxok),:),st.xstep(orgxok)')),1);
-            y = sum(fn_add(st.yoffset(orgyok)', fn_mult(ijk(org.y(orgyok),:),st.ystep(orgyok)')),1);
+            x = sum(fn_add(st.x_offset(org_x_ok)', fn_mult(ijk(org.x(org_x_ok), :), st.x_step(org_x_ok)')), 1);
+            y = sum(fn_add(st.y_offset(org_y_ok)', fn_mult(ijk(org.y(org_y_ok), :), st.y_step(org_y_ok)')), 1);
             xy = [x; y];
-            if ~isempty(st.xydim)
-                xyidx = ijk(st.xydim,:);
-                inside = (xyidx>0 & xyidx<=size(st.xyoffsets,2));
-                xy(:,inside) = xy(:,inside) + st.xyoffsets(:,xyidx(inside)); 
+            if ~isempty(st.xy_dim)
+                xy_idx = ijk(st.xy_dim, :);
+                inside = (xy_idx > 0 & xy_idx <= size(st.xy_offsets, 2));
+                xy(:, inside) = xy(:, inside) + st.xy_offsets(:, xy_idx(inside));
                 % points outside of graph
-                xy(:,~inside) = NaN;
+                xy(:, ~inside) = NaN;
             end
         end
-        function ijk = graph2zslice(G,xy,varargin)
-            % function ijk = graph2zslice(G,xy,options...)
+        function ijk = graph_to_zslice(G, xy, varargin)
+            % function ijk = graph_to_zslice(G,xy,options...)
             %---
             % Input:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
-            % - options (name/value pairs): see xplr.displaygraph.conversionOptions
+            % - options (name/value pairs): see xplr.DisplayGraph.conversion_options
             %
             % Output:
             % - ijk         index coordinates in the zslice data
             %
-            % See also xplr.displaygraph.conversionOptions
+            % See also xplr.DisplayGraph.conversion_options
 
             % Input points
             if isvector(xy), xy = xy(:); end
-            np = size(xy,2);
-            ijk = zeros(G.D.nd,np);
+            np = size(xy, 2);
+            ijk = zeros(G.D.nd, np);
             
             % Parse options
-            [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
-            if length(subdim)<G.D.nd && isempty(ijk0)
+            [sub_dim, ijk0, mode, invertible] = conversion_options(G, np, varargin{:});
+            if length(sub_dim) < G.D.nd && isempty(ijk0)
                 % Define ijk0 using the first point
-                ijk0 = graph2zslice(G,xy(:,1),'invertible',true);
-                if np==1, ijk = ijk0(subdim); return, end
+                ijk0 = graph_to_zslice(G, xy(:, 1), 'invertible', true);
+                if np == 1, ijk = ijk0(sub_dim); return, end
             end
             
             % If mode is 'vector', we cannot operate in xy/yx dims, and
             % operate at most on one x and one y dims
             org = G.layout;
-            if strcmp(mode,'vector')
-                ok = ~any(ismember(subdim,org.xy)) ...
-                    && ~any(ismember(subdim,org.yx)) ...
-                    && sum(ismember(subdim,org.x)) <= 1 ...
-                    && sum(ismember(subdim,org.y)) <= 1;
+            if strcmp(mode, 'vector')
+                ok = ~any(ismember(sub_dim, org.xy)) ...
+                    && ~any(ismember(sub_dim, org.yx)) ...
+                    && sum(ismember(sub_dim, org.x)) <= 1 ...
+                    && sum(ismember(sub_dim, org.y)) <= 1;
                 if ~ok
-                    error 'vector conversion not possible in graph2zslice for this set of dimensions'
+                    error 'vector conversion not possible in graph_to_zslice for this set of dimensions'
                 end
             end          
                         
             % xy/yx
             st = G.steps;
-            sz = G.zslicesz;
-            if strcmp(mode,'point') && ~isempty(st.xydim)
+            sz = G.zslice_sz;
+            if strcmp(mode, 'point') && ~isempty(st.xy_dim)
                 % take advantage on the fact that the grid spans the full
                 % axis
-                d = st.xydim;
-                x = .5+xy(1,:); y = .5-xy(2,:);
-                ncol = round(1/st.xysteps(1)); icol = .5 + x*ncol;
-                nrow = round(1/abs(st.xysteps(2))); irow = .5 + y*nrow;
-                if ismember(d,subdim)
-                    if d==G.layout.xy
-                        ijk(d,:) = icol + ncol*round(irow-1);
+                d = st.xy_dim;
+                x = .5 + xy(1, :);
+                y = .5 - xy(2, :);
+                n_col = round(1/st.xy_steps(1));
+                icol = .5 + x*n_col;
+                n_row = round(1/abs(st.xy_steps(2)));
+                irow = .5 + y*n_row;
+                if ismember(d, sub_dim)
+                    if d == G.layout.xy
+                        ijk(d, :) = icol + n_col*round(irow-1);
                     else
-                        ijk(d,:) = irow + nrow*round(icol-1);
+                        ijk(d, :) = irow + n_row*round(icol-1);
                     end
                 else
-                    ijk(d,:) = ijk0(d,:);
+                    ijk(d, :) = ijk0(d, :);
                 end
-                xy = xy - st.xyoffsets(:,fn_coerce(round(ijk(d,:)),1,sz(d)));
+                xy = xy - st.xy_offsets(:, fn_coerce(round(ijk(d, :)), 1, sz(d)));
             end
             
             % x 
-            x = xy(1,:);
-            xlayout = org.x;
-            for ix = length(xlayout):-1:1
-                d = xlayout(ix);
-                if strcmp(mode,'point')
-                    x = x - st.xoffset(ix);
+            x = xy(1, :);
+            x_layout = org.x;
+            for ix = length(x_layout):-1:1
+                d = x_layout(ix);
+                if strcmp(mode, 'point')
+                    x = x - st.x_offset(ix);
                 end
-                if ismember(d,subdim)
-                    ijk(d,:) = fn_div(x,st.xstep(ix));
+                if ismember(d, sub_dim)
+                    ijk(d, :) = fn_div(x, st.x_step(ix));
                 else
-                    ijk(d,:) = ijk0(d,:);
+                    ijk(d, :) = ijk0(d, :);
                 end
-                if strcmp(mode,'point')
-                    x = x - fn_mult(round(ijk(d,:)),st.xstep(ix));
+                if strcmp(mode, 'point')
+                    x = x - fn_mult(round(ijk(d, :)), st.x_step(ix));
                 end
             end
             
             % y
-            y = xy(2,:);
-            ylayout = org.y;
-            for iy = length(ylayout):-1:1
-                d = ylayout(iy);
-                if strcmp(mode,'point')
-                    y = y - st.yoffset(iy);
+            y = xy(2, :);
+            y_layout = org.y;
+            for iy = length(y_layout):-1:1
+                d = y_layout(iy);
+                if strcmp(mode, 'point')
+                    y = y - st.y_offset(iy);
                 end
-                if ismember(d,subdim)
-                    ijk(d,:) = fn_div(y,st.ystep(iy));
+                if ismember(d, sub_dim)
+                    ijk(d, :) = fn_div(y, st.y_step(iy));
                 else
-                    ijk(d,:) = ijk0(d,:);
+                    ijk(d, :) = ijk0(d, :);
                 end
-                if strcmp(mode,'point')
-                    y = y - fn_mult(round(ijk(d,:)),st.ystep(iy));
+                if strcmp(mode, 'point')
+                    y = y - fn_mult(round(ijk(d, :)), st.y_step(iy));
                 end
             end
             
             % we want an output that can be invertible by calling
-            % zslice2graph, this means that we should not give the
+            % zslice_to_graph, this means that we should not give the
             % conversion "per dimension" but in a global fashion where
             % dimensions "exterior" to the dimensions of interest are
             % rounded
             if invertible
-                doround = true(1, length(ijk));
-                if length(subdim) < G.D.nd
-                    doround(org.x(find(ismember(org.x,subdim),1,'first'))) = false; % do not round the first dimension of interest on the x location
-                    doround(org.y(find(ismember(org.y,subdim),1,'first'))) = false; % do not round the first dimension of interest on the x location
+                do_round = true(1, length(ijk));
+                if length(sub_dim) < G.D.nd
+                    do_round(org.x(find(ismember(org.x, sub_dim), 1, 'first'))) = false; % do not round the first dimension of interest on the x location
+                    do_round(org.y(find(ismember(org.y, sub_dim), 1, 'first'))) = false; % do not round the first dimension of interest on the x location
                 else
-                    if ~isempty(xlayout), doround(xlayout(1)) = false; end
-                    if ~isempty(ylayout), doround(ylayout(1)) = false; end
+                    if ~isempty(x_layout), do_round(x_layout(1)) = false; end
+                    if ~isempty(y_layout), do_round(y_layout(1)) = false; end
                 end
-                ijk(doround) = round(ijk(doround));
+                ijk(do_round) = round(ijk(do_round));
             end
             
             % not all dimensions?
-            if length(subdim) < G.D.nd
-                ijk = ijk(subdim,:);
+            if length(sub_dim) < G.D.nd
+                ijk = ijk(sub_dim, :);
             end
         end
-        function xy = slice2graph(G,ijk,varargin)
-            % function xy = slice2graph(G,ijk[,options...])
+        function xy = slice_to_graph(G, ijk, varargin)
+            % function xy = slice_to_graph(G,ijk[,options...])
             %---
             % Input:
             % - ijk         index coordinates in the zslice data
-            % - options (name/value pairs): see xplr.displaygraph.conversionOptions
+            % - options (name/value pairs): see xplr.DisplayGraph.conversion_options
             %
             % Output:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
             %
-            % See also xplr.displaygraph.codnversionOptions
+            % See also xplr.DisplayGraph.codnversionOptions
 
             % Input points
-            np = size(ijk,2);
-            [subdim, ijk0, mode, invertible] = conversionOptions(G,np,varargin{:});
-            if strcmp(mode,'vector')
+            np = size(ijk, 2);
+            [sub_dim, ijk0, mode, invertible] = conversion_options(G, np, varargin{:});
+            if strcmp(mode, 'vector')
                 error 'case not handled yet'
             elseif invertible
-                warning 'zslice2graph conversion is always invertible, no need to use ''invertible'' flag!'
+                warning 'zslice_to_graph conversion is always invertible, no need to use ''invertible'' flag!'
             end
-            if length(subdim) < G.D.nd
+            if length(sub_dim) < G.D.nd
                 if isempty(ijk0)
-                    ijk_ = zeros(G.D.nd,np);
+                    ijk_ = zeros(G.D.nd, np);
                 else
                     ijk_ = ijk0;
                 end
-                if size(ijk,1) == length(subdim)
-                    ijk_(subdim,:) = ijk;
-                elseif size(ijk,1) == G.D.nd
-                    ijk_(subdim,:) = ijk(subdim,:);
+                if size(ijk, 1) == length(sub_dim)
+                    ijk_(sub_dim, :) = ijk;
+                elseif size(ijk, 1) == G.D.nd
+                    ijk_(sub_dim, :) = ijk(sub_dim, :);
                 else
-                    error('expected %i or %i number of dimensions, but entry points have %i', length(subdim), G.D.nd, size(ijk,1))
+                    error('expected %i or %i number of dimensions, but entry points have %i', length(sub_dim), G.D.nd, size(ijk,1))
                 end
                 ijk = ijk_;
             end
@@ -949,59 +967,59 @@ classdef displaygraph < xplr.graphnode
             if strcmp(mode,'vector')
                 error 'case not handled yet'
             else
-                [idxoffset, bin] = G.getZoom('off&bin');
-                zijk = fn_div(fn_subtract(ijk, idxoffset(:))-.5,bin(:)) + .5;
+                [idx_offset, bin] = G.get_zoom('off&bin');
+                zijk = fn_div(fn_subtract(ijk, idx_offset(:))-.5, bin(:)) + .5;
             end
             
             % then convert to graph coordinates
-            if length(subdim)<G.D.nd && isempty(ijk0)
-                % let zslice2graph estimate zijk0
-                xy = zslice2graph(G,zijk,'mode',mode,'subdim',subdim);
+            if length(sub_dim) < G.D.nd && isempty(ijk0)
+                % let zslice_to_graph estimate zijk0
+                xy = zslice_to_graph(G, zijk, 'mode', mode, 'sub_dim', sub_dim);
             else
-                % ijk and zijk values in other dimensions than subdim have
+                % ijk and zijk values in other dimensions than sub_dim have
                 % already be assigned using ijk0
-                xy = zslice2graph(G,zijk,'mode',mode);
+                xy = zslice_to_graph(G, zijk, 'mode', mode);
             end
         end
-        function ijk = graph2slice(G,xy,varargin)
-            % function ijk = graph2slice(G,xy,options...)
+        function ijk = graph_to_slice(G, xy, varargin)
+            % function ijk = graph_to_slice(G,xy,options...)
             %---
             % Input:
             % - xy          coordinates in the graph (between -0.5 and 0.5)
-            % - options (name/value pairs): see xplr.displaygraph.conversionOptions
+            % - options (name/value pairs): see xplr.DisplayGraph.conversion_options
             %
             % Output:
             % - ijk         index coordinates in the slice data
             %
-            % See also xplr.displaygraph.conversionOptions
+            % See also xplr.DisplayGraph.conversion_options
 
             % coordinates in zoomed slice
-            np = size(xy,2);
-            zijk = graph2zslice(G,xy,varargin{:});
+            np = size(xy, 2);
+            zijk = graph_to_zslice(G, xy, varargin{:});
             
             % convert to before zooming
-            [subdim, ~, mode] = G.conversionOptions(np,varargin{:});
-            [idxoffset, bin] = G.getZoom('off&bin');
-            if strcmp(mode,'vector')
-                ijk = fn_mult(zijk, bin(subdim)');
+            [sub_dim, ~, mode] = G.conversion_options(np, varargin{:});
+            [idx_offset, bin] = G.get_zoom('off&bin');
+            if strcmp(mode, 'vector')
+                ijk = fn_mult(zijk, bin(sub_dim)');
             else
-                ijk = fn_add(idxoffset(subdim)', .5+fn_mult(zijk-.5,bin(subdim)'));
+                ijk = fn_add(idx_offset(sub_dim)', .5+fn_mult(zijk-.5, bin(sub_dim)'));
             end
         end
 	end
 
 	% Specialized position functions
 	methods
-        function M = gettransform(G,ijk)
-            % function M = gettransform(G,ijk,ybase)
+        function M = get_transform(G, ijk)
+            % function M = get_transform(G,ijk,ybase)
             %---
             % Matrix transformation to place curve/image at ijk data
             % coordinates; note that only coordinates not belonging to the
             % curve/image will be taken into account.
             % 
-            % For 'image' displaymode, M will transform indices
+            % For 'image' display_mode, M will transform indices
             % 1:size(im,1) and 1:size(im,2) to accurate pixel positions.
-            % For 'time courses' displaymode, M will transform indices
+            % For 'time courses' display_mode, M will transform indices
             % 1:length(x) to accurate x-ordinates, and data values 0 and 1
             % respectively to the bottom and top y-ordinates of the
             % available space.
@@ -1013,8 +1031,8 @@ classdef displaygraph < xplr.graphnode
             org = G.layout;
 
             % Initialize matrix
-            ntransform = size(ijk,2);
-            M = repmat(eye(4),[1 1 ntransform]);
+            n_transform = size(ijk, 2);
+            M = repmat(eye(4), [1, 1, n_transform]);
             
             % Scale & offset
             % (x)
@@ -1022,15 +1040,15 @@ classdef displaygraph < xplr.graphnode
                 % no data dimension on x-axis: only 1 data point for time
                 % courses or image display, which must be positionned in
                 % the center of the available space
-                xscale = st.xavailable;
-                % index 1 must be positionned at x-ordinate 0, i.e. xoffset + 1*xscale = 0
-                xoffsets = -xscale * ones(1,ntransform); 
+                x_scale = st.x_available;
+                % index 1 must be positionned at x-ordinate 0, i.e. x_offset + 1*x_scale = 0
+                x_offsets = -x_scale * ones(1, n_transform);
             else
-                xscale = st.xstep(1);
-                xoffsets = fn_add( sum(st.xoffset), sum(fn_mult(column(st.xstep(2:end)),ijk(org.x(2:end),:)),1) );
+                x_scale = st.x_step(1);
+                x_offsets = fn_add(sum(st.x_offset), sum(fn_mult(column(st.x_step(2:end)), ijk(org.x(2:end), :)), 1));
             end
             % (y)
-            switch G.D.displaymode
+            switch G.D.display_mode
                 case 'image'
                     % not possible to have negative scaling in the
                     % hgtransform matrix
@@ -1039,44 +1057,44 @@ classdef displaygraph < xplr.graphnode
                     % creation, i.e. will be -1:-1:-size(im,2)
                     if isempty(org.y)
                         % no data dimension on y-axis: similar to above
-                        yscale = st.yavailable;
-                        % index -1 must be positionned at y-ordinate 0, i.e. yoffset + 1*yscale = 0
-                        yoffsets = yscale * ones(1,ntransform);
+                        y_scale = st.y_available;
+                        % index -1 must be positionned at y-ordinate 0, i.e. y_offset + 1*y_scale = 0
+                        y_offsets = y_scale * ones(1, n_transform);
                     else
-                        yscale = abs(st.ystep(1));
-                        yoffsets = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(2:end)),ijk(org.y(2:end),:)),1) );
+                        y_scale = abs(st.y_step(1));
+                        y_offsets = fn_add(sum(st.y_offset), sum(fn_mult(column(st.y_step(2:end)), ijk(org.y(2:end), :)), 1));
                     end
                 case 'time courses'
                     % in this case, the transformation will apply not on
                     % data indices in some dimension, but on data values
                     % -> orient these values upward, and transform them
                     % such that [0 1] fills the available space
-                    yscale = st.yavailable;
-                    if yscale == 1
+                    y_scale = st.y_available;
+                    if y_scale == 1
                         % occupy full vertical space, because there are no
                         % data dimensions in y, xy or yx location -> get a
                         % nicer display by leaving some gaps above and
                         % below
-                        yscale = 1/(1+G.ysep/2);
+                        y_scale = 1/(1 + G.y_sep/2);
                     end
-                    yoffsets = fn_add( sum(st.yoffset), sum(fn_mult(column(st.ystep(1:end)),ijk(org.y(1:end),:)),1) );
-                    % value .5 must be positionned at y-ordinates yoffsets, i.e. yoffsets + .5*yscale = 0
-                    yoffsets = yoffsets - yscale/2; 
+                    y_offsets = fn_add(sum(st.y_offset), sum(fn_mult(column(st.y_step(1:end)), ijk(org.y(1:end), :)), 1) );
+                    % value .5 must be positionned at y-ordinates y_offsets, i.e. y_offsets + .5*y_scale = 0
+                    y_offsets = y_offsets - y_scale/2; 
                 otherwise
                     error 'invalid display mode'
             end
             % (add offsets for the xy grid)
-            xyoffset = [xoffsets; yoffsets];
-            if ~isempty(st.xydim)
-                xyoffset = xyoffset + st.xyoffsets(:,ijk(st.xydim,:)); 
+            xy_offset = [x_offsets; y_offsets];
+            if ~isempty(st.xy_dim)
+                xy_offset = xy_offset + st.xy_offsets(:, ijk(st.xy_dim, :)); 
             end
             % (set transform matrix)
-            M(1,1,:) = xscale;
-            M(2,2,:) = yscale; 
-            M(1:2,4,:) = xyoffset;
+            M(1, 1, :) = x_scale;
+            M(2, 2, :) = y_scale; 
+            M(1:2, 4, :) = xy_offset;
         end
-        function [bottomleft, siz] = sub_axes_position(G,ijk)
-            % function [bottomleft, siz] = sub_axes_position(G,ijk)
+        function [bottom_left, siz] = sub_axes_position(G, ijk)
+            % function [bottom_left, siz] = sub_axes_position(G,ijk)
             %---
             % Input:
             % - ijk     nd * npoint array
@@ -1084,7 +1102,7 @@ classdef displaygraph < xplr.graphnode
             % Output:
             % - pos     4 * npoint array
             
-            np = size(ijk,2);
+            np = size(ijk, 2);
             st = G.steps;
 
             % Position of sub-axes centers
@@ -1093,45 +1111,45 @@ classdef displaygraph < xplr.graphnode
 %                 % no data dimension on x-axis: only 1 data point for time
 %                 % courses or image display, which must be positionned in
 %                 % the center of the available space
-%                 xoffsets = zeros(1,np); 
+%                 x_offsets = zeros(1,np); 
 %             else
-                xoffsets = fn_add( sum(st.xoffset(2:end)), sum(fn_mult(column(st.xstep(2:end)),ijk(org.x(2:end),:)),1) );
+                x_offsets = fn_add(sum(st.x_offset(2:end)), sum(fn_mult(column(st.x_step(2:end)), ijk(org.x(2:end), :)), 1) );
 %             end
             % (y)
-            switch G.D.displaymode
+            switch G.D.display_mode
                 case 'image'
-                    yoffsets = fn_add( sum(st.yoffset(2:end)), sum(fn_mult(column(st.ystep(2:end)),ijk(org.y(2:end),:)),1) );
+                    y_offsets = fn_add(sum(st.y_offset(2:end)), sum(fn_mult(column(st.y_step(2:end)), ijk(org.y(2:end), :)), 1));
                 case 'time courses'
-                    yoffsets = fn_add( sum(st.yoffset(1:end)), sum(fn_mult(column(st.ystep(1:end)),ijk(org.y(1:end),:)),1) );
+                    y_offsets = fn_add(sum(st.y_offset(1:end)), sum(fn_mult(column(st.y_step(1:end)), ijk(org.y(1:end), :)), 1));
                 otherwise
                     error 'invalid display mode'
             end
             % (add offsets for the xy grid)
-            xyoffsets = [xoffsets; yoffsets];
-            if ~isempty(st.xydim)
-                xyoffsets = xyoffsets + st.xyoffsets(:,ijk(st.xydim,:)); 
+            xy_offsets = [x_offsets; y_offsets];
+            if ~isempty(st.xy_dim)
+                xy_offsets = xy_offsets + st.xy_offsets(:, ijk(st.xy_dim, :)); 
             end
             
             % We are done!
-            siz = repmat([st.xspan(1); st.yspan(1)],[1 np]);
-            bottomleft = xyoffsets - siz/2;
+            siz = repmat([st.xspan(1); st.yspan(1)], [1, np]);
+            bottom_left = xy_offsets - siz/2;
         end
-        function pos = labelPosition(G,dim,orgin)
-            % function pos = labelPosition(G,d[,orgin])
+        function pos = label_position(G, dim, org_in)
+            % function pos = label_position(G,d[,org_in])
             
-            dim = G.D.slice.dimensionNumber(dim);
+            dim = G.D.slice.dimension_number(dim);
         
             % steps
-            if nargin==3
-                st = computeStepsPrivate(G,orgin);
+            if nargin == 3
+                st = compute_steps_private(G, org_in);
             else
-                orgin = G.layout;
+                org_in = G.layout;
                 st = G.steps;
                 if isempty(st)
                     % code here added on 04/06/2018 to avoid error
-                    if G.D.nodisplay
+                    if G.D.no_display
                         warning 'Please edit code to better handle this case'
-                        pos = zeros(1,length(dim));
+                        pos = zeros(1, length(dim));
                         return
                     else
                         error 'programming'
@@ -1141,29 +1159,29 @@ classdef displaygraph < xplr.graphnode
             
             % label positions
             n = length(dim);
-            pos = zeros(1,n);
+            pos = zeros(1, n);
             for i=1:n
                 d = dim(i);
-                if ~isempty(orgin.x) && d==orgin.x(end)
-                    pos(i) = st.xyoffsets(1,1);
-                elseif any(d==orgin.x)
-                    ix = find(d==orgin.x,1);
-                    pos(i) = st.xyoffsets(1,1) + sum(st.xoffset(ix+1:end) + st.xstep(ix+1:end));
-                    if pos(i)<-.5, pos(i) = pos(i) + sum(st.xstep(ix+1:end)); end % first grid element is more than half-outside
-                elseif ~isempty(orgin.y) && d==orgin.y(end)
-                    pos(i) = st.xyoffsets(2,1);
-                elseif any(d==orgin.y)
-                    iy = find(d==orgin.y,1);
-                    pos(i) = st.xyoffsets(2,1) + sum(st.yoffset(iy+1:end) + st.ystep(iy+1:end));
-                    if pos(i)>.5, pos(i) = pos(i) + sum(st.ystep(iy+1:end)); end % first grid element is more than half-outside
-                elseif d==st.xydim
+                if ~isempty(org_in.x) && d == org_in.x(end)
+                    pos(i) = st.xy_offsets(1, 1);
+                elseif any(d == org_in.x)
+                    ix = find(d == org_in.x, 1);
+                    pos(i) = st.xy_offsets(1, 1) + sum(st.x_offset(ix+1:end) + st.x_step(ix+1:end));
+                    if pos(i)<-.5, pos(i) = pos(i) + sum(st.x_step(ix+1:end)); end % first grid element is more than half-outside
+                elseif ~isempty(org_in.y) && d == org_in.y(end)
+                    pos(i) = st.xy_offsets(2, 1);
+                elseif any(d == org_in.y)
+                    iy = find(d == org_in.y, 1);
+                    pos(i) = st.xy_offsets(2, 1) + sum(st.y_offset(iy+1:end) + st.y_step(iy+1:end));
+                    if pos(i) > .5, pos(i) = pos(i) + sum(st.y_step(iy+1:end)); end % first grid element is more than half-outside
+                elseif d == st.xy_dim
                     pos(i) = 0;
                 else
                     pos(i) = 0;
                 end
             end
         end
-		function [polygon, center] = selectionMark(G,dim,sel)
+		function [polygon, center] = selection_mark(G, dim, sel)
             % Create the polygon to display corresponding to a given
             % selection. This is a complex function as it handles many
             % different cases whether the selection is 1D or 2D, which
@@ -1174,69 +1192,69 @@ classdef displaygraph < xplr.graphnode
             
 			% checks
 			nd = length(dim);
-            dim = G.D.slice.dimensionNumber(dim);
+            dim = G.D.slice.dimension_number(dim);
 			if sel.nd ~= nd, error 'selection has incorrect number of dimensions', end
             
             % default polygon is empty (no display)
-            polygon = nan(2,1); 
-            center = nan(2,1); % out of display
+            polygon = nan(2, 1); 
+            center = nan(2, 1); % out of display
 
 			switch nd
 				case 1
 					lines = sel.polygon; % 2*n array: set of lines
-					nline = size(lines,2);
+					n_line = size(lines, 2);
                     % remove lines that are completely out of current view
-					zoom = G.getZoom(dim,'value');
-                    lines(:, lines(1,:)>zoom(2) | lines(2,:)<zoom(1)) = [];
+					zoom = G.get_zoom(dim, 'value');
+                    lines(:, lines(1, :) > zoom(2) | lines(2, :) < zoom(1)) = [];
                     if isempty(lines), return, end
                     % lines spanning beyond the left or right side
-                    beyondleft = lines(1,:) < zoom(1);
-                    beyondright = lines(2,:) > zoom(2);
+                    beyond_left = lines(1, :) < zoom(1);
+                    beyond_right = lines(2, :) > zoom(2);
                     % clip lines to current view
-                    lines(1,beyondleft) = zoom(1);
-                    lines(2,beyondright) = zoom(2);
+                    lines(1, beyond_left) = zoom(1);
+                    lines(2, beyond_right) = zoom(2);
                     % convert from slice to zslice coordinates
-                    [idxoffset, bin] = G.getZoom(dim, 'off&bin');
-                    lines = (lines-idxoffset-.5)/bin + .5;
+                    [idx_offset, bin] = G.get_zoom(dim, 'off&bin');
+                    lines = (lines - idx_offset - .5)/bin + .5;
                     % display selections as rectangles (for 'x' and 'y'
                     % locations), or as more complex polygon (for 'xy' and
                     % 'yx')
                     st = G.steps;
                     dim_location = G.D.layoutID.dim_locations{dim};
-					if ismember(dim_location, {'x' 'y'})
+					if ismember(dim_location, {'x', 'y'})
 						% convert from zslice to graph coordinates:
 						% ignore dimensions that are more internal than dim
 						% take value 1 for dimensiont that are more external than dim
 						dim_layout = org.(dim_location);
-						idx_dim = find(dim_layout==dim,1);
+						idx_dim = find(dim_layout == dim, 1);
 						switch dim_location
 							case 'x'
-								lines = sum(st.xoffset(idx_dim:end)) + lines*st.xstep(idx_dim) + sum(st.xstep(idx_dim+1:end));
+								lines = sum(st.x_offset(idx_dim:end)) + lines*st.x_step(idx_dim) + sum(st.x_step(idx_dim+1:end));
 							case 'y'
-								lines = sum(st.yoffset(idx_dim:end)) + lines*st.ystep(idx_dim) + sum(st.ystep(idx_dim+1:end));
+								lines = sum(st.y_offset(idx_dim:end)) + lines*st.y_step(idx_dim) + sum(st.y_step(idx_dim+1:end));
 						end
-                        if ~isempty(st.xydim)
-                            graphdim = fn_switch(dim_location,'x',1,'y',2);
-                            lines = lines + st.xyoffsets(graphdim,1); 
+                        if ~isempty(st.xy_dim)
+                            graph_dim = fn_switch(dim_location, 'x', 1, 'y', 2);
+                            lines = lines + st.xy_offsets(graph_dim, 1); 
                         end
                         % construct polygon as union of rectangles
-                        polygon = cell(1,2*nline-1);
-                        for i = 1:nline
-                            switch 2*beyondleft(i) + beyondright(i)
+                        polygon = cell(1, 2*n_line - 1);
+                        for i = 1:n_line
+                            switch 2*beyond_left(i) + beyond_right(i)
                                 case 0
                                     % segment within view: full rectangle
-                                    polygon{2*i-1} = [lines([1 2 2 1 1],i)'; -.5 -.5 .5 .5 -.5];
+                                    polygon{2*i - 1} = [lines([1, 2, 2, 1, 1], i)'; -.5, -.5, .5, .5, -.5];
                                 case 1
                                     % 'rectangle' open on the right side
-                                    polygon{2*i-1} = [lines([2 1 1 2],i)'; -.5 -.5 .5 .5];
+                                    polygon{2*i - 1} = [lines([2, 1, 1, 2], i)'; -.5, -.5, .5, .5];
                                 case 2
                                     % 'rectangle' open on the left side
-                                    polygon{2*i-1} = [lines([1 2 2 1],i)'; -.5 -.5 .5 .5];
+                                    polygon{2*i - 1} = [lines([1, 2, 2, 1], i)'; -.5, -.5, .5, .5];
                                 case 3
                                     % 'rectangle' open on both sides: 2
                                     % lines
-                                    polygon{2*i-1} = [lines([1 2],:)' NaN lines([2 1],i)'; ...
-                                        -.5 -.5 NaN .5 .5];
+                                    polygon{2*i - 1} = [lines([1, 2], :)', NaN, lines([2, 1], i)'; ...
+                                        -.5, -.5, NaN, .5, .5];
                             end
                         end
                         [polygon{2:2:end}] = deal([NaN; NaN]);
@@ -1244,36 +1262,36 @@ classdef displaygraph < xplr.graphnode
                         center = [mean(lines(:)); 0];
                         
                         % invert coordinates if dim location is 'y'
-                        if strcmp(dim_location,'y')
-                            polygon = polygon([2 1],:);
-                            center = center([2 1]);
+                        if strcmp(dim_location, 'y')
+                            polygon = polygon([2, 1], :);
+                            center = center([2, 1]);
                         end
                     elseif strcmp(dim_location, 'xy')
                         % fancy display of selections in grid !
-                        hh = abs(st.xysteps(2)) *.46; % half height of the frame around a single grid element
-                        polygon = cell(1,2*nline-1);
-                        for i = 1:nline
+                        hh = abs(st.xy_steps(2)) *.46; % half height of the frame around a single grid element
+                        polygon = cell(1, 2*n_line - 1);
+                        for i = 1:n_line
                             % corners: convert from zslice to graph coordinates
-                            rline = round(lines(:,i)+[1; -1]*.01);
-                            c = st.xyoffsets(:,rline); % 2*2, i.e. x/y * start/stop
-                            c(1,:) = c(1,:) + st.xysteps(1) * (lines(:,i) - rline)';
+                            r_line = round(lines(:, i) + [1; -1]*.01);
+                            c = st.xy_offsets(:, r_line); % 2*2, i.e. x/y * start/stop
+                            c(1, :) = c(1, :) + st.xy_steps(1) * (lines(:, i) - r_line)';
                             % sub-polygon
-                            singlerow = (diff(c(2,:)) == 0);
-                            if singlerow
+                            single_row = (diff(c(2, :)) == 0);
+                            if single_row
                                 % the easy case: a simple rectangle
                                 % spanning a single line in the grid
-                                polygon{2*i-1} = [c(1,[1 2 2 1 1]); c(2,[1 1 2 2 1])+[-1 -1 1 1 -1]*hh];
-                            elseif diff(rline) < st.xyncol
+                                polygon{2*i - 1} = [c(1,[1, 2, 2, 1, 1]); c(2,[1, 1, 2, 2, 1]) + [-1, -1, 1, 1, -1]*hh];
+                            elseif diff(r_line) < st.xyn_col
                                 % two non-intersecting rectangles on two successive lines
                                 polygon{2*i-1} = ...
-                                    [c(1,1) .5*ones(1,2) c(1,[1 1]) NaN -.5 c(1,[2 2]) -.5*ones(1,2); ...
-                                    (c(2,[1 1])+hh) (c(2,[1 1])-hh) (c(2,1)+hh) NaN (c(2,[2 2])+hh) (c(2,[2 2])-hh) (c(2,2)+hh)];
+                                    [c(1,1), .5*ones(1,2), c(1,[1 1]), NaN, -.5, c(1,[2, 2]), -.5*ones(1,2); ...
+                                    (c(2,[1, 1])+hh), (c(2,[1, 1])-hh), (c(2,1)+hh), NaN, (c(2,[2, 2])+hh), (c(2,[2, 2])-hh), (c(2,2)+hh)];
                             else
                                 % more difficult: spanning multiple lines
-                                hhc = abs(st.xysteps(2)) - hh;
+                                hhc = abs(st.xy_steps(2)) - hh;
                                 polygon{2*i-1} = ...
-                                    [c(1,1) .5*ones(1,3) c(1,2)*ones(1,2) -.5*ones(1,3) c(1,1)*ones(1,2); ...
-                                    (c(2,[1 1])+hh) (c(2,1)-hhc) (c(2,[2 2])+hhc) (c(2,[2 2])-hh) (c(2,2)+hhc) (c(2,[1 1])-hhc) c(2,1)+hh];
+                                    [c(1,1), .5*ones(1,3), c(1,2)*ones(1,2), -.5*ones(1,3), c(1,1)*ones(1,2); ...
+                                    (c(2,[1, 1])+hh), (c(2,1)-hhc), (c(2,[2, 2])+hhc), (c(2,[2, 2])-hh), (c(2,2)+hhc), (c(2,[1, 1])-hhc), c(2,1)+hh];
                             end
                         end
                         [polygon{2:2:end}] = deal([NaN; NaN]);
@@ -1281,36 +1299,36 @@ classdef displaygraph < xplr.graphnode
                         
                         % center: will be better pKosition if we average
                         % after conversion from indices to graph positions
-                        center = mean(G.slice2graph(sel.dataind,'subdim',dim),2);
+                        center = mean(G.slice_to_graph(sel.dataind, 'sub_dim', dim), 2);
                     else
                         error 'not implemented yet'
-                        center = [nmean(polygon(1,:)) nmean(polygon(2,:))];
+                        center = [nmean(polygon(1, :)), nmean(polygon(2, :))];
                     end
                 case 2
                     % somehow simpler because only the x,y configuration is
                     % allowed
                     % get polygon in slice coordinates
-                    polyslice = sel.polygon;
-                    centerslice = [mean(polyslice(1,1:end-1)); mean(polyslice(2,1:end-1))]; % remove the last point as it repeats the first one
+                    poly_slice = sel.polygon;
+                    center_slice = [mean(poly_slice(1, 1:end-1)); mean(poly_slice(2, 1:end-1))]; % remove the last point as it repeats the first one
                     % restrict to the part that is visible within the
                     % current zoom
-                    polyslice = G.visiblePolygon(polyslice,dim);
-                    display_limit = G.getZoom(dim,'displaylimit');
-                    if any(centerslice<display_limit(1,:)' | centerslice>display_limit(2,:)')
-                        centerslice(:) = NaN;
+                    poly_slice = G.visible_polygon(poly_slice, dim);
+                    display_limit = G.get_zoom(dim, 'displaylimit');
+                    if any(center_slice < display_limit(1, :)' | center_slice > display_limit(2, :)')
+                        center_slice(:) = NaN;
                     end
                     % convert to graph
-                    polygon = G.slice2graph(polyslice,'subdim',dim);
-                    center = G.slice2graph(centerslice,'subdim',dim);
+                    polygon = G.slice_to_graph(poly_slice, 'sub_dim', dim);
+                    center = G.slice_to_graph(center_slice, 'sub_dim', dim);
 				otherwise
 					error 'case not handled yet'
 			end
 
         end
-        function output = visiblePolygon(G,polyslice,dim)
-                % function output = visiblePolygon(G, polyslice, dim);
+        function output = visible_polygon(G, poly_slice, dim)
+                % function output = visible_polygon(G, poly_slice, dim);
                 %---
-                % @param polyslice: nd*np list of points
+                % @param poly_slice: nd*np list of points
                 % @param dim: 1*nd list of dimensions in which the
                 % polygon is defined
                 % @return output: nd*np' list of points: part of the
@@ -1321,57 +1339,57 @@ classdef displaygraph < xplr.graphnode
                 % limit
 
                 % sizes
-                [nd, np] = size(polyslice);
-                assert(length(dim)==nd)
+                [nd, np] = size(poly_slice);
+                assert(length(dim) == nd)
 
                 % get zoom limits in these dimensions
-                zoomSliceValues = G.getZoom(dim,'displaylimit');
+                zoom_slice_values = G.get_zoom(dim, 'displaylimit');
 
                 % set the ouput to zeros (they will be set to one if one of the
                 % dimension if it's out of display)
-                polygonIsOutOfDisplay = false(1,np);
+                polygon_is_out_of_display = false(1, np);
                 for dimension = 1:nd  
                    % is equal to one if is out of limits of the zoom or if the
                    % previous value was already 1
-                    polygonIsOutOfDisplay = polyslice(dimension,:)<zoomSliceValues(1,dimension) | polyslice(dimension,:)>zoomSliceValues(2,dimension) | polygonIsOutOfDisplay;
+                    polygon_is_out_of_display = poly_slice(dimension, :) < zoom_slice_values(1, dimension) | poly_slice(dimension, :) > zoom_slice_values(2, dimension) | polygon_is_out_of_display;
                 end
 
                 % "Boundary points" will be inserted where there are
                 % connections between a displayed point and a point out of
                 % display.
                 % Example:
-                % polygonIsOutOfDisplay = [0  1  1  0  1  0  0  1]
-                % boundaryDir =            [1  0 -1  1 -1  0  1]
-                % boundaryPrev =            1,    3, 4, 5,    7
-                % boundaryNext =            2,    4, 5, 6,    8
-                % insertionIndexes =       [2     5  7  8    10] 
-                boundaryDir = diff(polygonIsOutOfDisplay);
-                boundariesIndexes = find(boundaryDir~=0);
-                nboundaries = size(boundariesIndexes,2);
-                boundariesValues = nan(nd,nboundaries);
-                insertionIndexes = zeros(1,nboundaries);
+                % polygon_is_out_of_display = [0  1  1  0  1  0  0  1]
+                % boundary_dir =            [1  0 -1  1 -1  0  1]
+                % boundary_prev =            1,    3, 4, 5,    7
+                % boundary_next =            2,    4, 5, 6,    8
+                % insertion_indexes =       [2     5  7  8    10] 
+                boundary_dir = diff(polygon_is_out_of_display);
+                boundaries_indexes = find(boundary_dir ~= 0);
+                n_boundaries = size(boundaries_indexes, 2);
+                boundaries_values = nan(nd, n_boundaries);
+                insertion_indexes = zeros(1, n_boundaries);
 
                 % calculate intermediate points between points displayed
                 % and points not displayed
-                numberOfPointsAdded = 0;
-                for k = 1:nboundaries
-                    boundaryPrev = boundariesIndexes(k);
-                    boundaryNext = boundaryPrev + 1;
+                number_of_points_added = 0;
+                for k = 1:n_boundaries
+                    boundary_prev = boundaries_indexes(k);
+                    boundary_next = boundary_prev + 1;
 
                     % which of the two points is inside / outside
-                    if(boundaryDir(boundaryPrev)==1)
-                        [inside_point, outside_point] = deal(boundaryPrev, boundaryNext);
+                    if(boundary_dir(boundary_prev) == 1)
+                        [inside_point, outside_point] = deal(boundary_prev, boundary_next);
                     else
-                        [inside_point, outside_point] = deal(boundaryNext, boundaryPrev);
+                        [inside_point, outside_point] = deal(boundary_next, boundary_prev);
                     end
 
                     % scan dimensions to determine what portion of the
                     % initial segment should be hidden.
-                    biggestRatio = 0;
+                    biggest_ratio = 0;
                     for dimension = 1:nd
-                        outside_to_inside = polyslice(dimension,inside_point) - polyslice(dimension,outside_point);
-                        outside_to_limit_min = zoomSliceValues(1, dimension) - polyslice(dimension,outside_point);
-                        outside_to_limit_max = zoomSliceValues(2, dimension) - polyslice(dimension,outside_point);
+                        outside_to_inside = poly_slice(dimension, inside_point) - poly_slice(dimension, outside_point);
+                        outside_to_limit_min = zoom_slice_values(1, dimension) - poly_slice(dimension, outside_point);
+                        outside_to_limit_max = zoom_slice_values(2, dimension) - poly_slice(dimension, outside_point);
 
                         % portion of initial segment must be hidden only if
                         % both values have the same sign (if they have
@@ -1379,28 +1397,28 @@ classdef displaygraph < xplr.graphnode
                         % inside the zoom limit for this dimension)
                         V = [outside_to_limit_max, outside_to_limit_min];
                         if ~any(diff(sign(V)))
-                            biggestRatio = max(biggestRatio,min(abs(outside_to_limit_min),abs(outside_to_limit_max))/abs(outside_to_inside));
+                            biggest_ratio = max(biggest_ratio, min(abs(outside_to_limit_min), abs(outside_to_limit_max))/abs(outside_to_inside));
                         end
                     end
 
                     % use this ratio to define boundary point
-                    boundariesValues(:,k) = polyslice(:,outside_point)+(polyslice(:,inside_point)-polyslice(:,outside_point))*biggestRatio;
+                    boundaries_values(:, k) = poly_slice(:, outside_point) + (poly_slice(:, inside_point) - poly_slice(:, outside_point))*biggest_ratio;
 
                     % insertion position
-                    insertionIndexes(k) =  boundaryNext + numberOfPointsAdded;
-                    numberOfPointsAdded = numberOfPointsAdded + 1;
+                    insertion_indexes(k) =  boundary_next + number_of_points_added;
+                    number_of_points_added = number_of_points_added + 1;
                 end
 
                 % replace values by NaN for points that must not be
                 % displayed
-                polyslice(:,polygonIsOutOfDisplay) = NaN;
+                poly_slice(:, polygon_is_out_of_display) = NaN;
 
                 % insert boundary points
-                output = ones(nd, np + size(boundariesValues,2));
-                output(:,setdiff(1:end,insertionIndexes)) = polyslice;
-                output(:,insertionIndexes) = boundariesValues;
+                output = ones(nd, np + size(boundaries_values, 2));
+                output(:, setdiff(1:end, insertion_indexes)) = poly_slice;
+                output(:, insertion_indexes) = boundaries_values;
         end
-        function selslice = selection2slice(G,dim,selax)
+        function sel_slice = selection_to_slice(G, dim, sel_ax)
             % More or less the symmetric of the previous function: convert
             % selection definition in graph coordinates to slice
             % coordinates in the dimensions dim
@@ -1411,27 +1429,27 @@ classdef displaygraph < xplr.graphnode
             
             % use the first point as the origin, work in the zslice to
             % avoid difficulties due to binning
-            xy0 = selax.shapes(1).points(:,1);
-            zijk0 = round(G.graph2zslice(xy0));
+            xy0 = sel_ax.shapes(1).points(:, 1);
+            zijk0 = round(G.graph_to_zslice(xy0));
 
             % infer the affinity matrix graph->zslice
             % (first the linear part)
-            xytest = fn_add(xy0, [0 1 0; 0 0 1]);
-            zijktest = G.graph2zslice(xytest, 'subdim', dim, 'ijk0', zijk0);
-            linearpart = [zijktest(:,2)-zijktest(:,1) zijktest(:,3)-zijktest(:,1)];
+            xy_test = fn_add(xy0, [0, 1, 0; 0, 0, 1]);
+            zijk_test = G.graph_to_zslice(xy_test, 'sub_dim', dim, 'ijk0', zijk0);
+            linear_part = [zijk_test(:, 2) - zijk_test(:, 1), zijk_test(:, 3) - zijk_test(:, 1)];
             % (then the offset)
-            offset = zijktest(:,1) - linearpart * xy0;
+            offset = zijk_test(:, 1) - linear_part * xy0;
             
             % now the affinity matrix graph->slice
-            [idxoffset, bin] = G.getZoom('off&bin');
-            linearpart = diag(bin(dim)) * linearpart;
-            offset = idxoffset(dim)' + .5 + (offset - .5) .* bin(dim)';
+            [idx_offset, bin] = G.get_zoom('off&bin');
+            linear_part = diag(bin(dim)) * linear_part;
+            offset = idx_offset(dim)' + .5 + (offset - .5) .* bin(dim)';
             
             % construct affinitynd object
-            affinity = xplr.affinitynd(linearpart,offset);
+            affinity = xplr.AffinityND(linear_part,offset);
             
             % use the selectionnd method
-            selslice = selax.applyaffinity(affinity,G.D.slice.sz(dim));
+            sel_slice = sel_ax.apply_affinity(affinity, G.D.slice.sz(dim));
         end
         %         function [dim, ij] = pointed_dim(G, xy)
         %             % function [dim, ij] = pointed_dim(G, xy)
@@ -1477,37 +1495,40 @@ classdef displaygraph < xplr.graphnode
 end
 
 %---
-function [xpair ypair] = checkpairs(xhead,yhead,dosignal)
+function [x_pair, y_pair] = checkpairs(x_head, y_head, do_signal)
 % this function is very ad-hoc and could be improved
 
-nx = length(xhead);  ny = length(yhead);
-xpair = zeros(1,nx); ypair = zeros(1,ny);
+nx = length(x_head);
+ny = length(y_head);
+x_pair = zeros(1, nx);
+y_pair = zeros(1, ny);
 
 % restrict to dimensions which are measures
-xok = false(1,nx);   yok = false(1,ny);
-for i=1:nx, xok(i) = xhead(i).ismeasure; end
-for i=1:ny, yok(i) = yhead(i).ismeasure; end
+xok = false(1, nx);
+yok = false(1, ny);
+for i=1:nx, xok(i) = x_head(i).is_measure; end
+for i=1:ny, yok(i) = y_head(i).is_measure; end
 if ~any(xok) || ~any(yok), return, end
 
 % look for dimensions being in the same space!
-xunits = {xhead.unit};
-yunits = {yhead.unit};
-if xok(1) && yok(1) && isequal(xunits(1),yunits(1))
-    [xpair(1) ypair(1)] = deal(1,1);
-    [xok(1) yok(1)] = deal(false);
+xunits = {x_head.unit};
+yunits = {y_head.unit};
+if xok(1) && yok(1) && isequal(xunits(1), yunits(1))
+    [x_pair(1), y_pair(1)] = deal(1, 1);
+    [xok(1), yok(1)] = deal(false);
 end
-if nx>=2 && ny>=2 && xok(nx) && yok(ny) && isequal(xunits(nx),yunits(ny))
-    [xpair(nx) ypair(ny)] = deal(ny,nx);
-    [xok(nx) yok(ny)] = deal(false);
+if nx >= 2 && ny >= 2 && xok(nx) && yok(ny) && isequal(xunits(nx), yunits(ny))
+    [x_pair(nx), y_pair(ny)] = deal(ny, nx);
+    [xok(nx), yok(ny)] = deal(false);
 end
-if dosignal && nx>=2 && xok(2) && yok(1) && isequal(xunits(2),yunits(1))
+if do_signal && nx >= 2 && xok(2) && yok(1) && isequal(xunits(2), yunits(1))
     % (x1 cannot be paired with y2 for images)
-    [xpair(2) ypair(1)] = deal(1,2);
-    [xok(1) yok(1)] = deal(false);
+    [x_pair(2), y_pair(1)] = deal(1, 2);
+    [xok(1), yok(1)] = deal(false);
 end
-if nx>=2 && xok(2) && ny>=2 && yok(2) && isequal(xunits(2),yunits(2))
-    [xpair(2) ypair(2)] = deal(2,2);
-    [xok(2) yok(2)] = deal(false); %#ok<NASGU>
+if nx >= 2 && xok(2) && ny >= 2 && yok(2) && isequal(xunits(2), yunits(2))
+    [x_pair(2), y_pair(2)] = deal(2, 2);
+    [xok(2), yok(2)] = deal(false); %#ok<NASGU>
 end
 
 end

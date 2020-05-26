@@ -5,68 +5,68 @@ function test(varargin)
 % test filter slicer
 
 flags = varargin;
-if nargin==0
+if nargin == 0
     flags = {'all'};
 end
 
 % execute all tests
 for i=1:length(flags)
-    disp(['TEST ' upper(flags{i})])
-    eval(['test_' flags{i}])
+    disp(['TEST ', upper(flags{i})])
+    eval(['test_', flags{i}])
 end
 
 %---
 function test_private
 % test th
-strictsize(2,3)
+strictsize(2, 3)
 
 %---
 function test_all
 
 test_header
 test_xdata
-test_filterAndPoint
+test_filter_and_point
 test_view
 
 %---
 function test_header %#ok<*DEFNU>
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
+header = xplr.Header({'x', 3}, {'y', 2}, {'time', 's', 5, 0, 1}, {'cond', {'a', 'b', 'a', 'b'}});
 
 %---
 function test_xdata
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
-x = reshape(1:120,[3 2 5 4]);
-data = xplr.xdata(x,header);
+header = xplr.Header({'x', 3}, {'y', 2}, {'time', 's', 5, 0, 1}, {'cond', {'a', 'b', 'a', 'b'}});
+x = reshape(1:120, [3, 2, 5, 4]);
+data = xplr.XData(x, header);
 disp(data)
 
 %---
-function test_filterAndPoint
+function test_filter_and_point
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
-x = reshape(1:120,[3 2 5 4]);
-data = xplr.xdata(x,header);
-F = xplr.filterAndPoint(header(1));
-F.updateSelection('all',{1:2 3},'origin',{'titi' 'tata'})
-slice = F.operation(data,1);
+header = xplr.Header({'x', 3}, {'y', 2}, {'time', 's', 5, 0, 1}, {'cond', {'a', 'b', 'a', 'b'}});
+x = reshape(1:120, [3, 2, 5, 4]);
+data = xplr.XData(x, header);
+F = xplr.FilterAndPoint(header(1));
+F.update_selection('all', {1:2, 3}, 'origin', {'titi', 'tata'})
+slice = F.operation(data, 1);
 
 %---
 function test_view
 
-header = xplr.header({'x' 3},{'y' 2},{'time' 's' 5 0 1},{'cond' {'a' 'b' 'a' 'b'}});
-x = reshape(1:120,[3 2 5 4]);
-data = xplr.xdata(x,header);
-V = xplr.view(data);
+header = xplr.Header({'x', 3}, {'y'  2}, {'time', 's', 5, 0, 1}, {'cond', {'a', 'b', 'a', 'b'}});
+x = reshape(1:120, [3, 2, 5, 4]);
+data = xplr.XData(x, header);
+V = xplr.View(data);
 
 %---
-function test_zoomcentral
+function test_zoom_central
 %%
 
 % two displays with y coordinate not sampled the same way
 load 'clown';
-x1 = xplr.xdata(X,{{'x' 'px' 200} {'y' 'cm' 320 -1+1/320 2/320}});
-x2 = xplr.xdata(X(:,1:2:end),{{'x' 'px' 200} {'y' 'cm' 160 -1+1/160 2/160}});
+x1 = xplr.XData(X, {{'x', 'px', 200}, {'y', 'cm', 320, -1+1/320, 2/320}});
+x2 = xplr.XData(X(:, 1:2:end), {{'x', 'px', 200}, {'y', 'cm', 160, -1+1/160, 2/160}});
 
 V1 = xplor(x1);
 V2 = xplor(x2);
@@ -101,10 +101,10 @@ error 'much of the code below is not working any more due to changes in code'
 % S.addFilter(2,F2)
 % 
 % %%
-% F2.updateSelection('all',{[1 2] [3 4]})
+% F2.update_selection('all',{[1 2] [3 4]})
 % 
 % %%
-% F1.updateSelection('new',{1:3})
+% F1.update_selection('new',{1:3})
 % 
 % %% lists
 % 

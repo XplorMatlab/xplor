@@ -2,7 +2,7 @@ classdef HelpPopupManager < handle
     
     % TODO:
     % - complete methods popup_window and button_clicked
-    % - add a 'Help' menu in view.m with items "Show help popups" (use
+    % - add a 'Help' menu in View.m with items "Show help popups" (use
     %   function fn_prop_control on the HelpPopupManager object to handle
     %   the check mark) and "Reset popup display" 
     
@@ -28,22 +28,22 @@ classdef HelpPopupManager < handle
             self.load_from_disk('do_show_popups')
             self.load_from_disk('displayed_identifiers_disk')
         end
-        function load_from_disk(self,prop)
+        function load_from_disk(self, prop)
             % loadprop
-            fsave = fn_userconfig('configfolder','xplor_popup');
-            warning('off','MATLAB:load:variableNotFound')
+            fsave = fn_userconfig('configfolder', 'xplor_popup');
+            warning('off', 'MATLAB:load:variableNotFound')
             try %#ok<TRYNC>
-                self.(prop) = fn_loadvar(fsave,prop);
+                self.(prop) = fn_loadvar(fsave, prop);
             end
-            warning('on','MATLAB:load:variableNotFound')
+            warning('on', 'MATLAB:load:variableNotFound')
         end
-        function save_to_disk(self,prop)
-            fsave = fn_userconfig('configfolder','xplor_popup');
-            s = struct(prop,{self.(prop)});
-            if exist(fsave,'file')
-                save(fsave,'-STRUCT','s','-APPEND');
+        function save_to_disk(self, prop)
+            fsave = fn_userconfig('configfolder', 'xplor_popup');
+            s = struct(prop, {self.(prop)});
+            if exist(fsave, 'file')
+                save(fsave, '-STRUCT', 's', '-APPEND');
             else
-                save(fsave,'-STRUCT','s');
+                save(fsave, '-STRUCT', 's');
             end
         end
     end
@@ -52,10 +52,10 @@ classdef HelpPopupManager < handle
             % Unique popup manager is attached to the root graphic object.
             % This is preferrable to using a global variable that might be
             % deleted with the 'clear' command.
-            M0 = getappdata(0,'xplor_popup');
+            M0 = getappdata(0, 'xplor_popup');
             if isempty(M0)
                 M0 = xplr.HelpPopupManager();
-                setappdata(0,'xplor_popup',M0)
+                setappdata(0, 'xplor_popup', M0)
             end
             manager = M0;
         end
@@ -64,8 +64,8 @@ classdef HelpPopupManager < handle
     % Identifiers lists
     methods (Access='private')
         function value = was_identifier_displayed(self, identifier)
-            value = ismember(identifier,self.displayed_identifiers_disk) ...
-                || ismember(identifier,self.displayed_identifiers_session);
+            value = ismember(identifier, self.displayed_identifiers_disk) ...
+                || ismember(identifier, self.displayed_identifiers_session);
         end
         function add_to_disk_list(self, identifier)
             self.displayed_identifiers_disk{end+1} = identifier;
@@ -95,7 +95,7 @@ classdef HelpPopupManager < handle
     
     % Popup window
     methods (Static)
-        function popup_window(filename, object)
+        function popup_window(file_name, object)
             % create dialog window with appropriate buttons
             % - display message = web page
             % - highlight a control (stop highlight when window closed)
@@ -104,17 +104,17 @@ classdef HelpPopupManager < handle
             manager = xplr.HelpPopupManager.get_popup_manager();
             
             % is this message in a list of already displayed messages?
-            if ~manager.do_show_popups || manager.was_identifier_displayed(filename)
+            if ~manager.do_show_popups || manager.was_identifier_displayed(file_name)
                 return
             end
 
-            if nargin>=2, manager.object = object; end
+            if nargin >= 2, manager.object = object; end
             
-            manager.current_identifier = filename;
+            manager.current_identifier = file_name;
             
-            % for the moment, just display filename and emulate button
+            % for the moment, just display file_name and emulate button
             % click
-            disp(filename)
+            disp(file_name)
             manager.button_clicked(true);
         end
     end
@@ -132,7 +132,5 @@ classdef HelpPopupManager < handle
             self.current_identifier = [];
         end
     end
-    
-    
-    
+
 end

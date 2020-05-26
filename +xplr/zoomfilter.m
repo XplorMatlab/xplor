@@ -1,260 +1,261 @@
-classdef zoomfilter < xplr.dataOperand
-    % function Z = zoomfilter(headerin[,zoom[,bin]])
+classdef ZoomFilter < xplr.DataOperand
+    % function z = zoomfilter(header_in[,zoom[,bin]])
     %---
-    % defines zooming, but also binning
+    % defines zoom_ing, but also binn_ing
    
     properties (SetAccess='protected')
         % filter definition
-        zoom = ':'      % ':' or [istart istop] with 1 <= istart <= istop <= headerin.n
+        zoom = ':'      % ':' or [istart istop] with 1 <= istart <= istop <= header_in.n
         bin = 1
         % output
-        indicesin       % data points that will be extracted
-        indicesout      % data positions after zooming AND BINING (is equal to indicesin only if bin=1)
+        indices_in       % data points that will be extracted
+        indices_out      % data positions after zoom_ing AND BINING (is equal to indices_in only if bin=1)
     end
     properties (Dependent, SetAccess='protected', Transient)
-        zoomvalue       % [istart istop]
+        zoom_value       % [istart istop]
     end
     
     % Setting and updating filter
     methods
-        function Z = zoomfilter(headerin,zoom,bin)
+        function z = ZoomFilter(header_in, zoom, bin)
             % invalid zoomfilter
-            if nargout==0, return, end
+            if nargout == 0, return, end
 
             % input
-            if nargin<3, zoom = ':'; end
-            if nargin<4, bin = 1; end
-            if ~isscalar(headerin)
-                Z = xplr.zoomfilter.empty(1,0);
-                for i=1:length(headerin)
-                    Z(i) = xplr.zoomfilter(headerin(i));
+            if nargin < 3, zoom = ':'; end
+            if nargin < 4, bin = 1; end
+            if ~isscalar(header_in)
+                z = xplr.ZoomFilter.empty(1, 0);
+                for i=1:length(header_in)
+                    z(i) = xplr.ZoomFilter(header_in(i));
                 end
                 return
             end
             
             % input header
-            Z.headerin = headerin;
+            z.header_in = header_in;
             
             % operation definition
-            Z.zoom = zoom;
-            Z.bin = bin;
+            z.zoom = zoom;
+            z.bin = bin;
             
             % set indices and output header
-            prepareFilter(Z,true,true)
+            prepare_filter(z, true, true)
         end
-        function setZoom(Z,zoom,bin)
-            chgzoom = ~isequal(zoom,Z.zoom);
-            chgbin = (nargin>=3 && bin~=Z.bin);
-            if ~chgzoom && ~chgbin, return, end
+        function set_zoom(z, zoom, bin)
+            chg_zoom = ~isequal(zoom, z.zoom);
+            chg_bin = (nargin >= 3 && bin ~= z.bin);
+            if ~chg_zoom && ~chg_bin, return, end
             % check and assign zoom
-            if strcmp(zoom,':')
-                Z.zoom = zoom;
+            if strcmp(zoom, ':')
+                z.zoom = zoom;
             else
-                if ~isnumeric(zoom) || length(zoom)~=2, error 'wrong zoom value', end
-                zoom = [max(.5,zoom(1)) min(Z.headerin.n+.5,zoom(2))];
-                if diff(zoom)<=0, zoom = ':'; end % invalid zoom -> zoom reset
-                Z.zoom = zoom;
+                if ~isnumeric(zoom) || length(zoom) ~= 2, error 'wrong zoom value', end
+                zoom = [max(.5,zoom(1)), min(z.header_in.n+.5,zoom(2))];
+                if diff(zoom) <= 0, zoom = ':'; end % invalid zoom -> zoom reset
+                z.zoom = zoom;
             end
             % assign bin and update output
-            if nargin>=3
-                if bin==0 || mod(bin,1), error 'binning value must be a positive integer', end
-                Z.bin = bin;
+            if nargin >= 3
+                if bin == 0 || mod(bin,1), error 'binn_ing value must be a positive integer', end
+                z.bin = bin;
             end
-            prepareFilter(Z,chgzoom,chgbin) % this will raise 'ChangedOperation' event
+            prepare_filter(z, chg_zoom, chg_bin) % this will raise 'ChangedOperation' event
         end
-        function moveZoom(Z,nstep)
-            if strcmp(Z.zoom,':'), return, end
-            d = diff(Z.zoom);
-            if nstep > 0
-                z2 = min(Z.headerin.n+.5,Z.zoom(2)+d*nstep);
-                Z.setZoom([z2-d z2])
+        function move_zoom(z, n_step)
+            if strcmp(z.zoom, ':'), return, end
+            d = diff(z.zoom);
+            if n_step > 0
+                z2 = min(z.header_in.n + .5, z.zoom(2) + d*n_step);
+                z.set_zoom([z2-d, z2])
             else
-                z1 = max(.5,Z.zoom(1)+d*nstep);
-                Z.setZoom([z1 z1+d])
+                z1 = max(.5, z.zoom(1) + d*n_step);
+                z.set_zoom([z1, z1+d])
             end
         end
-        function setBin(Z,bin)
-            if bin==Z.bin, return, end
+        function set_bin(z, bin)
+            if bin == z.bin, return, end
             % check
-            if bin==0 || mod(bin,1), error 'binning value must be a positive integer', end
+            if bin == 0 || mod(bin, 1), error 'binn_ing value must be a positive integer', end
             % assign and update output
-            Z.bin = bin;
-            prepareFilter(Z,false,true) % this will raise 'ChangedOperation' event
+            z.bin = bin;
+            prepare_filter(z, false, true) % this will raise 'ChangedOperation' event
         end
-        function copyin(Z,obj)
-            Z.setZoom(obj.zoom,obj.bin);
+        function copy_in(z, obj)
+            z.set_zoom(obj.zoom, obj.bin);
         end
     end
     methods (Access='private')
-        function prepareFilter(Z,chgzoom,chgbin)
-            nin = Z.headerin.n;
-            [curbin, curiout] = deal(Z.bin,Z.indicesout);
+        function prepare_filter(z, chg_zoom, chg_bin)
+            n_in = z.header_in.n;
+            [cur_bin, cur_i_out] = deal(z.bin, z.indices_out);
             
             % indices
-            if strcmp(Z.zoom,':')
-                if Z.bin==1
-                    nout = nin;
-                    Z.indicesin = 1:nin;
+            if strcmp(z.zoom, ':')
+                if z.bin == 1
+                    n_out = n_in;
+                    z.indices_in = 1:n_in;
                 else
-                    nout = floor(nin/Z.bin);
-                    Z.indicesin = reshape(1:Z.bin*nout,Z.bin,nout);
+                    n_out = floor(n_in/z.bin);
+                    z.indices_in = reshape(1:z.bin*n_out, z.bin,n_out);
                 end
             else
-                if Z.bin==1
-                    nout = fn_coerce(floor(1+diff(Z.zoom)), 1, nin);
-                    idx1 = round(Z.zoom(1)+(1+diff(Z.zoom)-nout)/2);
-                    Z.indicesin = idx1+(0:nout-1);
+                if z.bin == 1
+                    n_out = fn_coerce(floor(1+diff(z.zoom)), 1, n_in);
+                    idx_1 = round(z.zoom(1)+(1+diff(z.zoom)-n_out)/2);
+                    z.indices_in = idx_1 + (0:n_out-1);
                 else
-                    nout = fn_coerce( floor(1+diff(Z.zoom)/Z.bin), 1, floor(nin/Z.bin) );
-                    idx1 = round(Z.zoom(1)+(1+diff(Z.zoom)-nout*Z.bin)/2);
-                    idx1 = fn_coerce(idx1,1,nin-Z.bin*nout+1);
-                    Z.indicesin = reshape(idx1+(0:Z.bin*nout-1),Z.bin,nout);
+                    n_out = fn_coerce(floor(1+diff(z.zoom)/z.bin), 1, floor(n_in/z.bin) );
+                    idx_1 = round(z.zoom(1) + (1+diff(z.zoom)-n_out*z.bin)/2);
+                    idx_1 = fn_coerce(idx_1, 1, n_in-z.bin*n_out + 1);
+                    z.indices_in = reshape(idx_1 + (0:z.bin*n_out-1), z.bin,n_out);
                 end
             end
-            Z.indicesout = mean(Z.indicesin,1);
+            z.indices_out = mean(z.indices_in, 1);
             
             % output header
-            headin= Z.headerin;
-            if strcmp(Z.zoom,':') && Z.bin==1
+            head_in= z.header_in;
+            if strcmp(z.zoom, ':') && z.bin == 1
                 % not any change
-                Z.headerout = headin;
-            elseif headin.ismeasure
+                z.header_out = head_in;
+            elseif head_in.is_measure
                 % if header is a measure, new positions are
                 % straightforward to compute
-                Z.headerout = xplr.header(headin.sublabels,nout,headin.start+(Z.indicesout(1)-1)*headin.scale,headin.scale*Z.bin);
-            elseif headin.ncolumn==0
+                z.header_out = xplr.Header(head_in.sub_labels, n_out, head_in.start + (z.indices_out(1)-1)*head_in.scale, head_in.scale*z.bin);
+            elseif head_in.n_column == 0
                 % no values, keep track of index
-                Z.headerout = xplr.header(headin.label,xplr.dimensionlabel('Index','numeric'),num2cell(Z.indicesout(:)));
-            elseif Z.bin==1
-                % no binning: getting values is straightforward
-                Z.headerout = xplr.header(headin.label,headin.sublabels,headin.values(Z.indicesin,:));
+                z.header_out = xplr.Header(head_in.label, xplr.DimensionLabel('Index', 'numeric'), num2cell(z.indices_out(:)));
+            elseif z.bin == 1
+                % no binn_ing: getting values is straightforward
+                z.header_out = xplr.Header(head_in.label, head_in.sub_labels, head_in.values(z.indices_in,:));
             else
-                % binning
-                headvalue = Z.headerin.trackValues(num2cell(Z.indicesin,1));
-                Z.headerout = xplr.header(headin.label,headin.sublabels,headvalue);
+                % binn_ing
+                head_value = z.header_in.trackValues(num2cell(z.indices_in,1));
+                z.header_out = xplr.Header(head_in.label, head_in.sub_labels, head_value);
             end
             
             % notifications
-            chgnout = (nout~=length(curiout));
-            if chgzoom
-                notify(Z,'ChangedOperation',xplr.eventinfo('zoom',chgnout))
+            chg_n_out = (n_out ~= length(cur_i_out));
+            if chg_zoom
+                notify(z, 'ChangedOperation', xplr.EventInfo('zoom',chg_n_out))
             end
-            if chgbin
-                notify(Z,'ChangedOperation',xplr.eventinfo('bin'))
+            if chg_bin
+                notify(z, 'ChangedOperation', xplr.EventInfo('bin'))
             end
-            anychg = chgnout || (Z.indicesout(1)~=curiout(1));
-            zoomin = anychg && (isempty(Z.indicesout) ...
-                || ((Z.bin==1) && ~isempty(curiout) && (Z.indicesout(1)>=curiout(1)) && (Z.indicesout(end)<=curiout(end)) && (curbin==1)));
-            if zoomin
-                idxfirst = find(curiout==Z.indicesout(1),1,'first');
-                idxlast = find(curiout==Z.indicesout(end),1,'last');
-                idxrm = [1:idxfirst-1 idxlast+1:length(curiout)];
-                notify(Z,'ChangedOperation',xplr.eventinfo('filter','remove',idxrm))
-            elseif chgnout
-                notify(Z,'ChangedOperation',xplr.eventinfo('filter','all'))
-            elseif anychg
-                notify(Z,'ChangedOperation',xplr.eventinfo('filter','chg',1:nout))
+            any_chg = chg_n_out || (z.indices_out(1) ~= cur_i_out(1));
+            zoom_in = any_chg && (isempty(z.indices_out) ...
+                || ((z.bin==1) && ~isempty(cur_i_out) && (z.indices_out(1)>=cur_i_out(1)) && (z.indices_out(end)<=cur_i_out(end)) && (cur_bin==1)));
+            if zoom_in
+                idx_first = find(cur_i_out==z.indices_out(1), 1, 'first');
+                idx_last = find(cur_i_out==z.indices_out(end), 1, 'last');
+                idx_rm = [1:idx_first-1, idx_last+1:length(cur_i_out)];
+                notify(z, 'ChangedOperation', xplr.EventInfo('filter','remove',idx_rm))
+            elseif chg_n_out
+                notify(z, 'ChangedOperation', xplr.EventInfo('filter','all'))
+            elseif any_chg
+                notify(z, 'ChangedOperation', xplr.EventInfo('filter','chg',1:n_out))
             end
         end
     end
     
     % Get Dependent
     methods
-        function x = get.zoomvalue(Z)
-            x = Z.zoom;
-            if strcmp(x,':'), x = [.5 Z.headerin.n+.5]; end
+        function x = get.zoom_value(z)
+            x = z.zoom;
+            if strcmp(x, ':'), x = [.5, z.header_in.n+.5]; end
         end
     end
     
     % Slicing
     methods
-        function slic = slicing(Z,dat,dims,selsubidx)
-            % here Z can be non-scalar!
-            if length(dims)~=length(Z), error 'number of dimensions does not match number of points', end
-            dosubidx = (nargin>=4);
+        function slic = slicing(z, dat, dims, sel_sub_idx)
+            % here z can be non-scalar!
+            if length(dims)~=length(z), error 'number of dimensions does not match number of points', end
+            do_sub_idx = (nargin >= 4);
             
             % size
             s = size(dat);
-            nddata = max(max(dims),length(s));
-            s(end+1:nddata) = 1;
-            sout = s;
-            headout = [Z.headerout];
-            sout(dims) = [headout.n];
+            nd_data = max(max(dims), length(s));
+            s(end+1:nd_data) = 1;
+            s_out = s;
+            head_out = [z.header_out];
+            s_out(dims) = [head_out.n];
             
             % extract sub-data
-            subs = substruct('()',repmat({':'},1,length(s)));
-            nofilt = true;
-            for i=1:length(Z)
-                if ~strcmp(Z(i).zoom,':') || Z(i).bin~=1 || dosubidx
-                    nofilt = false;
-                    ind = Z(i).indicesin;
-                    if dosubidx, ind = ind(:,selsubidx); end
+            subs = substruct('()', repmat({':'}, 1, length(s)));
+            no_filt = true;
+            for i=1:length(z)
+                if ~strcmp(z(i).zoom,':') || z(i).bin ~= 1 || do_sub_idx
+                    no_filt = false;
+                    ind = z(i).indices_in;
+                    if do_sub_idx, ind = ind(:, sel_sub_idx); end
                     subs.subs{dims(i)} = ind; 
                 end
             end
-            if nofilt
+            if no_filt
                 slic = dat;
             else
-                slic = subsref(dat,subs);
+                slic = subsref(dat, subs);
             end
             
             % bin
-            scur = size(slic); scur(end+1:nddata) = 1; % size before binning
-            for i=1:length(Z)
-                if Z(i).bin>1
-                    slic = reshape(slic,[prod(sout(1:dims(i)-1)) Z(i).bin sout(dims(i)) prod(scur(dims(i)+1:end))]);
-                    slic = nmean(slic,2);
+            scur = size(slic);
+            scur(end+1:nd_data) = 1; % size before binn_ing
+            for i=1:length(z)
+                if z(i).bin > 1
+                    slic = reshape(slic, [prod(s_out(1:dims(i)-1)), z(i).bin, s_out(dims(i)), prod(scur(dims(i)+1:end))]);
+                    slic = nmean(slic, 2);
                 end
             end
-            slic = reshape(slic,sout);
+            slic = reshape(slic, s_out);
         end
     end
     methods (Access='protected')
-        function slic = operation_(Z,dat,dims)
-            % function slic = operation_(Z,dat,dims)
+        function slic = operation_(z, dat, dims)
+            % function slic = operation_(z,dat,dims)
             %---
             % dat and slic are simple Matlab arrays
-            slic = Z.slicing(dat,dims);
+            slic = z.slicing(dat, dims);
         end
-        function updateOperation_(Z,x,dims,slice,flag,ind) 
+        function update_operation_(z, x, dims, slice, flag, ind)
             % there is no 'smart' way of updating operation: just do the
             % slicing
-            slic = Z.slicing(x.data,dims);
-            slice.updateData(flag,dims,ind,slic,Z.headerout); % this will trigger automatic notifications
+            slic = z.slicing(x.data, dims);
+            slice.update_data(flag, dims, ind, slic, z.header_out); % this will trigger automatic notifications
         end
     end
     
     % Link with zoom definition in real world coordinates
     methods
-        function zoom_world = operationData2Space(Z)
-            if strcmp(Z.zoom,':')
+        function zoom_world = operation_data_to_space(z)
+            if strcmp(z.zoom, ':')
                 zoom_world = ':';
             else
-                zoom_world = Z.headerin.start + (Z.zoom-1)*Z.headerin.scale;
+                zoom_world = z.header_in.start + (z.zoom-1)*z.header_in.scale;
             end
         end
-        function updateOperationData2Space(Z,WO,evnt)
+        function update_operation_data_to_space(z, wo, evnt)
             if ~strcmp(evnt.type,'zoom'), return, end
-            WO.operation = Z.operationData2Space();
-            notify(WO,'ChangedOperation')
+            wo.operation = z.operation_data_to_space();
+            notify(wo, 'ChangedOperation')
         end
-        function updateOperationSpace2Data(Z,world_operation,~)
-            if strcmp(world_operation,':')
-                Z.setZoom(':')
+        function update_operation_space_to_data(z, world_operation, ~)
+            if strcmp(world_operation, ':')
+                z.set_zoom(':')
             else
-                zoom_idx = 1 + (world_operation - Z.headerin.start)/Z.headerin.scale;
-                Z.setZoom(zoom_idx)
+                zoom_idx = 1 + (world_operation - z.header_in.start)/z.header_in.scale;
+                z.set_zoom(zoom_idx)
             end
         end
     end
     
     % Tools
     methods
-        function idx1 = orig2zoomed(Z,idx)
-            b = (idx>=Z.indicesin(1)) & (idx<=Z.indicesin(end));
-            idx1 = idx;
-            idx1(~b) = 0;
-            idx1(b) = 1 + floor((idx(b)-Z.indicesin(1))/Z.bin);
+        function idx_1 = orig_to_zoomed(z, idx)
+            b = (idx >= z.indices_in(1)) & (idx <= z.indices_in(end));
+            idx_1 = idx;
+            idx_1(~b) = 0;
+            idx_1(b) = 1 + floor((idx(b)-z.indices_in(1))/z.bin);
         end
     end
     

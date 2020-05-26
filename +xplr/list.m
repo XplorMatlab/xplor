@@ -1,150 +1,151 @@
-classdef list < xplr.graphnode
+classdef List < xplr.GraphNode
     % function L = list(filter[,'in',uipanel][,other options...])
         
     properties (SetAccess='private')
         F           % xplr.filterAndPoint object
-        seltype
-        hlist
-        hp  % direct parent
-        hf  % figure parent
-        hlabel
+        sel_type
+        h_list
+        h_p  % direct parent
+        h_f  % figure parent
+        h_label
         menu
-        valuestr    % precomputed list of values
+        value_str    % precomputed list of values
     end
     properties (SetObservable, AbortSet=true)
-        selmultin = true;
-        scrollwheel = 'on'; % 'on', 'off' or 'default'
-        selectionpromptname = 'none'; % 'all', 'groups' or 'none'
+        sel_mult_in = true;
+        scroll_wheel = 'on'; % 'on', 'off' or 'default'
+        selection_prompt_name = 'none'; % 'all', 'groups' or 'none'
     end
     
     % Constructor and Destructor
     methods
-        function L = list(F,varargin)
+        function L = List(F, varargin)
             % options for initialization
             opt = struct( ...
                 'in',                   [] ...
                 );
-            if nargin==0
-                head = xplr.header('testheader',10);
-                F = xplr.filterAndPoint(head);
+            if nargin == 0
+                head = xplr.Header('testheader', 10);
+                F = xplr.FilterAndPoint(head);
             end
-            [opt, optadd] = parseInput(opt,varargin{:});
+            [opt, opt_add] = parseInput(opt, varargin{:});
             
             % check filter
             L.F = F;
-            if F.ndin~=1 || F.ndout~=1, error 'input and output of list filter must be one-dimensional', end
-            if ~isa(F,'xplr.filterAndPoint'), error 'list can act only on a filterAndPoint object', end
-            L.seltype = fn_switch(F.headerin.categorical,'indices','point1D');
+            if F.nd_in ~= 1 || F.nd_out ~= 1, error 'input and output of list filter must be one-dimensional', end
+            if ~isa(F,'xplr.FilterAndPoint'), error 'list can act only on a filterAndPoint object', end
+            L.sel_type = fn_switch(F.header_in.categorical, 'indices', 'point1D');
             
             % watch filter deletion
-            addlistener(L.F,'ObjectBeingDestroyed',@(u,e)delete(L));
+            addlistener(L.F, 'ObjectBeingDestroyed', @(u,e)delete(L));
             
-            % add 'SoftSelection' label to output header
-            F.augmentHeader('SoftSelection','logical')
+            % add 'soft_selection' label to output header
+            F.augment_header('soft_selection', 'logical')
             
             % uipanel container
-            newfigure = isempty(opt.in);
-            if newfigure
+            new_figure = isempty(opt.in);
+            if new_figure
                 % create uipanel in a new figure
-                L.hp = uipanel('parent',figure);
-            elseif strcmp(get(opt.in,'type'),'uipanel')
-                L.hp = opt.in;
+                L.h_p = uipanel('parent', figure);
+            elseif strcmp(get(opt.in, 'type'), 'uipanel')
+                L.h_p = opt.in;
             else
                 error 'input container must be an uipanel object'
             end
             
             % parent figure
-            L.hf = fn_parentfigure(L.hp);
+            L.h_f = fn_parentfigure(L.h_p);
 
             % create several components
             % (list)
-            L.hlist = uicontrol('parent',L.hp,'style','listbox','min',0,'max',2, ...
-                'callback',@(hlist,evnt)event(L,'select'), ...
-            	'keypressfcn',@(hlist,evnt)keypress(L,evnt));
-            fn_controlpositions(L.hlist,L.hp,[0 0 1 1],[8 5 -16 -5-21-2])
+            L.h_list = uicontrol('parent', L.h_p, 'style', 'listbox', 'min', 0, 'max', 2, ...
+                'callback', @(h_list, evnt)event(L, 'select'), ...
+            	'keypressfcn', @(h_list, evnt)keypress(L, evnt));
+            fn_controlpositions(L.h_list, L.h_p, [0, 0, 1, 1], [8, 5, -16, -5-21-2])
             % (label)
-            L.hlabel = uicontrol('parent',L.hp,'style','text', ...
-                'string',L.F.headerout.label, ...
-                'horizontalalignment','center', ...
-                'backgroundcolor',xplr.colors('linkkey',L.F.linkkey));
-            fn_controlpositions(L.hlabel,L.hp,[0 1 1 0],[8 -21 -8-18 18])
+            L.h_label = uicontrol('parent', L.h_p, 'style', 'text', ...
+                'string', L.F.header_out.label, ...
+                'horizontalalignment', 'center', ...
+                'backgroundcolor', xplr.colors('link_key', L.F.link_key));
+            fn_controlpositions(L.h_label, L.h_p, [0, 1, 1, 0], [8, -21, -8-18, 18])
             % (close button)
-            if ~newfigure
-                x = fn_printnumber(ones(18),'x','pos','center')';
-                x(x==1) = NaN; x = repmat(x,[1 1 3]);
-                hclose = uicontrol('parent',L.hp,'cdata',x,'callback',@(u,e)delete(L));
-                fn_controlpositions(hclose,L.hp,[1 1],[-8-18 -3-18 18 18])
+            if ~new_figure
+                x = fn_printnumber(ones(18), 'x', 'pos', 'center')';
+                x(x == 1) = NaN;
+                x = repmat(x, [1, 1, 3]);
+                h_close = uicontrol('parent', L.h_p, 'cdata', x, 'callback', @(u,e)delete(L));
+                fn_controlpositions(h_close, L.h_p, [1, 1], [-8-18, -3-18, 18, 18])
             end
             % (group button)
-            ctrl = fn_propcontrol(L,'selmultin','togglebutton', ...
-                {'parent',L.hp,'string','G'});
-            fn_controlpositions(ctrl.hu,L.hp,[0 1],[8 -3-18 18 18])
+            ctrl = fn_propcontrol(L, 'sel_mult_in', 'togglebutton', ...
+                {'parent', L.h_p, 'string', 'G'});
+            fn_controlpositions(ctrl.hu, L.h_p, [0, 1], [8, -3-18, 18, 18])
             
             % context menu
-            initlocalmenu(L)
+            init_local_menu(L)
             
             % list and event (bottom-up)
-            if boolean(L.scrollwheel)
-                L.scrollwheel = 'on'; % this will automaticall register scroll wheel
+            if boolean(L.scroll_wheel)
+                L.scroll_wheel = 'on'; % this will automaticall register scroll wheel
             end
-            if isempty(get(L.hf,'WindowButtonMotionFcn'))
+            if isempty(get(L.h_f, 'WindowButtonMotionFcn'))
                 % force update of current position when moving the mouse
                 % around
-                set(L.hf,'WindowButtonMotionFcn',@(u,e)donothing())
+                set(L.h_f, 'WindowButtonMotionFcn', @(u,e)do_nothing())
             end
             
             % watch filter
-            function filterchanged(~,e)
-                if strcmp(e.type,'filter'), displayselection(L), end
+            function filter_changed(~, e)
+                if strcmp(e.type, 'filter'), display_selection(L), end
             end
-            connectlistener(F,L,'ChangedOperation',@filterchanged);
+            connect_listener(F, L, 'ChangedOperation', @filter_changed);
             
             % auto-delete
-            set(L.hlist,'deletefcn',@(u,e)delete(L))
-            addlistener(F,'ObjectBeingDestroyed',@(u,e)delete(L));
+            set(L.h_list, 'deletefcn', @(u,e)delete(L))
+            addlistener(F, 'ObjectBeingDestroyed', @(u,e)delete(L));
 
             % update display (here, just sets the correct value)
-            preformatvalues(L)
-            displayselection(L)
+            preformat_values(L)
+            display_selection(L)
             
             % set more properties
-            if ~isempty(optadd)
-                set(L,optadd{:})
+            if ~isempty(opt_add)
+                set(L,opt_add{:})
             end
             
             % put object in base workspace for debugging purposes
-            if nargin==0, assignin('base','L',L), end
+            if nargin == 0, assignin('base', 'L', L), end
         end
-        function initlocalmenu(L)
+        function init_local_menu(L)
             delete(L.menu)
-            L.menu = uicontextmenu('parent',L.hf);
+            L.menu = uicontextmenu('parent', L.h_f);
             m = L.menu;
-            set(L.hlist,'UIContextMenu',m)
+            set(L.h_list, 'UIContextMenu', m)
             
-            uimenu(m,'label','New singleton selections','callback',@(u,e)event(L,'newuni'))
-            uimenu(m,'label','New group selection [A]','callback',@(u,e)event(L,'newgroup'))
-            uimenu(m,'label','Add to selection','callback',@(u,e)event(L,'add'))
+            uimenu(m, 'label', 'New singleton selections', 'callback', @(u,e)event(L, 'newuni'))
+            uimenu(m, 'label', 'New group selection [A]', 'callback', @(u,e)event(L, 'newgroup'))
+            uimenu(m, 'label', 'Add to selection', 'callback', @(u,e)event(L, 'add'))
 
-            uimenu(m,'label','Define new group...','callback',@(u,e)event(L,'definegroup'),'separator','on')
+            uimenu(m, 'label', 'Define new group...', 'callback', @(u,e)event(L, 'definegroup'), 'separator', 'on')
 
-            uimenu(m,'label','Sort selections according to list order','callback',@(u,e)event(L,'sort'),'separator','on')
-            uimenu(m,'label','Reorder selections...','callback',@(u,e)event(L,'reorder'))
+            uimenu(m, 'label', 'Sort selections according to list order', 'callback', @(u,e)event(L, 'sort'), 'separator', 'on')
+            uimenu(m, 'label', 'Reorder selections...', 'callback', @(u,e)event(L, 'reorder'))
             
-            uimenu(m,'label','Remove highlighted group(s)','callback',@(u,e)event(L,'rmgroup'),'separator','on')
-            uimenu(m,'label','Remove all groups','callback',@(u,e)event(L,'rmgroupall'))
-            uimenu(m,'label','Remove highlighted individuals','callback',@(u,e)event(L,'rmuni'))
-            uimenu(m,'label','Remove all individuals','callback',@(u,e)event(L,'rmuniall'))
-            uimenu(m,'label','Remove highlighted selections','callback',@(u,e)event(L,'rm'))
-            uimenu(m,'label','Remove all selections','callback',@(u,e)event(L,'rmall'))
+            uimenu(m, 'label', 'Remove highlighted group(s)', 'callback', @(u,e)event(L, 'rmgroup'), 'separator', 'on')
+            uimenu(m, 'label', 'Remove all groups', 'callback', @(u,e)event(L, 'rmgroupall'))
+            uimenu(m, 'label', 'Remove highlighted individuals', 'callback', @(u,e)event(L, 'rmuni'))
+            uimenu(m, 'label', 'Remove all individuals', 'callback', @(u,e)event(L, 'rmuniall'))
+            uimenu(m, 'label', 'Remove highlighted selections', 'callback', @(u,e)event(L, 'rm'))
+            uimenu(m, 'label', 'Remove all selections', 'callback', @(u,e)event(L, 'rmall'))
 
-            uimenu(m,'label','Select all','separator','on','callback',@(u,e)event(L,'selectall'))
+            uimenu(m, 'label', 'Select all', 'separator', 'on', 'callback', @(u,e)event(L, 'selectall'))
             
-            fn_propcontrol(L,'selmultin', ...
-                {'menuval', {true false}, {'individuals' 'group'}}, ...
-                {'parent',m,'label','Temporary selection','separator','on'});
-            fn_propcontrol(L,'selectionpromptname', ...
-                {'menu' {'all' 'groups' 'none'} {'all selections' 'group selections only' 'none'}}, ...
-                {'parent',m,'label','Prompt for selection name'});
+            fn_propcontrol(L, 'sel_mult_in', ...
+                {'menuval', {true, false}, {'individuals', 'group'}}, ...
+                {'parent', m, 'label', 'Temporary selection', 'separator', 'on'});
+            fn_propcontrol(L, 'selection_prompt_name', ...
+                {'menu', {'all', 'groups', 'none'}, {'all selections', 'group selections only', 'none'}}, ...
+                {'parent', m, 'label', 'Prompt for selection name'});
             
             % scroll wheel behavior: changing it would make sense only if
             % list is inside a figure with other elements, which does not
@@ -153,30 +154,30 @@ classdef list < xplr.graphnode
             % windowcallbackmanager thing needs to be replaced by calls to
             % iptaddcallback
             %             m1 = uimenu(m,'label','scroll wheel','separator','on');
-            %             fn_propcontrol(L,'scrollwheel', ...
+            %             fn_propcontrol(L,'scroll_wheel', ...
             %                 {'menu', {'on' 'off' 'default'}}, ...
             %                 {'parent',m1,'label','Scroll wheel behavior'});
             %             uimenu(m1,'label','make default in figure', ...
-            %                 'callback',@(u,e)set(L,'scrollwheel','default'));
+            %                 'callback',@(u,e)set(L,'scroll_wheel','default'));
         end
         function delete(L)
-            delete@xplr.graphnode(L)
-            if ~isvalid(L) && ~isprop(L,'hlist'), return, end
-            deleteValid(L.hlist,L.hlabel)
+            delete@xplr.GraphNode(L)
+            if ~isvalid(L) && ~isprop(L, 'h_list'), return, end
+            delete_valid(L.h_list,L.h_label)
         end
     end
        
     % Events
     methods
-        function keypress(L,e)
+        function keypress(L, e)
             switch e.Key
                 case 'a'
-                    event(L,'newgroup')
-                case {'insert' 'delete'}
-                    event(L,'scroll',fn_switch(e.Key,'insert',-1,'delete',1))
+                    event(L, 'newgroup')
+                case {'insert', 'delete'}
+                    event(L, 'scroll', fn_switch(e.Key, 'insert', -1, 'delete', 1))
             end
         end
-        function event(L,flag,varargin)
+        function event(L, flag, varargin)
             % possible values for flag:
             % - select          selection by user click in list display
             % - unisel          selection by user double-click
@@ -189,38 +190,38 @@ classdef list < xplr.graphnode
             % - rmall, rmgroup, rmgroupall, rmuni, rmuniall, rm         
             
             % selected list entries
-            val = get(L.hlist,'value');
+            val = get(L.h_list, 'value');
             %L.F.shared.list.cursel = val; % make available to all lists acting on this filter what is the new entries selection
             
             % get the current selections
-            selinds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
-            nsel = length(selinds);
-            isunisel = false(1,nsel); 
-            for i=1:nsel, isunisel(i) = isscalar(selinds{i}); end % faster than calling fn_map
+            sel_inds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
+            n_sel = length(sel_inds);
+            is_unis_el = false(1, n_sel); 
+            for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling fn_map
             
             % which selections are soft
-            softsel = L.F.F.headerout.getValue('SoftSelection'); % same as above
-            softsel = [softsel{:}]; % faster than cell2mat
-            if isempty(softsel), softsel = false(1,nsel); end
-            isoft = find(softsel);
-            nsoft = length(isoft);
-            isolid = find(~softsel);
-            nsolid = nsel-nsoft;
+            soft_sel = L.F.F.header_out.get_value('soft_selection'); % same as above
+            soft_sel = [soft_sel{:}]; % faster than cell2mat
+            if isempty(soft_sel), soft_sel = false(1,n_sel); end
+            i_soft = find(soft_sel);
+            n_soft = length(i_soft);
+            i_solid = find(~soft_sel);
+            n_solid = n_sel-n_soft;
             
             % modify flag if needed
             switch flag
                 case 'select'
-                    if strcmp(get(L.hf,'selectiontype'),'open')
+                    if strcmp(get(L.h_f, 'selectiontype'), 'open')
                         flag = 'unisel';
                     end
                 case 'selectall'
-                    set(L.hlist,'value',1:L.F.szin)
+                    set(L.h_list, 'value', 1:L.F.sz_in)
                     flag = 'select';
                 case 'scroll'
                     n = varargin{1};
-                    soft = selinds(softsel);
-                    if length(soft)>=2 && all(fn_map(@isscalar,soft)) ...
-                            && all(ismember(diff([soft{:}]),[0 1]))
+                    soft = sel_inds(soft_sel);
+                    if length(soft) >= 2 && all(fn_map(@isscalar, soft)) ...
+                            && all(ismember(diff([soft{:}]), [0, 1]))
                         % current soft selection consists of a range of
                         % consecutive values -> select the same number of
                         % values before or after
@@ -229,288 +230,290 @@ classdef list < xplr.graphnode
                         % selection in order to remember how many values
                         % where selected in total.
                         soft = [soft{:}];
-                        nval = length(soft);
-                        if n<0
+                        n_val = length(soft);
+                        if n < 0
                             % decreasing values
-                            if any(diff(soft)==0)
+                            if any(diff(soft) == 0)
                                 % if last value was selected several times
-                                % show the nval last values
-                                val = soft(end) + (-nval+1:0);
+                                % show the n_val last values
+                                val = soft(end) + (-n_val + 1:0);
                             else
-                                % otherwise show the nval values before
+                                % otherwise show the n_val values before
                                 % soft(1)
-                                val = soft(1) + n*nval + (0:nval-1);
+                                val = soft(1) + n*n_val + (0:n_val-1);
                             end
                         else
                             % increasing values, same idea
-                            if any(diff(soft)==0)
-                                val = soft(1) + (0:nval-1);
+                            if any(diff(soft) == 0)
+                                val = soft(1) + (0:n_val - 1);
                             else
-                                val = soft(end) + (n-1)*nval + (1:nval);
+                                val = soft(end) + (n-1)*n_val + (1:n_val);
                             end
                         end
-                        val = fn_coerce(val,1,L.F.szin);
+                        val = fn_coerce(val, 1, L.F.sz_in);
                     else
-                        val = fn_coerce(L.F.index+n,1,L.F.szin);
-                        if val==L.F.index, return, end
+                        val = fn_coerce(L.F.index + n, 1, L.F.sz_in);
+                        if val == L.F.index, return, end
                     end
-                    set(L.hlist,'value',val,'listboxtop',val(1)-2);
+                    set(L.h_list, 'value', val, 'listboxtop', val(1) - 2);
                     flag = 'select';
             end            
             
             % action (or only determine shich selections to remove and
             % which to add)
-            idxrm = []; newsel = []; newissoft = false;
+            idx_rm = [];
+            new_sel = [];
+            new_is_soft = false;
             switch flag
                 case 'select'
                     if isscalar(val)
-                        L.F.index = val;
+                        L.F.P.index_exact = val;
                     end
-                    if isempty(val) || (isscalar(val) && isempty(isolid)) ...
-                            || (isscalar(val) && isequal({val},selinds(isoft)))
+                    if isempty(val) || (isscalar(val) && isempty(i_solid)) ...
+                            || (isscalar(val) && isequal({val}, sel_inds(i_soft)))
                         % remove temporary selection in the following
                         % cases:
-                        % - user unselected all list items
+                        % - user un_selected all list items
                         % - no solid selection and a single selected item
                         % - repeated selection of temporaray selection item
-                        idxrm = isoft;
+                        idx_rm = i_soft;
                     else
                         % new temporary selection
-                        idxrm = isoft;
-                        newsel = buildCurrentSelection(L,L.selmultin);
-                        newissoft = true;
+                        idx_rm = i_soft;
+                        new_sel = build_current_selection(L, L.sel_mult_in);
+                        new_is_soft = true;
                     end
                 case 'unisel'
                     % double-click -> make new solid selection with current
                     % index, or remove it
                     if ~isscalar(val), return, end
-                    kunisel = find(isunisel);
-                    idxrm = kunisel([selinds{kunisel}]==val); % index of already-existing selection with this value
-                    if isempty(idxrm)
+                    k_uni_sel = find(is_unis_el);
+                    idx_rm = k_uni_sel([sel_inds{k_uni_sel}] == val); % index of already-existing selection with this value
+                    if isempty(idx_rm)
                         % create
-                        newsel = buildCurrentSelection(L,true);
-                    elseif softsel(idxrm)
+                        new_sel = build_current_selection(L, true);
+                    elseif soft_sel(idx_rm)
                         % make solid
-                        newsel = buildCurrentSelection(L,true);
+                        new_sel = build_current_selection(L, true);
                     else
                         % remove
                     end
                 case 'newuni'
-                    idxrm = isoft;
-                    newsel = buildCurrentSelection(L,true);
+                    idx_rm = i_soft;
+                    new_sel = build_current_selection(L, true);
                 case 'newgroup'
-                    idxrm = isoft;
-                    newsel = buildCurrentSelection(L,false);
+                    idx_rm = i_soft;
+                    new_sel = build_current_selection(L, false);
                 case 'definegroup'
-                    str = inputdlg('Define selection','',1,{['1:' num2str(L.F.szin)]}); % TODO: continue!!!
+                    str = inputdlg('Define selection', '', 1, {['1:', num2str(L.F.sz_in)]}); % TODO: continue!!!
                     if isempty(str), disp 'interrupted', return, end
                     try
-                        val = evalin('base',['[' str{1} ']']);
+                        val = evalin('base', ['[', str{1}, ']']);
                         if ~iscell(val), val = {val}; end
-                        newsel = xplr.selectionnd(length(val));
+                        new_sel = xplr.SelectionND(length(val));
                         for i=1:length(val)
-                            newsel(i) = xplr.selectionnd(L.seltype,val{i},L.F.headerin.n);
+                            new_sel(i) = xplr.SelectionND(L.sel_type,val{i}, L.F.header_in.n);
                         end
                     catch
                         errordlg('Command could not be evaluated correctly')
                         return
                     end
                 case 'add'
-                    newsel = xplr.selectionnd('point1D',val);
-                    if nsoft, updateSelection(L.F,'remove',isoft), end % remove all soft selections
-                    if ~isempty(isolid)
-                        updateSelection(L.F,'add',isolid(end),newsel)
+                    new_sel = xplr.SelectionND('point1D', val);
+                    if n_soft, update_selection(L.F, 'remove', i_soft), end % remove all soft selections
+                    if ~isempty(i_solid)
+                        update_selection(L.F, 'add', i_solid(end), new_sel)
                     else
-                        updateSelection(L.F,'new',newsel)
+                        update_selection(L.F, 'new', new_sel)
                     end
                     return
                 case 'sort'
                     % remove all soft selections
-                    if nsoft, updateSelection(L.F,'remove',isoft), end
-                    selinds(isoft) = [];
+                    if n_soft, update_selection(L.F, 'remove', i_soft), end
+                    sel_inds(i_soft) = [];
                     % reorder other selections
-                    idxfirst = fn_map(selinds,@(v)v(1),'array');
-                    [~, ord] = sort(idxfirst);
-                    updateSelection(L.F,'perm',ord)
+                    idx_first = fn_map(sel_inds, @(v)v(1), 'array');
+                    [~, ord] = sort(idx_first);
+                    update_selection(L.F, 'perm', ord)
                     return
                 case 'reorder'
                     % first remove all soft selections
-                    if nsoft, updateSelection(L.F,'remove',isoft), end
-                    nsel = nsolid;
+                    if n_soft, update_selection(L.F, 'remove', i_soft), end
+                    n_sel = n_solid;
                     % prompt for reordering
-                    ord = fn_input('new order',1:nsel);
-                    if length(unique(ord))<length(ord) || ~all(ismember(ord,1:nsel))
+                    ord = fn_input('new order', 1:n_sel);
+                    if length(unique(ord)) < length(ord) || ~all(ismember(ord, 1:n_sel))
                         waitfor(errordlg('Not a valid permutation or subset'))
                         return
                     end
-                    if length(ord)<nsel
+                    if length(ord) < n_sel
                         answer = questdlg('This is not a permutation: some selections will be removed','', ...
                             'OK','Cancel','OK');
-                        if strcmp(answer,'Cancel'), return, end
-                        idxrm = setdiff(1:nsel,ord);
-                        updateSelection(L.F,'remove',idxrm)
-                        [~, ordsort] = sort(ord);
-                        ord(ordsort) = 1:length(ord);
+                        if strcmp(answer, 'Cancel'), return, end
+                        idx_rm = setdiff(1:n_sel, ord);
+                        update_selection(L.F, 'remove', idx_rm)
+                        [~, ord_sort] = sort(ord);
+                        ord(ord_sort) = 1:length(ord);
                     end
-                    updateSelection(L.F,'perm',ord)
+                    update_selection(L.F, 'perm', ord)
                     return
                 case 'rmall'
                     % set empty selections rather than remove all existing
                     % ones: this can performs some clean-up when errors
                     % occured previously
-                    newsel = xplr.selectionnd.empty(1,0);
-                    updateSelection(L.F,'all',newsel)
+                    new_sel = xplr.SelectionND.empty(1, 0);
+                    update_selection(L.F, 'all', new_sel)
                     return
-                case {'rmgroup' 'rmgroupall' 'rmuni' 'rmuniall' 'rm'}
-                    if strfind(flag,'all')
-                        range = 1:nsel;
-                        flag = strrep(flag,'all','');
+                case {'rmgroup', 'rmgroupall', 'rmuni', 'rmuniall', 'rm'}
+                    if strfind(flag, 'all')
+                        range = 1:n_sel;
+                        flag = strrep(flag, 'all', '');
                     else
-                        range = fn_find(@(x)intersect(x,val),selinds);
+                        range = fn_find(@(x)intersect(x, val), sel_inds);
                     end
-                    rmmask = false(1,nsel);
+                    rm_mask = false(1, n_sel);
                     switch flag
                         case 'rmgroup'
-                            rmmask(range) = ~isunisel(range);
+                            rm_mask(range) = ~is_unis_el(range);
                         case 'rmuni'
-                            rmmask(range) = isunisel(range);
+                            rm_mask(range) = is_unis_el(range);
                         case 'rm'
-                            rmmask(range) = true;
+                            rm_mask(range) = true;
                     end
-                    rmmask(isoft) = true; % in any case, remove all soft selections
-                    idxrm = find(rmmask);
+                    rm_mask(i_soft) = true; % in any case, remove all soft selections
+                    idx_rm = find(rm_mask);
             end
             
             % prompt for name of new selections
             name_options = {};
-            if ~strcmp(L.selectionpromptname,'none') && ~newissoft
-                anyname = false;
-                nnew = length(newsel);
-                names = cell(1,nnew);
-                for i = 1:nnew
-                    if strcmp(L.selectionpromptname,'groups') && isscalar(newsel(i).dataind), continue, end
-                    name = inputdlg('Group name','xplor');
+            if ~strcmp(L.selection_prompt_name, 'none') && ~new_is_soft
+                any_name = false;
+                n_new = length(new_sel);
+                names = cell(1, n_new);
+                for i = 1:n_new
+                    if strcmp(L.selection_prompt_name, 'groups') && isscalar(new_sel(i).dataind), continue, end
+                    name = inputdlg('Group name', 'xplor');
                     if isempty(name), continue, end
                     names{i} = name;
-                    anyname = true;
+                    any_name = true;
                 end
-                if anyname
-                    name_options = {'Name' names};
+                if any_name
+                    name_options = {'Name', names};
                 end
             end
             
             % remove/change/add new selections
-            nnew = length(newsel);
-            nrm = length(idxrm);
-            if nnew==0 && nrm==0
+            n_new = length(new_sel);
+            n_rm = length(idx_rm);
+            if n_new == 0 && n_rm == 0
                 % happens for example when there are no selection, and the
                 % point is moved -> nothing to do
-            elseif nrm==0
-                updateSelection(L.F,'new',newsel,'SoftSelection',newissoft)
-            elseif nnew==0
-                updateSelection(L.F,'remove',idxrm)
-            elseif nnew==nrm
-                updateSelection(L.F,'chg',idxrm,newsel,'SoftSelection',newissoft,name_options{:})
-            elseif nnew>nrm
-                updateSelection(L.F,'chg&new',{idxrm nsel+(1:nnew-nrm)},newsel,'SoftSelection',newissoft,name_options{:})
-            elseif nrm>nnew
-                updateSelection(L.F,'chg&rm',{idxrm(1:nnew) idxrm(nnew+1:nrm)},newsel,'SoftSelection',newissoft,name_options{:})
+            elseif n_rm == 0
+                update_selection(L.F, 'new', new_sel, 'soft_selection', new_is_soft)
+            elseif n_new == 0
+                update_selection(L.F, 'remove', idx_rm)
+            elseif n_new == n_rm
+                update_selection(L.F, 'chg', idx_rm, new_sel, 'soft_selection', new_is_soft, name_options{:})
+            elseif n_new > n_rm
+                update_selection(L.F, 'chg&new', {idx_rm, n_sel + (1:n_new - n_rm)}, new_sel, 'soft_selection', new_is_soft, name_options{:})
+            elseif n_rm > n_new
+                update_selection(L.F, 'chg&rm', {idx_rm(1:n_new), idx_rm(n_new + 1:n_rm)}, new_sel, 'soft_selection', new_is_soft, name_options{:})
             end
         end
-        function sel = buildCurrentSelection(L,domultin)
-            val = get(L.hlist,'value');
+        function sel = build_current_selection(L, do_mult_in)
+            val = get(L.h_list, 'value');
             if isempty(val), sel = []; return, end
-            if domultin 
-                nsel = length(val);
-                sel = xplr.selectionnd(nsel);
-                for i=1:nsel
-                    sel(i) = xplr.selectionnd(L.seltype,val(i),L.F.headerin.n);
+            if do_mult_in 
+                n_sel = length(val);
+                sel = xplr.SelectionND(n_sel);
+                for i=1:n_sel
+                    sel(i) = xplr.SelectionND(L.sel_type, val(i), L.F.header_in.n);
                 end
-            elseif L.F.headerin.ismeasure && ~isscalar(val) && all(diff(val)==1)
+            elseif L.F.header_in.is_measure && ~isscalar(val) && all(diff(val) == 1)
                 % selection is a segment rather than a mere list of points
-                sel = xplr.selectionnd('line1D',val([1 end]) + [-.5 .5],L.F.headerin.n);
+                sel = xplr.SelectionND('line1D', val([1, end]) + [-.5, .5], L.F.header_in.n);
             else
-                sel = xplr.selectionnd(L.seltype,val,L.F.headerin.n);
+                sel = xplr.SelectionND(L.sel_type, val, L.F.header_in.n);
             end
         end
     end
         
     % Get/Set - scroll wheel
     methods
-        function set.scrollwheel(L,flag)
+        function set.scroll_wheel(L, flag)
             switch flag
                 case 'on'
-                    fn_scrollwheelregister(L.hlist,@(n)event(L,'scroll',n)) %#ok<MCSUP>
-                    L.scrollwheel = 'on';
+                    fn_scroll_wheel_register(L.h_list, @(n)event(L, 'scroll', n)) %#ok<MCSUP>
+                    L.scroll_wheel = 'on';
                 case 'default'
-                    fn_scrollwheelregister(L.hlist,@(n)event(L,'scroll',n),'default') %#ok<MCSUP>
-                    L.scrollwheel = 'on';
+                    fn_scroll_wheel_register(L.h_list, @(n)event(L, 'scroll', n), 'default') %#ok<MCSUP>
+                    L.scroll_wheel = 'on';
                 case 'off'
-                    fn_scrollwheelregister(L.hlist,flag) %#ok<MCSUP>
-                    L.scrollwheel = 'off';
+                    fn_scroll_wheel_register(L.h_list, flag) %#ok<MCSUP>
+                    L.scroll_wheel = 'off';
                 otherwise
-                    error 'scrollwheel value must be ''off'', ''on'' or ''default'''
+                    error 'scroll_wheel value must be ''off'', ''on'' or ''default'''
             end
         end
     end
     
     % Get/Set
     methods
-        function set.selmultin(L,val)
-            if val==L.selmultin, return, end
-            L.selmultin = val;
+        function set.sel_mult_in(L, val)
+            if val == L.sel_mult_in, return, end
+            L.sel_mult_in = val;
             % update selection
-            event(L,'select')
+            event(L, 'select')
         end
     end
     
     % Display
     methods (Access = 'private')
-        function preformatvalues(L)
-            L.valuestr = L.F.headerin.getItemNames();
+        function preformat_values(L)
+            L.value_str = L.F.header_in.get_item_names();
         end
-        function displayselection(L)
+        function display_selection(L)
             % init list with names of items
-            str = L.valuestr;
+            str = L.value_str;
             
-            selinds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
-            nsel = length(selinds);
-            isunisel = false(1,nsel); 
-            for i=1:nsel, isunisel(i) = isscalar(selinds{i}); end % faster than calling fn_map
-            softsel = L.F.F.headerout.getValue('SoftSelection'); % same as above
-            softsel = [softsel{:}]; % faster than cell2mat
-            if isempty(softsel), softsel = false(1,nsel); end
+            sel_inds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
+            n_sel = length(sel_inds);
+            is_unis_el = false(1, n_sel); 
+            for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling fn_map
+            soft_sel = L.F.F.header_out.get_value('soft_selection'); % same as above
+            soft_sel = [soft_sel{:}]; % faster than cell2mat
+            if isempty(soft_sel), soft_sel = false(1, n_sel); end
                         
             % mark selections
-            for ksel=find(isunisel & ~softsel)
-                ind = selinds{ksel};
-                str{ind} = [str{ind} '[' num2str(ksel) ']'];
+            for k_sel = find(is_unis_el & ~soft_sel)
+                ind = sel_inds{k_sel};
+                str{ind} = [str{ind}, '[', num2str(k_sel), ']'];
             end
-            for ksel=find(~isunisel & ~softsel)
-                for ind = selinds{ksel}
-                    str{ind} = [str{ind} '[group' num2str(ksel) ']'];
+            for k_sel = find(~is_unis_el & ~soft_sel)
+                for ind = sel_inds{k_sel}
+                    str{ind} = [str{ind}, '[group', num2str(k_sel), ']'];
                 end
             end
-            for ksel=find(isunisel & softsel)
-                ind = selinds{ksel};
-                str{ind} = [str{ind} '*'];
+            for k_sel = find(is_unis_el & soft_sel)
+                ind = sel_inds{k_sel};
+                str{ind} = [str{ind}, '*'];
             end
-            for ksel=find(~isunisel & softsel)
-                for ind = selinds{ksel}
-                    str{ind} = [str{ind} '*g'];
+            for k_sel = find(~is_unis_el & soft_sel)
+                for ind = sel_inds{k_sel}
+                    str{ind} = [str{ind}, '*g'];
                 end
             end
             
             % update display!
-            top = get(L.hlist,'listboxtop'); % the portion of the list that is shown moves when setting the string -> reset it to its current position
-            set(L.hlist,'string',str,'ListboxTop',top)
-            if nsel==0
+            top = get(L.h_list, 'listboxtop'); % the portion of the list that is shown moves when setting the string -> reset it to its current position
+            set(L.h_list, 'string', str, 'ListboxTop', top)
+            if n_sel == 0
                 % if no selection, highlight the point selection
-                set(L.hlist,'value',L.F.index)
+                set(L.h_list, 'value', L.F.point_index)
             else
-                set(L.hlist,'value',[selinds{softsel}])
+                set(L.h_list, 'value', [sel_inds{soft_sel}])
             %             elseif isfield(L.F.shared,'list')
-            %                 set(L.hlist,'value',L.F.shared.list.cursel)
+            %                 set(L.h_list,'value',L.F.shared.list.cursel)
             end
         end
             
@@ -519,10 +522,10 @@ classdef list < xplr.graphnode
 end
      
 %---
-function donothing()
+function do_nothing()
 % setting this function as main figure WindowButtonMotionFcn forces the
 % figure to update CurrentPoint whenever the mouse is moved, and therefore
 % have this property set currently even when clicking active controls
 % (unfortunately, clicking a control does not set this property)
 end
-   
+ 

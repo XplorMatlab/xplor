@@ -1,4 +1,4 @@
-classdef selectionshape
+classdef SelectionShape
     % selectionshape('point1D',[x1 x2 ...])
     % selectionshape('line1D',[a1 b1 a2 b2 ...])
     % selectionshape('point2D|poly2D|openpoly2D',[x1 x2 ...; y1 y2 ...])
@@ -20,7 +20,7 @@ classdef selectionshape
     
     % Constructor
     methods
-        function S = selectionshape(type,data)
+        function S = SelectionShape(type, data)
             if nargin == 0
                 return
             end
@@ -30,74 +30,75 @@ classdef selectionshape
             switch type
                 case 'point1D'
                     S.points = data(:)';
-                    S.vectors = zeros(1,0);
+                    S.vectors = zeros(1, 0);
                 case 'line1D'
                     lines = row(data);
-                    if mod(length(lines),2) || any(diff(lines(:))<=0)
+                    if mod(length(lines), 2) || any(diff(lines(:)) <= 0)
                         error('set of lines should come as ordered non-intersecting segments')
                     end
-                    nline = length(lines)/2;
-                    lines = reshape(lines,[1 2 nline]);
-                    S(nline).points = []; % pre-allocate
-                    for i=1:nline
-                        S(i).points = lines(:,:,i);
-                        S(i).vectors = zeros(1,0);
+                    n_line = length(lines)/2;
+                    lines = reshape(lines, [1, 2, n_line]);
+                    S(n_line).points = []; % pre-allocate
+                    for i=1:n_line
+                        S(i).points = lines(:, :, i);
+                        S(i).vectors = zeros(1, 0);
                     end
-                case {'point2D' 'openpoly2D'}
-                    if size(data,1)==1; data = data'; end
-                    if size(data,1)~=2, error('data should have 2 rows'), end
+                case {'point2D', 'openpoly2D'}
+                    if size(data,1) == 1; data = data'; end
+                    if size(data,1) ~= 2, error('data should have 2 rows'), end
                     S.points = data;
-                    S.vectors = zeros(2,0);
+                    S.vectors = zeros(2, 0);
                 case 'poly2D'
-                    if size(data,1)~=2, error('data should have 2 rows'), end
-                    if ~all(data(:,1)==data(:,end)), data = data(:,[1:end 1]); end
-                    [px, py] = deal(data(1,:),data(2,:)); % poly2cw(data(1,:),data(2,:));
+                    if size(data,1) ~= 2, error('data should have 2 rows'), end
+                    if ~all(data(:,1) == data(:,end)), data = data(:, [1:end 1]); end
+                    [px, py] = deal(data(1,:), data(2,:)); % poly2cw(data(1,:),data(2,:));
                     S.points = [px(:)'; py(:)'];
-                    S.vectors = zeros(2,0);
+                    S.vectors = zeros(2, 0);
                 case 'rect2D'
-                    if ~isvector(data) || length(data)~=4, error('data should be a 4-element vector (x,y,w,h)'), end
-                    if any(data(3:4)<0), error('width and height must be >= 0'), end
+                    if ~isvector(data) || length(data) ~= 4, error('data should be a 4-element vector (x,y,w,h)'), end
+                    if any(data(3:4) < 0), error('width and height must be >= 0'), end
                     S.points = [data(1); data(2)];
                     S.vectors = [data(3); data(4)];
-                case {'ellipse2D' 'ring2D'}
+                case {'ellipse2D', 'ring2D'}
                     if ~iscell(data)
                         error 'ellipse or ring description must be a cell array';
                     end
                     % center and radius
-                    if length(data)<2 || numel(data{1})~=2 || numel(data{2})>2
+                    if length(data) < 2 || numel(data{1}) ~= 2 || numel(data{2}) > 2
                         error 'center or radius is ill-defined'
                     end
                     [c, u] = deal(data{1:2});
-                    c = c(:); u = u(:);
+                    c = c(:);
+                    u = u(:);
                     if isscalar(u), u = [u; 0]; end
                     % eccentricity and ring secondary radius
                     switch length(data)
                         case 2
-                            if strcmp(type,'ring2D'), error 'eccentricity and secondary radius missing for ring description', end
+                            if strcmp(type, 'ring2D'), error 'eccentricity and secondary radius missing for ring description', end
                             e = 1;
                             logic = e;
                         case 3
                             logic = data{3};
                         case 4
-                            [e r] = deal(data{3:4});
-                            logic = [e r];
+                            [e, r] = deal(data{3:4});
+                            logic = [e, r];
                         otherwise
                             error 'too many elements in shape description'
                     end
-                    if length(logic)~=fn_switch(type,'ellipse2D',1,'ring2D',2)
+                    if length(logic) ~= fn_switch(type, 'ellipse2D', 1, 'ring2D', 2)
                         error 'wrong shape definition'
                     end
                     % that's it
                     S.points = c;
                     S.vectors = u;
                     S.logic = logic;
-                    S.special = EllipseVector2Sym(u,logic(1));
+                    S.special = ellipse_vector_to_sym(u, logic(1));
                 case 'all'
                     % nothing more needs to be set!
                 case 'indices'
                     S.special = data;
                 otherwise
-                    error('unknown type ''%s''',type)
+                    error('unknown type ''%s''', type)
             end
         end
     end
@@ -106,46 +107,46 @@ classdef selectionshape
     methods
         function S2 = simplify(S)
             % special
-            if any(strcmp({S.type},'all'))
-                S2 = xplr.selectionshape('all');
+            if any(strcmp({S.type}, 'all'))
+                S2 = xplr.SelectionShape('all');
                 return
             end
             
             % Shapes that cannot be merged
-            idx = fn_ismemberstr({S.type},{'openpoly2D' 'rect2D' 'ellipse2D' 'ring2D'});
+            idx = fn_ismemberstr({S.type}, {'openpoly2D', 'rect2D', 'ellipse2D', 'ring2D'});
             S2 = S(idx);
             S(idx) = [];
             
             % Shapes that are easier to merge at once
-            idx = strcmp({S.type},'point1D');
+            idx = strcmp({S.type}, 'point1D');
             if ~isempty(idx)
-                S2 = [S2 xplr.selectionshape('point1D',unique([S(idx).points]))]; 
+                S2 = [S2, xplr.SelectionShape('point1D', unique([S(idx).points]))]; 
             end
             S(idx) = [];
-            idx = strcmp({S.type},'point2D');
+            idx = strcmp({S.type}, 'point2D');
             if ~isempty(idx)
-                S2 = [S2 xplr.selectionshape('point2D',unique([S(idx).points]))]; 
+                S2 = [S2, xplr.SelectionShape('point2D', unique([S(idx).points]))]; 
             end
             S(idx) = [];
-            idx = strcmp({S.type},'line1D');
+            idx = strcmp({S.type}, 'line1D');
             if ~isempty(idx)
-                S2 = [S2 xplr.selectionshape('line1D',ConvertLine1D(S(idx)))];
+                S2 = [S2, xplr.SelectionShape('line1D', convert_line_1D(S(idx)))];
             end
             S(idx) = [];
-            idx = strcmp({S.type},'indices');
+            idx = strcmp({S.type}, 'indices');
             if ~isempty(idx)
-                data = cat(1,S(idx).special); % 2 x n
-                n = size(data,2);
+                data = cat(1, S(idx).special); % 2 x n
+                n = size(data, 2);
                 if n == 1
-                    S2 = [S2 S(idx)];
+                    S2 = [S2, S(idx)];
                 else
                     % check size compatibility
-                    sz = data{1,1}; 
+                    sz = data{1, 1}; 
                     for i = 2:n
-                        if ~isequal(data{1,i},sz), error 'indices shape to combine do not have the same size', end
+                        if ~isequal(data{1, i}, sz), error 'indices shape to combine do not have the same size', end
                     end
                     % merge
-                    S2 = [S2 xplr.selectionshape('indices',{sz unique([data{2,:}])})];
+                    S2 = [S2, xplr.SelectionShape('indices', {sz, unique([data{2, :}])})];
                 end
             end
             S(idx) = [];
@@ -153,16 +154,16 @@ classdef selectionshape
             % Shapes that are easier to merge one after each other
             for k = 1:length(S)
                 Sk = S(k);
-                f = find(strcmp({S2.type},Sk.type));
+                f = find(strcmp({S2.type}, Sk.type));
                 if isempty(f)
-                    S2 = [S2 Sk]; %#ok<AGROW>
+                    S2 = [S2, Sk]; %#ok<AGROW>
                     continue
                 end
                 switch Sk.type
                     case 'poly2D'
                         % This should be improved, as intersecting
                         % polygons will not be merged
-                        S(f).points = [S(f).points NaN(2,1) poly2.points];
+                        S(f).points = [S(f).points, NaN(2, 1), poly2.points];
                     otherwise
                         error('unhandled shape type ''%s''', Sk.type)
                 end
@@ -173,29 +174,29 @@ classdef selectionshape
     
     % Compute indices
     methods
-        function ind = indices1D(S,sizes)
-            ind = zeros(1,0,'uint32');
+        function ind = indices_1D(S, sizes)
+            ind = zeros(1, 0, 'uint32');
             for k=1:length(S)
                 switch S(k).type
                     case 'point1D'
-                        ind = [ind round(S(k).points)]; %#ok<AGROW>
+                        ind = [ind, round(S(k).points)]; %#ok<AGROW>
                     case 'line1D'
                         line = S(k).points;
-                        istart = max(1,ceil(line(1)));
-                        iend   = min(sizes,floor(line(2)));
-                        ind = [ind istart:iend]; %#ok<AGROW>
+                        i_start = max(1, ceil(line(1)));
+                        i_end   = min(sizes, floor(line(2)));
+                        ind = [ind, i_start:i_end]; %#ok<AGROW>
                     case 'all'
                         ind = ':';
                         return
                     case 'indices'
-                        ind = [ind S(k).special];
+                        ind = [ind, S(k).special];
                 end
             end
-            ind(ind<1 | ind>sizes) = [];
+            ind(ind < 1 | ind>sizes) = [];
             ind = unique(ind);
         end
-        function ind = indices2D(S,sizes)
-            if any(strcmp(S.type,'all'))
+        function ind = indices_2D(S, sizes)
+            if any(strcmp(S.type, 'all'))
                 ind = ':';
                 return
             end
@@ -205,41 +206,41 @@ classdef selectionshape
                 vects  = S(k).vectors;
                 switch S(k).type
                     case 'point2D'
-                        np = size(points,2);
+                        np = size(points, 2);
                         ij = round(points);
-                        bad = any(ij<1 | ij>repmat(sizes(:),1,np));
-                        ij(:,bad) = [];
-                        mask(ij(1,:)+sizes(1)*(ij(2,:)-1)) = true;
+                        bad = any(ij < 1 | ij > repmat(sizes(:), 1, np));
+                        ij(:, bad) = [];
+                        mask(ij(1, :) + sizes(1)*(ij(2, :)-1)) = true;
                     case 'openpoly2D'
                         line = points;
-                        longueur = [0 cumsum(sqrt(sum(diff(line,1,2).^2)))];
-                        [longueur f] = unique(longueur);
-                        line = line(:,f);
-                        longueur2 = [0:.1:longueur(end)-.05 longueur(end)];
-                        line2 = interp1(longueur,line',longueur2,'pchip')';
-                        np = size(line2,2);
+                        longueur = [0, cumsum(sqrt(sum(diff(line, 1, 2).^2)))];
+                        [longueur, f] = unique(longueur);
+                        line = line(:, f);
+                        longueur2 = [0:.1:longueur(end)-.05, longueur(end)];
+                        line2 = interp1(longueur, line', longueur2, 'pchip')';
+                        np = size(line2, 2);
                         ij = round(line2);
-                        bad = any(ij<1 | ij>repmat(sizes(:),1,np));
-                        ij(:,bad) = [];
-                        mask(ij(1,:)+sizes(1)*(ij(2,:)-1)) = true;
+                        bad = any(ij < 1 | ij > repmat(sizes(:), 1, np));
+                        ij(:, bad) = [];
+                        mask(ij(1, :)+sizes(1)*(ij(2, :)-1)) = true;
                     case 'poly2D'
-                        pp = mypolysplit(points);
+                        pp = my_poly_split(points);
                         for i=1:length(pp)
-                            mask = mask | fn_poly2mask(pp{i},sizes);
+                            mask = mask | fn_poly2mask(pp{i}, sizes);
                         end
                     case 'rect2D'
-                        istart = max(1,ceil(points(1)));
-                        iend   = min(sizes(1),floor(points(1)+vects(1)));
-                        jstart = max(1,min(ceil(points(2)),round(points(2)+vects(2))));
-                        jend   = min(sizes(2),max(floor(points(2)+vects(2)),round(points(2))));
-                        mask(istart:iend,jstart:jend) = true;
+                        i_start = max(1, ceil(points(1)));
+                        i_end   = min(sizes(1), floor(points(1)+vects(1)));
+                        j_start = max(1, min(ceil(points(2)), round(points(2)+vects(2))));
+                        j_end   = min(sizes(2), max(floor(points(2)+vects(2)), round(points(2))));
+                        mask(i_start:i_end, j_start:j_end) = true;
                     case 'ellipse2D'
-                        points = ConvertPoly2D(S(k));
-                        mask = mask | fn_poly2mask(points,sizes);
+                        points = convert_poly_2D(S(k));
+                        mask = mask | fn_poly2mask(points, sizes);
                     case 'ring2D'
-                        points = ConvertPoly2D(S(k));
-                        pp = mypolysplit(points);
-                        mask = mask | xor(fn_poly2mask(pp{1},sizes),fn_poly2mask(pp{2},sizes));
+                        points = convert_poly_2D(S(k));
+                        pp = my_poly_split(points);
+                        mask = mask | xor(fn_poly2mask(pp{1}, sizes), fn_poly2mask(pp{2}, sizes));
                     case 'indices'
                         mask(indices) = true;
                     otherwise
@@ -252,37 +253,37 @@ classdef selectionshape
     
     % Conversion
     methods
-        function lines = ConvertLine1D(S)
+        function lines = convert_line_1D(S)
             lines = zeros(2, 0);
             for k=1:length(S)
                 switch S(k).type
                     case 'line1D'
-                        lines(:,end+1) = S(k).points; %#ok<AGROW>
-                    case {'point1D' 'indices'}
-                        if strcmp(S(k).type,'point1D')
+                        lines(:, end+1) = S(k).points; %#ok<AGROW>
+                    case {'point1D', 'indices'}
+                        if strcmp(S(k).type, 'point1D')
                             indices = sort(round(S(k).points));
                         else
                             indices = S(k).special{2};
                         end
                         if isempty(indices), continue, end
-                        gaps = diff(indices)>1;
-                        start = indices([true gaps]);
-                        stop = indices([gaps true]);
-                        linesk = fn_add(double([start; stop]), [-.5; .5]);
-                        lines = [lines linesk]; %#ok<AGROW>
+                        gaps = diff(indices) > 1;
+                        start = indices([true, gaps]);
+                        stop = indices([gaps, true]);
+                        lines_k = fn_add(double([start; stop]), [-.5; .5]);
+                        lines = [lines, lines_k]; %#ok<AGROW>
                     case 'all'
-                        disp 'converting ''all1D'' selection by a [-1e30 1e30] line'
+                        disp 'converting ''all1D'' selection by a [-1e30, 1e30] line'
                         lines = [-1; 1]*1e30;
                         return
                     otherwise
                         error programming
                 end
             end
-            merge = xor( bsxfun(@lt,lines(1,:)',lines(2,:)), bsxfun(@lt,lines(2,:)',lines(1,:)) );
+            merge = xor( bsxfun(@lt,lines(1,:)', lines(2,:)), bsxfun(@lt, lines(2,:)', lines(1,:)) );
             for i=1:size(lines,2), merge(i,i) = false; end
             while any(merge(:))
-                [i, j] = find(merge,1,'first');
-                lines(:,i) = [min(lines(1,[i j])) max(lines(2,[i j]))];
+                [i, j] = find(merge, 1, 'first');
+                lines(:,i) = [min(lines(1,[i j])), max(lines(2,[i j]))];
                 merge(i,:) = merge(i,:) | merge(j,:);
                 merge(:,i) = merge(:,i) | merge(:,j);
                 merge(i,i) = false;
@@ -291,61 +292,61 @@ classdef selectionshape
                 merge(:,j) = [];
             end
         end
-        function poly = ConvertPoly2D(S)
+        function poly = convert_poly_2D(S)
             poly = zeros(2,0);
             for k = 1:length(S)
                 Sk = S(k);
                 switch Sk.type
                     case 'poly2D'
-                        polyk = Sk.points;
+                        poly_k = Sk.points;
                     case 'point2D'
                         p = round(Sk.points);
                         np = size(p,2);
-                        polyk = kron(p,ones(1,6)) + repmat([-.5 -.5 .5 .5 -.5 NaN; -.5 .5 .5 -.5 -.5 NaN],1,np);
-                        polyk(:,end) = []; % remove last NaN
+                        poly_k = kron(p,ones(1,6)) + repmat([-.5, -.5, .5, .5, -.5, NaN; -.5, .5, .5, -.5, -.5, NaN], 1, np);
+                        poly_k(:,end) = []; % remove last NaN
                     case 'rect2D'
-                        polyk = fn_add(Sk.points,fn_mult(Sk.vectors,[0 0 1 1 0; 0 1 1 0 0]));
-                    case {'ellipse2D' 'ring2D'}
+                        poly_k = fn_add(Sk.points, fn_mult(Sk.vectors, [0, 0, 1, 1, 0; 0, 1, 1, 0, 0]));
+                    case {'ellipse2D', 'ring2D'}
                         c = Sk.points;
                         u = Sk.vectors;
                         e = Sk.logic(1);
-                        phi = linspace(0,2*pi,50);
-                        udata = cos(phi);
-                        vdata = e*sin(phi);
-                        if strcmp(Sk.type,'ring2D')
+                        phi = linspace(0, 2*pi, 50);
+                        u_data = cos(phi);
+                        v_data = e*sin(phi);
+                        if strcmp(Sk.type, 'ring2D')
                             r = Sk.logic(2);
-                            udata = [udata NaN r*udata];
-                            vdata = [vdata NaN r*vdata];
+                            u_data = [u_data, NaN, r*u_data];
+                            v_data = [v_data, NaN, r*v_data];
                         end
-                        polyk = fn_add(c,fn_mult(u,udata)+fn_mult([u(2);-u(1)],vdata));
+                        poly_k = fn_add(c, fn_mult(u,u_data) + fn_mult([u(2);-u(1)], v_data));
                     case 'openpoly2D'
-                        polyk = Sk.points;
+                        poly_k = Sk.points;
                     case 'indices'
                         [sz, indices] = deal(Sk.special{:});
                         % first make a mask
-                        mask = false([sz 1]);
+                        mask = false([sz, 1]);
                         mask(indices) = true;
                         % then convert to polygon
-                        polyk = fn_mask2poly(mask);
+                        poly_k = fn_mask2poly(mask);
                     case 'all'
-                        disp 'converting ''all2D'' selection by a [-1e30 1e30] square'
-                        polyk = [-1 -1 1 1 -1; -1 1 1 -1 -1]*1e30;
+                        disp 'converting ''all2D'' selection by a [-1e30, 1e30] square'
+                        poly_k = [-1, -1, 1, 1, -1; -1, 1, 1, -1, -1]*1e30;
                     otherwise
                         error programming
                 end
             end
             if k == 1
-                poly = polyk;
+                poly = poly_k;
             else
-                poly = [poly [NaN; NaN] polyk];
+                poly = [poly, [NaN; NaN], poly_k];
             end
         end
     end
 
     % Affinity
     methods
-        function S = applyaffinity(S,affinity)
-            if ~isa(affinity,'xplr.affinitynd')
+        function S = apply_affinity(S, affinity)
+            if ~isa(affinity, 'xplr.AffinityND')
                 error('argument ''afinity'' is expected to be an affinitynd instance')
             end
             for k=1:length(S)
@@ -354,13 +355,13 @@ classdef selectionshape
                 switch Sk.type
                     case 'indices'
                         error 'affinity cannot be performed on selection of type ''indices'''
-                    case {'ellipse2D' 'ring2D'}
+                    case {'ellipse2D', 'ring2D'}
                         % this is a bit bad that ellipse main axis vector
                         % and eccentricity cannot be dealt like usual
                         % vectors and logic
                         [S(k).vectors S(k).logic S(k).special] = ...
-                            EllipseAffinity(Sk.vectors,Sk.logic(1),Sk.special,affinity.linearpart);
-                        if strcmp(Sk.type,'ring2D'), S(k).logic(2) = Sk.logic(2); end
+                            ellipse_affinity(Sk.vectors, Sk.logic(1), Sk.special, affinity.linearpart);
+                        if strcmp(Sk.type, 'ring2D'), S(k).logic(2) = Sk.logic(2); end
                     otherwise
                         S(k).vectors = affinity.move_vectors(Sk.vectors);
                         % 'logic' remains unchanged
@@ -371,25 +372,25 @@ classdef selectionshape
     
     % Misc
     methods
-        function b = ispoint(S,tol)
+        function b = is_point(S, tol)
             switch S.type
-                case {'point1D','point2D','line1D','openpoly2D','poly2D'}
-                    b = all(all(abs(diff(S.points,1,2))<=tol));
+                case {'point1D', 'point2D', 'line1D', 'openpoly2D', 'poly2D'}
+                    b = all(all(abs(diff(S.points, 1, 2)) <= tol));
                 case 'rect2D'
-                    b = all(abs(S.vectors)<=tol);
+                    b = all(abs(S.vectors) <= tol);
                 case {'ellipse2D' 'ring2D'}
-                    b = all(abs(S.vectors)<=tol);
+                    b = all(abs(S.vectors) <= tol);
                 case 'all'
                     b = false;
                 otherwise
                     error programming
             end
         end
-        function S2 = topoint(S)
-            if strfind(S.type,'1D')
-                S2 = xplr.selectionshape('point1D',mean(S.points));
-            elseif strfind(S.type,'2D')
-                S2 = xplr.selectionshape('point2D',mean(S.points,2));
+        function S2 = to_point(S)
+            if strfind(S.type, '1D')
+                S2 = xplr.SelectionShape('point1D', mean(S.points));
+            elseif strfind(S.type, '2D')
+                S2 = xplr.SelectionShape('point2D', mean(S.points,2));
             else
                 error 'not handled yet'
             end
@@ -405,33 +406,33 @@ end
 % Ellipse defined either by center, main radius vector and eccentricity, or
 % by its bilinear equation (x-c)'A(x-c) = 1,
 
-function [u, e, A] = EllipseAffinity(u,e,A,M)
+function [u, e, A] = ellipse_affinity(u, e, A, M)
 
     % ellipse equation becomes, for y=Mx: (y-Mc)'(M^-1' A M^-1)(y-Mc) = 1
     M1 = M^-1;
     A = M1'*A*M1;
-    [u, e] = EllipseSym2Vector(A);
+    [u, e] = ellipse_sym_to_vector(A);
 
 end
 
 %---
-function A = EllipseVector2Sym(u,e)
+function A = ellipse_vector_to_sym(u,e)
 
     % (U,c) is the referential of the ellipse, x->y=U'(x-c) returns coordinates
     % in this referential, in which the ellipse equation is
     % y(1)^2 + y(2)^2/e^2 = r^2
     r = norm(u);
     u = u/r;
-    U = [[-u(2); u(1)] u];
+    U = [[-u(2); u(1)], u];
     A = U*(diag([1/e^2 1])/r^2)*U';
 
 end
 
 %---
-function [u e] = EllipseSym2Vector(A)
+function [u, e] = ellipse_sym_to_vector(A)
 
     % eigenvalue decomposition returns U, r and e as above
-    [U D] = svd(A); % better use svd than eig because output is real even if A is not exactly symmetric
+    [U, D] = svd(A); % better use svd than eig because output is real even if A is not exactly symmetric
     r = D(2,2)^-(1/2);
     e = D(1,1)^-(1/2) / r;
     u = r*U(:,2);
@@ -439,17 +440,18 @@ function [u e] = EllipseSym2Vector(A)
 end
 
 %---
-function pp = mypolysplit(points)
+function pp = my_poly_split(points)
 
-    ksep = find(any(isnan(points),1));
-    n = length(ksep)+1;
-    if n==1
+    ksep = find(any(isnan(points), 1));
+    n = length(ksep) + 1;
+    if n == 1
         pp = {points};
     else
-        pp = cell(1,n); ok = false(1,n);
-        ksep = [0 ksep size(points,2)+1];
+        pp = cell(1, n);
+        ok = false(1, n);
+        ksep = [0, ksep, size(points,2)+1];
         for i=1:n
-            pp{i} = points(:,ksep(i)+1:ksep(i+1)-1);
+            pp{i} = points(:, ksep(i)+1:ksep(i+1)-1);
             ok(i) = ~isempty(pp{i});
         end
         pp = pp(ok);

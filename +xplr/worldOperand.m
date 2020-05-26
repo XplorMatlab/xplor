@@ -1,4 +1,4 @@
-classdef worldOperand < xplr.graphnode
+classdef WorldOperand < xplr.GraphNode
 % Similarly to dataOperand, a worldOperand object defines an operation to
 % perform on data, but it is not associated with specific data headers;
 % rather it will link data headers corresponding to the same measure space,
@@ -8,11 +8,11 @@ classdef worldOperand < xplr.graphnode
 % it immediately looks for (and creates if necessary) a worldOperand object
 % to link this dataOperand object to.
 % 
-% See also xplr.dataOperand, xplr.bank
+% See also xplr.dataOperand, xplr.Bank
 
 properties (SetAccess='private')
     type        % type of operation: the class of the dataOperand objects it is linked to
-    spaceID     % identifier of the measure space the object operate on
+    space_id     % identifier of the measure space the object operate on
 end
 properties
     operation   % operation definition: will be defined by the dataOperand objects it is linked to
@@ -24,34 +24,34 @@ end
     
 
 methods
-    function WO = worldOperand(DO)
-        % WO and DO are respectively the constructed worldOperand object
+    function wo = WorldOperand(do)
+        % wo and do are respectively the constructed worldOperand object
         % and a first dataOperand object it links to
 
         % information about the type of operation and the space it operates
         % on
-        WO.type = class(DO);
-        WO.spaceID = DO.headerin.getMeasureSpaceID();
+        wo.type = class(do);
+        wo.space_id = do.header_in.get_measure_space_id();
         % connect dataOperand and worldOperand together
-        WO.addListenerExclusivePair(DO, ...
-            'ChangedOperation',@(u,e)DO.updateOperationSpace2Data(WO.operation,e), ...
-            'ChangedOperation',@(u,e)DO.updateOperationData2Space(WO,e));
-        DO.world_operand = WO;
+        wo.add_listener_exclusive_pair(do, ...
+            'ChangedOperation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
+            'ChangedOperation', @(u,e)do.update_operation_data_to_space(wo,e));
+        do.world_operand = wo;
         % obtain world operation by running dataOperand method
-        WO.operation = DO.operationData2Space();
+        wo.operation = do.operation_data_to_space();
     end
-    function connectDataOperand(WO,DO)
+    function connect_data_operand(wo,do)
         % check
-        if ~strcmp(class(DO),WO.type) || ~isequal(DO.headerin.getMeasureSpaceID(), WO.spaceID)
+        if ~strcmp(class(do), wo.type) || ~isequal(do.header_in.get_measure_space_id(), wo.space_id)
             error 'cannot connect dataOperand to worldOperand as they are not compatible'
         end
         % connect
-        WO.addListenerExclusivePair(DO, ...
-            'ChangedOperation',@(u,e)DO.updateOperationSpace2Data(WO.operation,e), ...
-            'ChangedOperation',@(u,e)DO.updateOperationData2Space(WO,e));
-        DO.world_operand = WO;
+        wo.add_listener_exclusive_pair(do, ...
+            'ChangedOperation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
+            'ChangedOperation', @(u,e)do.update_operation_data_to_space(wo,e));
+        do.world_operand = wo;
         % set data operation
-        DO.updateOperationSpace2Data(WO.operation)
+        do.update_operation_space_to_data(wo.operation)
     end
 end
 
