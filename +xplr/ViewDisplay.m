@@ -468,11 +468,13 @@ classdef ViewDisplay < xplr.GraphNode
             % whether newlayout is actually new or not (this allows finishing
             % a previous incomplete update with do_immediate_display set to
             % false)
-            if isequal(new_layout_id, D.layout_id_all), return, end
-            c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             if nargin < 3
                 do_immediate_display = true;
             end
+            if ~do_immediate_display && isequal(new_layout_id, D.layout_id_all)
+                return
+            end
+            c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             D.layout_id_all = new_layout_id;
             D.layout_id = new_layout_id.current_layout(); % keep only dimensions actually displayed
             % is zslice too large for being displayed

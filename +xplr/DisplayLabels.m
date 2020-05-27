@@ -94,8 +94,13 @@ classdef DisplayLabels < xplr.GraphNode
             L.rot_height = hpix/axsiz(1);  % normalized to axis size
             L.prev_org_set_pos = []; % next call to set_positions should have doloose set to false
         end
-        function set_positions(L)
-            persistent prev_org
+        function set_positions(L, dim)
+            % input
+            if nargin < 2
+                dim = 1:L.D.nd;
+            else
+                dim = L.D.slice.dimension_number(dim);
+            end
             
             % current layout
             org = L.D.layout;
@@ -112,18 +117,6 @@ classdef DisplayLabels < xplr.GraphNode
             isactive = false(1,length(sz));
             isactive([L.D.active_dim.x L.D.active_dim.y]) = true;
             
-            % do 'loose' update? (i.e. do not adjust position for
-            % non-relevant coordinates)
-            % NO MORE NEEDED, as automatic positionning should be good
-            % enough now
-            if isempty(L.moving_dim)
-                doloose = false; %isequal(org,prev_org);
-                prev_org = org;
-            else
-                doloose = false;
-                prev_org = [];
-            end
-            
             % steps in the direction orthogonal to the positioning one
             axis_pos = fn_pixelpos(L.D.ha);
             available_space = axis_pos(1:2)./axis_pos(3:4) - L.height;
@@ -131,11 +124,10 @@ classdef DisplayLabels < xplr.GraphNode
             yh_step = min(1.5*L.rot_height, available_space(1)/(1.5+length(org.y)));
             
             % set positions 
-            for d=1:length(sz)
+            for d = dim
                 if ~isgraphics(L.h(d), 'text')
                     % it can happen that labels do not exist yet when
                     % update_labels(L,'axsiz') is invoked
-                    prev_org = []; % positions will not be set, so do not store a 'prevlayout'!
                     continue
                 end
                 if ~ok_dim(d)
@@ -170,28 +162,14 @@ classdef DisplayLabels < xplr.GraphNode
                         case 'yx'
                             new_pos = [1+2. 2*L.rot_height, 1];
                     end
-                    if doloose
-                        pos = get(L.h(d), 'position');
-                        switch f
-                            case 'x'
-                                new_pos(2) = pos(2);
-                                set(L.h(d), 'position', new_pos)
-                            case 'y'
-                                new_pos(1) = pos(1);
-                                set(L.h(d), 'position', new_pos)
-                            otherwise
-                                set(L.h(d), 'position', new_pos)
-                        end
+                    if any(d == L.moving_dim)
+                        set(L.moving_clone, 'position', new_pos, ...
+                            'rotation', get(L.h(d), 'rotation'), ...
+                            'visible',true, ...
+                            'horizontalalignment', get(L.h(d), 'horizontalalignment'), ...
+                            'verticalalignment', get(L.h(d), 'verticalalignment'))
                     else
-                        if any(d == L.moving_dim)
-                            set(L.moving_clone, 'position', new_pos, ...
-                                'rotation', get(L.h(d), 'rotation'), ...
-                                'visible',true, ...
-                                'horizontalalignment', get(L.h(d), 'horizontalalignment'), ...
-                                'verticalalignment', get(L.h(d), 'verticalalignment'))
-                        else
-                            set(L.h(d), 'position', new_pos)
-                        end
+                        set(L.h(d), 'position', new_pos)
                     end
                 end
             end
@@ -201,7 +179,15 @@ classdef DisplayLabels < xplr.GraphNode
     % Update labels
     methods
         function update_labels(L, flag, dim)
+            % input
             if nargin < 2, flag = 'pos'; end
+            if nargin < 3
+                dim = 1:L.D.nd;
+            else
+                dim = L.D.slice.dimension_number(dim);
+            end
+            
+            % update
             switch flag
                 case 'global'
                     create_labels(L, 'global')
@@ -227,7 +213,7 @@ classdef DisplayLabels < xplr.GraphNode
                 otherwise
                     error('invalid flag ''%s''',flag)
             end
-            set_positions(L)
+            L.set_positions(dim)
         end
     end
     
@@ -241,19 +227,25 @@ classdef DisplayLabels < xplr.GraphNode
                 case 'normal'
                     % move the label; if it is not moved, change active dim
                     label_move(L, dim_id)
+                case 'open'
+                    % position label back in default place
+                    L.set_positions(dim_id)
             end
         end
-        function label_move(L, dim_id, do_swap)
-            % function label_move(L, dim_id, do_swap)
+        function label_move(L, dim_id, do_swap, do_initial_move)
+            % function label_move(L, dim_id, do_swap, do_initial_move)
             %---
             % Input:
             % - dim_id  identifier of the dimension of the label to move
             % - do_swap if this dimension is in x and is moved to y, allow
             %           swapping with elements that are in y (this results
             %           for example in transposing images)
-
+            % - do_initial_move     label will immediately be positionned
+            %           under the mouse pointer
+            
             % input
             if nargin<3, do_swap = true; end
+            if nargin<4, do_initial_move = false; end
 
             % prepare for changing organization
             [prev_layout_id, layout_id_d, layout_id] = deal(L.D.layout_id_all); % previous, previous without d, current
@@ -335,16 +327,17 @@ classdef DisplayLabels < xplr.GraphNode
             obj = L.h(L.moving_dim);
             uistack(obj, 'top')
 
-            % move
+            % prepare clone
             L.moving_clone = copyobj(obj, L.ha);
             set(L.moving_clone, 'color', [1, 1, 1]*.6, 'edgecolor', 'none', 'BackgroundColor', 'none')
             uistack(L.moving_clone, 'bottom')
-            % (execute movelabel once: this is needed when L.labelMove is
-            % called from xplr.viewcontrol.move_filtered_dimension and
-            % mouse cursor is actually at a different position than the
-            % label)
-            move_label()
-            % (execute movelabel upon mouse motion)
+            L.set_positions(L.moving_dim)
+
+            % move
+            if do_initial_move
+                move_label()
+            end
+            any_change = false;
             moved = fn_buttonmotion(@move_label, L.D.V.hf, 'moved?', 'pointer', 'hand');
 
             function move_label
@@ -444,6 +437,7 @@ classdef DisplayLabels < xplr.GraphNode
                 % update)
                 if ~isequal(new_layout_id, layout_id)
                     layout_id = new_layout_id;
+                    any_change = true;
                     L.D.set_layout_id(layout_id, immediate_display)
                 end
                 drawnow update
@@ -462,11 +456,11 @@ classdef DisplayLabels < xplr.GraphNode
                 % global change in dimensions
                 view_control.activate_inoperant_filter(dim_id)
             elseif isequal(layout_id, prev_layout_id)
-                % update label positions once more to put the one for dimension
-                % d in place, but keep the "non-so-meaningful" coordinate
-                % at its new position (maybe user moved the label to a
-                % better place where it does not hide other information)
-                set_positions(L)
+                % do not put label back in its original place if it was only slightly moved: this allow
+                % user to slightly move labels that cover other information
+                if any_change
+                    set_positions(L)
+                end
             elseif L.do_immediate_display || isequal(layout_id,prev_layout_id)
                 % update label positions once more to put the one for dimension
                 % d in place
