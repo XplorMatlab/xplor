@@ -1009,7 +1009,7 @@ classdef DisplayNavigation < xplr.GraphNode
             end
 
             % name
-            name_rotation = fn_switch(isscalar(N.selectiondimID) && length (name)>3, 45, 0);
+            name_rotation = fn_switch(isscalar(N.selection_dim_id) && length (name)>3, 45, 0);
 
             % color
             colors = fn_colorset;
@@ -1026,7 +1026,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 if strfind(N.selection_show, 'name')
                     hl.label = text(center(1), center(2), name, 'Parent', N.D.ha, ...
                         'horizontalalignment', 'center', 'verticalalignment', 'middle', ...
-                        'rotation', namerotation);
+                        'rotation', name_rotation);
                 end
                 % center marked with a cross
                 if strfind(N.selection_show, 'center')

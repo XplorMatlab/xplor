@@ -70,7 +70,7 @@ classdef DisplayLabels < xplr.GraphNode
                     'margin', 1, ...
                     'backgroundcolor', [1, 1, 1]*.95, 'units', 'normalized', ...
                     'UserData', dim_id, 'buttondownfcn', @(u,e)label_click(L, u), ...
-                    'UIContextMenu', uicontextmenu(L.D.V.hf, 'callback', @(m, e)L.D.dimensionContextMenu(m, dim_id)));
+                    'UIContextMenu', uicontextmenu(L.D.V.hf, 'callback', @(m, e)L.D.dimension_context_menu(m, dim_id)));
             end
         end
         function change_label(L, d)
@@ -141,7 +141,7 @@ classdef DisplayLabels < xplr.GraphNode
                 if ~ok_dim(d)
                     % do not display the label of singleton dimension
                     set(L.h(d), 'visible', 'off')
-                    if any(d == L.movingdim)
+                    if any(d == L.moving_dim)
                         set(L.moving_clone, 'visible', 'off')
                     end
                 else

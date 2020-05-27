@@ -448,7 +448,7 @@ classdef DisplayGraph < xplr.GraphNode
             % enough space on y-axis to show values?
             org = G.D.layout;
             st = G.steps;
-            minimum_spacing = G.minimum_target_spacing(2);
+            minimum_spacing = G.ticks_minimum_spacing(2);
             if ~isempty([org.y st.xy_dim]), minimum_spacing = minimum_spacing/2; end
 %             if st.y_available < target_spacing
 %                 set(G.D.ha,'ytick',[])
@@ -503,28 +503,28 @@ classdef DisplayGraph < xplr.GraphNode
             ny = prod(sz(org.y));
             [y_tick, y_tick_values, y_tick_labels] = deal(cell([ny, st.xy_n_row]));
             for k_row = 1:st.xy_n_row
-                for ky = 1:ny
+                for k_y = 1:ny
                     % vertical center of the row
-                    yidx = row(fn_indices(sz(org.y), ky, 'g2i'));
+                    y_idx = row(fn_indices(sz(org.y), k_y, 'g2i'));
                     if ~isempty(org.xy)
-                        yrowoffset = st.xyoffsets(2, 1+(krow-1)*st.xyncol);
+                        y_row_offset = st.xy_offsets(2, 1+(k_row-1)*st.xy_n_col);
                     elseif ~isempty(org.yx)
-                        yrowoffset = st.xyoffsets(2, krow);
+                        y_row_offset = st.xy_offsets(2, k_row);
                     else
-                        yrowoffset = 0;
+                        y_row_offset = 0;
                     end
-                    yoffset = yrowoffset + sum(st.yoffset) + sum(st.ystep .* yidx);
+                    yoffset = y_row_offset + sum(st.y_offset) + sum(st.y_step .* y_idx);
                     % tick values
-                    clip_k = grid_clip(:, ky, krow);
-                    if any(isnan(clipk)), continue, end % happens when data itself consists only of NaNs
-                    clip_extent = diff(clipk);
+                    clip_k = grid_clip(:, k_y, k_row);
+                    if any(isnan(clip_k)), continue, end % happens when data itself consists only of NaNs
+                    clip_extent = diff(clip_k);
                     minimum_sub_step = minimum_spacing * clip_extent/st.y_available;
-                    [tick_values, tick_labels] = G.nicevalues(clipk(1), clip_k(2), minimum_sub_step);
+                    [tick_values, tick_labels] = G.nice_values(clip_k(1), clip_k(2), minimum_sub_step);
                     y_scale = st.y_available / clip_extent;
                     clip_center = mean(clip_k);
-                    y_tick_values{ky, krow} = tick_values;
-                    y_tick{ky, krow} = yoffset + (tick_values-clip_center) * yscale;
-                    y_tick_labels{ky, krow} = tick_labels;
+                    y_tick_values{k_y, k_row} = tick_values;
+                    y_tick{k_y, k_row} = yoffset + (tick_values-clip_center) * y_scale;
+                    y_tick_labels{k_y, k_row} = tick_labels;
                 end
             end
             % y_offset are descending, so read y_tick in reverse order to

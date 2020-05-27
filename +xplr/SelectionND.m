@@ -287,9 +287,9 @@ classdef SelectionND < xplr.GraphNode
             else
                 switch sel.nd
                     case 1
-                        sel2.data_ind = indices1D(sel2.shapes, data_sizes);
+                        sel2.data_ind = sel2.shapes.indices_1D(data_sizes);
                     case 2
-                        sel2.data_ind = indices2D(sel2.shapes, data_sizes);
+                        sel2.data_ind = sel2.shapes.indices_2D(data_sizes);
                 end
             end
         end     

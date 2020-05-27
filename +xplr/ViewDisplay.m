@@ -253,10 +253,10 @@ classdef ViewDisplay < xplr.GraphNode
             fn_propcontrol(D.navigation, 'show_cross', 'menu', ...
                 {'parent', m, 'label', 'Show cross', 'separator', onoff(do_sep)});
             if D.navigation.show_cross
-                fn_propcontrol(D.navigation,'crosscolor', ...
+                fn_propcontrol(D.navigation,'cross_color', ...
                     {'menu', {'k', 'b', 'r', [1, 1, 1]*.6, 'w'}, {'black', 'blue', 'red', 'gray', 'white', 'other'}}, ...
                     {'parent',m,'label','Cross color'});
-                fn_propcontrol(D.navigation, 'crossalpha', ...
+                fn_propcontrol(D.navigation, 'cross_alpha', ...
                     {'menu', {1, .4, .05}, {'none', 'medium', 'barely visible', 'manual'}}, ...
                     {'parent', m, 'label', 'Cross transparency'});
             end
@@ -294,7 +294,6 @@ classdef ViewDisplay < xplr.GraphNode
             if nargin<3, do_auto = false; end
             
             org_id = D.layout_id;
-            sz = D.slice.sz; 
             
             % try to keep same active dims if they still exist in the new
             % data
@@ -822,13 +821,13 @@ classdef ViewDisplay < xplr.GraphNode
                 D.h_display = gobjects(h_display_size);
                 [do_position, do_data_all] = deal(true);
             elseif do_new      	% new grid elements
-                if ismember(dim,external_dim)
+                if ismember(dim, external_dim_)
                     D.grid = subsasgn_dim(D.grid, dim, ind, gobjects);
                 end
                 D.grid_clip = subsasgn_dim(D.grid_clip, 1+dim, ind, NaN);
                 D.h_display = subsasgn_dim(D.h_display, dim, ind, gobjects);
             elseif do_remove     % remove grid elements
-                if ismember(dim, external_dim)
+                if ismember(dim, external_dim_)
                     delete_valid(subsref_dim(D.grid, dim, ind)) % this also deletes the children hdisplay objects
                     D.grid = subsasgn_dim(D.grid, dim, ind, []);
                 end
@@ -856,7 +855,7 @@ classdef ViewDisplay < xplr.GraphNode
             if do_data
                 displayed_data = D.zslice.data;
                 % correct data to align signals on their mean or median?
-                align_signals = do_time_courses && D.clipping.align_signals;
+                align_signals = do_time_courses && ~isempty(D.clipping.align_signals);
                 if align_signals
                     D.signals_baseline = displayed_data;
                     if ~isempty(org.x)
@@ -911,7 +910,7 @@ classdef ViewDisplay < xplr.GraphNode
             if do_position
                 % (list of grid cell indices)
                 idx_grid_list = 1:prod(grid_size);
-                if do_data_select_grid && ~doposition
+                if do_data_select_grid && ~do_position
                     % not all grid elements need to be visited ('chg' flag)
                     idx_grid_list = reshape(idx_grid_list, grid_size);
                     subs = substruct('()', repmat({':'}, 1, D.zslice.nd));
@@ -1002,7 +1001,7 @@ classdef ViewDisplay < xplr.GraphNode
                             else
                                 line_opt = {'linestyle', '-', 'marker', 'none'};
                             end
-                            if ~ishandle(D.h_display(idx_hdisplay))
+                            if ~ishandle(D.h_display(idx_h_display))
                                 hl = line(1:nt,xi, ...
                                     'parent', D.grid(idx_grid), 'HitTest', 'off', line_opt{:});
                                 D.h_display(idx_h_display) = hl;

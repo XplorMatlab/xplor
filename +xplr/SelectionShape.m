@@ -360,7 +360,7 @@ classdef SelectionShape
                         % and eccentricity cannot be dealt like usual
                         % vectors and logic
                         [S(k).vectors S(k).logic S(k).special] = ...
-                            ellipse_affinity(Sk.vectors, Sk.logic(1), Sk.special, affinity.linearpart);
+                            ellipse_affinity(Sk.vectors, Sk.logic(1), Sk.special, affinity.linear_part);
                         if strcmp(Sk.type, 'ring2D'), S(k).logic(2) = Sk.logic(2); end
                     otherwise
                         S(k).vectors = affinity.move_vectors(Sk.vectors);

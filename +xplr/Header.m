@@ -214,7 +214,7 @@ classdef Header < handle
             H.values = table;
             H.n = size(table,1);
             % set sublabels
-            if isa(lab,'xplr.dimensionlabel')
+            if isa(lab,'xplr.DimensionLabel')
                 H.sub_labels = lab;
             else
                 % need to infer the class of each label
