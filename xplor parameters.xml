@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <s>
    <bank>
-      <nheadermax>100</nheadermax>
+      <NHeaderMax>100</NHeaderMax>
    </bank>
    <display>
       <NImageMax>500</NImageMax>

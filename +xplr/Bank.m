@@ -138,7 +138,7 @@ classdef Bank < handle
             % place all new headers first in the list
             B.recent_headers(idx(idx ~= 0)) = [];
             B.recent_headers = [new_header, B.recent_headers];
-            n_header_max = xplr.Parameters.get('bank.n_header_max');
+            n_header_max = xplr.Parameters.get('bank.NHeaderMax');
             B.recent_headers(n_header_max+1:end) = [];
             save_prop(B,'recent_headers')
         end
@@ -183,7 +183,7 @@ classdef Bank < handle
             header = xplr.Header(header); % in case header is a xplr.dimheader
             F = xplr.Bank.get_existing_filter(filter_type, link_key, header, user);
             if isempty(F)
-                isnew = true;
+                is_new = true;
                 F = feval(['xplr.', filter_type], header);
                 xplr.Bank.register_filter(link_key, F, user);
                 % if input space is measurable, connect with a

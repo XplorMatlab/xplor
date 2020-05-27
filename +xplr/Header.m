@@ -223,8 +223,8 @@ classdef Header < handle
                 end
                 for i=1:n_label
                     xi = table{1,i};
-                    type = xplr.dimension_label.infer_type(xi);
-                    H.sub_labels(i) = xplr.dimension_label(lab{i}, type);
+                    type = xplr.DimensionLabel.infer_type(xi);
+                    H.sub_labels(i) = xplr.DimensionLabel(lab{i}, type);
                 end
             end
             % set summary label

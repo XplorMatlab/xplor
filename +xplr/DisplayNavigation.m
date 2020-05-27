@@ -239,7 +239,7 @@ classdef DisplayNavigation < xplr.GraphNode
                         rect = fn_mouse(N.ha, 'rectaxp-');
                         do_zoom = any(any(abs(diff(rect, 1, 2))>1e-2));
                     end
-                    if dozoom
+                    if do_zoom
                         % apply some rules to guess in which dimension the
                         % user intended to zoom, and which value he wanted
                         % to zoom in
@@ -393,10 +393,10 @@ classdef DisplayNavigation < xplr.GraphNode
             end
 
             % Global index?
-            if doround
+            if do_round
                 ijk = fn_coerce(round(ijk), 1, N.D.slice.sz');
             end
-            if doglobal
+            if do_global
                 ijk = fn_indices(N.D.slice.sz(dim), ijk(dim), 'i2g');
             end
         end
@@ -1387,10 +1387,10 @@ classdef DisplayNavigation < xplr.GraphNode
             % yet for grid display it is more complicated because we want a
             % selection whose size is greater than 1 in both x and y
             org = N.D.layout;
-            xydim = [org.xy, org.yx];
-            if ~isempty(xydim)
+            xy_dim = [org.xy, org.yx];
+            if ~isempty(xy_dim)
                 st = N.D.graph.steps;
-                valid_dim(xydim) = all(abs(diff(rect,1,2)) > 1 ./ [st.xy_n_row; st.xy_n_col]);
+                valid_dim(xy_dim) = all(abs(diff(rect,1,2)) > 1 ./ [st.xy_n_row; st.xy_n_col]);
             end
 
             % zoom_dim will be the most exterior valid dimension for

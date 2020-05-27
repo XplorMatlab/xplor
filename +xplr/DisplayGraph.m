@@ -113,7 +113,7 @@ classdef DisplayGraph < xplr.GraphNode
 
             % G.filling will get values assigned both for 'grid' and
             % 'linear' arrangements
-            [fill, st.xspan, st.yspan] = deal(zeros(1, nd), zeros(1, nx), zeros(1, ny));
+            [fill, st.x_span, st.y_span] = deal(zeros(1, nd), zeros(1, nx), zeros(1, ny));
             
             % does one dimension have 2D grid organization
             x_avail = 1;
@@ -130,7 +130,7 @@ classdef DisplayGraph < xplr.GraphNode
                 
                 % TODO: the lines below are not correct, remove?
                 % % span
-                % [st.xspan(st.xy_dim) st.yspan(st.xy_dim)] = deal(x_avail,y_avail);
+                % [st.x_span(st.xy_dim) st.y_span(st.xy_dim)] = deal(x_avail,y_avail);
                                 
                 % determine number of column: what aspect ratio is desired
                 % for the grid elements?
@@ -193,7 +193,7 @@ classdef DisplayGraph < xplr.GraphNode
                 % (x)
                 for ix=ix:-1:ixnext
                     d = x_layout(ix);
-                    st.xspan(ix) = x_avail;
+                    st.x_span(ix) = x_avail;
                     st.x_step(ix) = x_avail / ze(d);
                     st.x_offset(ix) = -zm(d)*st.x_step(ix);   % middle of zoom should be placed at the middle of the available space
                     if sz_orig(d)>1, x_avail = st.x_step(ix) / (1+G.x_sep); end  % available x-span for (ix-1)th dimension
@@ -201,7 +201,7 @@ classdef DisplayGraph < xplr.GraphNode
                 % (y)
                 for iy=iy:-1:iynext
                     d = y_layout(iy);
-                    st.yspan(iy) = y_avail;
+                    st.y_span(iy) = y_avail;
                     st.y_step(iy) = -y_avail / ze(d);        % start from top of the screen (i.e. higher values of y) rather than bottom
                     st.y_offset(iy) = -zm(d)*st.y_step(iy);   % middle of zoom should be placed at the middle of the available space
                     if sz_orig(d) > 1, y_avail = abs(st.y_step(iy)) / (1+G.y_sep); end % available y-span for (iy-1)th dimension
@@ -216,7 +216,7 @@ classdef DisplayGraph < xplr.GraphNode
                 if correction > 1
                     % need to reduce x-span
                     d = x_layout(ix);
-                    st.xspan(ix) = st.xspan(ix)/correction;
+                    st.x_span(ix) = st.x_span(ix)/correction;
                     st.x_offset(ix) = st.x_offset(ix) + zm(d)*st.x_step(ix)*(1-1/correction);
                     st.x_step(ix) = st.x_step(ix)/correction;
                     fill(d) = 1/correction;
@@ -224,7 +224,7 @@ classdef DisplayGraph < xplr.GraphNode
                 elseif correction < 1
                     % need to reduce y-span
                     d = y_layout(iy);
-                    st.yspan(iy) = st.yspan(iy)*correction;
+                    st.y_span(iy) = st.y_span(iy)*correction;
                     st.y_offset(iy) = st.y_offset(iy) + zm(d)*st.y_step(iy)*(1-1*correction);
                     st.y_step(iy) = st.y_step(iy)*correction;
                     fill(d) = correction;
@@ -264,7 +264,7 @@ classdef DisplayGraph < xplr.GraphNode
     
     % Ticks
     methods (Access='private')
-        function minimum_spacing = ticks_target_spacing(G, k)
+        function minimum_spacing = ticks_minimum_spacing(G, k)
             % k = 1 for 'x', 2 for 'y'
             ax_siz = fn_pixelsize(G.ha);
             ax_siz_inch = ax_siz/get(0, 'ScreenPixelsPerInch');
@@ -362,11 +362,11 @@ classdef DisplayGraph < xplr.GraphNode
                 
                 % different display depending on whether header is measure
                 % or categorical
-                if domeasure
+                if do_measure
                     [start, scale] = deal(head.start, head.scale);
                     [start, stop] = deal(start, start+(n-1)*scale);
                     [ticks_data, tick_labels] = G.nice_values(start, stop, minimum_step*scale);
-                    ticks_idx = 1 + (ticksdata-start)/scale; % data indices coordinates
+                    ticks_idx = 1 + (ticks_data-start) / scale; % data indices coordinates
                 else
                     % ticks for each data point (display only some of
                     % them if there is not enough space for all)
@@ -929,7 +929,7 @@ classdef DisplayGraph < xplr.GraphNode
             if do_vector
                 zijk = fn_div(ijk, bin(:));
             else
-                zijk = fn_div(fn_subtract(ijk, idxoffset(:)) - .5, bin(:)) + .5;
+                zijk = fn_div(fn_subtract(ijk, idx_offset(:)) - .5, bin(:)) + .5;
             end
         end
         function ijk = zslice_to_slice(G, zijk, do_vector, sub_dim)
@@ -1139,7 +1139,7 @@ classdef DisplayGraph < xplr.GraphNode
             end
             
             % We are done!
-            siz = repmat([st.xspan(1); st.yspan(1)], [1, np]);
+            siz = repmat([st.x_span(1); st.y_span(1)], [1, np]);
             bottom_left = xy_offsets - siz/2;
         end
         function pos = label_position(G, dim, org_in)
@@ -1153,16 +1153,6 @@ classdef DisplayGraph < xplr.GraphNode
             else
                 org_in = G.layout;
                 st = G.steps;
-                if isempty(st)
-                    % code here added on 04/06/2018 to avoid error
-                    if G.D.no_display
-                        warning 'Please edit code to better handle this case'
-                        pos = zeros(1, length(dim));
-                        return
-                    else
-                        error 'programming'
-                    end
-                end
             end
             
             % label positions

@@ -209,7 +209,10 @@ classdef DisplayLabels < xplr.GraphNode
                     % some specific properties need to be updated
                     for d = dim, change_label(L, d), end
                 case 'axsiz'
-                    if isempty(L.D.layout_id), return, end % happens sometimes at init because figure size changes for no clear reason
+                    if isempty(L.D.layout_id) || isempty(L.D.graph.steps)
+                        % happens sometimes at init because figure size changes for no clear reason
+                        return
+                    end 
                     get_heights(L)
                 case 'pos'
                 case 'active'
@@ -340,7 +343,7 @@ classdef DisplayLabels < xplr.GraphNode
             % called from xplr.viewcontrol.move_filtered_dimension and
             % mouse cursor is actually at a different position than the
             % label)
-            movelabel
+            move_label()
             % (execute movelabel upon mouse motion)
             moved = fn_buttonmotion(@move_label, L.D.V.hf, 'moved?', 'pointer', 'hand');
 

@@ -9,7 +9,7 @@ xplor_folder = fileparts(which('xplor'));
 
 if eval('false')
     %% ()
-    s = fn_loadvar(fullfile(xplor_folder,'demo data','neurons_movie.mat'));
+    s = fn_loadvar(fullfile(xplor_folder,'demo data','neuron_movies.mat'));
     x = xplr.xdata(s.data, ...
         {{'x' 'um' s.pixel_size}, {'y' 'um' s.pixel_size}, {'time' 's' 1/s.frame_rate}, 'trial'}, ...
         'NEURONS');

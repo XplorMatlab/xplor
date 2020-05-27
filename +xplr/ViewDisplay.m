@@ -99,7 +99,7 @@ classdef ViewDisplay < xplr.GraphNode
             D.menu = uimenu(D.V.hf, 'label', 'Display', 'callback', @(u,e)display_menu(D));
             
             % clipping tool
-            D.clipping = D.add_component(xplr.cliptool(D)); % creates a menu
+            D.clipping = D.add_component(xplr.ClipTool(D)); % creates a menu
             
             % color_map tool
             D.color_map = D.add_component(xplr.ColorMapTool(D)); % creates a menu
@@ -469,7 +469,7 @@ classdef ViewDisplay < xplr.GraphNode
             % whether newlayout is actually new or not (this allows finishing
             % a previous incomplete update with do_immediate_display set to
             % false)
-            if isequal(newlayout_id, D.layout_id_all), return, end
+            if isequal(new_layout_id, D.layout_id_all), return, end
             c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             if nargin < 3
                 do_immediate_display = true;
@@ -835,7 +835,7 @@ classdef ViewDisplay < xplr.GraphNode
                 D.grid_clip = subsasgn_dim(D.grid_clip, 1+dim, ind, []);
                 delete_valid(subsref_dim(D.h_display, dim, ind)) % this also deletes the children hdisplay objects
                 D.h_display = subsasgn_dim(D.h_display, dim, ind, []);
-            elseif strcmp(flag, 'chg_data&blocksize')
+            elseif strcmp(flag, 'chg_data&blocksize') ...
                     && ~do_time_courses && ismember(dim, org.merged_data)
                 % D.gridclip might need to be changed in dimension
                 % org.mergeddata for images
@@ -920,7 +920,7 @@ classdef ViewDisplay < xplr.GraphNode
                 end
                 ijk_grid_list = fn_indices(grid_size, idx_grid_list, 'g2i');
                 % (prepare dispatch)
-                M = D.graph.gettransform(ijk_grid_list);
+                M = D.graph.get_transform(ijk_grid_list);
                 % (loop on grid cells)
                 for u = 1:length(idx_grid_list)
                     idx_grid = idx_grid_list(u);
@@ -949,12 +949,11 @@ classdef ViewDisplay < xplr.GraphNode
                 % (reorganize list as: rows=different grid cells, columns=overlapped elements inside same grid cell)
                 idx_h_display_list = fn_reshapepermute(idx_h_display_list, {external_dim_ overlap_dim_ internal_dim_});
                 [n_grid, n_overlap] = size(idx_h_display_list); % can be smaller than total numbers of grids/overlaps
-                ijk_h_display_list = fn_indices(h_display_size,
-                idx_h_display_list(:),'g2i');
-                ijk_h_display_list = reshape(ijk_h_display_list,[D.nd, ngrid, n_overlap]);
+                ijk_h_display_list = fn_indices(h_display_size, idx_h_display_list(:),'g2i');
+                ijk_h_display_list = reshape(ijk_h_display_list, [D.nd, n_grid, n_overlap]);
                 % (corresponding grid cells)
                 ijk_grid_list = ijk_h_display_list(:, :, 1);
-                ijk_grid_list(overlapdim, :) = 1;
+                ijk_grid_list(overlap_dim_, :) = 1;
                 idx_grid_list = fn_indices(grid_size, ijk_grid_list, 'i2g');
 
                 % subs structure for slicing
@@ -1009,7 +1008,7 @@ classdef ViewDisplay < xplr.GraphNode
                                 D.h_display(idx_h_display) = hl;
                             else
                                 hl = D.h_display(idx_h_display);
-                                if do_chgx
+                                if do_chg_x
                                     set(hl, 'xdata', 1:nt, line_opt{:})
                                 end
                                 set(hl, 'ydata', xi)
@@ -1045,12 +1044,12 @@ classdef ViewDisplay < xplr.GraphNode
                                     'CDataMapping', 'scaled', 'FaceAlpha', 'texturemap', ...
                                     'CData', im, 'AlphaData', alpha, ...
                                     'HitTest', 'off');
-                            elseif do_chgx
+                            elseif do_chg_x
                                 set(D.h_display(idx_h_display), ...
                                     'xdata', [.5, size(im,2)+.5], 'ydata', [-.5, -.5-size(im, 1)], ...
                                     'CData', im, 'AlphaData', alpha)
                             else
-                                set(D._hdisplay(idx_h_display), 'CData', im, 'AlphaData', alpha)
+                                set(D.h_display(idx_h_display), 'CData', im, 'AlphaData', alpha)
                             end
                         end
                     end
@@ -1146,7 +1145,7 @@ classdef ViewDisplay < xplr.GraphNode
                     else
                         flag = 'chg_data&blocksize';
                     end
-                    updateDisplay(D, flag, chg_dim, e.ind)
+                    D.update_display(flag, chg_dim, e.ind)
                 else
                     % the grid arrangement changes
                     switch flag
