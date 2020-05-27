@@ -1,4 +1,4 @@
-function s = strictsize(x,ndim)
+function s = strict_size(x,ndim)
 
 s = size(x);
 nd = find(s~=1,1,'last');

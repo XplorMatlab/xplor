@@ -787,7 +787,7 @@ classdef ViewDisplay < xplr.GraphNode
             if ~isempty(dim)
                 prev_size_check(dim) = prev_size_check(dim) + (do_remove-do_new) * length(ind);
             end
-            if ~isequal(strictsize(D.grid,length(grid_size)),prev_size_check) ...
+            if ~isequal(strict_size(D.grid,length(grid_size)),prev_size_check) ...
                     || ~all(ishandle(D.grid(:)))
                 [do_reset, do_position, do_data_all] = deal(true);
                 do_color = do_time_courses;

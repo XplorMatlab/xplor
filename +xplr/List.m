@@ -31,7 +31,7 @@ classdef List < xplr.GraphNode
                 head = xplr.Header('testheader', 10);
                 F = xplr.FilterAndPoint(head);
             end
-            [opt, opt_add] = parseInput(opt, varargin{:});
+            [opt, opt_add] = parse_input(opt, varargin{:});
             
             % check filter
             L.F = F;

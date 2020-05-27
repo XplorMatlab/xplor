@@ -39,7 +39,7 @@ function E = HeaderEdit(data, callback)
     else
         input_head = [];
         E.dat = data;
-        E.sz = strictsize(data);
+        E.sz = strict_size(data);
     end
     E.nd = length(E.sz);
 

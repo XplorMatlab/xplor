@@ -130,7 +130,7 @@ classdef XData < xplr.GraphNode
         function chg_Data(x, data)
             if isequal(data, x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
-            data_sz = strictsize(data, x.nd);
+            data_sz = strict_size(data, x.nd);
             if length(data_sz) > x.nd, error 'Cannot increase number of dimensions. Use update_data to change both data and headers.', end
             chg_sz = (data_sz ~= x.sz);
             if any([x.header(chg_sz).is_categorical_with_values]), error 'Cannot change data size in categorical dimensions. Use update_data to change both data and headers', end
@@ -217,7 +217,7 @@ classdef XData < xplr.GraphNode
                 otherwise
                     error('invalid flag ''%s'' for xdata update_data method')
             end
-            if ~isequal(strictsize(new_data, length(new_head)), [new_head.n])
+            if ~isequal(strict_size(new_data, length(new_head)), [new_head.n])
                 error 'new data size does not match header(s)'
             end
             % really update data only now (after all checks occured)
@@ -241,7 +241,7 @@ classdef XData < xplr.GraphNode
             % update data
             if ~isreal(new_data), error 'data cannot be complex', end
             if x.nd == 1 && isvector(new_data), new_data = new_data(:); end % don't generate an error for a row vector input
-            if ~isequal(strictsize(new_data, x.nd), x.sz)
+            if ~isequal(strict_size(new_data, x.nd), x.sz)
                 error 'new data size does not match new header'
             end
             x.data = new_data;

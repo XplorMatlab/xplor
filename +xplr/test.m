@@ -18,7 +18,7 @@ end
 %---
 function test_private
 % test th
-strictsize(2, 3)
+strict_size(2, 3)
 
 %---
 function test_all

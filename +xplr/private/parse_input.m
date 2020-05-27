@@ -1,6 +1,6 @@
-function [opt optadd] = parseInput(varargin)
-% function [optinit optadd] = parseInput(optinit,'name','value',...)
-% function opt = parseInput('name','value',...)
+function [opt optadd] = parse_input(varargin)
+% function [optinit optadd] = parse_input(optinit,'name','value',...)
+% function opt = parse_input('name','value',...)
 %---
 % optinit is a structure, but optadd/opt is a cell array
 
