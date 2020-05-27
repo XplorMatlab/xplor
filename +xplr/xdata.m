@@ -9,7 +9,9 @@ classdef XData < xplr.GraphNode
     %
     % Input:
     % * dat   ND array
-    % * head  a cell array with as many elements as data dimensions, each element is itself a cell array containing arguments for the xplr.header constructor
+    % * head  a cell array with as many elements as data dimensions, each
+    %         element is itself a cell array containing arguments for the
+    %         xplr.header constructor, but with argument 'n' ommitted
     % * name  string
     %
     % See also xplr.header
@@ -46,10 +48,20 @@ classdef XData < xplr.GraphNode
                 labels = head;
                 head = xplr.DimHeader.empty(1, 0);
                 for i=1:length(labels)
+                    n = size(dat, i);
                     if iscell(labels{i})
-                        head(i) = xplr.Header(labels{i}{:});
+                        args = labels{i};
+                        if ~ischar(args{end}) && ~isscalar(args{end})
+                            % categorical header defined by a table of
+                            % values: no need to add number of samples
+                            head(i) = xplr.Header(args{:});
+                        else
+                            % other header formats: add number of samples
+                            head(i) = xplr.Header(args{1}, n, args{2:end});
+                        end
                     else
-                        head(i) = xplr.Header(labels{i}, size(dat,i));
+                        label = labels{i};
+                        head(i) = xplr.Header(label, n);
                     end
                 end
             end

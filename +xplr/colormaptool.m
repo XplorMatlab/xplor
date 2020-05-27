@@ -137,8 +137,11 @@ classdef ColorMapTool < xplr.GraphNode
             [nx, ny, nc] = size(xi);
             xi = reshape(xi, [nx*ny, nc]);
             idxnan = any(isnan(xi), 2);
-            % clip data
-            xi = fn_clip(xi, clipi, [0, 1]);
+            % clip data; note that clipi can have 3 clipping ranges for the
+            % 3 image color channels
+            clipi = matrix(clipi);
+            xi = fn_div(fn_subtract(xi, clipi(1,:)), diff(clipi));
+            xi = max(0, min(1, xi));
             % apply nonlinear function if any
             if C.do_non_linear
                 xi = C.non_linear_fun_editor.interp(1 + 255*xi);

@@ -9,7 +9,7 @@ classdef Filter < xplr.DataOperand
     end
     properties (SetObservable, AbortSet)
         slice_fun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
-        slice_fun_str = 'nmean'; 
+        slice_fun_str = 'nmean';
     end
     properties(Dependent, SetAccess='protected', Transient)
         n_sel
@@ -158,7 +158,7 @@ classdef Filter < xplr.DataOperand
                             else
                                 % measure
                                 [start, scale, unit] = deal(F.header_in.start, F.header_in.scale, F.header_in.unit);
-                                sub_names{j} = sprintf('%.4g-%.4g%s', start+[k_start k_stop]*scale, unit);
+                                sub_names{j} = sprintf('%.4g-%.4g%s', start+([k_start k_stop]-1)*scale, unit);
                             end
                         end 
                         names{i} = fn_strcat(sub_names, ',');
@@ -353,7 +353,7 @@ classdef Filter < xplr.DataOperand
             s_final = s;
             s_final(dims(1)) = n_sel_slice;
             s_final(dims(2:end)) = [];
-            slic = reshape(slic, s_final);            
+            slic = reshape(slic, s_final);
         end
     end
     methods (Access='protected')
@@ -439,7 +439,8 @@ classdef Filter < xplr.DataOperand
     methods
         function context_menu(F, m)
             delete(get(m, 'children'))
-            fun_str = {'mean', 'nmean', 'median', 'min', 'max', 'std'};
+            fun_str = {'mean', 'nmean', 'median', 'nmedian', ...
+                'sum', 'nsum', 'min', 'max', 'std'};
             fn_propcontrol(F, 'slice_fun_str', ...
                 {'menuval', fun_str, [fun_str, {'other...'}]}, ...
                 {'parent', m, 'label', 'Filter operation'});

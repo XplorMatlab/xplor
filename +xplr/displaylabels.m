@@ -14,7 +14,7 @@ classdef DisplayLabels < xplr.GraphNode
         listeners = struct('slice', []);
         prev_org_set_pos     % last organization seen by set_positions
     end
-    properties
+    properties (SetObservable=true)
         do_immediate_display = false;
     end
     properties (Dependent, Access='private')
@@ -99,11 +99,16 @@ classdef DisplayLabels < xplr.GraphNode
             
             % current layout
             org = L.D.layout;
+
+            % locations of dimension: note that some dimensions might not
+            % be present in the layout, in particular when it was removed
+            % from the layout in labelMove, but the change is not
+            % definitive and the slice has not been updated yet
             dim_locations = L.D.layout_id.dim_locations;
-            
+
             % visible labels and active dimensions
             sz = L.D.slice.sz; % slice size
-            ok_dim = (sz > 1);
+            ok_dim = (sz > 1) & ~fn_isemptyc(dim_locations);
             isactive = false(1,length(sz));
             isactive([L.D.active_dim.x L.D.active_dim.y]) = true;
             
@@ -136,6 +141,9 @@ classdef DisplayLabels < xplr.GraphNode
                 if ~ok_dim(d)
                     % do not display the label of singleton dimension
                     set(L.h(d), 'visible', 'off')
+                    if any(d == L.movingdim)
+                        set(L.moving_clone, 'visible', 'off')
+                    end
                 else
                     f = dim_locations{d};
                     % fixed properties
@@ -160,7 +168,7 @@ classdef DisplayLabels < xplr.GraphNode
                         case 'xy'
                             new_pos = [0, 1 + 1.5*L.height];
                         case 'yx'
-                            new_pos = [-(length(org.y) + 2)*L.rot_height, 1];
+                            new_pos = [1+2. 2*L.rot_height, 1];
                     end
                     if doloose
                         pos = get(L.h(d), 'position');
@@ -178,6 +186,7 @@ classdef DisplayLabels < xplr.GraphNode
                         if any(d == L.moving_dim)
                             set(L.moving_clone, 'position', new_pos, ...
                                 'rotation', get(L.h(d), 'rotation'), ...
+                                'visible',true, ...
                                 'horizontalalignment', get(L.h(d), 'horizontalalignment'), ...
                                 'verticalalignment', get(L.h(d), 'verticalalignment'))
                         else
@@ -228,10 +237,21 @@ classdef DisplayLabels < xplr.GraphNode
             switch get(L.D.V.hf, 'SelectionType')
                 case 'normal'
                     % move the label; if it is not moved, change active dim
-                    label_move(L, dim_id, obj)
+                    label_move(L, dim_id)
             end
         end
-        function label_move(L, dim_id, obj)
+        function label_move(L, dim_id, do_swap)
+            % function label_move(L, dim_id, do_swap)
+            %---
+            % Input:
+            % - dim_id  identifier of the dimension of the label to move
+            % - do_swap if this dimension is in x and is moved to y, allow
+            %           swapping with elements that are in y (this results
+            %           for example in transposing images)
+
+            % input
+            if nargin<3, do_swap = true; end
+
             % prepare for changing organization
             [prev_layout_id, layout_id_d, layout_id] = deal(L.D.layout_id_all); % previous, previous without d, current
             d_layout = layout_id.dim_location(dim_id);
@@ -243,13 +263,12 @@ classdef DisplayLabels < xplr.GraphNode
             % -> remember the current dimension in these location for a
             % swap
             xy_dim_id = [layout_id_d.xy, layout_id_d.yx];
-            if strcmp(L.D.display_mode, 'image') 
+            if strcmp(L.D.display_mode, 'image')
                 color_dim_id = layout_id_d.merged_data;
             else
-                color_dim_id = []; 
+                color_dim_id = [];
             end
-            
-            
+
             % data
             sz = L.D.slice.sz;
             ok_dim = (sz>1);
@@ -266,8 +285,8 @@ classdef DisplayLabels < xplr.GraphNode
             x_thr(x_layout == dim_id) = [];
             x_layout(x_layout == dim_id) = [];        % remove dimension d
             ok_x = ismember(x_layout, dim_ids_ok);
-            x_thr(~ok_x) = NaN;        % make it impossible to insert to the right of a singleton or non-present dimension
-            if strcmp(d_layout, 'y')                                     % refine intervals in case of swapping
+            x_thr(~ok_x) = NaN;             % make it impossible to insert to the right of a singleton or non-present dimension
+            if do_swap && strcmp(d_layout, 'y')  % refine intervals in case of swapping
                 % not only x insertions, but also x/y swaps are possible
                 % for example:
                 %      pos =    0   x           x               1
@@ -290,7 +309,7 @@ classdef DisplayLabels < xplr.GraphNode
             y_layout(y_layout == dim_id) = [];        % remove dimension d
             ok_y = ismember(y_layout, dim_ids_ok);
             y_thr(~ok_y) = NaN;             % make it impossible to insert to the right of a singleton or non-present dimension
-            if strcmp(d_layout, 'x')
+            if do_swap && strcmp(d_layout, 'x')
                 % not only y insertions, but also x/y swaps are possible
                 nok_y = sum(ok_y);
                 pos = [0, y_thr(ok_y), 1];
@@ -304,33 +323,68 @@ classdef DisplayLabels < xplr.GraphNode
             end
             y_thr = [-Inf, row(y_thr)];
                         
-            % make sure label will not be covered by data display
-            uistack(obj, 'top')
-            % move
+            % moving out of the graph to the "filter" area
+            view_control = L.D.V.C; % what a nice piece of code isn't it!?
+            do_filter = false;
+
+            % label object, make sure it will not be covered by data display
             L.moving_dim = L.D.slice.dimension_number(dim_id);
+            obj = L.h(L.moving_dim);
+            uistack(obj, 'top')
+
+            % move
             L.moving_clone = copyobj(obj, L.ha);
             set(L.moving_clone, 'color', [1, 1, 1]*.6, 'edgecolor', 'none', 'BackgroundColor', 'none')
             uistack(L.moving_clone, 'bottom')
-            moved = fn_buttonmotion(@move_label, L.D.V.hf, 'moved?');
-            
+            % (execute movelabel once: this is needed when L.labelMove is
+            % called from xplr.viewcontrol.move_filtered_dimension and
+            % mouse cursor is actually at a different position than the
+            % label)
+            movelabel
+            % (execute movelabel upon mouse motion)
+            moved = fn_buttonmotion(@move_label, L.D.V.hf, 'moved?', 'pointer', 'hand');
+
             function move_label
-                p = get(L.ha, 'currentpoint');
-                p = fn_coordinates(L.ha, 'a2c', p(1, 1:2)', 'position'); % convert to 'normalized' unit
+                p = get(L.ha,'currentpoint');
+                p = p(1, 1:2)';
+                p_fig = fn_coordinates(L.ha, 'a2p', p, 'position'); % convert to 'normalized' unit in parent panel
+                p = fn_coordinates(L.ha, 'a2c', p, 'position');    % convert to 'normalized' unit in axes
                 % move object
                 set(obj, 'position', p)
+                % special: going outside of graph, in the controls area
+                % -> filter dimension, new layout has no more dimension dimID
+                if p_fig(1) < 0
+                    if ~do_filter
+                        do_filter = true;
+                        view_control.show_inoperant_filter(dim_id)
+                    end
+                else
+                    if do_filter
+                        do_filter = false;
+                        view_control.remove_inoperant_filter(dim_id)
+                    end
+                end
+                % immediate display update
+                immediate_display = L.do_immediate_display;
                 % update organization and object location
                 new_layout_id = layout_id_d;
-                if p(2) <= 0 && p(2) <= p(1)
+                if p_fig(1) < -2
+                    % nothing to do: newlayout_id is already the current
+                    % layout without dimension d
+                    % however we cannot perform a complete display update
+                    % because the slice is not recomputed yet
+                    immediate_display = false;
+                elseif p(2) <= 0 && p(2) <= p(1)
                     % insert in x
                     idx = find(p(1) >= x_thr, 1, 'last'); % never empty thanks to the -Inf
                     % x/y swap rather than insert?
-                    if strcmp(d_layout, 'y')
-                        do_swap = ~mod(idx, 2);
-                        idx = ceil(idx/2);
+                    if do_swap && strcmp(d_layout, 'y')
+                        is_swap = ~mod(idx, 2);
+                        idx = ceil(idx / 2);
                     else
-                        do_swap = false;
+                        is_swap = false;
                     end
-                    if do_swap
+                    if is_swap
                         new_layout_id.x = [layout_id_d.x(1:idx-1), dim_id, layout_id_d.x(idx+1:end)];
                         new_layout_id.y = [layout_id_d.y(1:didx-1), layout_id_d.x(idx), layout_id_d.y(didx:end)];
                     else
@@ -349,28 +403,26 @@ classdef DisplayLabels < xplr.GraphNode
                     % insert in y
                     idx = find(1 - p(2) >= y_thr, 1, 'last'); % never empty thanks to the +Inf
                     % x/y swap rather than insert?
-                    if strcmp(d_layout, 'x')
-                        do_swap = ~mod(idx, 2);
-                        idx = ceil(idx/2);
+                    if do_swap && strcmp(d_layout,'x')
+                        is_swap = ~mod(idx, 2);
+                        idx = ceil(idx / 2);
                     else
-                        do_swap = false;
+                        is_swap = false;
                     end
-                    if do_swap
-                        new_layout_id.x = [layout_id_d.x(1:didx-1), layout_id_d.y(idx), layout_id_d.x(didx:end)];
-                        new_layout_id.y = [layout_id_d.y(1:idx-1), dim_id, layout_id_d.y(idx+1:end)];
+                    if is_swap
+                        new_layout_id.x = [new_layout_id.x(1:didx-1), new_layout_id.y(idx), new_layout_id.x(didx:end)];
+                        new_layout_id.y = [new_layout_id.y(1:idx-1), dim_id, new_layout_id.y(idx+1:end)];
                     else
                         new_layout_id.y = [new_layout_id.y(1:idx-1), dim_id, new_layout_id.y(idx:end)];
                     end
-                else
-                    % xy or yx
-                    if p(1) >= p(2) || p(1) >= (1-p(2))
-                        % xy arrangement is more usual than yx, therefore
-                        % give it more 'space
-                        new_layout_id.xy = dim_id;
-                        new_layout_id.yx = [];
+                elseif any(p>=1)
+                    % xy and yx
+                    if p(2) >= p(1)
+                        % (zone above the graph)
+                        [new_layout_id.xy, new_layout_id.yx] = deal(dim_id, []);
                     else
-                        new_layout_id.xy = [];
-                        new_layout_id.yx = dim_id;
+                        % (zone to the right of the graph)
+                        [new_layout_id.xy, new_layout_id.yx] = deal([], dim_id);
                     end
                     if xy_dim_id
                         % move away dimension that was occupying xy or yx
@@ -378,12 +430,18 @@ classdef DisplayLabels < xplr.GraphNode
                         tmp = new_layout_id.(d_layout);
                         new_layout_id.(d_layout) = [tmp(1:didx-1), xy_dim_id, tmp(didx:end)];
                     end
+                else
+                    % no change in layout, return
+                    % note that there is no more zone for yx!, meaning that
+                    % this display option is no longer accessible, it
+                    % seemed to be too useless
+                    return
                 end
                 % update organization (-> will trigger automatic display
                 % update)
                 if ~isequal(new_layout_id, layout_id)
                     layout_id = new_layout_id;
-                    L.D.set_layout_id(layout_id, L.do_immediate_display)
+                    L.D.set_layout_id(layout_id, immediate_display)
                 end
                 drawnow update
             end
@@ -396,6 +454,10 @@ classdef DisplayLabels < xplr.GraphNode
                 % label was not moved, make d the active x or y dimension
                 % if appropriate
                 make_dim_active(L.D, dim_id, 'toggle')
+            elseif do_filter
+                % apply the filter! -> this will cause a reslice and  a
+                % global change in dimensions
+                view_control.activate_inoperant_filter(dim_id)
             elseif isequal(layout_id, prev_layout_id)
                 % update label positions once more to put the one for dimension
                 % d in place, but keep the "non-so-meaningful" coordinate

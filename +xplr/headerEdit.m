@@ -8,7 +8,7 @@ properties
     dat
     sz
     nd
-    
+
     % header under construction
     cur_head = struct('sub_labels', cell(1,0), 'label', [], ...
         'unit', [], 'start', [], 'scale', [], 'values', [], ...
@@ -562,21 +562,21 @@ function done(E)
                     );
             end
             E.header(i) = xplr.Header( ...
-                dimlabel, E.sz(i), head.start*conversion, ...
-                head.scale*conversion ...
+                dimlabel, E.sz(i), head.scale*conversion, ...
+                head.start*conversion ...
                 );
         end
     end
-    
+
     % close figure -> calling editHeader function can proceed
     delete(E.hf)
     drawnow
-    
+
     % register headers to the bank
     if ~isempty(E.header)
         xplr.Bank.register_headers(E.header)
     end
-    
+
     % execute callback if any
     if ~isempty(E.callback)
         E.callback(E.header);

@@ -4,22 +4,20 @@ classdef DisplayNavigation < xplr.GraphNode
 % These can control the following elements:
 % - point selection left button click to move the cross in all visible
 %                   dimensions
-% - ROIselections   drag with right button to make new selections in
+% - ROI selections  drag with right button to make new selections in
 %                   the N.selection_dim dimension(s); use also the Selection
 %                   menu on the top and selection context menus that appear
 %                   when right-clicking on a displayed selection
-% - zoom            zoom can be controlled by different actions, but they
-%                   do not all affect the same dimensions!
-%   zoom in/out in internal dimensions  with the scroll wheel
-%   zoom reset in internal dimensions   left double-click
-%   zoom in, automatic dimension(s)     drag and make a rectangle with the
-%                   left mouse to zoom in: the affected dimensions will be
-%                   automatically determined based on where there seemed to
-%                   be an intended change
-%   zoom in/out/reset in specific dimension     select the label of the
-%                   intended dimension to make it active and make a zooming
-%                   slider appear, then drag the edges of the slider or
-%                   double-click on it to reset zoom
+% - zoom            zoom can be controlled by different actions, the
+%                   affected dimensions are detected automatically:
+%                   - with the scroll wheel
+%                   - drag the mouse left button and draw rectangle region
+%                     where to zoom in
+%                   - double-click with the mouse left button to reset zoom
+%                   - select the label of the intended dimension to make it
+%                     active and make a zooming slider appear, then drag
+%                     the edges of the slider or double-click on it to
+%                     reset zoom
 
     properties (SetAccess='private')
         D                                       % parent xplr.viewdisplay
@@ -45,7 +43,7 @@ classdef DisplayNavigation < xplr.GraphNode
         cross_alpha = .5;
         selection_dim_id          % dimensions to which these selections apply, identified by its id
         selection_2d_shape = 'ellipse'; % 'poly', 'free', 'rect', 'ellipse', 'ring', 'segment', 'openpoly', 'freeline'
-        selection_round_1d_measure = true; 
+        selection_round_1d_measure = true;
         selection_show = 'shape+name';
         selection_do_edit = false
         selection_prompt_name = false
@@ -151,21 +149,15 @@ classdef DisplayNavigation < xplr.GraphNode
         function move_clip(N)
             switch get(N.hf, 'selectiontype')
                 case 'normal'       % change clip
-                    clip0 = N.D.clip;
+                    clip0 = row(N.D.current_clip);
                     e0 = diff(clip0);
                     clip_center = N.D.clipping.center;
-                    switch N.D.clipping.adjust
-                        case 'none'
-                            % nothing
-                        otherwise
-                            clip_center = 0;
-                    end
                     if ~isempty(clip_center), clip0 = clip_center + [-.5, .5]*e0; end
                     p0 = get(N.hf, 'currentpoint');
                     ht = uicontrol('style', 'text', 'position', [2, 2, 200, 17], 'parent', N.hf);
                     % change clip
                     move_clipsub() % this displays the bottom-left numbers
-                    fn_buttonmotion(@move_clipsub, N.hf)
+                    fn_buttonmotion(@move_clipsub, N.hf, 'pointer', 'cross')
                     delete(ht)
                 case 'open'         % use default clipping
                     autoClip(N.D)
@@ -175,6 +167,9 @@ classdef DisplayNavigation < xplr.GraphNode
                 p = get(N.hf, 'currentpoint');
                 dp = p - p0;
                 if ~isempty(clip_center), dp = [-1, 1]*(dp(2)-dp(1))/2; end
+                % (tolerance to detect motion)
+                tol = 2;
+                dp = dp - (sign(dp) .* min(tol, abs(dp)));
                 FACT = 1/100;
                 clip = clip0 + dp*(e0*FACT);
                 % it might be that we have diff(clip)<=0 here! apply some
@@ -185,6 +180,11 @@ classdef DisplayNavigation < xplr.GraphNode
                     %e = thr*exp(e/thr-1); % goes from thr for e=thr to 0 for e=-Inf
                     e = thr^2 / (2*thr-e); % goes from thr for e=thr to 0 for e=-Inf
                     clip = mean(clip) + [-.5, .5]*e;
+                    if clip(1) < clip0(1)
+                        clip = clip0(1) + [0 1] * e;
+                    elseif clip(2) > clip0(2)
+                        clip = clip0(2) + [-1 0] * e;
+                    end
                 end     
                 % update display
                 set(ht, 'string', sprintf('min: %.3f,  max: %.3f', clip(1), clip(2)))
@@ -193,10 +193,11 @@ classdef DisplayNavigation < xplr.GraphNode
         end
         function cliprange(N, flag)
             % current clip extent
-            clip = N.D.clip;
+            clip = N.D.current_clip;
             m = mean(clip);
             e = diff(clip);
-            
+            if e == 0, return, end % well, we have a problem with the current clip...
+
             % round it to a nice value
             e10 = 10^floor(log10(e));
             e = e / e10;
@@ -213,7 +214,7 @@ classdef DisplayNavigation < xplr.GraphNode
         end
     end
     
-    % axes_click actions
+    % general mouse actions inside the graph
     methods
         function axes_click(N, flag)
             % function axes_click(N)
@@ -229,43 +230,32 @@ classdef DisplayNavigation < xplr.GraphNode
             point_only = strcmp(flag, 'point_only');
             point =  get(N.D.ha, 'CurrentPoint');
             point = point(1, [1, 2])';
-            active_dim = [N.D.active_dim.x, N.D.active_dim.y];
             switch get(N.hf, 'SelectionType')
                 case 'normal'
                     % zoom in or select point
-                    if point_only                        
+                    if point_only
                         do_zoom = false;
                     else
                         rect = fn_mouse(N.ha, 'rectaxp-');
                         do_zoom = any(any(abs(diff(rect, 1, 2))>1e-2));
                     end
-                    if do_zoom
-                        % determine in which dimension to zoom as the most
-                        % exterior dimension(s) where at least 2
-                        % elements are selected
-                        zijk = N.graph.graph_to_zslice(rect);
-                        ijk = N.graph.graph_to_slice(rect);
-                        non_single_ton = logical(diff(round(zijk), 1, 2)); % nd*1 vector
-                        org = N.D.layout;
-                        xy_dim = [org.xy, org.yx];
-                        if non_single_ton(xy_dim)
-                            zoom_dim = xy_dim;
-                        else
-                            x_dim = org.x(find(non_single_ton(org.x), 1, 'last'));
-                            y_dim = org.y(find(non_single_ton(org.y), 1, 'last'));
-                            zoom_dim = [x_dim, y_dim];
-                        end
-                        zoom = ijk(zoom_dim, :)';
-                        for i=1:length(zoom_dim), zoom(:, i) = sort(zoom(:, i)); end
+                    if dozoom
+                        % apply some rules to guess in which dimension the
+                        % user intended to zoom, and which value he wanted
+                        % to zoom in
+                        [zoom_dim, zoom] = N.zoom_in_rect(rect);
                         N.D.zoom_slicer.set_zoom(zoom_dim, zoom)
                     else
                         N.manual_click_move_cross(point);
                     end
                 case 'open'
                     % zoom reset
-                    zoom_out_dim = N.D.internal_dim;
-                    zoom = repmat(':', 1, length(zoom_out_dim));
-                    N.D.zoom_slicer.set_zoom(zoom_out_dim, zoom)
+                    % (automatic determination of the intended dimensions
+                    % for changing zoom)
+                    zoom_dim = N.pointed_dimension(point);
+                    % (zoom reset)
+                    zoom = repmat(':', 1, length(zoom_dim));
+                    N.D.zoom_slicer.set_zoom(zoom_dim, zoom)
                 case 'alt'
                     % on right click: create a new selection in N.selection
                     % depending on the parameter selectionshape
@@ -310,7 +300,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 head = N.D.slice.header(d);
                 % no interest in creating and controling a filter for a
                 % dimension with only 1 value
-                if head.n == 1 
+                if head.n == 1
                     N.point_filters{d} = [];
                     continue
                 end
@@ -339,13 +329,75 @@ classdef DisplayNavigation < xplr.GraphNode
             N.cross_center = N.graph.slice_to_graph(ijk);
             update_cross_visibility(N);
         end
-        function ijk = get_point_index_position(N)
+        function ijk = get_point_index_position(N,varargin)
+            % function ijk = getPointIndexPosition(N[,subdimflag][,'global|round'])
+            %---
+            % Position in slice of point selected by the point filters.
+            % Argument subdimflag serves to subselect dimensions of
+            % interest and is any of the following: 'all'
+            % [default],'internal','external','overlap','overlap+external'.
+            % Values for non-selected dimensions will be replaced by ones.
+            % If 'global' flag is set, returns global index instead of
+            % per-dimensions coordinates. Warning: this global index is to
+            % be considered inside an array with only the selected
+            % dimensions.
+            %
+            % Example:
+            % slice size is 10*5*4*3, display mode 'time courses',
+            % dimension positions {'x', 'mergeddata', 'y', 'x'}, current
+            % point [8.1; 5; 3; 2]
+            % getPointIndexPosition(N)  returns [8.1; 5; 3; 2]
+            % getPointIndexPosition(N,'internal')   returns 8.1
+            % getPointIndexPosition(N,'external')   returns [3; 2]
+            % getPointIndexPosition(N,'overlap')    returns 5
+            % getPointIndexPosition(N,'overlap+external')   returns [5; 3; 2]
+            % getPointIndexPosition(N,'clip')       returns [5; 3; 2]
+            % getPointIndexPosition(N,'round')      returns [8; 5; 3; 2]
+            % getPointIndexPosition(N,'global')     returns 348
+            % getPointIndexPosition(N,'internal','global')  returns 8
+            % getPointIndexPosition(N,'external','global')  returns 7
+
             nd = N.D.slice.nd;
             ijk = ones(nd, 1);
-            for d = 1:nd
+
+            % Which dimensions to consider (note that in every case they
+            % will be sorted)
+            dim = 1:nd; do_global = false; do_round = false;
+            for i = 1:length(varargin)
+                switch varargin{i}
+                    case 'all'
+                        dim = 1:nd;
+                    case 'internal'
+                        dim = N.D.internal_dim;
+                    case 'external'
+                        dim = N.D.external_dim;
+                    case 'overlap'
+                        dim = N.D.overlap_dim;
+                    case 'overlap+external'
+                        dim = unique([N.D.overlap_dim, N.D.external_dim]);
+                    case 'clip'
+                        dim = unique(N.D.clip_dim);
+                    case 'global'
+                        do_round = true;
+                        do_global = true;
+                    case 'round'
+                        do_round = true;
+                    otherwise
+                        error('unknown flag')
+                end
+            end
+            for d = dim
                 P = N.point_filters{d};
                 if isempty(P), continue, end
                 ijk(d) = P.index_exact;
+            end
+
+            % Global index?
+            if doround
+                ijk = fn_coerce(round(ijk), 1, N.D.slice.sz');
+            end
+            if doglobal
+                ijk = fn_indices(N.D.slice.sz(dim), ijk(dim), 'i2g');
             end
         end
         function reposition_cross(N)
@@ -393,7 +445,6 @@ classdef DisplayNavigation < xplr.GraphNode
                 axes_click(N)
                 return
             end
-            set(N.hf, 'pointer', fn_switch(il, 1, 'left', 2, 'top', 3, 'cross'))
             
             % prepare a time to pan zoom while moving the cross!
             do_drag_zoom = (il == 1) && isequal(N.D.layout.x, 1) && isequal(N.D.active_dim.x, 1);
@@ -411,8 +462,8 @@ classdef DisplayNavigation < xplr.GraphNode
             end
             point = [];
             
-            anymove = fn_buttonmotion(@move_cross_sub, N.hf, 'moved?');            
-            set(N.hf, 'pointer', 'arrow')
+            pointer = fn_switch(il, 1, 'left', 2, 'top', 3, 'crosshair');
+            anymove = fn_buttonmotion(@move_cross_sub, N.hf, 'moved?', 'pointer', pointer);
             if do_drag_zoom
                 stop(drag_timer)
             end
@@ -485,7 +536,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % do not show cross?
             if ~N.show_cross
                 set(N.cross, 'Visible', 'off')
-                set(N.cross_data_value, 'Visible', 'off')                
+                set(N.cross_data_value, 'Visible', 'off')
                 return
             end           
                         
@@ -511,7 +562,7 @@ classdef DisplayNavigation < xplr.GraphNode
             update_cross_center_visibility(N);
 
             % Cross Value
-            set(N.cross_data_value,'Visible','on') 
+            set(N.cross_data_value,'Visible','on')
             update_value_display(N);
         end
         function update_cross_center_visibility(N)
@@ -519,9 +570,8 @@ classdef DisplayNavigation < xplr.GraphNode
             % cross center as well
             N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
         end
-        function update_value_display(N)            
-            ijk = get_point_index_position(N);
-            idx = fn_indices(N.D.slice.sz, round(ijk));
+        function update_value_display(N)
+            idx = get_point_index_position(N, 'global');
             value = N.D.slice.data(idx);
 
             % Test to display the value as "val(d1,d2,d3,...)=value"
@@ -656,7 +706,7 @@ classdef DisplayNavigation < xplr.GraphNode
             
             fn_propcontrol(N, 'selection_show', ...
                 {'menuval', {'shape+name', 'shape', 'name', 'center'}}, ...
-                {'parent', m, 'label', 'Display mode', 'separator', 'on'});       
+                {'parent', m, 'label', 'Display mode', 'separator', 'on'});
             % selection edit mode not ready yet!!! (need first to convert
             % selection from slice to graph)
             %             fn_propcontrol(N,'selection_do_edit','menu', ...
@@ -816,7 +866,7 @@ classdef DisplayNavigation < xplr.GraphNode
             end
             
             % find filter to connect to
-            header_in = N.D.slice.header(dim); 
+            header_in = N.D.slice.header(dim);
             F = xplr.Bank.get_filter_filter(1, header_in, N); % xplr.filter object
             if isempty(F)
                 % filter needs to be created
@@ -889,25 +939,25 @@ classdef DisplayNavigation < xplr.GraphNode
                     try uistack(N.cross([3, 1, 2]), 'top'), end % can fail when D.resetDisplay is invoked
                 case {'add', 'chg', 'affinity'}
                     % might be several indices
-                    for k=ind, display_one_sel(N, k, 'pos'); end
+                    for k=ind, display_one_sel(N, k, 'chg'); end
                 case 'referentialchanged'
                     % it is not the positions of selections that have
                     % changed, but the referential of these positions
                     % relative to the main display axes: we need then to
                     % recompute the positions of each selection display
                     % inside this new referential
-                    for k = 1:length(N.selection), display_one_sel(N, k, 'pos'), end
+                    for k = 1:length(N.selection), display_one_sel(N, k, 'chg'), end
                 case 'remove'
                     % delete selected selections
                     delete_valid(N.selection_display(ind))
                     N.selection_display(ind) = [];
                     % index (and therefore displayed name) of some other selections have changed
-                    for k = min(ind):length(N.selection), display_one_sel(N, k, 'name'), end
+                    for k = min(ind):length(N.selection), display_one_sel(N, k, 'chg'), end
                 case 'perm'
                     perm = ind;
                     N.selection_display = N.selection_display(perm);
                     % index (and therefore displayed name) of some selections have changed
-                    for k = find(perm~=1:length(N.selection)), display_one_sel(N, k, 'name'), end
+                    for k = find(perm~=1:length(N.selection)), display_one_sel(N, k, 'chg'), end
                 case 'chg&new'
                     N.display_selection('chg', ind{1})
                     N.display_selection('new', ind{2})
@@ -921,55 +971,52 @@ classdef DisplayNavigation < xplr.GraphNode
         end
         function display_one_sel(N, k, flag, varargin)
             % function display_one_sel(D,k,'new')       - selection at index k is new
-            % function display_one_sel(D,k,'pos')       - position has changed
-            % function display_one_sel(D,k,'name')      - name or color has changed
+            % function display_one_sel(D,k,'chg')       - selection has changed
+
+            % new selection?
+            new_sel = fn_switch(flag, 'new', true, 'chg', false);
             
-            % flags: what kind of update
-            [flag_new, flag_pos, flag_name] = fn_flags('new', 'pos', 'name', flag);
-            
+            % position
             % selection in slice coordinates
             sel_ij = N.selection(k);
             name = N.selection_filter.header_out.get_item_names{k};
-            
             % convert selection to displayable polygon
             sel_dim = N.selection_dim;
-            if flag_new || flag_pos
-                selection_axis = [N.D.layout_id.dim_locations{sel_dim}];
-                if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
-                    error('selection cannot be displayed')
-                end
-                % selection shape
-                [polygon, center] = N.D.graph.selection_mark(sel_dim, sel_ij);
-                % additional points for when in selection edit mode
-                if N.selection_do_edit
-                    switch sel_ij.type
-                        case {'poly2D', 'mixed', 'point2D', 'line2D'} % TODO: not sure about 'point2D'
-                            shape_edit_poly = polygon(:, 1:end-1); % the last point is a repetition of the 1st one
-                            shape_edit_info = [];
-                        case 'rect2D'
-                            shape_edit_poly = polygon(:, 1:4); % the 5th point of polygon is a repetition of the 1st one
-                            shape_edit_info = [sel_ij.shapes.points', sel_ij.shapes.vectors'];
-                        case {'ellipse2D', 'ring2D'}
-                            c = sel_ij.shapes.points;
-                            u = sel_ij.shapes.vectors;
-                            e = sel_ij.shapes.logic;
-                            shape_edit_poly = [c-u, c+u];
-                            shape_edit_info = {c, u, e};
-                        otherwise
-                            error programming
-                    end
+            selection_axis = [N.D.layout_id.dim_locations{sel_dim}];
+            if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
+                error('selection cannot be displayed')
+            end
+            % selection shape
+            [polygon, center] = N.D.graph.selection_mark(sel_dim, sel_ij);
+            % additional points for when in selection edit mode
+            if N.selection_do_edit
+                switch sel_ij.type
+                    case {'poly2D', 'mixed', 'point2D', 'line2D'} % TODO: not sure about 'point2D'
+                        shape_edit_poly = polygon(:, 1:end-1); % the last point is a repetition of the 1st one
+                        shape_edit_info = [];
+                    case 'rect2D'
+                        shape_edit_poly = polygon(:, 1:4); % the 5th point of polygon is a repetition of the 1st one
+                        shape_edit_info = [sel_ij.shapes.points', sel_ij.shapes.vectors'];
+                    case {'ellipse2D', 'ring2D'}
+                        c = sel_ij.shapes.points;
+                        u = sel_ij.shapes.vectors;
+                        e = sel_ij.shapes.logic;
+                        shape_edit_poly = [c-u, c+u];
+                        shape_edit_info = {c, u, e};
+                    otherwise
+                        error programming
                 end
             end
-            
+
+            % name
+            name_rotation = fn_switch(isscalar(N.selectiondimID) && length (name)>3, 45, 0);
+
             % color
-            if flag_new || flag_name
-                colors = fn_colorset;
-                col = colors(mod(k-1, size(colors, 1)) + 1, :);
-                namerotation = fn_switch(isscalar(N.selection_dim_id) && length(name)>3, 45, 0);
-            end
-            
+            colors = fn_colorset;
+            col = colors(mod(k-1, size(colors, 1)) + 1, :);
+
             % Create / update objects
-            if flag_new
+            if new_sel
                 hl = struct('shape', [], 'label', [], 'cross', [], 'handles', []);
                 % selection shape
                 if strfind(N.selection_show, 'shape')
@@ -1001,18 +1048,17 @@ classdef DisplayNavigation < xplr.GraphNode
                 end            
             else
                 hl = N.selection_display(k);
-                if flag_pos
-                    set(hl.label, 'position', center)
-                    set(hl.shape, 'xdata', polygon(1, :), 'ydata', polygon(2, :))
-                    set(hl.cross, 'xdata', center(1), 'ydata', center(2))
-                    if N.selection_do_edit
-                        set(hl.handles, 'xdata', shape_edit_poly(1, :), 'ydata', shape_edit_poly(2, :), ...
-                            'UserData', shape_edit_info);
-                    end
-                elseif flag_name
-                    set(hl.label, 'string', name, 'rotation', namerotation)
-                    set(struct_to_array(hl), 'color', col)
+                % update position
+                set(hl.label, 'position', center)
+                set(hl.shape, 'xdata', polygon(1, :), 'ydata', polygon(2, :))
+                set(hl.cross, 'xdata', center(1), 'ydata', center(2))
+                if N.selection_do_edit
+                    set(hl.handles, 'xdata', shape_edit_poly(1, :), 'ydata', shape_edit_poly(2, :), ...
+                        'UserData', shape_edit_info);
                 end
+                % update name
+                set(hl.label, 'string', name, 'rotation', namerotation)
+                set(struct_to_array(hl), 'color', col)
             end
         end
         function set.selection_show(N, value)
@@ -1131,7 +1177,7 @@ classdef DisplayNavigation < xplr.GraphNode
                                 idx = idx(1); %#ok<*ASGLU>
                                 if idx==1 && ~fn_ismemberstr(shapetype, {'line2D', 'openpoly2D'})
                                     % need to move both the first and last point (which is a repetition of the first)
-                                    idx=[1, size(polymark, s2)]; 
+                                    idx=[1, size(polymark, s2)];
                                 end 
                             else
                                 % closest segment (in fact, closest line)
@@ -1288,7 +1334,7 @@ classdef DisplayNavigation < xplr.GraphNode
         end
         function selection_load(N, f_name)
             if nargin < 2
-                f_name = fn_getfile('*.xpls', 'Select selections file'); 
+                f_name = fn_getfile('*.xpls', 'Select selections file');
                 if isequal(f_name,0), return, end
             end
             try
@@ -1300,8 +1346,79 @@ classdef DisplayNavigation < xplr.GraphNode
         end
    end
 
-    % Slider and scroll wheel callbacks: change zoom
+    % Zoom (left mouse, slider and scroll wheel)
     methods
+        function zoom_dim = pointed_dimension(N, point)
+            % automatic determination of the intended dimensions for
+            % changing zoom: apply to the most internal dimensions where we
+            % are not ouf of display
+            in_dim = ~N.is_point_out_of_display(point, true);
+            % case of image display: if point is outside image in either of
+            % the 2 dimensions, zoom in neither of the 2
+            internal_dim = N.D.internal_dim;
+            in_dim(internal_dim) = all(in_dim(internal_dim));
+            % most internal x and y dimensions where we are not out of
+            % display
+            org = N.D.layout;
+            zoom_dim = [org.x(find(in_dim(org.x), 1, 'first')), ...
+                org.y(find(in_dim(org.y), 1, 'first'))];
+            % if empty, grid (xy or yx) dimension
+            if isempty(zoom_dim)
+                zoom_dim = [org.xy, org.yx];
+            end
+        end
+        function [zoom_dim, zoom] = zoom_in_rect(N, rect)
+            % determine in which dimension to zoom and zoom values
+            %
+            % Input:
+            % - rect    nd*2 array, first and second point selected by the
+            %           mouse
+            %
+            % Ouput:
+            % - zoom_dim    dimension(s) in which to zoom in
+            % - zoom        zoom values in this(these) dimension(s)
+
+            zijk = N.graph.graph_to_zslice(rect);  % nd*2
+
+            % a valid zoom-in selection in dimension d must be a segment of
+            % length greater than 1
+            valid_dim = (abs(diff(zijk, 1, 2)) > 1);
+
+            % yet for grid display it is more complicated because we want a
+            % selection whose size is greater than 1 in both x and y
+            org = N.D.layout;
+            xydim = [org.xy, org.yx];
+            if ~isempty(xydim)
+                st = N.D.graph.steps;
+                valid_dim(xydim) = all(abs(diff(rect,1,2)) > 1 ./ [st.xy_n_row; st.xy_n_col]);
+            end
+
+            % zoom_dim will be the most exterior valid dimension for
+            % zooming in
+            if valid_dim(xy_dim)
+                % zoom into 'grid dimension'
+                zoom_dim = xy_dim;
+                % we want to zoom only on grid elements that are strictly
+                % inside the rectangle
+                zoom = zijk(zoom_dim,:)';
+            else
+                % zoom into 'regular dimension'
+                xdim = org.x(find(valid_dim(org.x), 1, 'last'));
+                ydim = org.y(find(valid_dim(org.y), 1, 'last'));
+                zoom_dim = [xdim, ydim];
+                % zoom value in zslice: rounding if exterior dimensions;
+                % rounding is achieved by setting edges at an "integer +
+                % .5" value that will be rounded later to "integer + 1" and
+                % an "integet + .5 - 1e-6" that will be rounded later to
+                % "integer"
+                zoom = sort(zijk(zoom_dim,:), 2)'; % 2*nzd
+                external_dim = ~ismember(zoom_dim, N.D.internal_dim);
+                zoom(:,external_dim) = round(zoom(:,external_dim) - .5) + [.5; .5-1e-6];
+            end
+
+            % convert from zslice to slice
+            zoom = N.graph.zslice_to_slice(zoom', false, zoom_dim)'; % 2*nzd
+        end
         function chg_zoom(N, f, obj)
             dim = N.D.active_dim.(f);
             if isempty(dim), return, end
@@ -1316,29 +1433,43 @@ classdef DisplayNavigation < xplr.GraphNode
                 set_zoom(Z, obj.value)
             end
         end
-        function Scroll(N, nscroll)
+        function Scroll(N, n_scroll)
+            persistent last_tic last_zoom_dim
+
             p = get(N.D.ha, 'currentpoint');
             p = p(1, 1:2);
             origin = row(N.graph.graph_to_slice(p)); % current point in data coordinates
-            zoom_factor = 1.5^nscroll;
+            zoom_factor = 1.5^n_scroll;
             
-            zoom_dim = N.D.internal_dim;            
+            % if we keep zooming from the same point, apply to the same
+            % dimension if it is not the same dimensions that are pointed
+            % any more
+            if ~isempty(last_tic) && toc(last_tic) < .6
+                zoom_dim = last_zoom_dim;
+            else
+                % automatic determination of the intended dimensions for
+                % changing zoom
+                zoom_dim = N.pointed_dimension(p);
+            end
+            [last_tic, last_zoom_dim] = deal(tic, zoom_dim);
             
             % This commented code had been put to replace the line below,
             % but it seems that the effect is less intuitive. Let's go back
             % to the previous code and see if we get errors or unintuitive
             % behaviors to decide what to do. (TD 12/11/2019)
-            %             if nscroll<0 && ~any([N.D.layout.xy N.D.layout.yx])
+            %             if n_scroll<0 && ~any([N.D.layout.xy N.D.layout.yx])
             %                 % it does not make sense to zoom-in in a dimensions which
             %                 % does not fill its available space due to aspect ratio
             %                 % constraints
             %                 dim(N.graph.filling(dim)<1) = [];
             %             end
-            %             zoom = N.graph.get_zoom(dim); %,'effective');
-            zoom = N.graph.get_zoom(zoom_dim, 'effective');
-            new_zoom = fn_add(origin(zoom_dim), fn_mult(zoom_factor, fn_subtract(zoom, origin(zoom_dim))));
-            %fprintf('%.2f -> %.2f\n',diff(zoom),diff(new_zoom))
-            N.D.zoom_slicer.set_zoom(zoom_dim, new_zoom)
+            %             zoom = N.graph.getZoom(dim); %,'effective');
+            zoom = N.graph.getZoom(zoom_dim, 'effective');
+            origin_dim = origin(zoom_dim);
+            origin_dim = fn_coerce(origin_dim, zoom);
+            new_zoom = fn_add(origin_dim, fn_mult(zoom_factor, fn_subtract(zoom, origin_dim)));
+            %fprintf('%.2f -> %.2f\n', diff(zoom), diff(new_zoom))
+            N.D.zoom_slicer.setZoom(zoom_dim, new_zoom)
         end
     end
 
@@ -1396,7 +1527,7 @@ classdef DisplayNavigation < xplr.GraphNode
             
             output = is_index_out_of_display(N, ijk, per_dim);
         end
-        function output = is_index_out_of_display(N, ijk, per_dim) 
+        function output = is_index_out_of_display(N, ijk, per_dim)
             % input
             if nargin<3, per_dim = false; end
             if isvector(ijk) && size(ijk, 2) ~= N.D.slice.nd

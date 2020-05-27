@@ -1,9 +1,10 @@
-classdef Header < hgsetget
-    % function H = header(label[,unit],n,start,scale)   [measure]
-    % function H = header(label,unit,n[,start,scale])   [measure]
-    % function H = header(label,n)                      [categorical]
-    % function H = header([label,]sub_labels,values)     [categorical]
-    % function H = header({args header 1},{args header 2},...)
+classdef Header < handle
+    % function H = header(label, n, unit, scale[, start])   [measure]
+    % function H = header(label, unit, n, scale[, start])   [measure]
+    % function H = header(dim_label, n, scale[, start])     [measure]
+    % function H = header(label, n)                         [categorical]
+    % function H = header([label,] sub_labels, values)      [categorical]
+    % function H = header({args header 1}, {args header 2}, ...)
     %---
     % Container for header information in a single dimension.
     %
@@ -60,17 +61,31 @@ classdef Header < hgsetget
     % Constructor, copy, display
     methods
         function H = Header(varargin)
+            % function H = header(label,n,unit,scale[,start])   [measure]
+            % function H = header(label,unit,n,scale[,start])   [measure]
+            % function H = header(dimlabel,n,scale[,start])     [measure]
+            % function H = header(label,n)                      [categorical]
+            % function H = header([label,]sublabels,values)     [categorical]
+            % function H = header({args header 1},{args header 2},...)
+            % function H = header()
+            % function H = header(n)
+            % function H2 = header(H1)
+
             % special cases
-            if nargin == 0        
-                % empty input -> empty header (nd=1 !)
+            if nargin == 0
+                % empty input -> empty, invalid, header (but not empty
+                % array of headers: use xplr.header.empty(size) to define
+                % an empty array of headers)
                 return
             elseif nargin == 1 && isnumeric(varargin{1})
+                % array of empty headers
                 n = varargin{1};
                 if n>1
                     H(n) = xplr.Header();
                 end
                 return
             elseif nargin==1 && isa(varargin{1}, 'xplr.Header')
+                % copy
                 H1 = varargin{1};
                 H = xplr.Header(length(H1));
                 H.copy_in(H1)
@@ -95,98 +110,11 @@ classdef Header < hgsetget
             end
                 
             % categorical?
-            H.categorical = (nargin<3) || (nargin==3 && ~isnumeric(varargin{3}));
+            H.categorical = (nargin<3) || (nargin==3 && ~isnumeric(varargin{2}) && ~isnumeric(varargin{3}));
             if H.categorical
-                % categorical
-                % input: is a global name given? is table empty?
-                if nargin == 2
-                    [lab, table_or_n] = deal(varargin{:});
-                    if ischar(lab) && isscalar(table_or_n) && isnumeric(table_or_n)
-                        % only a number of samples, no table description
-                        table = cell(table_or_n, 0);
-                        name = lab;
-                        lab = {};
-                    else
-                        table = table_or_n;
-                        name = [];
-                    end
-                elseif nargin == 3
-                    [name, lab, table] = deal(varargin{:});
-                else
-                    error 'not enough input arguments'
-                end
-                % check size of table and assign to 'values' property
-                if ischar(lab), lab = {lab}; end
-                n_label = length(lab);
-                if (n_label == 1 && ~isvector(table)) || (n_label > 1 && size(table, 2) ~= n_label)
-                    error 'values should be a cell array with as many columns as there are labels'
-                elseif n_label == 1
-                    table = column(table);
-                end
-%                 if n_label==0 % if table is empty, create one column with label 'index'
-%                     lab = {'index'};
-%                     table = num2cell((1:size(table,1))');
-%                 end
-                H.values = table;
-                H.n = size(table,1);
-                % set sub_labels
-                if isa(lab,'xplr.DimensionLabel')
-                    H.sub_labels = lab;
-                else
-                    % need to infer the class of each label
-                    if H.n == 0 && n_label > 0
-                        error 'no elements, cannot infer the type of label(s), please specify directly by using dimension_label object(s)'
-                    end
-                    for i = 1:n_label
-                        xi = table{1,i};
-                        type = xplr.DimensionLabel.infer_type(xi);
-                        H.sub_labels(i) = xplr.DimensionLabel(lab{i}, type);
-                    end
-                end
-                % set summary label
-                if ~isempty(name)
-                    H.label = name;
-                else
-                    H.label = fn_strcat({H.sub_labels.label}, '*');
-                end
+                build_categorical_header(H,varargin{:})
             else
-                % measure
-                % set unique sublabel and label
-                lab = varargin{1};
-                if isa(lab, 'xplr.DimensionLabel')
-                    if ~strcmp(lab.type,'numeric')
-                        error 'type of dimension_label must be ''numeric'' for non-categorical header'
-                    end
-                    H.sub_labels = lab;
-                else
-                    % is a unit given?
-                    if ischar(varargin{2})
-                        unit = varargin{2};
-                        varargin(2) = [];
-                        if length(unit) > 1 && unit(end) == '+'
-                            % check the bank for other linked units
-                            unit(end) = [];
-                            [~, ~, measure] = xplr.Bank.get_unit_info(unit);
-                            if ~isempty(measure), unit = measure.units; end
-                        end
-                        H.sub_labels = xplr.DimensionLabel(lab, 'numeric', unit);
-                    else
-                        H.sub_labels = xplr.DimensionLabel(lab, 'numeric');
-                    end
-                end
-                H.label = H.sub_labels.label;
-                % set number of samples, start and scale
-                switch length(varargin)
-                    case 2
-                        H.n = varargin{2};
-                        [H.start, H.scale] = deal(1);
-                    case 4
-                        [H.n, H.start, H.scale] = deal(varargin{2:4});
-                    otherwise
-                        error 'incorrect header specification'
-                end
-%                 % set values
-%                 H.values = num2cell(H.start + (0:H.n-1)'*H.scale);
+                build_measure_header(H,varargin{:})
             end
         end
         function disp(H)
@@ -249,6 +177,109 @@ classdef Header < hgsetget
         end
     end
     methods (Access='protected')
+        function build_categorical_header(H, varargin)
+            % function H = header(label, n)                      [categorical]
+            % function H = header([label,] sublabels, values)    [categorical]
+
+            % input: is a global name given? is table empty?
+            if length(varargin)==2
+                [lab, table_or_n] = deal(varargin{:});
+                if ischar(lab) && isscalar(table_or_n) && isnumeric(table_or_n)
+                    % only a number of samples, no table description
+                    table = cell(table_or_n, 0);
+                    name = lab;
+                    lab = {};
+                else
+                    table = table_or_n;
+                    if isnumeric(table), table = num2cell(table); end
+                    name = [];
+                end
+            elseif length(varargin)==3
+                [name, lab, table] = deal(varargin{:});
+            else
+                error 'not enough input arguments'
+            end
+            % check size of table and assign to 'values' property
+            if ischar(lab), lab = {lab}; end
+            n_label = length(lab);
+            if (n_label==1 && ~isvector(table)) || (n_label>1 && size(table,2)~=n_label)
+                error 'values should be a cell array with as many columns as there are labels'
+            elseif n_label==1
+                table = column(table);
+            end
+            %                 if n_label==0 % if table is empty, create one column with label 'index'
+            %                     lab = {'index'};
+            %                     table = num2cell((1:size(table,1))');
+            %                 end
+            H.values = table;
+            H.n = size(table,1);
+            % set sublabels
+            if isa(lab,'xplr.dimensionlabel')
+                H.sub_labels = lab;
+            else
+                % need to infer the class of each label
+                if H.n==0 && n_label>0
+                    error 'no elements, cannot infer the type of label(s), please specify directly by using dimensionlabel object(s)'
+                end
+                for i=1:n_label
+                    xi = table{1,i};
+                    type = xplr.dimension_label.infer_type(xi);
+                    H.sub_labels(i) = xplr.dimension_label(lab{i}, type);
+                end
+            end
+            % set summary label
+            if ~isempty(name)
+                H.label = name;
+            else
+                H.label = fn_strcat({H.sub_labels.label}, '*');
+            end
+        end
+        function build_measure_header(H,varargin)
+            % function H = header(label, n, unit, scale[, start])   [measure]
+            % function H = header(label, unit, n, scale[, start])   [measure]
+            % function H = header(dimlabel, n, scale[, start])      [measure]
+
+            % input -> set number of samples, scale and start
+            lab = varargin{1};
+            unit_ = [];
+            H.scale = []; H.start = [];
+            for i = 2:length(varargin)
+                a = varargin{i};
+                if ischar(a)
+                    unit_ = a;
+                elseif isempty(H.n)
+                    H.n = a;
+                elseif isempty(H.scale)
+                    H.scale = a;
+                else
+                    H.start = a;
+                end
+            end
+            if isempty(H.n), error 'number of samples not defined', end
+            if isempty(H.scale), H.scale = 1; end
+            if isempty(H.start), H.start = 0; end
+
+            % set label, which is also the unique sublabel
+            if isa(lab, 'xplr.DimensionLabel')
+                assert(strcmp(lab.type,'numeric'), 'type of DimensionLabel must be ''numeric'' for non-categorical header')
+                assert(isempty(unit_), 'if first input is a DimensionLabel object, unit must not be re-defined')
+                H.sub_labels = lab;
+            else
+                % is a unit given?
+                if ~isempty(unit_)
+                    if length(unit_)>1 && unit_(end)=='+'
+                        % check the bank for other linked units
+                        unit_(end) = [];
+                        [~, ~, measure] = xplr.bank.get_unit_info(unit_);
+                        if ~isempty(measure), unit_ = measure.units; end
+                    end
+                    H.sub_labels = xplr.DimensionLabel(lab, 'numeric', unit_);
+                else
+                    H.sub_labels = xplr.DimensionLabel(lab, 'numeric');
+                end
+            end
+            H.label = H.sub_labels.label;
+        end
         function H1 = copy(H)
             H1 = xplr.Header;
             H1.copy_in(H);
@@ -347,18 +378,18 @@ classdef Header < hgsetget
             % is a hash number of the header's label and unit.
             if ~isscalar(H)
                 if ~all([H.is_measure])
-                    id = []; 
+                    id = [];
                     return
                 end
                 id = zeros(size(H));
                 for i=1:numel(H)
-                    id(i) = get_measure_space_id(H(i)); 
+                    id(i) = get_measure_space_id(H(i));
                 end
                 return
             end
             if H.is_measure
                 if isempty(H.measure_space_id)
-                    H.measure_space_id = fn_hash({H.label,H.unit}, 'num'); 
+                    H.measure_space_id = fn_hash({H.label,H.unit}, 'num');
                 end
                 id = H.measure_space_id;
             else
@@ -408,7 +439,7 @@ classdef Header < hgsetget
     
     % List of labels for each item
     methods
-        function str = get_item_names(H, idx)
+        function names = get_item_names(H, idx)
             do_all = (nargin < 2);
             if do_all, idx = 1:H.n; end
             if isempty(H.item_names)
@@ -419,33 +450,40 @@ classdef Header < hgsetget
                     idx_name = find(strcmpi({H.sub_labels.label}, 'name'));
                     if isempty(idx_name), idx_name = 1; end
                     item_values = H.values(:, idx_name);
-                    str = cell(1, n_val);
+                    names = cell(1, n_val);
                     for k=1:n_val
                         val = item_values{idx(k)};
                         if isempty(val)
-                            str{k} = num2str(idx(k));
+                            names{k} = num2str(idx(k));
                         elseif ischar(val)
-                            str{k} = val;
+                            names{k} = val;
                         elseif isnumeric(val) || islogical(val)
-                            str{k} = fn_idx2str(val, ':,');
-                            if length(str{k}) > 12, str{k} = [str{k}(1:10), '...']; end
+                            names{k} = fn_idx2str(val, ':,');
+                            if length(names{k}) > 12, names{k} = [names{k}(1:10), '...']; end
                         elseif iscell(val)
-                            str{k} = fn_strcat(val, ',');
+                            names{k} = fn_strcat(val, ',');
                         else
                             error 'cannot form string from value'
                         end
                     end
                 elseif H.categorical
-                    str = fn_num2str(idx, 'cell')';
+                    names = fn_num2str(idx, 'cell')';
                 else % (measure)
-                    str = fn_num2str(H.start + (idx-1)*H.scale, ['%.4g', H.unit], 'cell')';
+                    names = fn_num2str(H.start + (idx-1)*H.scale, ['%.4g', H.unit], 'cell')';
                 end
-                if do_all, H.item_names = str; end
+                if do_all, H.item_names = names; end
             elseif do_all
-                str = H.item_names;
+                names = H.item_names;
             else
-                str = H.item_names(idx);
+                names = H.item_names(idx);
             end
+        end
+        function name = get_item_name(H,idx)
+            if ~isscalar(idx)
+                error 'call get_item_names method for multiple indices'
+            end
+            names = H.get_item_names(idx);
+            name = names{1};
         end
     end
     

@@ -121,7 +121,9 @@ classdef ZoomFilter < xplr.DataOperand
             elseif head_in.is_measure
                 % if header is a measure, new positions are
                 % straightforward to compute
-                z.header_out = xplr.Header(head_in.sub_labels, n_out, head_in.start + (z.indices_out(1)-1)*head_in.scale, head_in.scale*z.bin);
+                z.header_out = xplr.Header(head_in.sub_labels, n_out, ...
+                    head_in.scale*z.bin, ...
+                    head_in.start + (z.indices_out(1)-1)*head_in.scale);
             elseif head_in.n_column == 0
                 % no values, keep track of index
                 z.header_out = xplr.Header(head_in.label, xplr.DimensionLabel('Index', 'numeric'), num2cell(z.indices_out(:)));

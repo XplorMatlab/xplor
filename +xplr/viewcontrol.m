@@ -60,7 +60,7 @@ classdef ViewControl < xplr.GraphNode
             % (add filters)
             key = 1;
             if any(active)
-                C.dim_action('addfilter', num2cell(find(active)), key) 
+                C.dim_action('addfilter', num2cell(find(active)), key)
             end
         end
     end
@@ -108,7 +108,11 @@ classdef ViewControl < xplr.GraphNode
             item_positions(C, idx)
             if nargout == 0, clear obj, end
         end
-        function rm_item(C, id)
+        function item = get_item(C,id)
+            idx = fn_find(id, {C.items.id});
+            item = C.items(idx);
+        end
+        function remove_item(C,id)
             idx = fn_find(id, {C.items.id});
             delete_valid([C.items(idx).obj])
             C.items(idx) = [];
@@ -160,7 +164,7 @@ classdef ViewControl < xplr.GraphNode
         end
     end
     
-    % Dimensions menu
+    % Dimensions menu and actions
     methods
         function dimension_context_menu(C)
             % init context menu
@@ -227,6 +231,9 @@ classdef ViewControl < xplr.GraphNode
             % function dim_action(C,'addfilter',dim_ids[,key[,active]])
             % function dim_action(C,'rmfilter|showfilter',dim_id)
             % function dim_action(C,'set_active',dim_id,value)
+            % function dimaction(C,'viewdim',dimID)
+            % function dimaction(C,'newwindow',dimID)
+            % function dimaction(C,'newwindow_action',dimID,arg...)
             %---
             % if flag is 'addfilter', dims can be a cell array, to defined
             % several filters at once for example
@@ -278,7 +285,7 @@ classdef ViewControl < xplr.GraphNode
             if ismember(flag, {'addfilter', 'rmfilter', 'viewdim'})
                 % remove filter from the viewcontrol and the bank
                 for filter = current_filters_dim
-                    C.remove_filter(filter);
+                    C.remove_filter_item(filter.dim_id);
                 end
                 
                 % remove filters from the slicer
@@ -354,9 +361,10 @@ classdef ViewControl < xplr.GraphNode
                     active = varargin{1};
                     % show label(s) as enabled/disabled
                     for filter = current_filters_dim
-                        item_idx = fn_find({'filter', filter.dim_id}, {C.items.id});
-                        h_lab = C.items(item_idx).label;
+                        item = C.get_item({'filter', filter.dimID});
+                        hlab = [item.filter_label, item.dimension_label];
                         set(h_lab, 'enable', fn_switch(active, 'inactive', 'off'))
+                        set(item.checkbox, 'value', active)
                         drawnow
                     end
                     % toggle filter active in slicer
@@ -379,7 +387,53 @@ classdef ViewControl < xplr.GraphNode
             % Empty the dimension selection
             set(C.dim_list, 'value', [])
         end
-        function add_filter_item(C, dim_id, F, active)
+    end
+
+    % Filters display
+    methods (Access='private')
+        function remove_filter_item(C, dim_id)
+            % remove the filter from the view_control and the bank
+            % this function does not remove the filter from the slicer
+
+            % if filter is empty, does nothing and leave the function
+            if isempty(dim_id), return, end
+            % get filter
+            id = {'filter', dim_id};
+            F = C.get_item(id).F;
+            % remove filter from the items
+            C.remove_item(id)
+            % remove filter from the lists display
+            % if the filter is private
+            if F.link_key == 0
+                % remove the filter from the combo
+                combo = C.get_private_lists();
+                combo.remove_list(F)
+            else
+                % viewcontrol object C will be unregistered for the users
+                % list of filter F; if this list will become empty, F will
+                % be unregistered from the filters set
+                xplr.Bank.unregister_filter(F,C)
+            end
+        end
+        function F = create_filter_and_item(C, dim_id, key, active, show_new_filter)
+            % create filter or get existing one from the
+            % related public filters set
+            header = C.V.data.header_by_id(dim_id);
+            % if the filter has to be private
+            if key == 0
+                % create private filter
+                F = xplr.FilterAndPoint(header);
+                % show filter in combo
+                if isscalar(dim_id)
+                    combo = C.get_private_lists();
+                    if active, combo.show_list(F), end
+                end
+            else
+                % search for the filter in the bank with key and dimension
+                if nargin<5, show_new_filter = true; end
+                F = xplr.Bank.get_filter_and_point(key, header, C, show_new_filter);
+            end
+
             % panel
             id = {'filter', dim_id};
             [panel, item_idx] = C.new_item(id, 1, 'panel');
@@ -389,26 +443,46 @@ classdef ViewControl < xplr.GraphNode
             % store the filter
             C.items(item_idx).F = F;
             
-            % label
-            label = ['filter ', F.header_in.label, ' (', F.F.slice_fun_str, ')'];
-            h_lab = uicontrol('parent', panel, ...
-                'position', [20, 5, 300, 15], ...
-                'style', 'text', 'string', label, 'horizontalalignment', 'left', ...
+            % filter and dimension labels
+            % (create labels)
+            filter_label_name = uicontrol('parent', panel, ...
+                'style', 'text', 'string', 'filter', 'horizontalalignment', 'left', ...
                 'backgroundcolor', background_color, ...
                 'enable', fn_switch(active, 'inactive', 'off'), ...
-                'buttondownfcn', @(u,e)click_filter_item(C, dim_id, id), ...
-                'uicontextmenu', uicontextmenu(C.V.hf, 'callback', @(m, e)F.context_menu(m)));
-            C.items(item_idx).label = h_lab;
+                'buttondownfcn', @(u,e)click_filter_item(C,dim_id), ...
+                'uicontextmenu', uicontextmenu(C.V.hf, 'callback', @(m,e)F.context_menu(m)));
+            dimension_label = uicontrol('parent', C.hp, ...
+                'style', 'text', 'horizontalalignment', 'left', ...
+                'string', fn_strcat({F.headerin.label}, '-'), ...
+                'buttondownfcn', @(u,e)move_filtered_dimension(C, dim_id), ...
+                ... 'buttondownfcn',@(u,e)click_filter_item(C, dim_id, id), ...
+                'enable', fn_switch(active, 'inactive', 'off'));
+            filter_label_op = uicontrol('parent', panel, ...
+                'style', 'text', 'string', ['(' F.F.slicefunstr ')'], ...
+                'horizontalalignment', 'left', ...
+                'backgroundcolor', background_color, ...
+                'enable', fn_switch(active, 'inactive', 'off'), ...
+                'buttondownfcn', @(u,e)click_filter_item(C, dim_id), ...
+                'uicontextmenu', uicontextmenu(C.V.hf, 'callback', @(m,e)F.context_menu(m)));
+            % (adjust their positions based on their extents)
+            w_name = filter_label_name.Extent(3);
+            w_dim = dimension_label.Extent(3);
+            set(filter_label_name, 'position', [20, 5, w_name, 15])
+            fn_controlpositions(dimension_label, panel, [], [20+w_name-1, 5-1, w_dim, 15])
+            set(filter_label_op, 'position', [20+w_name+w_dim, 5, 300, 15])
+            % (store handles)
+            C.items(itemidx).filter_label = [filter_label_name, filter_label_op];
+            C.items(itemidx).dimension_label = dimension_label;
             
-            % change label upon operation change
+            % change filter label upon operation change
             function check_operation_change(~, e)
                 if strcmp(e.type, 'operation')
-                    label = ['filter ', F.header_in.label, ' (', F.F.slice_fun_str, ')'];
-                    set(h_lab, 'string', label)
+                    label = ['(' F.F.slicefunstr ')'];
+                    set(filter_label_op, 'string', label)
                 end
             end
-            connect_listener(F.F,h_lab, 'ChangedOperation', @check_operation_change);
-            
+            connect_listener(F.F, filter_label_op, 'ChangedOperation', @check_operation_change);
+
             % buttons
             [ii, jj] = ndgrid(-2:2);
             x = min(1, abs(abs(ii) - abs(jj))*.5);
@@ -423,14 +497,14 @@ classdef ViewControl < xplr.GraphNode
             fn_controlpositions(rm_filter_button, panel, [1, .5, 0, .5], [-11, 0, 11, 0]);
             
             % checkbox to disable and enable the filter
-            uicontrol('parent', panel, ...
+            C.items(itemidx).check_box = uicontrol('parent', panel, ...
                 'backgroundcolor', background_color, ...
                 'Style', 'checkbox', 'Value', active, ...
                 'position', [6, 6, 13, 12], ...
                 'callback', @(u,e)C.dim_action('set_active', dim_id, get(u, 'value')));
             
         end
-        function click_filter_item(C, d, id)
+        function click_filter_item(C, dim_id)
             hf = C.V.hf;
             switch get(hf, 'selectiontype')
                 case 'normal'
@@ -447,18 +521,19 @@ classdef ViewControl < xplr.GraphNode
             n_filter = length(idx_filter);
             
             % index and position of selected filter
+            id = {'filter' dimID};
             idx_item = fn_find(id, {C.items.id});
             idx_0 = idx_item - (idx_filter(1) - 1);
             idx_other = setdiff(1:n_filter, idx_0);
             obj = C.items(idx_item).obj;
             pos_0 = get(obj, 'position');
             y_step = 24;
-            
+
             % move
             p0 = get(hf, 'currentpoint');
             p0 = p0(1, 2); % only vertical position matters
             new_idx = [];
-            moved = fn_buttonmotion(@move, hf, 'moved?');
+            moved = fn_buttonmotion(@move, hf, 'moved?', 'pointer', 'hand');
             function move
                 p = get(hf, 'currentpoint');
                 p = p(1, 2);
@@ -480,57 +555,91 @@ classdef ViewControl < xplr.GraphNode
             end
             
             % show filter if there was no move
-            if ~moved, dim_action(C, 'showfilter', d), end
+            if ~moved, dim_action(C, 'showfilter', dim_id), end
         end
     end
     
-    % Filters display
-    methods (Access='private')
-        function remove_filter(C, filter)
-            % remove the filter from the viewcontrol and the bank
-            % this function does not remove the filter from the slicer
+    % Fancy moving dimensions from the filter items to the graph and
+    % vice-versa
+    methods
+        % moving from the filters to the graph: when this happens, finishes
+        % by a call to xplr.displaylabels.labelMove to select where to
+        % locate the dimension in the graph
+        function move_filtered_dimension(C, dim_id)
+
+            % move dimension label only if the filter is active
+            id = {'filter', dim_id};
+            item_idx = fn_find(id, {C.items.id});
+            item = C.items(item_idx);
+            label = item.dimension_label;
+            active = boolean(item.check_box.Value);
+            if ~active, return, end
             
-            % if filter is empty, does nothing and leave the function
-            if isempty(filter), return, end
-            % remove filter from the items
-            C.rm_item({'filter', filter.dim_id})
-            % remove filter from the lists display
-            % if the filter is private
-            if filter.obj.link_key == 0
-                % remove the filter from the combo
-                combo = C.get_private_lists();
-                combo.remove_list(filter.obj)
+            % move
+            hf = fn_parentfigure(C.hp);
+            p0 = get(hf, 'currentpoint');
+            p0 = p0(1, 1:2);
+            pos0 = get(label,'pos');
+            controls_width = C.hp.Position(3);
+            panel = [];
+            
+            fn_buttonmotion(@move_sub, hf, 'pointer', 'hand')
+            function move_sub
+                % once filter has been removed, do not execute this
+                % callback any more
+                if ~active, return, end
+
+                % move label
+                p = get(hf, 'currentpoint'); p = p(1, 1:2);
+                pos = pos0; pos(1:2) = pos0(1:2) + (p-p0);
+                set(label, 'pos', pos)
+
+                % disable filter if we exited the panel by the right side,
+                % and immediately run displaylabel 'labelMove' method to
+                % allow choosing where to position the dimension!!
+                active = (p(1) <= controls_width);
+                if ~active
+                    % stop filtering
+                    % prevent panel of being deleted now as this leads to a
+                    % strange bug when label is deleted or even only hidden!!
+                    panel = item.obj;
+                    set(panel,'visible','off')
+                    C.items(itemidx).obj = [];
+                    C.dimaction('rmfilter', dim_id)
+                    % move dimension label inside graph (note that this
+                    % will call fn_buttonmotion in the same figure, and
+                    % therefore terminate the current fn_buttonmotion)
+                    % we activate immediate display update
+                    if isscalar(dim_id)
+                        L = C.V.D.labels;
+                        mem_do_update = L.do_immediate_display;
+                        L.do_immediate_display = true;
+                        L.label_move(dim_id, false)
+                        L.do_immediate_display = mem_do_update;
+                    end
+                end
+            end
+
+            % and put back at original position when we release the mouse
+            % button!
+            if active
+                set(label, 'pos', pos0)
             else
-                % viewcontrol object C will be unregistered for the users
-                % list of filter F; if this list will become empty, F will
-                % be unregistered from the filters set
-                xplr.Bank.unregister_filter(filter.obj, C)
+                delete(label)
+                delete(panel)
             end
         end
-        function F = create_filter_and_item(C, dim_id, key, active)
-            % create filter or get existing one from the
-            % related public filters set
-            
-            header = C.V.data.header_by_id(dim_id);
-            % if the filter has to be private
-            if key == 0
-                % create private filter
-                F = xplr.FilterAndPoint(header);
-                % show filter in combo
-                if isscalar(dim_id)
-                    combo = C.get_private_lists();
-                    if active, combo.show_list(F), end
-                end
-            else
-                % search for the filter in the bank with key and dimension
-                do_show = true;
-                F = xplr.Bank.get_filter_and_point(key, header, C, do_show);
-            end
-            
-            % add the filter to the items, it is important that
-            % filter.link_key is set before using add_filter_item
-            % TODO: change how the string filter is shifted
-            C.add_filter_item(dim_id, F, active)
+        % moving from the graph to the filters: the methods below will be
+        % called by xplr.displaylabels.labelMove
+        function show_inoperant_filter(C, dim_id)
+            create_filter_and_item(C, dim_id, 1, true, false);
+        end
+        function activate_inoperant_filter(C, dim_id)
+            item = C.get_item({'filter', dim_id});
+            C.V.slicer.add_filter(dim_id, item.F) % slicing will occur
+        end
+        function remove_inoperant_filter(C, dim_id)
+            remove_filter_item(C, dim_id)
         end
     end
     

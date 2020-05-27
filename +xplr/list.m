@@ -16,7 +16,10 @@ classdef List < xplr.GraphNode
         scroll_wheel = 'on'; % 'on', 'off' or 'default'
         selection_prompt_name = 'none'; % 'all', 'groups' or 'none'
     end
-    
+    properties
+        selection_save_file       % name of file for saving current selection
+    end
+
     % Constructor and Destructor
     methods
         function L = List(F, varargin)
@@ -159,11 +162,40 @@ classdef List < xplr.GraphNode
             %                 {'parent',m1,'label','Scroll wheel behavior'});
             %             uimenu(m1,'label','make default in figure', ...
             %                 'callback',@(u,e)set(L,'scroll_wheel','default'));
+
+            % Load/save selections
+            uimenu(m, 'label', 'Load selections...', 'separator', 'on', ...
+                'callback', @(u,e)L.selection_load())
+            uimenu(m, 'label', 'Save selections', 'enable', onoff(~isempty(L.selection_save_file)), ...
+                'callback', @(u,e)L.selection_save(L.selection_save_file))
+            uimenu(m, 'label', 'Save selections as...', ...
+                'callback', @(u,e)L.selection_save())
+        end
+        function selection_save(L, fname)
+            if nargin<2 || isempty(fname)
+                prompt = 'Select file for saving selections';
+                fname = fn_savefile('*.xpls', prompt, L.selection_save_file);
+                if isequal(fname,0), return, end
+            end
+            L.F.save_to_file(fname);
+            L.selection_save_file = fname;
+        end
+        function selection_load(L, fname)
+            if nargin<2
+                fname = fn_getfile('*.xpls','Select selections file');
+                if isequal(fname,0), return, end
+            end
+            try
+                L.F.load_from_file(fname);
+                L.selection_save_file = fname;
+            catch ME
+                errordlg(ME.message)
+            end
         end
         function delete(L)
             delete@xplr.GraphNode(L)
             if ~isvalid(L) && ~isprop(L, 'h_list'), return, end
-            delete_valid(L.h_list,L.h_label)
+            delete_valid(L.h_list, L.h_label)
         end
     end
        
@@ -196,7 +228,7 @@ classdef List < xplr.GraphNode
             % get the current selections
             sel_inds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
             n_sel = length(sel_inds);
-            is_unis_el = false(1, n_sel); 
+            is_unis_el = false(1, n_sel);
             for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling fn_map
             
             % which selections are soft
@@ -423,7 +455,7 @@ classdef List < xplr.GraphNode
         function sel = build_current_selection(L, do_mult_in)
             val = get(L.h_list, 'value');
             if isempty(val), sel = []; return, end
-            if do_mult_in 
+            if do_mult_in
                 n_sel = length(val);
                 sel = xplr.SelectionND(n_sel);
                 for i=1:n_sel
@@ -478,7 +510,7 @@ classdef List < xplr.GraphNode
             
             sel_inds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
             n_sel = length(sel_inds);
-            is_unis_el = false(1, n_sel); 
+            is_unis_el = false(1, n_sel);
             for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling fn_map
             soft_sel = L.F.F.header_out.get_value('soft_selection'); % same as above
             soft_sel = [soft_sel{:}]; % faster than cell2mat
@@ -528,4 +560,3 @@ function do_nothing()
 % have this property set currently even when clicking active controls
 % (unfortunately, clicking a control does not set this property)
 end
- 
