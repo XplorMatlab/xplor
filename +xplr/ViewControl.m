@@ -361,10 +361,10 @@ classdef ViewControl < xplr.GraphNode
                     active = varargin{1};
                     % show label(s) as enabled/disabled
                     for filter = current_filters_dim
-                        item = C.get_item({'filter', filter.dimID});
-                        hlab = [item.filter_label, item.dimension_label];
+                        item = C.get_item({'filter', filter.dim_id});
+                        h_lab = [item.filter_label, item.dimension_label];
                         set(h_lab, 'enable', fn_switch(active, 'inactive', 'off'))
-                        set(item.checkbox, 'value', active)
+                        set(item.check_box, 'value', active)
                         drawnow
                     end
                     % toggle filter active in slicer
@@ -521,7 +521,7 @@ classdef ViewControl < xplr.GraphNode
             n_filter = length(idx_filter);
             
             % index and position of selected filter
-            id = {'filter' dimID};
+            id = {'filter', dim_id};
             idx_item = fn_find(id, {C.items.id});
             idx_0 = idx_item - (idx_filter(1) - 1);
             idx_other = setdiff(1:n_filter, idx_0);

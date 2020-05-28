@@ -160,7 +160,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     fn_buttonmotion(@move_clipsub, N.hf, 'pointer', 'cross')
                     delete(ht)
                 case 'open'         % use default clipping
-                    autoClip(N.D)
+                    N.D.auto_clip()
             end
             function move_clipsub
                 % 'naive' new clip
@@ -188,7 +188,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 end     
                 % update display
                 set(ht, 'string', sprintf('min: %.3f,  max: %.3f', clip(1), clip(2)))
-                N.D.setClip(clip)
+                N.D.set_clip(clip)
             end
         end
         function cliprange(N, flag)
@@ -210,7 +210,7 @@ classdef DisplayNavigation < xplr.GraphNode
             clip = m + [-.5, .5]*e;
             
             % set clip
-            N.D.setClip(clip)
+            N.D.set_clip(clip)
         end
     end
     
@@ -695,7 +695,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     {'menuval', {'poly', 'free', 'rect', 'ellipse', 'ring', 'line', 'openpoly', 'freeline'}}, ...
                     'parent', m, 'label', 'Shape');
             end
-            if length(N.selection_dim_id) == 1 && N.D.slice.header(sel_dim).ismeasure
+            if length(N.selection_dim_id) == 1 && N.D.slice.header(sel_dim).is_measure
                 fn_propcontrol(N, 'selection_round_1d_measure', 'menu', ...
                     {'parent', m, 'label', 'Round 1D selections to data indices', 'separator', 'on'});
             end
@@ -776,7 +776,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 % convert to slice indices in the selected
                 % dimension
                 ijk0 = round(N.graph.graph_to_slice(poly_ax(:, 1)));
-                poly_slice = N.graph.graph_to_slice(poly_ax, 'subdim', sel_dim, 'ijk0', ijk0);
+                poly_slice = N.graph.graph_to_slice(poly_ax, 'sub_dim', sel_dim, 'ijk0', ijk0);
                 poly_slice = sort(poly_slice);
 
                 % create selection in slice indices coordinates
@@ -1057,7 +1057,7 @@ classdef DisplayNavigation < xplr.GraphNode
                         'UserData', shape_edit_info);
                 end
                 % update name
-                set(hl.label, 'string', name, 'rotation', namerotation)
+                set(hl.label, 'string', name, 'rotation', name_rotation)
                 set(struct_to_array(hl), 'color', col)
             end
         end
@@ -1308,14 +1308,14 @@ classdef DisplayNavigation < xplr.GraphNode
                 'callback', @(u,e)N.selection_edit(idx, 'redraw'))
             
             % change selection number
-            nsel = N.selection_filter.nsel;
+            n_sel = N.selection_filter.n_sel;
             if idx ~= 1
                 uimenu(m, 'label', 'make this selection first', ...
-                    'callback', @(u,e)N.selection_filter.update_selection('perm', [idx, setdiff(1:nsel, idx)]))
+                    'callback', @(u,e)N.selection_filter.update_selection('perm', [idx, setdiff(1:n_sel, idx)]))
             end
-            if idx ~= nsel
+            if idx ~= n_sel
                 uimenu(m, 'label', 'make this selection last', ...
-                    'callback', @(u,e)N.selection_filter.update_selection('perm', [setdiff(1:nsel,idx), idx]))
+                    'callback', @(u,e)N.selection_filter.update_selection('perm', [setdiff(1:n_sel,idx), idx]))
             end
             
             % make menu visible
@@ -1464,12 +1464,11 @@ classdef DisplayNavigation < xplr.GraphNode
             %                 dim(N.graph.filling(dim)<1) = [];
             %             end
             %             zoom = N.graph.getZoom(dim); %,'effective');
-            zoom = N.graph.getZoom(zoom_dim, 'effective');
+            zoom = N.graph.get_zoom(zoom_dim, 'effective');
             origin_dim = origin(zoom_dim);
             origin_dim = fn_coerce(origin_dim, zoom);
             new_zoom = fn_add(origin_dim, fn_mult(zoom_factor, fn_subtract(zoom, origin_dim)));
-            %fprintf('%.2f -> %.2f\n', diff(zoom), diff(new_zoom))
-            N.D.zoom_slicer.setZoom(zoom_dim, new_zoom)
+            N.D.zoom_slicer.set_zoom(zoom_dim, new_zoom)
         end
     end
 

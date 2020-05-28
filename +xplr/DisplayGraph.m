@@ -1217,7 +1217,7 @@ classdef DisplayGraph < xplr.GraphNode
                     % locations), or as more complex polygon (for 'xy' and
                     % 'yx')
                     st = G.steps;
-                    dim_location = G.D.layoutID.dim_locations{dim};
+                    dim_location = G.D.layout_id.dim_locations{dim};
 					if ismember(dim_location, {'x', 'y'})
 						% convert from zslice to graph coordinates:
 						% ignore dimensions that are more internal than dim

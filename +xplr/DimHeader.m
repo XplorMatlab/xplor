@@ -117,10 +117,10 @@ classdef DimHeader < xplr.Header
         function dim_id = dimension_id(H, d)
             [~, dim_id] = H.dimension_number_and_id(d);
         end
-        function dim = dimensionNumber(H, d)
+        function dim = dimension_number(H, d)
             [dim, ~] = H.dimension_number_and_id(d);
         end
-        function label = dimensionLabel(H, d)
+        function label = dimension_label(H, d)
             [dim, ~] = H.dimension_number_and_id(d);
             if isempty(dim)
                 label = [];

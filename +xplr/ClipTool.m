@@ -75,7 +75,7 @@ classdef ClipTool < xplr.GraphNode
                     checked = ismember(clip_dim, C.independent_dim);
                     uimenu(m, 'label', 'Independent clipping range for each grid cell', ...
                         'checked', checked, ...
-                        'callback', @(u,e)setIndependentDim(C, clip_dim, ~checked))
+                        'callback', @(u,e)set_independent_dim(C, clip_dim, ~checked))
                 else
                     m1 = uimenu('parent', m, 'label', 'Independent clipping range for dimension(s)');
                     for dimID = clip_dim
@@ -162,7 +162,7 @@ classdef ClipTool < xplr.GraphNode
             % set property
             C.auto_clip_mode_no_center = comp;
             % add the centering information to final autoclip mode
-            C.autoclipmode = C.auto_clip_mode_no_center;
+            C.auto_clip_mode = C.auto_clip_mode_no_center;
             if ~isempty(C.center), C.autoclipmode = [C.autoclipmode, '[', num2str(C.center), ']']; end
             % update display
             C.D.auto_clip(true)
@@ -181,7 +181,7 @@ classdef ClipTool < xplr.GraphNode
     % Adjusting
     methods
         function set_independent_dim(C, dim_id, independent)
-            dim_id = C.D.slice.dimensionID(dim_id);
+            dim_id = C.D.slice.dimension_id(dim_id);
             if independent
                 C.independent_dim_id_mem = union(C.independent_dim_id_mem, dim_id);
             else

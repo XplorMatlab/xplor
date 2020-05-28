@@ -870,7 +870,7 @@ classdef ViewDisplay < xplr.GraphNode
                 % invalidate clip values that need to be recomputed
                 if D.clipping.adjust_to_view && ~strcmp(flag, 'clip')
                     if ismember(dim, D.clipping.independent_dim)
-                        D.grid_clip = subsasgn_dim(D.gridclip, 1+dim, ind, NaN);
+                        D.grid_clip = subsasgn_dim(D.grid_clip, 1+dim, ind, NaN);
                     else
                         D.grid_clip(:) = NaN;
                     end
@@ -1015,7 +1015,7 @@ classdef ViewDisplay < xplr.GraphNode
                                 set(hl, 'ydata', xi)
                             end
                             if do_color
-                                set(hl, 'color', cmap(ijk_h_display(cdim), :))
+                                set(hl, 'color', c_map(ijk_h_display(c_dim), :))
                             end
                         else
                             % size in color dimension must be 1, 3 or 4;
