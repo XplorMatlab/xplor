@@ -96,7 +96,9 @@ classdef SelectionShape
                 case 'all'
                     % nothing more needs to be set!
                 case 'indices'
-                    S.special = data;
+                    [sz, indices] = deal(data{:});
+                    indices(indices<=0 | indices>prod(sz)) = []; % remove invalid indices
+                    S.special = {sz, indices};
                 otherwise
                     error('unknown type ''%s''', type)
             end
@@ -382,6 +384,8 @@ classdef SelectionShape
                     b = all(abs(S.vectors) <= tol);
                 case 'all'
                     b = false;
+                case 'indices'
+                    b = (length(S.special{2}) <= 1);
                 otherwise
                     error programming
             end

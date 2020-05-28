@@ -161,9 +161,9 @@ classdef FilterAndPoint < xplr.DataOperand
     % Notification
     methods
         function transit_notification(F, flag, e)
+            set_header_out(F)
             switch flag
                 case 'filter'
-                    set_header_out(F)
                     if strcmp(e.type, 'operation')
                         if F.F.n_sel == 0
                             return
