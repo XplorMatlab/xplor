@@ -415,11 +415,13 @@ classdef DisplayGraph < xplr.GraphNode
                     row_height = st.y_span(end);
                 end
                 xy = fn_add([0; row_height/2], st.xy_offsets);
+                rotation = fn_switch(n<=10, 0, 20);
                 G.xy_ticks = gobjects(1, n);
                 for i=1:n
                     G.xy_ticks(i) = text(xy(1,i), xy(2,i), tick_labels{i}, ...
                         'parent', G.ha, 'hittest', 'off', ...
-                        'horizontalalignment', 'center', 'verticalalignment', 'bottom');
+                        'horizontalalignment', 'center', 'verticalalignment', 'bottom', ...
+                        'rotation', rotation);
                 end
             end
             
