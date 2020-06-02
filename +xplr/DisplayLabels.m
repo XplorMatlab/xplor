@@ -178,14 +178,9 @@ classdef DisplayLabels < xplr.GraphNode
     
     % Update labels
     methods
-        function update_labels(L, flag, dim)
+        function update_labels(L, flag, chg_dim)
             % input
             if nargin < 2, flag = 'pos'; end
-            if nargin < 3
-                dim = 1:L.D.nd;
-            else
-                dim = L.D.slice.dimension_number(dim);
-            end
             
             % update
             switch flag
@@ -193,7 +188,7 @@ classdef DisplayLabels < xplr.GraphNode
                     create_labels(L, 'global')
                 case 'chg_dim'
                     % some specific properties need to be updated
-                    for d = dim, change_label(L, d), end
+                    for d = chg_dim, change_label(L, d), end
                 case 'axsiz'
                     if isempty(L.D.layout_id) || isempty(L.D.graph.steps)
                         % happens sometimes at init because figure size changes for no clear reason
@@ -213,7 +208,7 @@ classdef DisplayLabels < xplr.GraphNode
                 otherwise
                     error('invalid flag ''%s''',flag)
             end
-            L.set_positions(dim)
+            L.set_positions()
         end
     end
     
