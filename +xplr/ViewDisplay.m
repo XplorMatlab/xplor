@@ -624,7 +624,7 @@ classdef ViewDisplay < xplr.GraphNode
                 clip = clip - feval(D.clipping.align_signals, clip, 1);
             end
         end
-        function set_clip(D, clip, do_update_display)
+        function set_clip(D, clip, all_cells)
             % input
             if ~isnumeric(clip) || length(clip) ~= 2 || diff(clip) <= 0 || any(isnan(clip)|isinf(clip))
                 xplr.debug_info('stop','clip value is not valid')
@@ -644,6 +644,12 @@ classdef ViewDisplay < xplr.GraphNode
             end
             % update display; note that this might also modify D.gridclip
             % if D.cliping.align_signals is not empty
+            update_display(D,'clip')
+        end
+        function set_grid_clip(D, clip)
+            assert(isequal(size(clip), size(D.grid_clip)))
+            assert(all(row(diff(clip)) > 0))
+            D.grid_clip = clip;
             update_display(D,'clip')
         end
         function auto_clip(D, all_cells)
@@ -874,6 +880,8 @@ classdef ViewDisplay < xplr.GraphNode
                     else
                         D.grid_clip(:) = NaN;
                     end
+                    % all data will need to be re-displayed
+                    [do_data_select, do_data_all] = deal(false, true);
                 end
                 % compute clip
                 dim_indpc = D.clipping.independent_dim; % dimensions with independent clipping
@@ -912,13 +920,6 @@ classdef ViewDisplay < xplr.GraphNode
             if do_position
                 % (list of grid cell indices)
                 idx_grid_list = 1:prod(grid_size);
-                if do_data_select_grid && ~do_position
-                    % not all grid elements need to be visited ('chg' flag)
-                    idx_grid_list = reshape(idx_grid_list, grid_size);
-                    subs = substruct('()', repmat({':'}, 1, D.zslice.nd));
-                    subs.subs{dim} = ind;
-                    idx_grid_list = row(subsref(idx_grid_list, subs));
-                end
                 ijk_grid_list = fn_indices(grid_size, idx_grid_list, 'g2i');
                 % (prepare dispatch)
                 M = D.graph.get_transform(ijk_grid_list);

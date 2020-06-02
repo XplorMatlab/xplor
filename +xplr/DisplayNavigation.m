@@ -155,12 +155,12 @@ classdef DisplayNavigation < xplr.GraphNode
                     if ~isempty(clip_center), clip0 = clip_center + [-.5, .5]*e0; end
                     p0 = get(N.hf, 'currentpoint');
                     ht = uicontrol('style', 'text', 'position', [2, 2, 200, 17], 'parent', N.hf);
+                    set(ht, 'string', sprintf('min: %.3f,  max: %.3f', clip0(1), clip0(2)))
+                    c = onCleanup(@()delete(ht)); 
                     % change clip
-                    move_clipsub() % this displays the bottom-left numbers
                     fn_buttonmotion(@move_clipsub, N.hf, 'pointer', 'cross')
-                    delete(ht)
                 case 'open'         % use default clipping
-                    N.D.auto_clip()
+                    N.D.auto_clip(~N.D.clipping.buttons_only_for_current_cells)
             end
             function move_clipsub
                 % 'naive' new clip
@@ -188,29 +188,36 @@ classdef DisplayNavigation < xplr.GraphNode
                 end     
                 % update display
                 set(ht, 'string', sprintf('min: %.3f,  max: %.3f', clip(1), clip(2)))
-                N.D.set_clip(clip)
+                N.D.set_clip(clip, false)
             end
         end
         function clip_change_range(N, flag)
             % current clip extent
-            clip = N.D.current_clip;
+            if N.D.clipping.buttons_only_for_current_cells
+                clip = N.D.current_clip;
+            else
+                clip = N.D.grid_clip; % ND array
+            end
             m = mean(clip);
             e = diff(clip);
-            if e == 0, return, end % well, we have a problem with the current clip...
 
             % round it to a nice value
-            e10 = 10^floor(log10(e));
-            e = e / e10;
+            e10 = 10.^floor(log10(e));
+            e = e ./ e10;
             vals = [.75, 1, 1.5, 2, 3, 4, 5, 7.5, 10, 15];
-            f = find(e*1.1>vals, 1, 'last');
+            f = sum(bsxfun(@gt, e(:)*1.1 ,vals), 2);
             
             % update as specified
             f = f + fn_switch(flag, '+', -1, '-', 1);
-            e = e10 * vals(f);
-            clip = m + [-.5, .5]*e;
+            e = e10 .* reshape(vals(f), size(e));
+            clip = fn_add(m, fn_mult([-.5; .5], e));
             
             % set clip
-            N.D.set_clip(clip)
+            if N.D.clipping.buttons_only_for_current_cells
+                N.D.set_clip(clip)
+            else
+                N.D.set_grid_clip(clip)
+            end
         end
     end
     

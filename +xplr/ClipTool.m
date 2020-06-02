@@ -14,6 +14,7 @@ classdef ClipTool < xplr.GraphNode
         independent_dim_id_mem = []          % dimension ID of dimensions along which clipping is not uniform
         align_signals = ''                  % '', 'nmean', 'nmedian'
         adjust_to_view = false
+        buttons_only_for_current_cells = false
     end
     properties (Dependent, SetAccess='private')
         independent_dim
@@ -41,6 +42,7 @@ classdef ClipTool < xplr.GraphNode
         function clip_menu(C)
             m = C.menu;
             delete(get(m,'children'))
+            
             % auto-clip specifications
             % (create a submenu whose label will update automatically)
             P = fn_propcontrol(C, 'auto_clip_mode', ...
@@ -59,13 +61,17 @@ classdef ClipTool < xplr.GraphNode
             fn_propcontrol(C, 'center', ...
                 {'menugroup', {0, 1, []}, {'center on 0', 'center on 1'}}, ...
                 m1);
+            
             % auto-clip
             if ~isempty(C.independent_dim)
                 uimenu(m, 'label', 'Do Auto-Clip (current cell(s) only)', 'callback', @(u,e)C.D.auto_clip(false))
                 uimenu(m, 'label', 'Do Auto-Clip (all cells)', 'callback', @(u,e)C.D.auto_clip(true))
+                fn_propcontrol(C, 'buttons_only_for_current_cells', 'menu', ...
+                    {'parent', m, 'label', 'Use clip buttons to control only current cell(s)'});
             else
                 uimenu(m,'label', 'Do Auto-Clip', 'callback', @(u,e)C.D.auto_clip(true))
             end
+            
             % adjust options
             fn_propcontrol(C, 'adjust_to_view', 'menu', ...
                 {'parent', m, 'label', 'Always adjust clipping to current view', 'separator', 'on'});
@@ -188,9 +194,7 @@ classdef ClipTool < xplr.GraphNode
                 C.independent_dim_id_mem = setdiff(C.independent_dim_id_mem, dim_id);
             end
             % update clip if some dimensions are no more independent
-            if ~independent
-                C.D.auto_clip(true)
-            end
+            C.D.auto_clip(true)
         end
         function set.adjust_to_view(C, value)
             C.adjust_to_view = value;
