@@ -28,7 +28,7 @@ classdef XData < xplr.GraphNode
     end
     
     events
-        ChangedData % sent with info xplr.eventinfo('data',chg_head)
+        ChangedData % sent with info xplr.EventInfo('data',chg_head)
     end
     
     % Constructor and simple access
@@ -127,7 +127,7 @@ classdef XData < xplr.GraphNode
             x.name = name;
             notify(x, 'ChangedData', xplr.EventInfo('data', 'name'))
         end
-        function chg_Data(x, data)
+        function chg_data(x, data)
             if isequal(data, x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
             data_sz = strict_size(data, x.nd);

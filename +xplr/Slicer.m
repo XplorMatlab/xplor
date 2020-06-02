@@ -21,7 +21,7 @@ classdef Slicer < xplr.GraphNode
     end
     properties (SetAccess='protected')
         slicing_chain = xplr.XData.empty(1, 0); % intermediary and last steps of slicing, length is same as S.active_filters
-        pend_ing_rm_filter = false; % remember when some dimensions were removed but reslice did not occur yet
+        pending_rm_filter = false; % remember when some dimensions were removed but reslice did not occur yet
     end
     properties (Dependent, SetAccess='private')
         nd_data
@@ -96,11 +96,11 @@ classdef Slicer < xplr.GraphNode
                 S.add_listener(new_filt(i), 'ChangedOperation', @(u,e)filter_change(S, new_filt(i), dim_id{i}, e));
             end
             % update slice
-            if ~S.pend_ing_rm_filter && isscalar(new_filt) && new_filt.nd_out == new_filt.nd_in
+            if ~S.pending_rm_filter && isscalar(new_filt) && new_filt.nd_out == new_filt.nd_in
                 do_slice(S,'slicer', 'chg_dim',dim_id_add)
             else
                 do_slice(S, 'slicer', 'global')
-                S.pend_ing_rm_filter = false;
+                S.pending_rm_filter = false;
             end
         end
         function add_filter(S, dim_id, new_filt, active)
@@ -135,7 +135,7 @@ classdef Slicer < xplr.GraphNode
                 end
             else
                 % remember that reslice did not occur after removing filter
-                S.pend_ing_rm_filter = true;
+                S.pending_rm_filter = true;
             end
         end
         function rm_filter_dim(S, dim_id, do_slicing)
@@ -268,10 +268,10 @@ classdef Slicer < xplr.GraphNode
             S.slicing_chain(nok+1:end) = [];
             do_slice(S, 'slicer', 'global')
         end
-        function applyPend_ing(S)
-            if S.pend_ing_rm_filter
+        function apply_pending(S)
+            if S.pending_rm_filter
                 S.do_slice('slicer', 'global')
-                S.pend_ing_rm_filter = false;
+                S.pending_rm_filter = false;
             end
         end
     end
@@ -476,7 +476,7 @@ classdef Slicer < xplr.GraphNode
                     chg_dim_out = res.dimension_number(chg_dim_id);
                     S.slice.update_data_dim(chg_flag, chg_dim_out, res.data, res.header(chg_dim_out))
                 case 'chg_data'
-                    S.slice.chg_Data(res.data)
+                    S.slice.chg_data(res.data)
                 otherwise
                     chg_dim_out = res.dimension_number(chg_dim_id);
                     S.slice.update_data(chg_flag, chg_dim_out, chg_ind, res.data, res.header(chg_dim_out))

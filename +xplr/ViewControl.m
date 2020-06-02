@@ -141,7 +141,7 @@ classdef ViewControl < xplr.GraphNode
         function edit_header(C)
             data = C.V.data;
             cur_head = data.header;
-            new_head = xplr.EditHeader(C.V.data);
+            new_head = xplr.edit_header(C.V.data);
             if isempty(new_head), return, end % user closed window: cancel
             dim_chg = false(1,data.nd);
             for i=1:data.nd, dim_chg(i) = ~isequal(new_head(i), cur_head(i)); end

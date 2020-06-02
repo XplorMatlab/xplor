@@ -2,7 +2,7 @@ classdef ColorMapTool < xplr.GraphNode
     
     properties (SetObservable=true, AbortSet)
         c_map_def
-        do_non_linear = false
+        do_nonlinear = false
         invert_map = false
     end
     properties (SetObservable=true, AbortSet, SetAccess='private')
@@ -10,7 +10,7 @@ classdef ColorMapTool < xplr.GraphNode
     end
     properties (Access='private')
         menu
-        non_linear_fun_editor
+        nonlinear_fun_editor
     end
     
     events
@@ -55,7 +55,7 @@ classdef ColorMapTool < xplr.GraphNode
             % Apply non-linear function to values before coloring
             fn_propcontrol(C, 'invert_map', 'menu', ...
                 {'parent', m, 'label', 'Invert map', 'separator', 'on'});
-            fn_propcontrol(C, 'do_non_linear', 'menu', ...
+            fn_propcontrol(C, 'do_nonlinear', 'menu', ...
                 {'parent', m, 'label', 'Apply nonlinear function before coloring'});
             
             % Control visibility depending on dislay mode
@@ -108,7 +108,7 @@ classdef ColorMapTool < xplr.GraphNode
     % applying the colormap, this allows for example in a black & white
     % image to enhance low contrast in the dark range, etc.
     methods
-        function set.do_non_linear(C, value)
+        function set.do_nonlinear(C, value)
             C.do_nonlinear = logical(value);
             % is we want to apply nonlinear function, we create an object
             % of class signaleditor to control the parameters of this
@@ -143,8 +143,8 @@ classdef ColorMapTool < xplr.GraphNode
             xi = fn_div(fn_subtract(xi, clipi(1,:)), diff(clipi));
             xi = max(0, min(1, xi));
             % apply nonlinear function if any
-            if C.do_non_linear
-                xi = C.non_linear_fun_editor.interp(1 + 255*xi);
+            if C.do_nonlinear
+                xi = C.nonlinear_fun_editor.interp(1 + 255*xi);
             end
             % color the image and replace NaNs by a specific color
             if size(xi, 2) == 1

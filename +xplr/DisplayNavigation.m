@@ -109,11 +109,11 @@ classdef DisplayNavigation < xplr.GraphNode
             % two next buttons control extent of clipping
             u = uicontrol('parent', N.D.hp, ...
                 'string', '+', 'fontsize', 8, ...
-                'callback', @(u,e)cliprange(N, '+'));
+                'callback', @(u,e)clip_change_range(N, '+'));
             fn_controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -32, 16, 16])
             u = uicontrol('parent', N.D.hp, ...
                 'string', '-', 'fontsize', 8, ...
-                'callback', @(u,e)cliprange(N, '-'));
+                'callback', @(u,e)clip_change_range(N, '-'));
             fn_controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -48, 16, 16])
         end
         function init_sliders(N)
@@ -191,7 +191,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 N.D.set_clip(clip)
             end
         end
-        function cliprange(N, flag)
+        function clip_change_range(N, flag)
             % current clip extent
             clip = N.D.current_clip;
             m = mean(clip);

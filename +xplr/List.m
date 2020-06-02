@@ -423,7 +423,7 @@ classdef List < xplr.GraphNode
                 n_new = length(new_sel);
                 names = cell(1, n_new);
                 for i = 1:n_new
-                    if strcmp(L.selection_prompt_name, 'groups') && isscalar(new_sel(i).dataind), continue, end
+                    if strcmp(L.selection_prompt_name, 'groups') && isscalar(new_sel(i).data_ind), continue, end
                     name = inputdlg('Group name', 'xplor');
                     if isempty(name), continue, end
                     names{i} = name;

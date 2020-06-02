@@ -143,14 +143,14 @@ classdef Point < xplr.DataOperand
     % Link with point selection in real world coordinates
     methods
         function point_world = operation_data_to_space(P)
-            point_world = P.header_in.start + (P.index-1)*P.header_in.scale;
+            point_world = P.header_in.start + (P.index_exact-1)*P.header_in.scale;
         end
         function update_operation_data_to_space(P, WO, ~)
             WO.operation = P.operation_data_to_space();
             notify(WO, 'ChangedOperation')
         end
         function update_operation_space_to_data(P, point_world, ~)
-            P.index = 1 + (point_world - P.header_in.start)/P.header_in.scale;
+            P.index_exact = 1 + (point_world - P.header_in.start)/P.header_in.scale;
         end
     end
     
