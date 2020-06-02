@@ -1,15 +1,22 @@
 function V = xplor(data, varargin)
-% function V = xplor(data[,dim_ids,filters])
+% function V = xplor(data, options...)
 % function V = xplor()         [demo data]
 % ---
 % xplor starter
 %
 % Input:
-% - data        data to visualize
-% - varargin    1-by-N cell array, where N is the number of inputs that
-% the function receives after the parameter data
+% - data        data to visualize: a Matlab ND array or an xplr.XData
+%               object
+% - options     name-value pairs
+%
+% Available options:
+% - 'header'    header description of the data, either an xplr.Header
+%               object of length the number of dimensions of data or a
+%               description (see xplr.XData for the syntax)
+% - 'name'      name to give to the data
+% - 'view'      select which dimensions to view (others will be filtered)
 
-% create a demo xdata with header
+% Create a demo xdata with header
 if nargin == 0
     [~, ~, ~, dat] = flow;
     dat = permute(dat, [1, 3, 2]);
@@ -27,41 +34,54 @@ end
 %     return
 % end
 
+% Gather options inside a structure
+for i = 2:2:length(varargin), varargin{i} = {varargin{i}}; end %#ok<CCAT1>
+options = struct(varargin{:});
 
+% Convert Matlab array to xplr.XData
 % create headers and launch view
 % if a parameter data is present -> evaluate it (execute and get result)
 if ischar(data)
     name = data;
     data = evalin('base', name);
     % if no parameters are presents (same case as previous create a demo data)
-elseif nargin == 0
-    name = 'demo data';
-    % TODO: document this case
+elseif isfield(options,'name')
+    name = options.name;
+    options = rmfield(options, 'name');
 else
     name = inputname(1);
 end
-if ~isa(data, 'xplr.XData')
+if isfield(options,'header')
+    if isa(data, 'xplr.XData')
+        error 'header description in the options will be ignored since data is already an xplr.XData object'
+    end
+    data = xplr.XData(data,options.header, name);
+    options = rmfield(options, 'header');
+end
+if isa(data, 'xplr.XData')
+    if isempty(data.name), data.set_name(name); end
+    V = launch_view(data, options);
+else
     data = squeeze(data); % remove singleton dimensions
     % does user expect an output?
     if nargout > 0
-        header = xplr.EditHeader(data);
-        V = launch_view({data, header, name}, varargin{:});
+        % wait for xplr.edith_header to finish
+        header = xplr.edit_header(data);
+        V = launch_view({data, header, name}, options);
     else
+        % do not wait, view will be launched later
         xplr.HeaderEdit( ...
             data, ...
             @(header)launch_view({data, header, name}, ...
-            varargin{:}) ...
+            options) ...
             );
         V = [];
     end
-else
-    if isempty(data.name), data.set_name(name); end
-    V = launch_view(data, varargin{:});
 end
 if nargout == 0, clear V, end
 
 %---
-function V = launch_view(x, varargin)
+function V = launch_view(x, options)
 
 % combine data and header
 if iscell(x)
@@ -70,8 +90,21 @@ else
     data = x;
 end
 
-% go!
-V = xplr.View(data, varargin{:});
+% create view
+V = xplr.View(data);
+
+% apply options
+option_names = fieldnames(options);
+for i = 1:length(option_names)
+    name = option_names{i};
+    value = options.(name);
+    switch name
+        case 'view'
+            V.C.dim_action('viewdim', value)
+        otherwise
+            disp(['invalide xplor option ''' name ''''])
+    end
+end
 
 %---
 function xplor_window

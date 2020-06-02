@@ -143,6 +143,12 @@ classdef View < xplr.GraphNode
                 main.pushExtent(1, 0, 'figleft');
             end
         end
+        function show_controls(V)
+            V.control_visible = true;
+        end
+        function hide_controls(V)
+            V.control_visible = false;
+        end
     end
     
     % Dependent properties

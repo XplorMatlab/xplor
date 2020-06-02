@@ -44,7 +44,7 @@ classdef Slicer < xplr.GraphNode
 
             % set filters
             if nargin >= 3 && ~isempty(filters)
-                add_filter(S, dim_id, filters)
+                S.add_filter(dim_id, filters)
             end
         end
         function n = get.nd_data(S)
@@ -106,7 +106,7 @@ classdef Slicer < xplr.GraphNode
         function add_filter(S, dim_id, new_filt, active)
             % function add_filter(S,dim_id,new_filt[,active])
             if nargin < 4, active = true; end
-            insert_filter(S, [], dim_id, new_filt, active)
+            S.insert_filter([], dim_id, new_filt, active)
         end
         function rm_filter(S, idx, do_slicing)
             % function rm_filter(S,idx[,do_slicing])

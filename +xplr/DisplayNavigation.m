@@ -140,7 +140,7 @@ classdef DisplayNavigation < xplr.GraphNode
             d = N.D.slice.dimension_number(N.selection_dim_id);
         end
         function set.selection_dim(N, dim)
-            N.selection_dim_id = N.D.slice.dimension_id(dim);
+            N.selection_dim_id = dim; % dim will be concerted to dim_id in N.set.selection_dim_id anyway
         end
     end
     
@@ -842,11 +842,11 @@ classdef DisplayNavigation < xplr.GraphNode
             end
 
             % check dimension(s)
+            [dim, dim_id] = N.D.slice.dimension_number_and_id(dim_id);
             nd = length(dim_id);
             if ~ismember(nd, [0, 1, 2])
                 error 'number of dimension for selection display must be 1 or 2'
             end
-            dim = N.D.slice.dimension_number(dim_id);
             if iscell(dim), error 'some dimension is not present in the slice data', end
             singleton = (N.D.slice.sz(dim) == 1);
             dim_id(singleton) = []; % no selection in singleton dimension(s)
