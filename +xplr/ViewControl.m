@@ -60,7 +60,7 @@ classdef ViewControl < xplr.GraphNode
             % (add filters)
             key = 1;
             if any(active)
-                C.dim_action('addfilter', num2cell(find(active)), key)
+                C.dim_action('add_filter', num2cell(find(active)), key)
             end
         end
     end
@@ -184,7 +184,7 @@ classdef ViewControl < xplr.GraphNode
             if length(dim_id) == 2
                 % (using key 1)
                 uimenu(m, 'label', 'Filter with shared 2D filter', 'separator', 'on', ...
-                    'callback', @(u,e)dim_action(C, 'addfilter', {dim_id}, 1))
+                    'callback', @(u,e)dim_action(C, 'add_filter', {dim_id}, 1))
                 next_separator = 'off';
             else
                 next_separator = 'off';
@@ -192,7 +192,7 @@ classdef ViewControl < xplr.GraphNode
             % (1D with key 1)
             uimenu(m, ...
                 'label', ['Filter with shared 1D ', filter_str], 'separator', next_separator, ...
-                'callback', @(u,e)dim_action(C, 'addfilter', num2cell(dim_id), 1))
+                'callback', @(u,e)dim_action(C, 'add_filter', num2cell(dim_id), 1))
             % (more options: select among available keys)
             available_keys = xplr.Bank.available_filter_keys('filterAndPoint');
             new_key = max(available_keys) + 1;
@@ -201,26 +201,26 @@ classdef ViewControl < xplr.GraphNode
             if length(dim_id) == 2
                 for key_value = key_values
                     uimenu(m2, 'label', ['shared 2D filter ', num2str(key_value)], ...
-                        'callback', @(u,e)dim_action(C, 'addfilter', {dim_id}, key_value));
+                        'callback', @(u,e)dim_action(C, 'add_filter', {dim_id}, key_value));
                 end
             end
             for key_value = key_values
                 uimenu(m2, 'label', ['shared 1D ', filter_str, ' ', num2str(key_value)], ...
-                    'callback', @(u,e)dim_action(C, 'addfilter', num2cell(dim_id), key_value));
+                    'callback', @(u,e)dim_action(C, 'add_filter', num2cell(dim_id), key_value));
             end
             uimenu(m2, 'label', ['private 1D ', filter_str], ...
-                'callback', @(u,e)dim_action(C, 'addfilter', num2cell(dim_id), 0))
+                'callback', @(u,e)dim_action(C, 'add_filter', num2cell(dim_id), 0))
             
             % remove filters in these dimensions
             uimenu(m, 'label', ['Remove ', filter_str], 'separator', 'on', ...
-                'callback', @(u,e)dim_action(C, 'rmfilter', dim_id))
+                'callback', @(u,e)dim_action(C, 'rm_filter', dim_id))
             
             % filter all others dimension
             uimenu(m, ...
                 'label', ['View ', dim_str, ', filter others'], 'separator', 'on', ...
-                'callback', @(u,e)dim_action(C, 'viewdim', dim_id, 1))
+                'callback', @(u,e)dim_action(C, 'view_dim', dim_id, 1))
             uimenu(m, 'label', ['View ', dim_str, ' in a new window'], ...
-                'callback', @(u,e)dim_action(C, 'newwindow_viewdim', dim_id, 1))
+                'callback', @(u,e)dim_action(C, 'new_window_view_dim', dim_id, 1))
             
             % make menu visible
             p = get(C.V.hf, 'currentpoint');
@@ -228,16 +228,16 @@ classdef ViewControl < xplr.GraphNode
             set(m, 'Position', p, 'Visible', 'on')
         end
         function dim_action(C, flag, dim_id, varargin)
-            % function dim_action(C,'addfilter',dim_ids[,key[,active]])
-            % function dim_action(C,'rmfilter|showfilter',dim_id)
+            % function dim_action(C,'add_filter',dim_ids[,key[,active]])
+            % function dim_action(C,'rm_filter|rm_filter',dim_id)
             % function dim_action(C,'set_active',dim_id,value)
-            % function dimaction(C,'viewdim',dimID)
-            % function dimaction(C,'newwindow',dimID)
-            % function dimaction(C,'newwindow_action',dimID,arg...)
+            % function dimaction(C,'view_dim',dimID)
+            % function dimaction(C,'new_window',dimID)
+            % function dimaction(C,'new_window_action',dimID,arg...)
             %---
-            % if flag is 'addfilter', dims can be a cell array, to defined
+            % if flag is 'add_filter', dims can be a cell array, to defined
             % several filters at once for example
-            % dim_action(C,'addfilter',{[1 2] 3}) will add two filters,
+            % dim_action(C,'add_filter',{[1 2] 3}) will add two filters,
             % first a 2D filter in dimensions [1 2], second a 1D filter in
             % dimension 3
             %
@@ -246,12 +246,12 @@ classdef ViewControl < xplr.GraphNode
             % number, or the dimension label
             
             % other window
-            if strfind(flag, 'newwindow') %#ok<STRIFCND>
+            if strfind(flag, 'new_window') %#ok<STRIFCND>
                 % open data in a new window: flag can be either
                 % 'otherwindow' or 'otherwindow_action' where 'action' is
                 % to be executed in this window
                 V2 = xplor(C.V.data);
-                tokens = regexp(flag, 'newwindow_(.*)', 'tokens');
+                tokens = regexp(flag, 'new_window_(.*)', 'tokens');
                 if ~isempty(tokens)
                     V2.C.dim_action(tokens{1}{1}, dim_id, varargin{:})
                 end
@@ -261,8 +261,8 @@ classdef ViewControl < xplr.GraphNode
             % convert dimension numbers or labels to dimension identifiers
             dim_id = C.V.data.dimension_id(dim_id);
             
-            % 'addfilter' flag -> several filters at once
-            if strcmp(flag, 'addfilter')
+            % 'add_filter' flag -> several filters at once
+            if strcmp(flag, 'add_filter')
                 % dims will be a cell array: list of dimensions, per filter
                 % dim_id will be an array: list of all affected dimensions
                 if ~iscell(dim_id)
@@ -282,22 +282,22 @@ classdef ViewControl < xplr.GraphNode
             current_filters_dim = C.V.slicer.filters(filters_idx); % current filters acting on dimensions within dd
 
             % filters to remove
-            if ismember(flag, {'addfilter', 'rmfilter', 'viewdim'})
+            if ismember(flag, {'add_filter', 'rm_filter', 'view_dim'})
                 % remove filter from the viewcontrol and the bank
                 for filter = current_filters_dim
                     C.remove_filter_item(filter.dim_id);
                 end
                 
                 % remove filters from the slicer
-                do_slicing = strcmp(flag, 'rmfilter'); % no need to reslice yet for 'addfilter', reslice will occur when adding the new filter(s)
+                do_slicing = strcmp(flag, 'rm_filter'); % no need to reslice yet for 'add_filter', reslice will occur when adding the new filter(s)
                 C.V.slicer.rm_filter(filters_idx, do_slicing);
             end
             
             % filters to add
-            if ismember(flag, {'addfilter', 'viewdim'})
+            if ismember(flag, {'add_filter', 'view_dim'})
                 if nargin >= 4, key = varargin{1}; else, key = 1; end
                 if nargin >= 5, active = varargin{2}; else, active = true; end
-                if strcmp(flag, 'addfilter')
+                if strcmp(flag, 'add_filter')
                     dim_ids_add = dim_ids; % already a cell array
                 else
                     % add 1D filters il all dimensions that we do not want
@@ -338,7 +338,7 @@ classdef ViewControl < xplr.GraphNode
                 
                 % adjust display mode and layout if it seems appropriate
                 D = C.V.D;
-                if strcmp(flag, 'viewdim')
+                if strcmp(flag, 'view_dim')
                     if isscalar(dim_id)
                         D.set_dim_location(dim_id, 'x', strcmp(D.display_mode, 'time courses'))
                         D.display_mode = 'time courses';
@@ -369,7 +369,7 @@ classdef ViewControl < xplr.GraphNode
                     end
                     % toggle filter active in slicer
                     C.V.slicer.chg_filter_active(filters_idx, active)
-                case 'showfilter'
+                case 'rm_filter'
                     for filter = current_filters_dim
                         F = filter.obj;
                         if ~isscalar(filter.dim_id)
@@ -430,7 +430,9 @@ classdef ViewControl < xplr.GraphNode
                 end
             else
                 % search for the filter in the bank with key and dimension
-                if nargin<5, show_new_filter = true; end
+                if nargin<5
+                    show_new_filter = header.categorical; 
+                end
                 F = xplr.Bank.get_filter_and_point(key, header, C, show_new_filter);
             end
 
@@ -493,7 +495,7 @@ classdef ViewControl < xplr.GraphNode
             rm_filter_button = uicontrol('parent', panel, 'cdata', x, ...
                 'unit', 'normalized', ...
                 'position', [0.95, 0.5, 0.05, 0.5], ...
-                'callback', @(u,e)C.dim_action('rmfilter', dim_id));
+                'callback', @(u,e)C.dim_action('rm_filter', dim_id));
             fn_controlpositions(rm_filter_button, panel, [1, .5, 0, .5], [-11, 0, 11, 0]);
             
             % checkbox to disable and enable the filter
@@ -555,7 +557,7 @@ classdef ViewControl < xplr.GraphNode
             end
             
             % show filter if there was no move
-            if ~moved, dim_action(C, 'showfilter', dim_id), end
+            if ~moved, dim_action(C, 'rm_filter', dim_id), end
         end
     end
     
@@ -605,7 +607,7 @@ classdef ViewControl < xplr.GraphNode
                     panel = item.obj;
                     set(panel,'visible','off')
                     C.items(item_idx).obj = [];
-                    C.dimaction('rmfilter', dim_id)
+                    C.dimaction('rm_filter', dim_id)
                     % move dimension label inside graph (note that this
                     % will call fn_buttonmotion in the same figure, and
                     % therefore terminate the current fn_buttonmotion)

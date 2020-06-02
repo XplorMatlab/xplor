@@ -97,7 +97,7 @@ classdef Slicer < xplr.GraphNode
             end
             % update slice
             if ~S.pending_rm_filter && isscalar(new_filt) && new_filt.nd_out == new_filt.nd_in
-                do_slice(S,'slicer', 'chg_dim',dim_id_add)
+                do_slice(S,'slicer', 'chg_dim', dim_id_add)
             else
                 do_slice(S, 'slicer', 'global')
                 S.pending_rm_filter = false;
@@ -522,8 +522,8 @@ classdef Slicer < xplr.GraphNode
                     % method so that filter display is updated as well;
                     % TODO: better way of synchronizing slicer and
                     % viewcontrol's filters display
-                    rmdim = [S.filters(~keep_filter).dim_id];
-                    S.V.C.dimaction('rm_filter',rmdim)
+                    rm_dim = [S.filters(~keep_filter).dim_id];
+                    S.V.C.dim_action('rm_filter',rm_dim)
                     % reslice
                     do_slice(S,'data','global')
                 case 'chg_data'

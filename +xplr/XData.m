@@ -40,42 +40,24 @@ classdef XData < xplr.GraphNode
             if nargin < 2 || isempty(head)
                 % open user edition window to edit headers
                 head = xplr.EditHeader(dat);
-            elseif ischar(head)
-                head = {head};
             end
-            if iscell(head)
-                % create xplr.header objects from labels
-                labels = head;
-                head = xplr.DimHeader.empty(1, 0);
-                for i=1:length(labels)
-                    n = size(dat, i);
-                    if iscell(labels{i})
-                        args = labels{i};
-                        if ~ischar(args{end}) && ~isscalar(args{end})
-                            % categorical header defined by a table of
-                            % values: no need to add number of samples
-                            head(i) = xplr.Header(args{:});
-                        else
-                            % other header formats: add number of samples
-                            head(i) = xplr.Header(args{1}, n, args{2:end});
-                        end
-                    else
-                        label = labels{i};
-                        head(i) = xplr.Header(label, n);
-                    end
-                end
-            end
-            
-            % convert to xplr.DimHeader objects
-            if isa(head,'xplr.DimHeader')
+            if isa(head, 'xplr.DimHeader')
                 if nargin>=4
                     error 'cannot set dim_ids when header are already dimheader objects'
                 end
             else
-                if nargin < 4
-                    dim_ids = rand(1, length(head));
+                if ~isa(head, 'xplr.Header')
+                    % convert input header information to xplr.Header
+                    if ischar(head)
+                        head = {head};
+                    end
+                    head = xplr.Header(strict_size(dat), head{:});
                 end
-                head = xplr.DimHeader(head, dim_ids);
+                if nargin>=4
+                    head = xplr.DimHeader(head, dim_ids);
+                else
+                    head = xplr.DimHeader(head);
+                end
             end
             
             % set object
@@ -85,7 +67,7 @@ classdef XData < xplr.GraphNode
             end
         end
         function y = copy(x)
-            y = xplr.XData(x.data, x.header);
+            y = xplr.XData(x.data, x.header, x.name);
         end
         function nd = get.nd(x)
             nd = length(x.header);
@@ -131,7 +113,7 @@ classdef XData < xplr.GraphNode
             if isequal(data, x.data), return, end
             % changes in size are allowed only in the 'measure' dimensions
             data_sz = strict_size(data, x.nd);
-            if length(data_sz) > x.nd, error 'Cannot increase number of dimensions. Use update_data to change both data and headers.', end
+            if length(data_sz) > x.nd, error 'Cannot increase number of dimensions. Use update_data_dim to change both data and headers.', end
             chg_sz = (data_sz ~= x.sz);
             if any([x.header(chg_sz).is_categorical_with_values]), error 'Cannot change data size in categorical dimensions. Use update_data to change both data and headers', end
             % set data
@@ -228,11 +210,24 @@ classdef XData < xplr.GraphNode
         end
         function update_data_dim(x, flag, dim, new_data, new_head)
             % update header
-            if ~isa(new_head,'xplr.DimHeader'), error 'new header must be a dimheader object', end
+            if iscell(new_head)
+                new_head = xplr.Header(size(new_data, dim), new_head{:});
+            end
             switch flag
                 case 'global'
+                    if ~isa(new_head, 'xplr.DimHeader')
+                        assert(isa(new_head, 'xplr.Header'), 'new header must be a Header or Dimheader object')
+                        new_head = xplr.DimHeader(new_head);
+                    end
                     x.header = new_head;
                 case 'chg_dim'
+                    if isa(new_head, 'xplr.DimHeader')
+                        % dimension ID should remain the same
+                        assert(isequal([new_head.dim_id], [x.header(dim).dim_id]))
+                    else
+                        assert(isa(new_head, 'xplr.Header'), 'new header must be a Header or Dimheader object')
+                        new_head = xplr.DimHeader(new_head, [x.header(dim).dim_id]);
+                    end
                     if length(dim) ~= length(new_head), error 'length of new header does not match number of new dimensions', end
                     x.header(dim) = new_head;
                 otherwise

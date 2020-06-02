@@ -48,7 +48,7 @@ if ischar(data)
 elseif isfield(options,'name')
     name = options.name;
     options = rmfield(options, 'name');
-else
+elseif ~isa(data, 'xplr.XData')
     name = inputname(1);
 end
 if isfield(options,'header')

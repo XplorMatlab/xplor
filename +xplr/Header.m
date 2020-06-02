@@ -5,6 +5,7 @@ classdef Header < handle
     % function H = header(label, n)                         [categorical]
     % function H = header([label,] sub_labels, values)      [categorical]
     % function H = header({args header 1}, {args header 2}, ...)
+    % function H = header([n1 n2 ...], {simplified args header 1}, {simplified args header 2}, ...)
     %---
     % Container for header information in a single dimension.
     %
@@ -18,6 +19,8 @@ classdef Header < handle
     % * scale   numerical value for step between data elements
     % * values  a cell array with n rows and as many columns as there are
     %           labels
+    % 
+    % "simplified args header" refers to arguments as above but without 'n'
     %
     % There are two types of header; this type is automatically inferred
     % from the syntax of the call to 'header' constructor.
@@ -93,6 +96,33 @@ classdef Header < handle
             end
             
             % multiple header definitions?
+            % (special case: starting with size specifications)
+            if isnumeric(varargin{1})
+                % create xplr.header objects from labels
+                spec = varargin(2:end);
+                nd = length(spec);
+                sz = varargin{1};
+                assert(length(sz) <= nd, 'less header specifications than number of dimensions')
+                sz(end+1:nd) = 1;
+                for i=1:nd
+                    if iscell(spec{i})
+                        args = spec{i};
+                        if ~ischar(args{end}) && ~isscalar(args{end})
+                            % categorical header defined by a table of
+                            % values: no need to add number of samples
+                            H(i) = xplr.Header(args{:});
+                        else
+                            % other header formats: add number of samples
+                            H(i) = xplr.Header(args{1}, sz(i), args{2:end});
+                        end
+                    else
+                        label = spec{i};
+                        H(i) = xplr.Header(label, sz(i));
+                    end
+                end
+                return
+            end
+            % (regular case)
             if ~iscell(varargin{1})
                 is_multiple = false;
             elseif nargin ~= 2
@@ -120,7 +150,7 @@ classdef Header < handle
         function disp(H)
             valid = ~isempty(H(1).n);
             if ~valid
-                disp@hgsetget(H)
+                disp@handle(H)
                 return
             end
             str = [class(H), ' object with following info:'];

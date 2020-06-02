@@ -95,11 +95,11 @@ error 'much of the code below is not working any more due to changes in code'
 % 
 % %%
 % F1 = F;
-% S.addFilter(1,F1)
+% S.add_filter(1,F1)
 % 
 % %%
 % F2 = xplr.filterAndPoint(header(2));
-% S.addFilter(2,F2)
+% S.add_filter(2,F2)
 % 
 % %%
 % F2.update_selection('all',{[1 2] [3 4]})
