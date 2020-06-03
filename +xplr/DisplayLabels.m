@@ -383,12 +383,16 @@ classdef DisplayLabels < xplr.GraphNode
                     end
                 elseif p(1) <= 0 && p(2) <= .25
                     % goes in merged_data
-                    new_layout_id.merged_data(end+1) = dim_id;
                     if color_dim_id
                         % move away dimension that was occupying merged_data
                         % location
                         tmp = new_layout_id.(d_layout);
                         new_layout_id.(d_layout) = [tmp(1:didx-1), color_dim_id, tmp(didx:end)];
+                        % and replace it by current dimension
+                        new_layout_id.merged_data = dim_id;
+                    else
+                        % add current dimension to merged_data location
+                        new_layout_id.merged_data(end+1) = dim_id;
                     end
                 elseif p(1)<=0
                     % insert in y

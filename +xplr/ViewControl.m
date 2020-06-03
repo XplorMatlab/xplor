@@ -229,7 +229,7 @@ classdef ViewControl < xplr.GraphNode
         end
         function dim_action(C, flag, dim_id, varargin)
             % function dim_action(C,'add_filter',dim_ids[,key[,active]])
-            % function dim_action(C,'rm_filter|rm_filter',dim_id)
+            % function dim_action(C,'show_filter|rm_filter',dim_id)
             % function dim_action(C,'set_active',dim_id,value)
             % function dimaction(C,'view_dim',dimID)
             % function dimaction(C,'new_window',dimID)
@@ -320,6 +320,12 @@ classdef ViewControl < xplr.GraphNode
                     dim_ids_add = [pairs, num2cell(setdiff(dim_ids_add, [pairs{:}], 'stable'))];
                 end
                 n_add = length(dim_ids_add);
+                if strcmp(flag, 'view_dim')
+                    % display mode and layout will be reset when display
+                    % will be updated
+                    any_change = n_add > 0 || ~isempty(current_filters_dim);
+                    C.V.D.forget_layout(~any_change);
+                end
                 if n_add > 0
                     if n_add>1 && isscalar(key), key = repmat(key, 1, n_add); end
                     if n_add>1 && isscalar(active), active = repmat(active, 1, n_add); end
@@ -330,8 +336,8 @@ classdef ViewControl < xplr.GraphNode
                         new_filters(end+1) = struct('dim_id', dim_ids_add{i}, 'F', F, 'active', active(i)); %#ok<AGROW>
                     end
                     C.V.slicer.add_filter({new_filters.dim_id}, [new_filters.F], [new_filters.active]) % slicing will occur now
-                else
-                    % we might have removed filters before without updating
+                elseif ~isempty(current_filters_dim)
+                    % we have removed filters before without updating
                     % completely the slice
                     C.V.slicer.apply_pending()
                 end
@@ -369,7 +375,7 @@ classdef ViewControl < xplr.GraphNode
                     end
                     % toggle filter active in slicer
                     C.V.slicer.chg_filter_active(filters_idx, active)
-                case 'rm_filter'
+                case 'show_filter'
                     for filter = current_filters_dim
                         F = filter.obj;
                         if ~isscalar(filter.dim_id)
@@ -479,7 +485,7 @@ classdef ViewControl < xplr.GraphNode
             % change filter label upon operation change
             function check_operation_change(~, e)
                 if strcmp(e.type, 'operation')
-                    label = ['(' F.F.slicefunstr ')'];
+                    label = ['(' F.F.slice_fun_str ')'];
                     set(filter_label_op, 'string', label)
                 end
             end
@@ -557,7 +563,7 @@ classdef ViewControl < xplr.GraphNode
             end
             
             % show filter if there was no move
-            if ~moved, dim_action(C, 'rm_filter', dim_id), end
+            if ~moved, dim_action(C, 'show_filter', dim_id), end
         end
     end
     
@@ -607,7 +613,7 @@ classdef ViewControl < xplr.GraphNode
                     panel = item.obj;
                     set(panel,'visible','off')
                     C.items(item_idx).obj = [];
-                    C.dimaction('rm_filter', dim_id)
+                    C.dim_action('rm_filter', dim_id)
                     % move dimension label inside graph (note that this
                     % will call fn_buttonmotion in the same figure, and
                     % therefore terminate the current fn_buttonmotion)

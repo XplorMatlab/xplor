@@ -32,8 +32,13 @@ classdef ViewDisplay < xplr.GraphNode
     end
     
     % Display properties
+    properties (Access='private')
+        display_mode_ = 'image';  % 'time courses' or 'image'
+    end
+    properties (Dependent, SetObservable=true, AbortSet=true)
+        display_mode
+    end
     properties (SetObservable=true, AbortSet=true)
-        display_mode = 'image';  % 'time courses' or 'image'
         show_color_legend = false; % false by default because of bug in Matlab's legend function, which inactivates several listeners
         line_alpha = 1; % lines have a small degree of transparency!
         do_title = true;
@@ -267,7 +272,7 @@ classdef ViewDisplay < xplr.GraphNode
                 fn_propcontrol(D.graph, 'show_separation', 'menu', ...
                     {'parent', m, 'label', 'Show separations between lines/images', 'separator', 'on'});
                 if D.graph.show_separation
-                    fn_propcontrol(D.graph, 'separationcolor', ...
+                    fn_propcontrol(D.graph, 'separation_color', ...
                         {'menu', {'k', [.8, .8, 1], [1, .8, .8], [.8, .8, .8]}, {'black', 'light blue', 'light red', 'light gray', 'other'}}, ...
                         {'parent', m, 'label', 'Separations color'});
                 end
@@ -1025,6 +1030,8 @@ classdef ViewDisplay < xplr.GraphNode
                             nc = size(xi, 3);
                             if nc > 4
                                 xi = xi(:, :, 1:4);
+                                clipi = clipi(:, 1:4);
+                                nc = 4;
                             end
                             im = D.color_map.color_image(xi, clipi);
                             if nc == 2
@@ -1208,7 +1215,7 @@ classdef ViewDisplay < xplr.GraphNode
             % first time?
             if isempty(D.layout_id_all)
                 % some heuristics to choose initial layout
-                D.display_mode = fn_switch(sum(D.slice.sz>1) == 1, 'time courses', 'image');
+                D.display_mode_ = xplr.DisplayLayout.suggest_display_mode(D);
                 D.layout_id_all = xplr.DisplayLayout(D);
                 D.layout_id = D.layout_id_all;
             else
@@ -1283,10 +1290,13 @@ classdef ViewDisplay < xplr.GraphNode
             D.navigation.reposition_cross()
             D.navigation.display_selection()
         end
+        function mode = get.display_mode(D)
+            mode = D.display_mode_;
+        end
         function set.display_mode(D, mode)
             c = disable_listener(D.listeners.ax_siz); %#ok<MCSUP,NASGU> % prevent display update following automatic change of axis position
             % set property
-            D.display_mode = mode;
+            D.display_mode_ = mode;
             % for 'image' mode, check that layout is valid, and modify it if
             % necessary
             if strcmp(mode, 'image') && length(D.layout_id.merged_data) > 1
@@ -1308,6 +1318,19 @@ classdef ViewDisplay < xplr.GraphNode
             end
             % show/hide color legend
             display_color_legend(D)
+        end
+        function forget_layout(D, redraw)
+            % let automatic heuristic find out the best display mode and
+            % layout
+            if nargin<2, redraw = true; end
+            % forget current layout
+            D.layout_id_all = [];
+            % update display; if no update now, it must happen later on
+            % programatically
+            if redraw
+                D.slice_change_event = struct('flag', 'global');
+                zslice_change(D)
+            end
         end
     end
     

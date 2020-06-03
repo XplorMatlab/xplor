@@ -132,7 +132,7 @@ classdef ZoomFilter < xplr.DataOperand
                 z.header_out = xplr.Header(head_in.label, head_in.sub_labels, head_in.values(z.indices_in,:));
             else
                 % binn_ing
-                head_value = z.header_in.trackValues(num2cell(z.indices_in,1));
+                head_value = z.header_in.track_values(num2cell(z.indices_in,1));
                 z.header_out = xplr.Header(head_in.label, head_in.sub_labels, head_value);
             end
             

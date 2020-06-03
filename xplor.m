@@ -18,14 +18,38 @@ function V = xplor(data, varargin)
 
 % Create a demo xdata with header
 if nargin == 0
-    [~, ~, ~, dat] = flow;
-    dat = permute(dat, [1, 3, 2]);
-    s = size(dat);
-    head = xplr.Header( ...
-        {'x', 'px', s(1)}, {'y', 'px', s(2)}, ...
-        {'axis', num2cell(['a':'y' 'A':'Y'])} ...
-        );
-    data = xplr.XData(dat, head, 'Flow Data');
+    %     % flow dataset
+    %     [~, ~, ~, dat] = flow;
+    %     dat = permute(dat, [1, 3, 2]);
+    %     s = size(dat);
+    %     head = xplr.Header( ...
+    %         {'x', 'px', s(1)}, {'y', 'px', s(2)}, ...
+    %         {'axis', num2cell(['a':'y' 'A':'Y'])} ...
+    %         );
+    %     data = xplr.XData(dat, head, 'Flow Data');
+    
+    % xplor logo
+    logo = fn_readimg(fullfile(fileparts(which('xplor')),'demo','XPLOR logo.png'));
+    logo = fn_bin(logo,2)/255;
+    n = max(size(logo)); logo(end+1:n, :, :) = 1; logo(:, end+1:n, :) = 1;
+    logo_rgb = num2cell(logo, [1 2]);
+    [xx, yy] = ndgrid(linspace(-1, 1, n), linspace(-1, 1, n));
+    xy = [row(xx); row(yy)];
+    nt = 30;
+    dat = zeros(n, n, 3, nt);
+    for i = 1:nt
+        theta = interp1([1 nt], [0 2*pi], i);
+        R = [cos(theta) sin(theta); -sin(theta) cos(theta)];
+        xy_i = R * xy;
+        xx_i = reshape(xy_i(1, :), n, n);
+        yy_i = reshape(xy_i(2, :), n, n);
+        for k = 1:3
+            dat(:, :, k, i) = interpn(xx(:, 1), yy(1, :), logo_rgb{k}, xx_i, yy_i, 'linear', 1);
+        end
+    end
+    data = xplr.XData(dat, ...
+        {{'x', 'px'}, {'y', 'px'}, {'color', {'r', 'g', 'b'}}, {'z', 'px', n/nt}}, ...
+        'LOGO');
 end
 
 % % drag & drop window

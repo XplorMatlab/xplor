@@ -27,17 +27,7 @@ classdef DisplayLayout
             L.D = D;
             
             % choose a default organization for display D
-            nd = D.nd;
-            do_image = strcmp(D.display_mode, 'image');
-            data_dim_id = [D.slice.header.dim_id];
-            if D.nd == 3 && do_image
-                L.x = data_dim_id(1);
-                L.y = data_dim_id(2);
-                L.xy = data_dim_id(3);
-            else
-                L.x = data_dim_id(1:2:nd);
-                L.y = data_dim_id(2:2:nd);
-            end
+            L = L.update_layout();
         end
     end
     
@@ -114,71 +104,6 @@ classdef DisplayLayout
                 L2.(f) = data_dim_id(dim_f(keep));
             end
         end
-        function [L, L2] = update_layout(L)
-            % function [L, L2] = update_layout(L)
-            %---
-            % Update layout upon slice change.
-            % Keep locations of dimensions already present in L, 
-            % remove dimensions that are not in L.D.slice anymore,
-            % use some heuristic to choose locations of new dimensions
-            % 
-            % Input:
-            % - L   layout
-            %
-            % Output:
-            % - L   new layout
-            % - L2  new layout, with singleton dimensions removed
-            
-            L2 = L; % copy (displaylayout is not a handle class)
-            data_head = L.D.slice.header;
-            data_dim_id = [data_head.dim_id];
-            
-            % dimensions already positionned + remove dimensions that
-            % disappeared
-            dim_positionned = false(1, L.D.nd);
-            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
-            for i = 1:length(F)
-                f = F{i};
-                dim_idf = L.(f);      % dimension identifiers
-                % mark among data dimensions those that are positionned
-                dim_positionned = dim_positionned | ismember(data_dim_id, dim_idf);
-                % and keep among L.(f) and L2.(f) only dimensions that are
-                % still present in the data
-                [present, dim] = ismember(dim_idf, data_dim_id);
-                dim_present = dim(present); % dimension numbers of those actually present in the data
-                singleton = ([data_head(dim_present).n] == 1);
-                L.(f) = data_dim_id(dim_present);
-                L2.(f) = data_dim_id(dim_present(~singleton));
-            end
-            
-            % layout without the singleton dimensions
-            L2 = L.current_layout();
-            
-            % position missing dimensions
-            for d = find(~dim_positionned)
-                if data_head(d).n > 1
-                    % insert in both L (which gathers all dimensions) and
-                    % L2 (which keeps only displayed dimensions); try to
-                    % keep L2 balanced between number of dimensions in x
-                    % and y
-                    if length(L2.y) <= length(L2.x)
-                        L.y(end+1) = data_dim_id(d);
-                        L2.y(end+1) = data_dim_id(d);
-                    else
-                        L.x(end+1) = data_dim_id(d);
-                        L2.x(end+1) = data_dim_id(d);
-                    end
-                else
-                    % insert only in L because dimension is not displayed;
-                    % try to keep L balanced
-                    if length(L.y) <= length(L.x)
-                        L.y(end+1) = data_dim_id(d);
-                    else
-                        L.x(end+1) = data_dim_id(d);
-                    end
-                end
-            end
-        end
         function [L, L2] = set_dim_location(L, dim_id, location)
             % function [L, L2] = set_dim_location(L,dim_id,location)
             %---
@@ -211,13 +136,13 @@ classdef DisplayLayout
             end
             
             % add them at the requested locations
-            dim_idmove = []; 
+%             dim_idmove = []; 
             for i = 1:length(dim_id)
                 f = location{i};
                 if ismember(f, {'xy', 'yx'})
                     % dimension that is already at 'xy' or 'yx' location if
                     % any will need to be moved somewhere else
-                    dim_idmove = [L.xy, L.yx];
+%                     dim_idmove = [L.xy, L.yx];
                     [L.xy, L.yx] = deal([]);
                     % assign requested dimension to the requested location
                     L.(f) = dim_id(i);
@@ -237,35 +162,156 @@ classdef DisplayLayout
                     L.(f) = [L.(f)(1:index), dim_id(i), L.(f)(index+1:end)];
                 end
             end
+%             
+%             % layout without the singleton dimensions
+%             L2 = L.current_layout();
+            
+            % dimension that needs to be moved somewhere else
+            [L, L2] = L.update_layout();
+%             for d = dim_idmove
+%                 if data_head(d).n > 1
+%                     % insert in both L (which gathers all dimensions) and
+%                     % L2 (which keeps only displayed dimensions); try to
+%                     % keep L2 balanced between number of dimensions in x
+%                     % and y
+%                     if length(L2.y) <= length(L2.x)
+%                         L.y(end+1) = data_dim_id(d);
+%                         L2.y(end+1) = data_dim_id(d);
+%                     else
+%                         L.x(end+1) = data_dim_id(d);
+%                         L2.x(end+1) = data_dim_id(d);
+%                     end
+%                 else
+%                     % insert only in L because dimension is not displayed;
+%                     % try to keep L balanced
+%                     if length(L.y) <= length(L.x)
+%                         L.y(end+1) = data_dim_id(d);
+%                     else
+%                         L.x(end+1) = data_dim_id(d);
+%                     end
+%                 end
+%             end
+                
+        end
+    end
+    
+    % Suggest layout and display mode
+    methods
+        function [L, L2] = update_layout(L)
+            % function [L, L2] = update_layout(L)
+            %---
+            % Update layout upon slice change.
+            % Keep locations of dimensions already present in L, 
+            % remove dimensions that are not in L.D.slice anymore,
+            % use some heuristic to choose locations of new dimensions
+            % 
+            % Input:
+            % - L   layout
+            %
+            % Output:
+            % - L   new layout
+            % - L2  new layout, with singleton dimensions removed
+            
+            data_head = L.D.slice.header;
+            non_singleton = [data_head.n] > 1;
+            data_dim_id = [data_head.dim_id];
+            do_image = strcmp(L.D.display_mode, 'image');
+            
+            % dimensions already positionned + remove dimensions that
+            % disappeared
+            dim_positionned = false(1, L.D.nd);
+            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
+            for i = 1:length(F)
+                f = F{i};
+                dim_idf = L.(f);      % dimension identifiers
+                % mark among data dimensions those that are positionned
+                dim_positionned = dim_positionned | ismember(data_dim_id, dim_idf);
+                % and keep among L.(f) and L2.(f) only dimensions that are
+                % still present in the data
+                [present, dim] = ismember(dim_idf, data_dim_id);
+                dim_present = dim(present); % dimension numbers of those actually present in the data
+                L.(f) = data_dim_id(dim_present);
+            end
+            
+            % find dimensions that form images together, put on on x, the
+            % other on y
+            if do_image
+                connections = data_head.measure_grouping();
+                while any(connections(:))
+                    [d_2, d_1] = find(connections, 1, 'first');
+                    connections([d_1, d_2], :) = false;
+                    connections(:, [d_1, d_2]) = false;
+                    if all(dim_positionned([d_1, d_2]))
+                        continue
+                    elseif ~any(dim_positionned([d_1, d_2]))
+                        L.x(end+1) = data_dim_id(d_1);
+                        L.y(end+1) = data_dim_id(d_2);
+                    elseif any(d_1 == L.x)
+                        L.y(end+1) = data_dim_id(d_2);
+                    elseif any(d_1 == L.y)
+                        L.x(end+1) = data_dim_id(d_2);
+                    elseif any(d_2 == L.x)
+                        L.y(end+1) = data_dim_id(d_1);
+                    elseif any(d_2 == L.y)
+                        L.x(end+1) = data_dim_id(d_1);
+                    else
+                        continue
+                    end
+                    dim_positionned([d_1 d_2]) = true;
+                end
+            end
+            
+            % color channel
+            if do_image && isempty(L.merged_data)
+                d = find(~dim_positionned & [data_head.n]>=2 & [data_head.n]<=4, 1);
+                if ~isempty(d)
+                    L.merged_data = data_dim_id(d); 
+                    dim_positionned(d) = true;
+                end
+            end      
             
             % layout without the singleton dimensions
             L2 = L.current_layout();
             
-            % dimension that needs to be moved somewhere else
-            for d = dim_idmove
+            % position missing dimensions
+            n_remain = sum(non_singleton & ~dim_positionned);
+            for d = find(~dim_positionned)
+                d_id = data_dim_id(d);
                 if data_head(d).n > 1
                     % insert in both L (which gathers all dimensions) and
                     % L2 (which keeps only displayed dimensions); try to
                     % keep L2 balanced between number of dimensions in x
                     % and y
-                    if length(L2.y) <= length(L2.x)
-                        L.y(end+1) = data_dim_id(d);
-                        L2.y(end+1) = data_dim_id(d);
+                    if n_remain == 1 && isscalar(L2.x) ...
+                            && (length(L2.y) == do_image) && isempty([L.xy, L.yx])
+                        % grid display looks promising
+                        L.xy = d_id;
+                    elseif length(L2.y) <= length(L2.x)
+                        L.y(end+1) = d_id;
+                        L2.y(end+1) = d_id;
                     else
-                        L.x(end+1) = data_dim_id(d);
-                        L2.x(end+1) = data_dim_id(d);
+                        L.x(end+1) = d_id;
+                        L2.x(end+1) = d_id;
                     end
+                    n_remain = n_remain - 1;
                 else
                     % insert only in L because dimension is not displayed;
                     % try to keep L balanced
                     if length(L.y) <= length(L.x)
-                        L.y(end+1) = data_dim_id(d);
+                        L.y(end+1) = d_id;
                     else
-                        L.x(end+1) = data_dim_id(d);
+                        L.x(end+1) = d_id;
                     end
                 end
             end
-                
+        end
+    end
+    methods (Static)
+        function display_mode = suggest_display_mode(D)
+            head = D.slice.header;
+            head([head.n]==1) = [];
+            do_image = any(row(measure_grouping(head)));
+            display_mode = fn_switch(do_image, 'image', 'time courses');
         end
     end
     

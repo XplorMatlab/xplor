@@ -425,7 +425,7 @@ classdef DisplayNavigation < xplr.GraphNode
             
             % callbacks
             for i=1:3
-                set(N.cross(i),'buttondownfcn', @(u,e)manualmovecross(N, i))
+                set(N.cross(i),'buttondownfcn', @(u,e)manual_move_cross(N, i))
             end
         end
         function set.cross_center(N, cross_center)
@@ -446,7 +446,7 @@ classdef DisplayNavigation < xplr.GraphNode
             set(N.cross(3), 'XData', cross_center([1, 1]), 'YData', cross_center([2, 2]))
 
         end
-        function manualmovecross(N, il)
+        function manual_move_cross(N, il)
             if ~ismember(get(N.hf, 'selectiontype'), {'normal', 'open'})
                 % not a left click: execute callback for axes
                 axes_click(N)
@@ -521,15 +521,18 @@ classdef DisplayNavigation < xplr.GraphNode
         end        
         function manual_click_move_cross(N, point)
             % move the cross to the selected point
-            ijk = N.graph.graph_to_slice(point, 'invertible', true);
+            ijk = row(N.graph.graph_to_slice(point, 'invertible', true));
             
             % round indices values in dimensions with categorical headers
             categorical = [N.D.slice.header.categorical];
             ijk(categorical) = round(ijk(categorical));
             
+            % clip to data edges
+            ijk = fn_coerce(ijk, .501, N.D.slice.sz + .499); 
+            
             % update the point filters (only for dimensions where the point
             % remains within the slice)
-            for d = find(~is_point_out_of_display(N, point, true))
+            for d = 1:N.D.nd
                 P = N.point_filters{d};
                 if ~isempty(P)
                     P.index_exact = ijk(d);

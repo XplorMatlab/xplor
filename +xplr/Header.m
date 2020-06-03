@@ -437,7 +437,7 @@ classdef Header < handle
             % dimensions whose headers are measure with the same units
             nh = length(H);
             connections = false(nh,nh);
-            idx_measure = find([H.is_measure]);
+            idx_measure = find([H.is_measure] & [H.n]>1);
             for i = idx_measure
                 for j = setdiff(idx_measure, i)
                     connections(i, j) = strcmp(H(i).unit, H(j).unit);
