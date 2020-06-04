@@ -35,6 +35,12 @@ classdef ZoomSlicer < xplr.Slicer
             S.add_filter(dim, Z)
             
         end
+    end
+    
+    % Automatic creation of zoom filters (contrary to the Slicer parent
+    % class that receives only filters defined externally, the ZoomSlicer
+    % object is the one that creates and manages its filters)
+    methods
         function Z = auto_zoom_filter(S, link_key, dim)
             % function Z = auto_zoom_filter(S,link_key[,dim])
             %---
@@ -158,7 +164,7 @@ classdef ZoomSlicer < xplr.Slicer
             
             % Disconnect one filter
             disconnect@xplr.GraphNode(S, F)
-            if isa(F, 'xplr.zoomfilter') && isvalid(F) && F.link_key ~= 0
+            if isa(F, 'xplr.ZoomFilter') && isvalid(F) && F.link_key ~= 0
                 xplr.Bank.unregister_filter(F, S)
             end
         end

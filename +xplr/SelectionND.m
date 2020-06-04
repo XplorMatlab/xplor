@@ -137,7 +137,7 @@ classdef SelectionND < xplr.GraphNode
         end
         function check_point(sel, tol)
             if sel.is_point(tol)
-                sel.shapes = sel.shapes.topoint();
+                sel.shapes = sel.shapes.to_point();
             end
         end
         function t = get.type(sel)
