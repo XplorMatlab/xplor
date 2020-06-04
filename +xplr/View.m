@@ -9,6 +9,7 @@ classdef View < xplr.GraphNode
         C               % control of data operation
         D               % main display
         panels          % panels for: display, control, lists, + some buttons
+        menu
     end
     properties (SetObservable = true)
         control_visible = false;  % logical - are the controls visible
@@ -50,10 +51,9 @@ classdef View < xplr.GraphNode
             % open figure and create panels
             init_panels(V)
             
-            % Developer menu
-            %if xplr.debuginfo
-            V.developer_menu()
-            %end            
+            % MENU
+            V.menu = uimenu('parent', V.hf, 'label', 'XPLOR', ...
+                'callback', @(u,e)V.xplor_menu());
             
             % DISPLAY
             % (note: calling add_component will cause V.D to be deleted when
@@ -70,11 +70,6 @@ classdef View < xplr.GraphNode
         function delete(V)
             if ~isprop(V,'hf'), return, end
             delete_valid(V.hf, V.C, V.D)
-        end
-        function developer_menu(V)
-            m = uimenu(V.hf, 'label', 'Developer');
-            uimenu(m, 'label', 'View object in base space', ...
-                'callback', @(u,e)assign_in('base', 'V', V))
         end
     end
     
@@ -148,6 +143,53 @@ classdef View < xplr.GraphNode
         end
         function hide_controls(V)
             V.control_visible = false;
+        end
+    end
+    
+    % Menu
+    methods
+        function xplor_menu(V)
+            m = V.menu;
+            delete(get(m,'children'))
+            
+            % Access View from command line
+            uimenu(m, 'label', 'Access window from command line...', ...
+                'callback', @(u,e)V.command_line_access())
+            
+            % Close XPLOR window(s)
+            fig_name = get(V.hf, 'name');
+            uimenu(m, 'label', ['Close all ''' fig_name ''' windows'], 'separator', 'on', ...
+                'callback', @(u,e)close(findall(0, 'type', 'figure', 'name', fig_name)))
+            uimenu(m, 'label', 'Close all XPLOR windows', ...
+                'callback', @(u,e)close(findall(0, 'type', 'figure', 'tag', 'XPLOR')))
+        end
+        function command_line_access(V)
+            persistent do_ask_name
+            % suggest a variable name
+            idx = 0;
+            ok = false;
+            while ~ok
+                idx = idx + 1;
+                name = ['V' num2str(idx)];
+                if ~evalin('base',['exist(''' name ''', ''var'')'])
+                    ok = true;
+                else
+                    V_name = evalin('base', name);
+                    ok = (~isvalid(V_name) || V == V_name);
+                end    
+            end
+            % prompt user for variable name
+            if isempty(do_ask_name), do_ask_name = true; end
+            if do_ask_name
+                s = fn_structedit( ...
+                    struct('Variable__name', name, 'do__not__ask__again', false));
+                if isempty(s), return, end
+                name = s.Variable__name;
+                do_ask_name = ~s.do__not__ask__again;
+            end
+            % save 
+            assignin('base', name, V)
+            disp(['View object has been stored in variable ''' name '''.'])
         end
     end
     

@@ -591,7 +591,7 @@ classdef ViewControl < xplr.GraphNode
             controls_width = C.hp.Position(3);
             panel = [];
             
-            fn_buttonmotion(@move_sub, hf, 'pointer', 'hand')
+            moved = fn_buttonmotion(@move_sub, hf, 'pointer', 'hand', 'moved?');
             function move_sub
                 % once filter has been removed, do not execute this
                 % callback any more
@@ -627,12 +627,17 @@ classdef ViewControl < xplr.GraphNode
                     end
                 end
             end
-
-            % and put back at original position when we release the mouse
-            % button!
-            if active
+            
+            % Finishing actions
+            if ~moved
+                % label was not moved, then show filter
+                C.dim_action('show_filter', dim_id)
+            elseif active
+                % put back at original position when we release the mouse
+                % button!
                 set(label, 'pos', pos0)
             else
+                % delete panel and label that had only been hidden so far
                 delete(label)
                 delete(panel)
             end

@@ -480,6 +480,10 @@ classdef Header < handle
                     idx_name = find(strcmpi({H.sub_labels.label}, 'name'));
                     if isempty(idx_name), idx_name = 1; end
                     item_values = H.values(:, idx_name);
+                    if idx_name > 1
+                        empty = fn_isemptyc(item_values);
+                        item_values(empty) = H.values(empty, 1);
+                    end
                     names = cell(1, n_val);
                     for k=1:n_val
                         val = item_values{idx(k)};
