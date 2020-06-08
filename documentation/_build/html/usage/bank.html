@@ -18,9 +18,7 @@
     <script src="../_static/language_data.js"></script>
     
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Structure" href="structure.html" />
-    <link rel="prev" title="Data container: xdata" href="xdata.html" /> 
+    <link rel="search" title="Search" href="../search.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -31,14 +29,7 @@
         <li class="right" >
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
-        <li class="right" >
-          <a href="structure.html" title="Structure"
-             accesskey="N">next</a> |</li>
-        <li class="right" >
-          <a href="xdata.html" title="Data container: xdata"
-             accesskey="P">previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="dev.html" accesskey="U">Developer documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li> 
       </ul>
     </div>  
 
@@ -53,7 +44,7 @@
 <dt id="+xplr.bank">
 <em class="property">class </em><code class="sig-prename descclassname">+xplr.</code><code class="sig-name descname">bank</code><a class="headerlink" href="#+xplr.bank" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <code class="xref mat mat-class docutils literal notranslate"><span class="pre">handle</span></code></p>
-<p>xplr.bank The bank is unique and store several elements :</p>
+<p>xplr.Bank The bank is unique and store several elements :</p>
 <ul class="simple">
 <li><p>measures: units for measures conversion</p></li>
 <li><p>recent headers: previously used headers, this list of recent headers is scanned when a new set of data is xplored</p></li>
@@ -61,54 +52,46 @@
 <li><p>list_combo: xplr.listcombo object for displaying 1D filters as lists</p></li>
 </ul>
 <dl class="staticmethod">
-<dt id="+xplr.bank.addMeasure">
-<em class="property">static </em><code class="sig-name descname">addMeasure</code><span class="sig-paren">(</span><em class="sig-param">label</em>, <em class="sig-param">units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.addMeasure" title="Permalink to this definition">¶</a></dt>
+<dt id="+xplr.bank.add_measure">
+<em class="property">static </em><code class="sig-name descname">add_measure</code><span class="sig-paren">(</span><em class="sig-param">label</em>, <em class="sig-param">units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.add_measure" title="Permalink to this definition">¶</a></dt>
 <dd><p>check</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.editMeasure">
-<em class="property">static </em><code class="sig-name descname">editMeasure</code><span class="sig-paren">(</span><em class="sig-param">oldlabel</em>, <em class="sig-param">label</em>, <em class="sig-param">units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.editMeasure" title="Permalink to this definition">¶</a></dt>
+<dt id="+xplr.bank.edit_measure">
+<em class="property">static </em><code class="sig-name descname">edit_measure</code><span class="sig-paren">(</span><em class="sig-param">oldlabel</em>, <em class="sig-param">label</em>, <em class="sig-param">units</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.edit_measure" title="Permalink to this definition">¶</a></dt>
 <dd><p>check</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.getFilterAndPoint">
-<em class="property">static </em><code class="sig-name descname">getFilterAndPoint</code><span class="sig-paren">(</span><em class="sig-param">linkkey</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em>, <em class="sig-param">doshow</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getFilterAndPoint" title="Permalink to this definition">¶</a></dt>
-<dd><p>function F = getFilterAndPoint(linkkey, header, newuser[, doshow])
-function F = getFilterAndPoint([linkkey_filter linkkey_point], header[, doshow[, newuser]])</p>
+<dt id="+xplr.bank.get_bank">
+<em class="property">static </em><code class="sig-name descname">get_bank</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.get_bank" title="Permalink to this definition">¶</a></dt>
+<dd><p>Unique bank object is stored in a persistent variable.</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.getFilterFilter">
-<em class="property">static </em><code class="sig-name descname">getFilterFilter</code><span class="sig-paren">(</span><em class="sig-param">linkkey</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getFilterFilter" title="Permalink to this definition">¶</a></dt>
-<dd><p>function F = getFilterFilter(linkkey, header[, newuser]])</p>
+<dt id="+xplr.bank.get_filter_and_point">
+<em class="property">static </em><code class="sig-name descname">get_filter_and_point</code><span class="sig-paren">(</span><em class="sig-param">link_key</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em>, <em class="sig-param">do_show</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.get_filter_and_point" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = get_filter_and_point(link_key, header, newuser[, do_show])
+function F = get_filter_and_point([link_key_filter linkkey_point], header[, do_show[, new_user]])</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.getPointFilter">
-<em class="property">static </em><code class="sig-name descname">getPointFilter</code><span class="sig-paren">(</span><em class="sig-param">linkkey</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getPointFilter" title="Permalink to this definition">¶</a></dt>
-<dd><p>function F = getPointFilter(linkkey, header[, newuser]])</p>
+<dt id="+xplr.bank.get_filter_filter">
+<em class="property">static </em><code class="sig-name descname">get_filter_filter</code><span class="sig-paren">(</span><em class="sig-param">link_key</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.get_filter_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = get_filter_filter(link_key, header[, new_user]])</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.getZoomFilter">
-<em class="property">static </em><code class="sig-name descname">getZoomFilter</code><span class="sig-paren">(</span><em class="sig-param">linkkey</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getZoomFilter" title="Permalink to this definition">¶</a></dt>
-<dd><p>function F = getZoomFilter(B,header, user)</p>
+<dt id="+xplr.bank.get_point_filter">
+<em class="property">static </em><code class="sig-name descname">get_point_filter</code><span class="sig-paren">(</span><em class="sig-param">link_key</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.get_point_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = get_point_filter(link_key, header[, new_user]])</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.getbank">
-<em class="property">static </em><code class="sig-name descname">getbank</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getbank" title="Permalink to this definition">¶</a></dt>
-<dd><p>Unique filter bank is attached to the root graphic object.
-This is preferrable to using a global variable that might be
-deleted with the ‘clear’ command.</p>
-</dd></dl>
-
-<dl class="staticmethod">
-<dt id="+xplr.bank.getunitinfo">
-<em class="property">static </em><code class="sig-name descname">getunitinfo</code><span class="sig-paren">(</span><em class="sig-param">unit</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.getunitinfo" title="Permalink to this definition">¶</a></dt>
-<dd><p>function [measurelabel conversion measure] = getunitinfo(unit)</p>
+<dt id="+xplr.bank.get_unit_info">
+<em class="property">static </em><code class="sig-name descname">get_unit_info</code><span class="sig-paren">(</span><em class="sig-param">unit</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.get_unit_info" title="Permalink to this definition">¶</a></dt>
+<dd><p>function [measurelabel, conversion, measure] = get_unit_info(unit)</p>
 <p>if ‘unit’ is a registered unit (e.g. ‘ms’), returns the label 
 of the corresponding measure (e.g. ‘time’) and the conversion
 to the reference unit (e.g. 1e-3, reference unit being ‘s’) 
@@ -116,32 +99,38 @@ otherwise returns an empty label</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.registerFilter">
-<em class="property">static </em><code class="sig-name descname">registerFilter</code><span class="sig-paren">(</span><em class="sig-param">linkkey</em>, <em class="sig-param">F</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerFilter" title="Permalink to this definition">¶</a></dt>
-<dd><p>function registerFilter(linkkey, F, user)</p>
+<dt id="+xplr.bank.get_zoom_filter">
+<em class="property">static </em><code class="sig-name descname">get_zoom_filter</code><span class="sig-paren">(</span><em class="sig-param">link_key</em>, <em class="sig-param">header</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.get_zoom_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function F = get_zoom_filter(B, header, user)</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.registerView">
-<em class="property">static </em><code class="sig-name descname">registerView</code><span class="sig-paren">(</span><em class="sig-param">V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.registerView" title="Permalink to this definition">¶</a></dt>
+<dt id="+xplr.bank.register_filter">
+<em class="property">static </em><code class="sig-name descname">register_filter</code><span class="sig-paren">(</span><em class="sig-param">link_key</em>, <em class="sig-param">F</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.register_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function register_filter(link_key, F, user)</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="+xplr.bank.register_view">
+<em class="property">static </em><code class="sig-name descname">register_view</code><span class="sig-paren">(</span><em class="sig-param">V</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.register_view" title="Permalink to this definition">¶</a></dt>
 <dd><p>update list of recent headers</p>
 </dd></dl>
 
 <dl class="staticmethod">
-<dt id="+xplr.bank.unregisterFilter">
-<em class="property">static </em><code class="sig-name descname">unregisterFilter</code><span class="sig-paren">(</span><em class="sig-param">F</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregisterFilter" title="Permalink to this definition">¶</a></dt>
-<dd><p>function unregisterFilter(F, user)</p>
+<dt id="+xplr.bank.unregister_filter">
+<em class="property">static </em><code class="sig-name descname">unregister_filter</code><span class="sig-paren">(</span><em class="sig-param">F</em>, <em class="sig-param">user</em><span class="sig-paren">)</span><a class="headerlink" href="#+xplr.bank.unregister_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>function unregister_filter(F, user)</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="+xplr.bank.measures">
-<code class="sig-name descname">measures</code><em class="property"> = &quot;struct('label','time','units',struct('unit',{'s' 'ms'},'value',{1 1e-3}))&quot;</em><a class="headerlink" href="#+xplr.bank.measures" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">measures</code><em class="property"> = &quot;struct('label', 'time', 'units', struct('unit', {'s' 'ms'}, 'value', {1 1e-3}))&quot;</em><a class="headerlink" href="#+xplr.bank.measures" title="Permalink to this definition">¶</a></dt>
 <dd><p>units</p>
 </dd></dl>
 
 <dl class="attribute">
-<dt id="+xplr.bank.recentheaders">
-<code class="sig-name descname">recentheaders</code><em class="property"> = 'xplr.header.empty(1,0)'</em><a class="headerlink" href="#+xplr.bank.recentheaders" title="Permalink to this definition">¶</a></dt>
+<dt id="+xplr.bank.recent_headers">
+<code class="sig-name descname">recent_headers</code><em class="property"> = 'xplr.Header.empty(1,0)'</em><a class="headerlink" href="#+xplr.bank.recent_headers" title="Permalink to this definition">¶</a></dt>
 <dd><p>headers will be ordered according to their appearance date</p>
 </dd></dl>
 
@@ -156,27 +145,10 @@ otherwise returns an empty label</p>
       <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
 <h3><a href="../index.html">Table of Contents</a></h3>
-<ul class="current">
+<ul>
 <li class="toctree-l1"><a class="reference internal" href="user.html">User tutorial</a></li>
-<li class="toctree-l1 current"><a class="reference internal" href="dev.html">Developer documentation</a><ul class="current">
-<li class="toctree-l2"><a class="reference internal" href="concepts_dev.html">Concepts: controlling and using filters in multiple windows</a></li>
-<li class="toctree-l2"><a class="reference internal" href="globalObjectMap.html">Global objects map</a></li>
-<li class="toctree-l2"><a class="reference internal" href="xdata.html">Data container: xdata</a></li>
-<li class="toctree-l2 current"><a class="current reference internal" href="#">The bank</a></li>
-<li class="toctree-l2"><a class="reference internal" href="structure.html">Structure</a></li>
-<li class="toctree-l2"><a class="reference internal" href="moduleXdata.html">Module xdata : defining a data structure</a></li>
-<li class="toctree-l2"><a class="reference internal" href="moduleView.html">Module view : user interface</a></li>
-<li class="toctree-l2"><a class="reference internal" href="credits.html">Credits</a></li>
-</ul>
-</li>
 </ul>
 
-  <h4>Previous topic</h4>
-  <p class="topless"><a href="xdata.html"
-                        title="previous chapter">Data container: xdata</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="structure.html"
-                        title="next chapter">Structure</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -207,14 +179,7 @@ otherwise returns an empty label</p>
         <li class="right" >
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
-        <li class="right" >
-          <a href="structure.html" title="Structure"
-             >next</a> |</li>
-        <li class="right" >
-          <a href="xdata.html" title="Data container: xdata"
-             >previous</a> |</li>
-        <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li>
-          <li class="nav-item nav-item-1"><a href="dev.html" >Developer documentation</a> &#187;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li> 
       </ul>
     </div>
     <div class="footer" role="contentinfo">

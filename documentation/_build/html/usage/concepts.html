@@ -19,8 +19,7 @@
     
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Developer documentation" href="dev.html" />
-    <link rel="prev" title="Overview" href="overview.html" /> 
+    <link rel="prev" title="Example: Temperature data" href="tutorialTemperature.html" /> 
   </head><body>
     <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
@@ -32,10 +31,7 @@
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
         <li class="right" >
-          <a href="dev.html" title="Developer documentation"
-             accesskey="N">next</a> |</li>
-        <li class="right" >
-          <a href="overview.html" title="Overview"
+          <a href="tutorialTemperature.html" title="Example: Temperature data"
              accesskey="P">previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="user.html" accesskey="U">User tutorial</a> &#187;</li> 
@@ -47,10 +43,42 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="toctree-wrapper compound">
-</div>
-<div class="section" id="concepts">
+  <div class="section" id="concepts">
 <h1>Concepts<a class="headerlink" href="#concepts" title="Permalink to this headline">¶</a></h1>
+<p>Xplor allows users to easily visualise their multi-dimensional data.
+An intuitive interface allows the selection of the filters that will be
+applied to the data before rendering the display.</p>
+<p><strong>Steps in using Xplor</strong></p>
+<img alt="Main mecanism of Xplor" class="align-center" src="../_images/globalinterest.png" />
+<dl class="simple">
+<dt>Here is a quick presentation of the main elements of Xplor:</dt><dd><ul class="simple">
+<li><p>Window : the interface ;</p></li>
+<li><p>Xdata : the container of the data and metadata ;</p></li>
+<li><p>Filter : to display only a slice of the data.</p></li>
+</ul>
+</dd>
+</dl>
+<div class="section" id="window-object">
+<h2>window object<a class="headerlink" href="#window-object" title="Permalink to this headline">¶</a></h2>
+<p>Window is the main interface. It is composed of a control zone, where
+the user can select the filters to apply, and a display zone, in which the user
+can zoom and change the labels’ position.</p>
+<p><strong>Screenshot of the Window with the control zone and the display zone</strong></p>
+<img alt="Screenshot of Window" class="align-center" src="../_images/windowExp.PNG" />
+</div>
+<div class="section" id="xdata-object">
+<h2>xdata object<a class="headerlink" href="#xdata-object" title="Permalink to this headline">¶</a></h2>
+<p>Xdata is a container for the N dimensional data and all the relative metadata.</p>
+<p><strong>Example of a Xdata instance</strong></p>
+<img alt="illustration for a xdata element" class="align-center" src="../_images/xdataexample.png" />
+</div>
+<div class="section" id="filter-object">
+<h2>filter object<a class="headerlink" href="#filter-object" title="Permalink to this headline">¶</a></h2>
+<p>Filters are selected in the interface and will update the xdata element :
+the resulting slice of data will be displayed.</p>
+<p><strong>Screenshot of the Window showing the filter applied</strong></p>
+<img alt="Screenshot of Window with filter" class="align-center" src="../_images/FilterExp.PNG" />
+</div>
 <div class="section" id="slicing-chain">
 <h2>slicing chain<a class="headerlink" href="#slicing-chain" title="Permalink to this headline">¶</a></h2>
 <p>The following diagram present the sclicing chain of xplor. It shows from a 5 dimensions dataset (x, y, condition, repetition and time) displayed as a 2 dimensions image.</p>
@@ -70,24 +98,22 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="reference internal" href="user.html">User tutorial</a><ul class="current">
 <li class="toctree-l2"><a class="reference internal" href="installation.html">Install from Github</a></li>
-<li class="toctree-l2"><a class="reference internal" href="tutorial.html">Example : Temperature data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorial.html">Tutorial</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">Concepts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#window-object">window object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#xdata-object">xdata object</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#filter-object">filter object</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#slicing-chain">slicing chain</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#controlling-and-using-filters-in-multiple-windows">controlling and using filters in multiple windows</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="dev.html">Developer documentation</a></li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="overview.html"
-                        title="previous chapter">Overview</a></p>
-  <h4>Next topic</h4>
-  <p class="topless"><a href="dev.html"
-                        title="next chapter">Developer documentation</a></p>
+  <p class="topless"><a href="tutorialTemperature.html"
+                        title="previous chapter">Example: Temperature data</a></p>
   <div role="note" aria-label="source link">
     <h3>This Page</h3>
     <ul class="this-page-menu">
@@ -119,10 +145,7 @@
           <a href="../mat-modindex.html" title="MATLAB Module Index"
              >matlab index</a> |</li>
         <li class="right" >
-          <a href="dev.html" title="Developer documentation"
-             >next</a> |</li>
-        <li class="right" >
-          <a href="overview.html" title="Overview"
+          <a href="tutorialTemperature.html" title="Example: Temperature data"
              >previous</a> |</li>
         <li class="nav-item nav-item-0"><a href="../index.html">xplor-matlab  documentation</a> &#187;</li>
           <li class="nav-item nav-item-1"><a href="user.html" >User tutorial</a> &#187;</li> 

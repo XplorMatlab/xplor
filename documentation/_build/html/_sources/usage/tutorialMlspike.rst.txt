@@ -1,4 +1,4 @@
-User tutorial - MLspike
+Example: MLspike
 *******************************************
 
  .. raw:: html
