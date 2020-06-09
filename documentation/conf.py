@@ -50,7 +50,7 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinxcontrib.matlab',
+#    'sphinxcontrib.matlab',
     'sphinx.ext.autosectionlabel',
 ]
 primary_domain = 'mat'
