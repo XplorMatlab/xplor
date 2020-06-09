@@ -1,6 +1,9 @@
 Concepts
 ********
 
+General concept
+----------------
+
 Xplor allows users to easily visualise their multi-dimensional data.
 An intuitive interface allows the selection of the filters that will be
 applied to the data before rendering the display.

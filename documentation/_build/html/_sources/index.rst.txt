@@ -23,7 +23,9 @@ Table of contents:
 .. toctree::
    :maxdepth: 3
 
-   usage/user
+   usage/installation
+   usage/tutorial
+   usage/concepts
 
 .. module:: xplr
 .. automodule:: +xplr
