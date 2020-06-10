@@ -7,6 +7,9 @@ Welcome to xplor-matlab's documentation!
 ========================================
 
 Xplor is an opensource toolbox to visualise easily N dimensional data.
+   .. raw:: html
+
+      <iframe width="560" height="315" src="https://www.youtube.com/embed/FU2xWCdarK8" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 
 .. image:: usage/image/presentation-filter01.png
 .. image:: usage/image/presentation-filter02.png
@@ -20,8 +23,9 @@ Table of contents:
 .. toctree::
    :maxdepth: 3
 
-   usage/user
-   usage/dev
+   usage/installation
+   usage/tutorial
+   usage/concepts
 
 .. module:: xplr
 .. automodule:: +xplr
