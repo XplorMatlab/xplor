@@ -13,6 +13,7 @@ classdef ZoomFilter < xplr.DataOperand
     end
     properties (Dependent, SetAccess='protected', Transient)
         zoom_value       % [istart istop]
+        no_zoom
     end
     
     % Setting and updating filter
@@ -165,6 +166,10 @@ classdef ZoomFilter < xplr.DataOperand
         function x = get.zoom_value(z)
             x = z.zoom;
             if strcmp(x, ':'), x = [.5, z.header_in.n+.5]; end
+        end
+        function b = get.no_zoom(z)
+            x = z.zoom;
+            b = strcmp(x, ':') || isequal(x, [.5, z.header_in.n+.5]);
         end
     end
     

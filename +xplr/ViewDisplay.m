@@ -623,6 +623,11 @@ classdef ViewDisplay < xplr.GraphNode
             % get clipping range of the current grid cell
             ijk = D.navigation.get_point_index_position('clip', 'round');
             ijk = row(round(D.graph.slice_to_zslice(ijk)));
+            if any(ijk < 1 | ijk > D.zslice.sz)
+                % cross outside of current zoom
+                clip = [];
+                return
+            end
             clip = subsref_dim(D.grid_clip, 1+D.clip_dim, ijk(D.clip_dim));
             % center if 'adjust by the mean' mode
             if strcmp(D.display_mode,'time courses') && ~isempty(D.clipping .align_signals)
@@ -630,6 +635,9 @@ classdef ViewDisplay < xplr.GraphNode
             end
         end
         function set_clip(D, clip, all_cells)
+            % function set_clip(D, clip[, all_cells])
+            % function set_clip(D, clip, zijk)
+
             % input
             if ~isnumeric(clip) || length(clip) ~= 2 || diff(clip) <= 0 || any(isnan(clip)|isinf(clip))
                 xplr.debug_info('stop','clip value is not valid')
@@ -637,15 +645,19 @@ classdef ViewDisplay < xplr.GraphNode
             end
             if nargin < 3, all_cells = false; end
             % set property
-            if all_cells
+            if isscalar(all_cells) && islogical(all_cells) && all_cells
                 D.grid_clip(1,:) = clip(1);
                 D.grid_clip(2,:) = clip(2);
             else
-                ijk = D.navigation.get_point_index_position('clip',  'round');
-                ijk = row(round(D.graph.slice_to_zslice(ijk)));
+                if isscalar(all_cells) && islogical(all_cells)
+                    ijk = D.navigation.get_point_index_position('clip',  'round');
+                    zijk = row(round(D.graph.slice_to_zslice(ijk)));
+                else
+                    zijk = row(all_cells);
+                end
                 dim_indp = D.clipping.independent_dim;
-                D.grid_clip = subsasgn_dim(D.grid_clip, [1, 1+dim_indp],[1, ijk(dim_indp)], clip(1));
-                D.grid_clip = subsasgn_dim(D.grid_clip, [1, 1+dim_indp],[2, ijk(dim_indp)], clip(2));
+                D.grid_clip = subsasgn_dim(D.grid_clip, [1, 1+dim_indp],[1, zijk(dim_indp)], clip(1));
+                D.grid_clip = subsasgn_dim(D.grid_clip, [1, 1+dim_indp],[2, zijk(dim_indp)], clip(2));
             end
             % update display; note that this might also modify D.gridclip
             % if D.cliping.align_signals is not empty
@@ -893,7 +905,7 @@ classdef ViewDisplay < xplr.GraphNode
                 clip_at_elements_level = isequal(elements_dim_, dim_indpc);
                 if strcmp(flag,'perm')
                     % mere permutation
-                    D.grid_clip = subsref_dim(D.grid_clip, dim, ind);
+                    D.grid_clip = subsref_dim(D.grid_clip, 1+dim, ind);
                 elseif clip_at_elements_level
                     % every element will be clipped independently: postpone
                     % clip computation to when elements will be extracted,

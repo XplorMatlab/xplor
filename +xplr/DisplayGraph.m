@@ -240,6 +240,12 @@ classdef DisplayGraph < xplr.GraphNode
             % 2) for time courses display, as "data value" becomes as a new
             % dimension below the most interior dimension in the y-axis.
             st.x_available = x_avail;
+            if do_signal && y_avail == 1
+                % signals would occupy the full vertical space, because
+                % there are no data dimensions in y, xy or yx location ->
+                % get a nicer display by leaving some gaps above and below
+                y_avail = 1/(1 + G.y_sep/2);
+            end
             st.y_available = y_avail;
         end
     end
@@ -601,7 +607,7 @@ classdef DisplayGraph < xplr.GraphNode
                 level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
                 color = 1 - (1-G.separation_color) / 2^level;
                 lines{end+1} = fn_lines('x', x_pos(:), G.D.ha, ...
-                    'color', color); %#ok<AGROW>
+                    'color', color, 'hittest', 'off'); %#ok<AGROW>
             end
             
             % y
@@ -628,7 +634,7 @@ classdef DisplayGraph < xplr.GraphNode
                 level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
                 color = 1 - (1-G.separation_color) / 2^level;
                 lines{end+1} = fn_lines('y', y_pos(:), G.D.ha, ...
-                    'color', color); %#ok<AGROW>
+                    'color', color, 'hittest', 'off'); %#ok<AGROW>
             end
             
             % xy
@@ -845,22 +851,21 @@ classdef DisplayGraph < xplr.GraphNode
                 % take advantage on the fact that the grid spans the full
                 % axis
                 d = st.xy_dim;
-                x = .5 + xy(1, :);
-                y = .5 - xy(2, :);
-                n_col = round(1/st.xy_steps(1));
-                icol = .5 + x*n_col;
-                n_row = round(1/abs(st.xy_steps(2)));
-                irow = .5 + y*n_row;
+                x = fn_coerce(.5 + xy(1, :), 0, 1); % 0 = left edge, 1 = right edge
+                y = fn_coerce(.5 - xy(2, :), 0, 1); % 0 = top edge,  1 = bottom edge
+                icol = .5 + x * st.xy_n_col;
+                irow = .5 + y * st.xy_n_row;
                 if ismember(d, sub_dim)
                     if d == G.layout.xy
-                        ijk(d, :) = icol + n_col*round(irow-1);
+                        ijk(d, :) = icol + st.xy_n_col * round(irow-1);
                     else
-                        ijk(d, :) = irow + n_row*round(icol-1);
+                        ijk(d, :) = irow + st.xy_n_row * round(icol-1);
                     end
+                    ijk(d, :) = min(ijk(d, :), sz(d) + .4999);
                 else
                     ijk(d, :) = ijk0(d, :);
                 end
-                xy = xy - st.xy_offsets(:, fn_coerce(round(ijk(d, :)), 1, sz(d)));
+                xy = xy - st.xy_offsets(:, round(ijk(d, :)));
             end
             
             % x 
@@ -872,12 +877,12 @@ classdef DisplayGraph < xplr.GraphNode
                     x = x - st.x_offset(ix);
                 end
                 if ismember(d, sub_dim)
-                    ijk(d, :) = fn_div(x, st.x_step(ix));
+                    ijk(d, :) = x / st.x_step(ix);
                 else
                     ijk(d, :) = ijk0(d, :);
                 end
                 if strcmp(mode, 'point')
-                    x = x - fn_mult(round(ijk(d, :)), st.x_step(ix));
+                    x = x - round(ijk(d, :)) * st.x_step(ix);
                 end
             end
             
@@ -890,12 +895,12 @@ classdef DisplayGraph < xplr.GraphNode
                     y = y - st.y_offset(iy);
                 end
                 if ismember(d, sub_dim)
-                    ijk(d, :) = fn_div(y, st.y_step(iy));
+                    ijk(d, :) = y / st.y_step(iy);
                 else
                     ijk(d, :) = ijk0(d, :);
                 end
                 if strcmp(mode, 'point')
-                    y = y - fn_mult(round(ijk(d, :)), st.y_step(iy));
+                    y = y - round(ijk(d, :)) * st.y_step(iy);
                 end
             end
             
@@ -1080,13 +1085,6 @@ classdef DisplayGraph < xplr.GraphNode
                     % -> orient these values upward, and transform them
                     % such that [0 1] fills the available space
                     y_scale = st.y_available;
-                    if y_scale == 1
-                        % occupy full vertical space, because there are no
-                        % data dimensions in y, xy or yx location -> get a
-                        % nicer display by leaving some gaps above and
-                        % below
-                        y_scale = 1/(1 + G.y_sep/2);
-                    end
                     y_offsets = fn_add(sum(st.y_offset), sum(fn_mult(column(st.y_step(1:end)), ijk(org.y(1:end), :)), 1) );
                     % value .5 must be positionned at y-ordinates y_offsets, i.e. y_offsets + .5*y_scale = 0
                     y_offsets = y_offsets - y_scale/2; 
@@ -1450,46 +1448,225 @@ classdef DisplayGraph < xplr.GraphNode
             % use the selectionnd method
             sel_slice = sel_ax.apply_affinity(affinity, G.D.slice.sz(dim));
         end
-        %         function [dim, ij] = pointed_dim(G, xy)
-        %             % function [dim, ij] = pointed_dim(G, xy)
-        %             %---
-        %             % Some areas of the main display graph "belong" to different
-        %             % dimensions; for example inside an image belongs to the
-        %             % dimensions of the images, but outside the image belongs to
-        %             % some external dimensions.
-        %             % This function is used in particular for zooming with the
-        %             % scroll wheel as it helps determining in which dimension to
-        %             % perform the zoom. It also returns the coordinated in
-        %             % this/these relevant dimensions of the pointed point.
-        %             % It returns values for point inside the graph, below it (only
-        %             % dimensions in layout.x/.xy/.yx) or on its left (only in
-        %             % layout.y/.xy/.yx). It returns an empty array for point
-        %             % anywhere else outside the graph.
-        %             %
-        %             % Input:
-        %             % - xy      coordinates of a single point
-        %             %
-        %             % Output:
-        %             % - dim     vector of one or two relevant dimensions for this
-        %             %           point
-        %             % - ij      coordinate(s) of this point in this(these)
-        %             %           dimension(s)
-        %
-        %             % Check input
-        %             assert(isnumeric(xy) && length(xy)==2)
-        %
-        %             org = G.layout;
-        %             st = G.steps;
-        %             dim = [];
-        %             ij = [];
-        %
-        %             % Areas not covered (right and top of graph, and the
-        %             % bottom-left corner): no dimension selected
-        %             if any(xy>.5) || all(xy<-.5)
-        %                 return
-        %             end
-        %
-        %         end
+        function [zoom_dim, zslice_zoom, clip_zijk, clip_zoom] = zoom_in_rect(G, rect)
+            % determine in which dimension to zoom and zoom values
+            %
+            % Input:
+            % - rect    nd*2 array, first and second point selected by the
+            %           mouse
+            %
+            % Ouput:
+            % - zoom_dim    dimension(s) in which to zoom in
+            % - zoom        zoom values in this(these) dimension(s)
+            
+            org = G.layout;
+            st = G.steps;
+            sz = G.zslice_sz;
+            
+            % by default, no clip zoom
+            [clip_zijk, clip_zoom] = deal([]);
+            
+            % start with the most external dimensions to determine whether
+            % they are valid for zooming in; if not, go to more internal
+            % dimensions
+            
+            % xy/yx
+            if ~isempty(st.xy_dim)
+                % correct the rectangle: flip y to go from top to bottom,
+                % coerce to within the graph, go from top-left to
+                % bottom-right corner
+                rect_mod = rect; 
+                rect_mod(2, :) = -rect_mod(2, :);
+                rect_mod = fn_coerce(rect_mod, -.5, .5);
+                rect_mod = [min(rect_mod, [], 2) max(rect_mod, [], 2)];
+                
+                % coordinates of rectangle in grid
+                grid_size = [st.xy_n_col; st.xy_n_row];
+                rect_grid_pos = round(.5 + fn_mult(rect_mod + .5, grid_size));
+                rect_in_cell = rect_mod + .5 - fn_div(rect_grid_pos - .5, grid_size);
+                col = rect_grid_pos(1, :);
+                row = rect_grid_pos(2, :);
+                d = st.xy_dim;
+                if d == org.xy
+                    idx = (row-1) * st.xy_n_col + col;
+                else
+                    idx = (col-1) * st.xy_n_row + row;
+                end
+                idx = min(idx, sz(d));
+                
+                % is there at least one grid cell that fits completely
+                % within the rectangle?
+                cell_size = zeros(2, 1);
+                if isempty(st.x_span)
+                    cell_size(1) = st.x_available;
+                else
+                    cell_size(1) = st.x_span(end);
+                end
+                if isempty(st.y_span)
+                    cell_size(2) = st.y_available;
+                else
+                    cell_size(2) = st.y_span(end);
+                end
+                rect_grid_inside = rect_grid_pos + ...
+                    [(rect_in_cell(:, 1) > -cell_size/2), -(rect_in_cell(:, 2) < cell_size/2)];
+                if d == org.xy
+                    idx_inside = (rect_grid_inside(2, :)-1) * st.xy_n_col + rect_grid_inside(1, :);
+                else
+                    idx_inside = (rect_grid_inside(1, :)-1) * st.xy_n_row + rect_grid_inside(2, :);
+                end
+                idx_inside = fn_coerce(idx_inside, 1, sz(d));
+                if diff(idx_inside) >= 0
+                    % yes we are covering at least one cell, so we have a
+                    % zoom in the "grid" dimension
+                    zoom_dim = d;
+                    zslice_zoom = idx_inside + [-.4999 .4999];
+                    return
+                end
+                
+                % no valid zoom in the "grid" dimension; we will consider
+                % zoom in more internal dimensions only if the rectangle
+                % covers, even partially, no more than one grid element
+                rect_grid_covered = rect_grid_pos + ...
+                    [(rect_in_cell(:, 1) > cell_size/2), -(rect_in_cell(:, 2) < -cell_size/2)];
+                if any(diff(rect_grid_covered, 1, 2))
+                    return
+                end
+                
+                % get rectangle coordinates inside the selected grid
+                % element
+                col = rect_grid_covered(1, 1);
+                row = rect_grid_covered(2, 1);
+                if d == org.xy
+                    idx = (row-1) * st.xy_n_col + col;
+                else
+                    idx = (col-1) * st.xy_n_row + row;
+                end
+                rect = fn_subtract(rect, st.xy_offsets(:, idx));
+            end
+            
+            % x 
+            x = sort(rect(1, :));
+            x_layout = org.x;
+            [x_zoom_dim, x_zoom] = deal([]); % default values
+            for ix = length(x_layout):-1:1
+                d = x_layout(ix);
+                x = x - st.x_offset(ix);
+                idx = x / st.x_step(ix);
+                
+                % if we reached theinternal dimension, things are pretty
+                % simple
+                if ix == 1
+                    x_zoom_dim = d;
+                    x_zoom = idx;
+                    break
+                end
+                
+                % we accept zooming in an external dimension only if the
+                % rectangle covers a full column
+                column_width = st.x_span(ix - 1);
+                x_in = x - round(idx) * st.x_step(ix);
+                idx_inside = round(idx) ...
+                    + [(x_in(1) > -column_width/2), -(x_in(2) < column_width/2)];
+                if diff(idx_inside) >= 0
+                    x_zoom_dim = d;
+                    x_zoom = idx_inside + [-.4999 .4999];
+                    break
+                end
+                
+                % no valid zoom; we will consider zoom in more internal
+                % dimensions only if the y-selection covers, even
+                % partially, no more than one row
+                idx_covered = round(idx) ...
+                    + [(x_in(1) > -column_width/2), -(x_in(2) < column_width/2)];
+                if diff(idx_covered)
+                    break
+                end
+                
+                % continue: get y-selection coordinates in the next, more
+                % internal, dimension
+                x = x - round(idx_covered(1)) * st.x_step(ix);
+            end
+            
+            % y 
+            y = sort(rect(2, :), 'descend');
+            y_layout = org.y;
+            [y_zoom_dim, y_zoom] = deal([]); % default values
+            broke = false;
+            for iy = length(y_layout):-1:1
+                d = y_layout(iy);
+                y = y - st.y_offset(iy);
+                y_step = st.y_step(iy);
+                idx = y / y_step;
+                
+                % if we reached the internal dimension, things are pretty
+                % simple
+                if iy == 1 && strcmp(G.D.display_mode, 'image')
+                    y_zoom_dim = d;
+                    y_zoom = idx;
+                    broke = true;
+                    break
+                end
+                
+                % we accept zooming in an external dimension only if the
+                % rectangle covers a full row
+                if iy == 1
+                    row_height = st.y_available;
+                else
+                    row_height = st.y_span(iy - 1);
+                end
+                y_in = y - round(idx) * y_step; % 
+                idx_inside = round(idx) ...
+                    + [(y_in(1) < row_height/2), -(y_in(2) > -row_height/2)];
+                if diff(idx_inside) >= 0
+                    y_zoom_dim = d;
+                    if isempty(d)
+                        y_zoom = [];
+                    else
+                        y_zoom = idx_inside + [-.4999 .4999];
+                    end
+                    broke = true;
+                    break
+                end
+                
+                % no valid zoom; we will consider zoom in more internal
+                % dimensions only if the y-selection covers, even
+                % partially, no more than one row
+                idx_covered = round(idx) ...
+                    + [(y_in(1) < -row_height/2), -(y_in(2) > row_height/2)];
+                if diff(idx_covered)
+                    broke = true;
+                    break
+                end
+                
+                % continue: get y-selection coordinates in the next, more
+                % internal, dimension
+                y = y - round(idx_covered(1)) * y_step;
+            end
+            
+            % We might be zooming in time courses value as well!
+            if ~broke && strcmp(G.D.display_mode, 'time courses')
+                % this zoom value will be applied to the current clipping
+                clip_zoom = sort(y) / st.y_available + .5; % between 0 and 1 instead of centered on 0
+                
+                % get also the coordinates in the zslice to know to which
+                % display element this clip zoom applies
+                zijk = round(G.graph_to_zslice(rect(:,1)));
+                clip_zijk = ones(G.D.nd, 1);
+                clip_zijk(G.D.clip_dim) = zijk(G.D.clip_dim);
+                
+                % if we zoom in values, do not zoom in x external
+                % dimensions, as this is too disturbing...
+                if ~isempty(x_zoom_dim) && x_zoom_dim ~= org.x(1)
+                    [x_zoom_dim, x_zoom] = deal([])
+                end
+            end
+                
+            % Zooming should occur either in external dimensions, either in
+            % internal dimensions or values; not both. If we have both
+            % kinds, prefer the internal dimensions.
+            zoom_dim = [x_zoom_dim, y_zoom_dim];
+            zslice_zoom = [x_zoom; y_zoom];
+        end
     end
 end
 

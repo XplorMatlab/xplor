@@ -150,6 +150,10 @@ classdef DisplayNavigation < xplr.GraphNode
             switch get(N.hf, 'selectiontype')
                 case 'normal'       % change clip
                     clip0 = row(N.D.current_clip);
+                    if isempty(clip0)
+                        % cross outside of current zoom
+                        return
+                    end
                     e0 = diff(clip0);
                     clip_center = N.D.clipping.center;
                     if ~isempty(clip_center), clip0 = clip_center + [-.5, .5]*e0; end
@@ -259,7 +263,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     % zoom reset
                     % (automatic determination of the intended dimensions
                     % for changing zoom)
-                    zoom_dim = N.pointed_dimension(point);
+                    zoom_dim = N.pointed_zoom_dimension(point, true);
                     % (zoom reset)
                     zoom = repmat(':', 1, length(zoom_dim));
                     N.D.zoom_slicer.set_zoom(zoom_dim, zoom)
@@ -523,12 +527,12 @@ classdef DisplayNavigation < xplr.GraphNode
             % move the cross to the selected point
             ijk = row(N.graph.graph_to_slice(point, 'invertible', true));
             
+            % clip to data edges
+            ijk = fn_coerce(ijk, .5001, N.D.slice.sz + .4999); 
+            
             % round indices values in dimensions with categorical headers
             categorical = [N.D.slice.header.categorical];
             ijk(categorical) = round(ijk(categorical));
-            
-            % clip to data edges
-            ijk = fn_coerce(ijk, .501, N.D.slice.sz + .499); 
             
             % update the point filters (only for dimensions where the point
             % remains within the slice)
@@ -1358,20 +1362,35 @@ classdef DisplayNavigation < xplr.GraphNode
 
     % Zoom (left mouse, slider and scroll wheel)
     methods
-        function zoom_dim = pointed_dimension(N, point)
+        function zoom_dim = pointed_zoom_dimension(N, point, zooming_out)
             % automatic determination of the intended dimensions for
             % changing zoom: apply to the most internal dimensions where we
             % are not ouf of display
-            in_dim = ~N.is_point_out_of_display(point, true);
+            ok_dim = ~N.is_point_out_of_display(point, true);
             % case of image display: if point is outside image in either of
             % the 2 dimensions, zoom in neither of the 2
             internal_dim = N.D.internal_dim;
-            in_dim(internal_dim) = all(in_dim(internal_dim));
+            ok_dim(internal_dim) = all(ok_dim(internal_dim));
+            % if zooming out, we also want to select dimension(s) where
+            % there is an active zoom
+            if nargin < 3, zooming_out = false; end
+            if zooming_out
+                dim_zoom_filters = N.D.zoom_filters;
+                ok_dim([dim_zoom_filters.no_zoom]) = false;
+                % if no dimension left, consider all dimensions where a
+                % zoom is active
+                if ~any(ok_dim)
+                    ok_dim = ~[dim_zoom_filters.no_zoom];
+                end
+                % if image display, ok to zoom out in image if ok for any
+                % of the 2 dimensions
+                ok_dim(internal_dim) = any(ok_dim(internal_dim));
+            end
             % most internal x and y dimensions where we are not out of
             % display
             org = N.D.layout;
-            zoom_dim = [org.x(find(in_dim(org.x), 1, 'first')), ...
-                org.y(find(in_dim(org.y), 1, 'first'))];
+            zoom_dim = [org.x(find(ok_dim(org.x), 1, 'first')), ...
+                org.y(find(ok_dim(org.y), 1, 'first'))];
             % if empty, grid (xy or yx) dimension
             if isempty(zoom_dim)
                 zoom_dim = [org.xy, org.yx];
@@ -1387,47 +1406,20 @@ classdef DisplayNavigation < xplr.GraphNode
             % Ouput:
             % - zoom_dim    dimension(s) in which to zoom in
             % - zoom        zoom values in this(these) dimension(s)
+            
+            % since computations rely on the internal representation for
+            % dispatching data, they are in a xplr.DisplayGraph method
+            [zoom_dim, zslice_zoom, clip_zijk, clip_zoom] = N.D.graph.zoom_in_rect(rect);
 
-            zijk = N.graph.graph_to_zslice(rect);  % nd*2
-
-            % a valid zoom-in selection in dimension d must be a segment of
-            % length greater than 1
-            valid_dim = (abs(diff(zijk, 1, 2)) > 1);
-
-            % yet for grid display it is more complicated because we want a
-            % selection whose size is greater than 1 in both x and y
-            org = N.D.layout;
-            xy_dim = [org.xy, org.yx];
-            if ~isempty(xy_dim)
-                st = N.D.graph.steps;
-                valid_dim(xy_dim) = all(abs(diff(rect,1,2)) > 1 ./ [st.xy_n_row; st.xy_n_col]);
+            % change in clipping rather than zoom
+            if ~isempty(clip_zoom)
+                clip = subsref_dim(N.D.grid_clip, 1+N.D.clip_dim, clip_zijk(N.D.clip_dim));
+                clip = clip(1) + clip_zoom(:) * diff(clip);
+                N.D.set_clip(clip, clip_zijk);
             end
-
-            % zoom_dim will be the most exterior valid dimension for
-            % zooming in
-            if valid_dim(xy_dim)
-                % zoom into 'grid dimension'
-                zoom_dim = xy_dim;
-                % we want to zoom only on grid elements that are strictly
-                % inside the rectangle
-                zoom = zijk(zoom_dim,:)';
-            else
-                % zoom into 'regular dimension'
-                xdim = org.x(find(valid_dim(org.x), 1, 'last'));
-                ydim = org.y(find(valid_dim(org.y), 1, 'last'));
-                zoom_dim = [xdim, ydim];
-                % zoom value in zslice: rounding if exterior dimensions;
-                % rounding is achieved by setting edges at an "integer +
-                % .5" value that will be rounded later to "integer + 1" and
-                % an "integet + .5 - 1e-6" that will be rounded later to
-                % "integer"
-                zoom = sort(zijk(zoom_dim,:), 2)'; % 2*nzd
-                external_dim = ~ismember(zoom_dim, N.D.internal_dim);
-                zoom(:,external_dim) = round(zoom(:,external_dim) - .5) + [.5; .5-1e-6];
-            end
-
+            
             % convert from zslice to slice
-            zoom = N.graph.zslice_to_slice(zoom', false, zoom_dim)'; % 2*nzd
+            zoom = N.graph.zslice_to_slice(zslice_zoom, false, zoom_dim)'; % 2*nzd
         end
         function chg_zoom(N, f, obj)
             dim = N.D.active_dim.(f);
@@ -1450,7 +1442,7 @@ classdef DisplayNavigation < xplr.GraphNode
             p = p(1, 1:2);
             origin = row(N.graph.graph_to_slice(p)); % current point in data coordinates
             zoom_factor = 1.5^n_scroll;
-            
+
             % if we keep zooming from the same point, apply to the same
             % dimension if it is not the same dimensions that are pointed
             % any more
@@ -1459,10 +1451,10 @@ classdef DisplayNavigation < xplr.GraphNode
             else
                 % automatic determination of the intended dimensions for
                 % changing zoom
-                zoom_dim = N.pointed_dimension(p);
+                zoom_dim = N.pointed_zoom_dimension(p);
             end
             [last_tic, last_zoom_dim] = deal(tic, zoom_dim);
-            
+
             % This commented code had been put to replace the line below,
             % but it seems that the effect is less intuitive. Let's go back
             % to the previous code and see if we get errors or unintuitive
