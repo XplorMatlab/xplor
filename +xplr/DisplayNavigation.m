@@ -86,7 +86,7 @@ classdef DisplayNavigation < xplr.GraphNode
             set(D.ha, 'buttondownfcn', @(u,e)axes_click(N))
 
             % scroll wheel zooming
-            fn_scrollwheelregister(D.ha, @(n)N.Scroll(n))
+            fn_scrollwheelregister(D.ha, @(n)N.wheel_scroll(n))
             
             % selection menu
             uimenu(N.hf, 'Label', 'Selection', 'callback', @(m, e)N.selection_menu(m))
@@ -1443,7 +1443,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 set_zoom(Z, obj.value)
             end
         end
-        function Scroll(N, n_scroll)
+        function wheel_scroll(N, n_scroll)
             persistent last_tic last_zoom_dim
 
             p = get(N.D.ha, 'currentpoint');

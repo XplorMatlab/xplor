@@ -107,7 +107,7 @@ classdef ZoomSlicer < xplr.Slicer
                         S.disconnect(cur_filt) % cur_filt will be deleted if it is not used elsewhere
                         new_filt = auto_zoom_filter(S, cur_key, dim);
                         S.filters(dim).obj = new_filt;
-                        S.add_listener(new_filt, 'ChangedOperation', @(u,e)filterchange(S,new_filt,dim,e));
+                        S.add_listener(new_filt, 'ChangedOperation', @(u,e)filter_change(S,new_filt,dim,e));
 
                         % smart update: note that this will call
                         % maybe we need: S.slicing_chain(dim:end) = [];

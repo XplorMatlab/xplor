@@ -1,5 +1,5 @@
-function y = subsref_dim(x,dim,ind)
-% function y = subsref_dim(x,dim,ind)
+function y = subsref_dim(x, dim, ind)
+% function y = subsref_dim(x, dim, ind)
 %---
 % Simplified version of Matlab's subsref to access sub-portion of array in
 % the specified dimension(s);
@@ -24,7 +24,7 @@ function y = subsref_dim(x,dim,ind)
 if isempty(dim)
     nd = ndims(x);
 else
-    nd = max(ndims(x),max(dim));
+    nd = max(ndims(x), max(dim));
 end
 if ~iscell(ind)
     if isscalar(dim)

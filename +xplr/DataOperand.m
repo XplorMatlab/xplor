@@ -200,7 +200,7 @@ classdef DataOperand < xplr.GraphNode
             end
             
             % copy property values
-            O.copyin(obj);
+            O.copy_in(obj);
         end
     end
     
