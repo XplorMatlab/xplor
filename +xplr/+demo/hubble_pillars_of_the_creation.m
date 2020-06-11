@@ -1,8 +1,7 @@
-
 %% Load data
 
 files = {'673nmos', '656nmos', '502nmos'};
-folder = fullfile(fileparts(which('xplor')),'demo','Hubble');
+folder = fullfile(fileparts(which('xplor')),'demo data','Hubble');
 fn_mkdir(folder)
 
 % Download from internet
@@ -43,9 +42,25 @@ step = 3.15 / size(data,1);
 wavelengths = {'673nm' '656nm' '502nm'};
 sz = size(data);
 
-header = xplr.header( ...
+header = xplr.Header( ...
     {'x'  unit sz(1) -sz(1)/2*dx dx}, ...
     {'y' unit sz(2) -sz(2)/2*dx dx}, ...
     {'wavelength' wavelengths} ...
     );
-Eagle_Nebula = xplr.xdata(data,header,'Eagle Nebula');
+Eagle_Nebula = xplr.XData(data, header, 'Eagle Nebula');
+
+%% Display
+
+V = xplor(Eagle_Nebula);
+V.D.clipping.auto_clip_mode_no_center = 'prc.1';
+V.D.clipping.adjust_to_view = true;
+
+%% Display some info
+disp('---')
+disp('Astronomy demo ("Pillars of the creation" in the Eagle Nebula,')
+disp('photographed by Hubble space telescope):')
+disp('Zoom in the image with mouse left button and by dragging sliders on the sides.')
+disp('Change the clipping range using the three small buttons top-right')
+disp('(click + or -, click and drag on the black and white button).')
+disp('Find more options for the clipping range in the ''Clipping'' menu.')
+disp('---')

@@ -1,10 +1,14 @@
 
-%% Download data
-disp 'Load coronavirus data from opendata.ecdc.europa.eu'
-% url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
-url = 'https://opendata.ecdc.europa.eu/covid19/casedistribution/csv';
-file = fullfile(fileparts(which('xplor')),'demo','coronavirus.csv');
-websave(file,url);
+%% Read data after attempting to update it from the internet
+try
+    disp 'Load coronavirus data from opendata.ecdc.europa.eu'
+    % url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
+    url = 'https://opendata.ecdc.europa.eu/covid19/casedistribution/csv';
+    file = fullfile(fileparts(which('xplor')),'demo data','coronavirus.csv');
+    websave(file,url);
+catch
+    disp '(loading latest data from Internet failed, reading data from local file)'
+end
 data = readtable(file);
 
 %% Header information
@@ -37,13 +41,13 @@ for i = 1:size(data,1)
 end
 
 % normalize by population
-CORONAVIRUS = cat(4,CORONAVIRUS,fn_div(CORONAVIRUS,pop/1e6));
+CORONAVIRUS = cat(4,fn_div(CORONAVIRUS,pop/1e6),CORONAVIRUS);
 
 % cumulated sums
 CORONAVIRUS = cat(5,CORONAVIRUS,cumsum(CORONAVIRUS,1));
 
 datanames = {'cases' 'deaths'; ...
-    'total' 'per million people'; ...
+    'per million people' 'total'; ...
     'dayly' 'cumulated'};
 
 % % normalize by population
@@ -60,7 +64,7 @@ sdata = size(CORONAVIRUS); sdata = sdata(3:end);
 
 %% Get world map
 
-folder = fullfile(fileparts(which('xplor')),'demo');
+folder = fullfile(fileparts(which('xplor')),'demo data');
 world_map_mat = fullfile(folder,'world_map.mat');
 if exist(world_map_mat, 'file')
     disp 'load world map'
@@ -173,7 +177,7 @@ for i = 1:ncountry
     if ~isempty(idx)
         country2shape(i) = idx;
     else
-        disp(['did not find ' lower(countries{i})])
+        % disp(['did not find ' lower(countries{i})])
     end
 end
 
@@ -186,21 +190,43 @@ CORONAVIRUS(:,unfound,:,:,:) = [];
 
 %% Make movie!!
 
-disp 'Make movie from countries data'
-CORONAVIRUS_MAP = NaN(nday, nx*ny, prod(sdata));
-population = NaN(nx,ny);
-for i = 1:ncountry
-    mask = (map == country2shape(i));
-    CORONAVIRUS_MAP(:, mask, :) = repmat(CORONAVIRUS(:, i, :), [1 sum(mask(:)) 1]);
-    population(mask) = pop(i);
-end
-CORONAVIRUS_MAP = reshape(CORONAVIRUS_MAP, [nday nx ny sdata]);
-
-%% Save data
-
 if eval('false')
-    % ()
-    disp 'Save'
-    cd(folder)
-    save coronavirus CORONAVIRUS CORONAVIRUS_MAP dates nday countries ncountry datanames pop population
+    %% ()
+    disp 'Make movie from countries data'
+    CORONAVIRUS_MAP = NaN(nday, nx*ny, prod(sdata));
+    population = NaN(nx,ny);
+    for i = 1:ncountry
+        mask = (map == country2shape(i));
+        CORONAVIRUS_MAP(:, mask, :) = repmat(CORONAVIRUS(:, i, :), [1 sum(mask(:)) 1]);
+        population(mask) = pop(i);
+    end
+    CORONAVIRUS_MAP = reshape(CORONAVIRUS_MAP, [nday nx ny sdata]);
 end
+
+%% Display data
+
+header = xplr.Header( ...
+    {'day' dates}, ...
+    {'country' countries}, ...
+    {'data' {'cases' 'deaths'}}, ...
+    {'norm.' {'per million people' 'total'}}, ...
+    {'type' {'daily' 'cumulated'}});
+
+V = xplor(CORONAVIRUS, ...
+    'header', header, ...
+    'view', {'day' 'country'}, ...
+    'colormap', 'white_red', ...
+    'display mode', 'time courses');
+V.D.clipping.auto_clip_mode_no_center = 'prc.1';
+V.D.clipping.adjust_to_view = true;
+V.D.set_dim_location('country', 'xy')
+
+%% Display some info
+disp('---')
+disp('Coronavirus demo:')
+disp('Select in the lists what should be displayed in the main graph.')
+disp('You can select multiple values at once, and double-click values to keep them selected.')
+disp('Right-click in the list to get a menu with more options.')
+disp('The graphs can be re-organized by grabbing and dragging the labels around.')
+disp('You can also switch between image and time courses display with the top-right control.')
+disp('---')

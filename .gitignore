@@ -22,3 +22,7 @@ Xplor.prj
 /demo/Hubble/
 /demo/EarthData/
 *.m~dev
+/demo data/nasa_neo/
+/demo data/OpenfMRI - Milham lab 2008-2011 - Flanker task/
+/demo data/Hubble/
+/demo data/EarthData/

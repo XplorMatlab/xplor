@@ -1,39 +1,52 @@
 function demo
 % Type xplr.demo to access a choice of demos of the XPLOR toolbox
 
+% List of available demos
+available_demos = list_available_demos;
+demo_list = available_demos(:, 1);
+demo_fun = available_demos(:, 2);
 
-demo_list = {'Intrinsic imaging'};
-demo_fun = {@demo_intrinsic};
-% demo_idx = listdlg('Name','XPLOR demo','PromptString','Select demo', ...
-%     'ListString',demo_list,'SelectionMode','single');
-demo_idx = 1;
-if isempty(demo_idx), return, end
-
-demo_dir = fullfile(fileparts(which('xplor')), 'demo data');
-cd(demo_dir)
-feval(demo_fun{demo_idx})
+% Execute one demo or display the full list
+hf = fn_figure('XPLOR demo', [240 400], 'Menubar', 'none', 'Toolbar', 'none');
+h_label = .05;
+uicontrol('style', 'text', 'parent', hf, ...
+    'units', 'normalized', 'position', [0 1-h_label 1 h_label], ...
+    'string', 'Select demo to run', 'fontsize', 12, 'horizontalalignment', 'left');
+uicontrol('style', 'listbox', 'parent', hf, ...
+    'units', 'normalized', 'position', [0 .5 1 .5-h_label], ...
+    'string', demo_list, ...
+    'callback', @(u, e)do_demo(get(u, 'value')));
+uicontrol('style', 'text', 'parent', hf, ...
+    'units', 'normalized', 'position', [0 .5-h_label 1 h_label], ...
+    'string', 'Show demo code', 'fontsize', 12, 'horizontalalignment', 'left');
+uicontrol('style', 'listbox', 'parent', hf, ...
+    'units', 'normalized', 'position', [0 0 1 .5-h_label], ...
+    'string', demo_list, ...
+    'callback', @(u, e)edit(char(demo_fun{get(u, 'value')})));
 
 %---
-function demo_intrinsic
+function available_demos = list_available_demos
 
-%%
-load intrinsic
+available_demos = {
+    'XPLOR logo',           @xplr.demo.logo
+    'Flow',                 @xplr.demo.flow
+    'Astronomy',            @xplr.demo.hubble_pillars_of_the_creation
+    'Coronavirus evolution',    @xplr.demo.coronavirus
+    'Intrinsic imaging',    @xplr.demo.intrinsic
+    '2-photon microscopy',  @xplr.demo.neuron_movies
+    'Earth temperature',    @xplr.demo.earth_temperature
+    };
 
-fn_figure('Intrinsic imaging - Main', [1023, 598], 'color', 'w')
+%---
+function do_demo(demo_idx)
 
-axes('position',[.02, .52, .3, .46])
-a = fourd(img, '2d', 'labels', {'x', 'y'}, 'units', {'um', 'um'}, 'mat', [20/6, 20/6]);
-a.D.do_labels = false;
+if isempty(demo_idx), return, end
 
-axes('position', [.02, .02, .3, .46])
-b = fourd(x, '2d', ...
-    'labels', {'x', 'y', 'time', 'condition', 'repetition'}, ...
-    'units', {'um', 'um', 's', {'stimulation', 'control'}, ''}, ...
-    'mat', {[20, 20, .2, 1, 1], [-20, -20, -.2, 0, 0]});
-b.D.do_labels = false;
-G = b.G;
+% Close all XPLOR windows
+close(findall(0, 'type', 'figure', 'tag', 'XPLOR'))
 
-axes('position', [.38, .1, .6, .86])
-c = fourd(x, '2dplot', G, 'dimsplus', []);
+% Do demo
+available_demos = list_available_demos;
+demo_fun = available_demos(:, 2);
+demo_fun{demo_idx}()
 
-X = explor(x, G);
