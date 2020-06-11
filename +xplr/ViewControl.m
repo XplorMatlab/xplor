@@ -218,7 +218,7 @@ classdef ViewControl < xplr.GraphNode
             % filter all others dimension
             uimenu(m, ...
                 'label', ['View ', dim_str, ', filter others'], 'separator', 'on', ...
-                'callback', @(u,e)dim_action(C, 'view_dim', dim_id, 1))
+                'callback', @(u,e)dim_action(C, 'view', dim_id, 1))
             uimenu(m, 'label', ['View ', dim_str, ' in a new window'], ...
                 'callback', @(u,e)dim_action(C, 'new_window_view_dim', dim_id, 1))
             
@@ -231,7 +231,7 @@ classdef ViewControl < xplr.GraphNode
             % function dim_action(C,'add_filter',dim_ids[,key[,active]])
             % function dim_action(C,'show_filter|rm_filter',dim_id)
             % function dim_action(C,'set_active',dim_id,value)
-            % function dimaction(C,'view_dim',dimID)
+            % function dimaction(C,'view|ROI|view_and_ROI',dimID)
             % function dimaction(C,'new_window',dimID)
             % function dimaction(C,'new_window_action',dimID,arg...)
             %---
@@ -282,7 +282,7 @@ classdef ViewControl < xplr.GraphNode
             current_filters_dim = C.V.slicer.filters(filters_idx); % current filters acting on dimensions within dd
 
             % filters to remove
-            if ismember(flag, {'add_filter', 'rm_filter', 'view_dim'})
+            if ismember(flag, {'add_filter', 'rm_filter', 'view', 'view_and_ROI'})
                 % remove filter from the viewcontrol and the bank
                 for filter = current_filters_dim
                     C.remove_filter_item(filter.dim_id);
@@ -294,7 +294,7 @@ classdef ViewControl < xplr.GraphNode
             end
             
             % filters to add
-            if ismember(flag, {'add_filter', 'view_dim'})
+            if ismember(flag, {'add_filter', 'view', 'view_and_ROI'})
                 if nargin >= 4, key = varargin{1}; else, key = 1; end
                 if nargin >= 5, active = varargin{2}; else, active = true; end
                 if strcmp(flag, 'add_filter')
@@ -320,7 +320,7 @@ classdef ViewControl < xplr.GraphNode
                     dim_ids_add = [pairs, num2cell(setdiff(dim_ids_add, [pairs{:}], 'stable'))];
                 end
                 n_add = length(dim_ids_add);
-                if strcmp(flag, 'view_dim')
+                if ismember(flag, {'view', 'view_and_ROI'})
                     % display mode and layout will be reset when display
                     % will be updated
                     any_change = n_add > 0 || ~isempty(current_filters_dim);
@@ -344,7 +344,7 @@ classdef ViewControl < xplr.GraphNode
                 
                 % adjust display mode and layout if it seems appropriate
                 D = C.V.D;
-                if strcmp(flag, 'view_dim')
+                if ismember(flag, {'view', 'view_and_ROI'})
                     if isscalar(dim_id)
                         D.set_dim_location(dim_id, 'x', strcmp(D.display_mode, 'time courses'))
                         D.display_mode = 'time courses';
@@ -361,7 +361,7 @@ classdef ViewControl < xplr.GraphNode
                 end
             end
             
-            % show filter, set filter active
+            % show filter, set filter active, ROI selection
             switch flag
                 case 'set_active'
                     active = varargin{1};
@@ -388,6 +388,8 @@ classdef ViewControl < xplr.GraphNode
                             xplr.Bank.show_list(F);
                         end
                     end
+                case {'ROI', 'view_and_ROI'}
+                    C.V.D.navigation.selection_dim_id = dim_id;
             end
 
             % Empty the dimension selection

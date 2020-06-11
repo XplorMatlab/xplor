@@ -169,7 +169,7 @@ classdef ClipTool < xplr.GraphNode
             C.auto_clip_mode_no_center = comp;
             % add the centering information to final autoclip mode
             C.auto_clip_mode = C.auto_clip_mode_no_center;
-            if ~isempty(C.center), C.autoclipmode = [C.autoclipmode, '[', num2str(C.center), ']']; end
+            if ~isempty(C.center), C.auto_clip_mode = [C.autoclipmode, '[', num2str(C.center), ']']; end
             % update display
             C.D.auto_clip(true)
         end

@@ -263,7 +263,7 @@ classdef DisplayLayout
             
             % color channel
             if do_image && isempty(L.merged_data)
-                d = find(~dim_positionned & [data_head.n]>=2 & [data_head.n]<=4, 1);
+                d = find(~dim_positionned & ismember([data_head.n], [3 4]) & [data_head.n]<=4, 1);
                 if ~isempty(d)
                     L.merged_data = data_dim_id(d); 
                     dim_positionned(d) = true;

@@ -450,7 +450,7 @@ classdef DisplayGraph < xplr.GraphNode
             if isempty(G.D.grid_clip)
                 error 'programming: set_value_ticks should be called after viewdisplay.updateDisplay, so grid_clip should be set'
             end
-            sz = size(G.D.grid_clip);
+            sz = strict_size(G.D.grid_clip, 1+G.D.nd);
             sz(1) = [];
             
             % enough space on y-axis to show values?
@@ -591,7 +591,7 @@ classdef DisplayGraph < xplr.GraphNode
                 if n == 1, continue, end
                 sz_out = ones(1, nd);
                 sz_out(d_out) = sz(d_out);
-                szout(nd+1) = st.xy_n_col;
+                sz_out(nd+1) = st.xy_n_col;
                 n_out = prod(sz_out);
                 x_pos = zeros(n-1, n_out);
                 for k_out = 1:n_out
