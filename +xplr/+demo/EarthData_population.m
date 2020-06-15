@@ -5,7 +5,7 @@
 
 % resolution 1440x720 (data at original resolution 8640x4320 can be found
 % on the website)
-folder = fullfile(demo_data_folder,'EarthData','gpw-v4-population-count-adjusted-to-2015-unwpp-country-totals-rev11_totpop_15_min_nc');
+folder = fullfile(xplr.demo.demo_data_folder,'EarthData','gpw-v4-population-count-adjusted-to-2015-unwpp-country-totals-rev11_totpop_15_min_nc');
 file = fullfile(folder,'gpw_v4_population_count_adjusted_rev11_15_min.nc');
 ncdisp(file)
 longitude = ncread(file,'longitude');
