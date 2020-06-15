@@ -1,6 +1,6 @@
 function V = xplor(data, varargin)
 % function V = xplor(data, options...)
-% function V = xplor()         [demo data]
+% function xplor('demo')         [launch demo]
 % ---
 % xplor starter
 %
@@ -26,9 +26,12 @@ function V = xplor(data, varargin)
 if nargin == 0
     disp('---')
     disp('xplor called without arguments calls xplr.demo.logo')
-    disp('call xplr.demo to see all available demos')
+    disp('type ''xplor demo'' to see all available demos')
     disp('---')
     xplr.demo.logo
+    return
+elseif nargin == 1 && ischar(data) && strcmp(data, 'demo')
+    xplr.demo
     return
 end
 
