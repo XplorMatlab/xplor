@@ -1,23 +1,33 @@
-Install from Github
+Install
 *********************
 xplor needs a few components available on Github:
 
 Download the sources
 ------------------------
 
-	* Clone `brick`_
+	* Clone or download `brick`_
 
 	.. _brick: https://github.com/XplorMatlab/brick
 
-	* Clone `colormaps`_
+	* Clone or download `colormaps`_
 
 	.. _colormaps: https://github.com/XplorMatlab/colormaps
 
-	* Clone `xplor-Matlab-`_
+	* Clone or download `xplor`_
 	
-	.. _xplor-Matlab-: https://github.com/XplorMatlab/xplor
+	.. _xplor: https://github.com/XplorMatlab/xplor
 
-Don't know what is 'clone'? If you 'clone' instead of 'download' it will be very straightforward to obtain new versions of XPLOR in the future. You can for example follow this simple tutorial: https://www.mediawiki.org/wiki/Git_for_dummies
+Don't know what is 'clone'?
+If you 'clone' with git instead of 'download' it will be very
+straightforward to obtain new versions of XPLOR in the future. All what you
+need to know is the following:
+
+- on Windows you need to install git from https://git-scm.com/download/win
+  (git is already included on linux and OSX)
+- to download a folder, type e.g. `git clone https://github.com/XplorMatlab/xplor`
+- to update a folder with the latest version, go inside the folder and type
+  `git pull`.
+
 
 Configure Matlab
 -----------------
