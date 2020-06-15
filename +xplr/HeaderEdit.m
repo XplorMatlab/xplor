@@ -32,7 +32,7 @@ methods
 function E = HeaderEdit(data, callback)
     % data
     if nargin < 1, data = rand(50, 40, 100); end
-    if isa(data, 'xplr.Xdata')
+    if isa(data, 'xplr.XData')
         input_head = data.header;
         E.dat = data.data;
         E.sz = data.sz;

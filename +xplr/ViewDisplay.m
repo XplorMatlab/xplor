@@ -623,12 +623,13 @@ classdef ViewDisplay < xplr.GraphNode
             % get clipping range of the current grid cell
             ijk = D.navigation.get_point_index_position('clip', 'round');
             ijk = row(round(D.graph.slice_to_zslice(ijk)));
-            if any(ijk < 1 | ijk > D.zslice.sz)
+            clip_dim_ = D.clip_dim;
+            if any(ijk(clip_dim_) < 1 | ijk(clip_dim_) > D.zslice.sz(clip_dim_))
                 % cross outside of current zoom
                 clip = [];
                 return
             end
-            clip = subsref_dim(D.grid_clip, 1+D.clip_dim, ijk(D.clip_dim));
+            clip = subsref_dim(D.grid_clip, 1+clip_dim_, ijk(clip_dim_));
             % center if 'adjust by the mean' mode
             if strcmp(D.display_mode,'time courses') && ~isempty(D.clipping .align_signals)
                 clip = clip - feval(D.clipping.align_signals, clip, 1);
