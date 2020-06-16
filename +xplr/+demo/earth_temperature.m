@@ -1,5 +1,5 @@
 % Data (compressed)
-s = fn_loadvar(fullfile(demo_data_folder,'NEO Earth Temperature.mat'));
+s = fn_loadvar(fullfile(xplr.demo.demo_data_folder,'NEO Earth Temperature.mat'));
 
 % Uncompress data
 data = s.temperatures(1+s.temperatures_indices);
