@@ -4,7 +4,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="utf-8" />
-    <title>Install from Github &#8212; xplor-matlab  documentation</title>
+    <title>Install &#8212; xplor-matlab  documentation</title>
     <link rel="stylesheet" href="../_static/classic.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
     <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
@@ -43,23 +43,33 @@
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="install-from-github">
-<h1>Install from Github<a class="headerlink" href="#install-from-github" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="install">
+<h1>Install<a class="headerlink" href="#install" title="Permalink to this headline">¶</a></h1>
 <p>xplor needs a few components available on Github:</p>
 <div class="section" id="download-the-sources">
 <h2>Download the sources<a class="headerlink" href="#download-the-sources" title="Permalink to this headline">¶</a></h2>
 <blockquote>
 <div><ul class="simple">
-<li><p>Clone <a class="reference external" href="https://github.com/XplorMatlab/brick">brick</a></p></li>
+<li><p>Clone or download <a class="reference external" href="https://github.com/XplorMatlab/brick">brick</a></p></li>
 </ul>
 <ul class="simple">
-<li><p>Clone <a class="reference external" href="https://github.com/XplorMatlab/colormaps">colormaps</a></p></li>
+<li><p>Clone or download <a class="reference external" href="https://github.com/XplorMatlab/colormaps">colormaps</a></p></li>
 </ul>
 <ul class="simple">
-<li><p>Clone <a class="reference external" href="https://github.com/XplorMatlab/xplor">xplor-Matlab-</a></p></li>
+<li><p>Clone or download <a class="reference external" href="https://github.com/XplorMatlab/xplor">xplor</a></p></li>
 </ul>
 </div></blockquote>
-<p>Don’t know what is ‘clone’? If you ‘clone’ instead of ‘download’ it will be very straightforward to obtain new versions of XPLOR in the future. You can for example follow this simple tutorial: <a class="reference external" href="https://www.mediawiki.org/wiki/Git_for_dummies">https://www.mediawiki.org/wiki/Git_for_dummies</a></p>
+<p>Don’t know what is ‘clone’?
+If you ‘clone’ with git instead of ‘download’ it will be very
+straightforward to obtain new versions of XPLOR in the future. All what you
+need to know is the following:</p>
+<ul class="simple">
+<li><p>on Windows you need to install git from <a class="reference external" href="https://git-scm.com/download/win">https://git-scm.com/download/win</a>
+(git is already included on linux and OSX)</p></li>
+<li><p>to download a folder, type e.g. <cite>git clone https://github.com/XplorMatlab/xplor</cite></p></li>
+<li><p>to update a folder with the latest version, go inside the folder and type
+<cite>git pull</cite>.</p></li>
+</ul>
 </div>
 <div class="section" id="configure-matlab">
 <h2>Configure Matlab<a class="headerlink" href="#configure-matlab" title="Permalink to this headline">¶</a></h2>
@@ -71,13 +81,19 @@
 <div class="section" id="try">
 <h2>Try<a class="headerlink" href="#try" title="Permalink to this headline">¶</a></h2>
 <blockquote>
+<div><blockquote>
 <div><p>Try to start xplor by typing:</p>
 <div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">xplor</span>
 </pre></div>
 </div>
 <p>in the commandline. It will load a default dataset.</p>
 <a class="reference internal image-reference" href="../_images/installation-xplor.png"><img alt="Set Path" src="../_images/installation-xplor.png" style="width: 700px;" /></a>
-<p>To load your own dataset see: <a class="reference internal" href="quickstart.html#quick-start"><span class="std std-ref">Quick Start</span></a></p>
+<p>To load your own dataset :</p>
+<div class="highlight-javascript notranslate"><div class="highlight"><pre><span></span><span class="nx">xplor</span> <span class="nx">my_data</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Where my_data is the name of your own data variable.</p>
 </div></blockquote>
 </div>
 </div>
@@ -90,7 +106,7 @@
         <div class="sphinxsidebarwrapper">
 <h3><a href="../index.html">Table of Contents</a></h3>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#">Install from Github</a><ul>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Install</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#download-the-sources">Download the sources</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#configure-matlab">Configure Matlab</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#try">Try</a></li>

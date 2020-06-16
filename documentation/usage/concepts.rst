@@ -27,7 +27,7 @@ zooming, etc.
 
 **Screenshot of the Window with the control zone and the display zone**
 
-.. image:: image/windowExp.PNG
+.. image:: image/windowExp.png
    :align: center
    :alt: Screenshot of Window
 

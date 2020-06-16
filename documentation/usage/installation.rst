@@ -53,7 +53,10 @@ Try
 	  :width: 700
 	  :alt: Set Path
 
-	To load your own dataset see: :ref:`Quick Start`
+	To load your own dataset :
 
+	.. code-block:: javascript
 
+	    xplor my_data
 
+    Where my_data is the name of your own data variable.
