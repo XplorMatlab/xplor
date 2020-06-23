@@ -7,3 +7,9 @@ Tutorials
    tutorialTemperature
    tutorialMlspike
    tutorialFunctionalMRI
+   tutorialAnimalBehavior
+   tutorialCoronavirusSpread
+   tutorialEagleNebula
+   tutorialIntrinsic
+   tutorialLanTemperature
+   tutorialNeuronAssemblyActivity
