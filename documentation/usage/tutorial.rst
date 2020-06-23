@@ -10,6 +10,7 @@ Tutorials
    tutorialAnimalBehavior
    tutorialCoronavirusSpread
    tutorialEagleNebula
-   tutorialIntrinsic
-   tutorialLanTemperature
+   tutorialIntrisinc
+   tutorialLandTemperature
    tutorialNeuronAssemblyActivity
+   tutorialWorldPopulation
