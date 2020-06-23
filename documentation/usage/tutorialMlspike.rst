@@ -1,4 +1,4 @@
-Example: Neural population activity
+LiveScript tutorial: Neural population activity
 *******************************************
 
  .. raw:: html

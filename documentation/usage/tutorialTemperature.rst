@@ -1,4 +1,4 @@
-Video example: NASA world temperatures
+Video tutorial: NASA world temperatures
 **********************************
 
 This tutorial shows the basic features of xplor using a demo dataset.
