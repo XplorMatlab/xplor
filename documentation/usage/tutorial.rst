@@ -6,3 +6,4 @@ Tutorials
 
    tutorialTemperature
    tutorialMlspike
+   tutorialFunctionalMRI
