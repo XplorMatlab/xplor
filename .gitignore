@@ -1,0 +1,28 @@
+desktop.ini
+github_icon.ico
+demo data/calcium.mat
+demo data/ceye.mat
+*.asv
+/testdata.mat
+/.idea
+*.swp
+/resources
+Xplor.prj
+/1706_XPLOR.lnk
+/demo/coronavirus.mat
+/demo/worldmap.dbf
+/demo/worldmap.prj
+/demo/worldmap.shp
+/demo/worldmap.shx
+/XPLOR (owncloud).lnk
+/demo/nasa_neo/
+*.xpls
+/demo/coronavirus.csv
+/demo/OpenfMRI - Milham lab 2008-2011 - Flanker task/
+/demo/Hubble/
+/demo/EarthData/
+*.m~dev
+/demo data/nasa_neo/
+/demo data/OpenfMRI - Milham lab 2008-2011 - Flanker task/
+/demo data/Hubble/
+/demo data/EarthData/

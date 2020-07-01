@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s>
+   <bank>
+      <NHeaderMax>100</NHeaderMax>
+   </bank>
+   <display>
+      <NImageMax>500</NImageMax>
+      <NImagePixelMax>200000000</NImagePixelMax>
+      <NLineMax>2000</NLineMax>
+      <NLinePointMax>2000000</NLinePointMax>
+   </display>
+</s>
