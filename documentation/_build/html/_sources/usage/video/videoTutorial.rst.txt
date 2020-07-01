@@ -1,8 +1,0 @@
-Video tutorial
-***************
-
-.. raw:: html
-
-	.. image:: videoTutorial.gif
-	  :width: 400
-	  :alt: Set Path
