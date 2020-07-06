@@ -397,6 +397,39 @@ classdef ViewControl < xplr.GraphNode
         end
     end
 
+    % Generic operation item
+    methods (Access='private')
+        function [panel, item_idx] = operation_item(C, dim_id, F, ...
+                background_color, active)
+            % panel
+            id = {'filter', dim_id};
+            [panel, item_idx] = C.new_item(id, 1, 'panel');
+            panel.BackgroundColor = background_color;
+
+            % store the filter
+            C.items(item_idx).F = F;
+            
+            % cross button to remove the filter
+            [ii, jj] = ndgrid(-2:2);
+            x = min(1, abs(abs(ii) - abs(jj))*.5);
+            x(x == 1) = NaN;
+            x = repmat(x, [1, 1, 3]);
+            C.items(item_idx).rm_filter_button = uicontrol('parent', panel, 'cdata', x, ...
+                'unit', 'normalized', ...
+                'position', [0.95, 0.5, 0.05, 0.5], ...
+                'callback', @(u,e)C.dim_action('rm_filter', dim_id));
+            fn_controlpositions(C.items(item_idx).rm_filter_button, panel, ...
+                [1, .5, 0, .5], [-11, 0, 11, 0]);
+            
+            % checkbox to disable and enable the filter
+            C.items(item_idx).check_box = uicontrol('parent', panel, ...
+                'backgroundcolor', background_color, ...
+                'Style', 'checkbox', 'Value', active, ...
+                'position', [6, 6, 13, 12], ...
+                'callback', @(u,e)C.dim_action('set_active', dim_id, get(u, 'value')));
+        end
+    end
+    
     % Filters display
     methods (Access='private')
         function remove_filter_item(C, dim_id)
@@ -445,13 +478,9 @@ classdef ViewControl < xplr.GraphNode
             end
 
             % panel
-            id = {'filter', dim_id};
-            [panel, item_idx] = C.new_item(id, 1, 'panel');
             background_color = xplr.colors('link_key', F.link_key);
-            panel.BackgroundColor = background_color;
-            
-            % store the filter
-            C.items(item_idx).F = F;
+            [panel, item_idx] = operation_item(C, dim_id, F, ...
+                background_color, active);
             
             % filter and dimension labels
             % (create labels)
@@ -491,28 +520,10 @@ classdef ViewControl < xplr.GraphNode
                     set(filter_label_op, 'string', label)
                 end
             end
-            connect_listener(F.F, filter_label_op, 'ChangedOperation', @check_operation_change);
-
-            % buttons
-            [ii, jj] = ndgrid(-2:2);
-            x = min(1, abs(abs(ii) - abs(jj))*.5);
-            x(x == 1) = NaN;
-            x = repmat(x, [1, 1, 3]);
+            connect_listener(F.F, filter_label_op, 'ChangedOperation', @check_operation_change);  
             
-            % cross button to remove the filter
-            rm_filter_button = uicontrol('parent', panel, 'cdata', x, ...
-                'unit', 'normalized', ...
-                'position', [0.95, 0.5, 0.05, 0.5], ...
-                'callback', @(u,e)C.dim_action('rm_filter', dim_id));
-            fn_controlpositions(rm_filter_button, panel, [1, .5, 0, .5], [-11, 0, 11, 0]);
-            
-            % checkbox to disable and enable the filter
-            C.items(item_idx).check_box = uicontrol('parent', panel, ...
-                'backgroundcolor', background_color, ...
-                'Style', 'checkbox', 'Value', active, ...
-                'position', [6, 6, 13, 12], ...
-                'callback', @(u,e)C.dim_action('set_active', dim_id, get(u, 'value')));
-            
+            % bring closing cross above the labels
+            uistack(C.items(item_idx).rm_filter_button, 'top')
         end
         function click_filter_item(C, dim_id)
             hf = C.V.hf;
@@ -678,5 +689,53 @@ classdef ViewControl < xplr.GraphNode
         end
     end
     
-    
+    % Test area: operation item with one slider
+    methods
+        function test(C)
+            % new item
+            dim_id = 0;
+            F = [];
+            background_color = [1 .5 0];
+            active = true;
+            [panel, item_idx] = operation_item(C, dim_id, F, ...
+                background_color, active);
+            
+            % label
+            slider_panel = uipanel('parent', panel, 'BorderType', 'none', ...
+                'BackgroundColor', background_color, ...
+                'ButtonDownFcn', @(u,e)slider_step(C));
+            fn_controlpositions(slider_panel, panel, [0 0 1 1], [21 1 -32 0]);
+            label = uicontrol('parent', slider_panel, ...
+                'position', [0 5 300 15], ...
+                'style', 'text', 'string', 'smooth data', 'horizontalalignment', 'left', ...
+                'backgroundcolor', background_color, ...
+                'enable', fn_switch(active, 'inactive', 'off'));
+            
+            % slider
+            slider = uicontrol('parent', slider_panel, ...
+                'style', 'frame', 'enable', 'off', ...
+                'units', 'normalized', 'position', [.44 0 .12 .95], ...
+                'buttondownfcn', @(u,e)C.move_slider(u));
+            
+            % for the moment no real filter; so replace the item close
+            % button callback with removing only the item
+            C.items(item_idx).rm_filter_button.Callback = @(u,e)C.remove_item({'filter', dim_id});
+        end
+        function move_slider(C, slider)
+            hf = C.V.hf;
+            panel = get(slider, 'parent');
+            panel_pos = fn_pixelpos(panel, 'recursive'); % position of panel in figure
+            x0 = panel_pos(1) + panel_pos(3) * .06;
+            w = panel_pos(3) * .88;
+            
+            function move
+                p = get(hf, 'CurrentPoint');
+                x = p(1);
+                u = fn_coerce((x - x0) / w, 0, 1);
+                set(slider, 'pos', [u*.88, 0, .12, .95])
+            end
+            
+            fn_buttonmotion(@move, hf)
+        end
+    end
 end

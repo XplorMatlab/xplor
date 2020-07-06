@@ -13,7 +13,7 @@ classdef ClipTool < xplr.GraphNode
         center = []                         % [], 0 or 1
         independent_dim_id_mem = []          % dimension ID of dimensions along which clipping is not uniform
         align_signals = ''                  % '', 'nmean', 'nmedian'
-        adjust_to_view = false
+        adjust_to_view = true
         buttons_only_for_current_cells = false
     end
     properties (Dependent, SetAccess='private')
