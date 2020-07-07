@@ -1,5 +1,5 @@
 % Data
-s = fn_loadvar(fullfile(xplr.demo.demo_data_folder,'neuron_movies.mat'));
+s = brick.loadvar(fullfile(xplr.demo.demo_data_folder,'neuron_movies.mat'));
 
 % Add header information
 x = xplr.XData(s.data, ...

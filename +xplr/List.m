@@ -37,7 +37,7 @@ classdef List < xplr.GraphNode
             L.F = F;
             if F.nd_in ~= 1 || F.nd_out ~= 1, error 'input and output of list filter must be one-dimensional', end
             if ~isa(F,'xplr.FilterAndPoint'), error 'list can act only on a filterAndPoint object', end
-            L.sel_type = fn_switch(F.header_in.categorical, 'indices', 'point1D');
+            L.sel_type = brick.switch_case(F.header_in.categorical, 'indices', 'point1D');
             
             % watch filter deletion
             addlistener(L.F, 'ObjectBeingDestroyed', @(u,e)delete(L));
@@ -57,38 +57,38 @@ classdef List < xplr.GraphNode
             end
             
             % parent figure
-            L.h_f = fn_parentfigure(L.h_p);
+            L.h_f = brick.parentfigure(L.h_p);
 
             % create several components
             % (list)
             L.h_list = uicontrol('parent', L.h_p, 'style', 'listbox', 'min', 0, 'max', 2, ...
                 'callback', @(h_list, evnt)event(L, 'select'), ...
             	'keypressfcn', @(h_list, evnt)keypress(L, evnt));
-            fn_controlpositions(L.h_list, L.h_p, [0, 0, 1, 1], [8, 5, -16, -5-21-2])
+            brick.controlpositions(L.h_list, L.h_p, [0, 0, 1, 1], [8, 5, -16, -5-21-2])
             % (label)
             L.h_label = uicontrol('parent', L.h_p, 'style', 'text', ...
                 'string', L.F.header_out.label, ...
                 'horizontalalignment', 'center', ...
                 'backgroundcolor', xplr.colors('link_key', L.F.link_key));
-            fn_controlpositions(L.h_label, L.h_p, [0, 1, 1, 0], [8, -21, -8-18, 18])
+            brick.controlpositions(L.h_label, L.h_p, [0, 1, 1, 0], [8, -21, -8-18, 18])
             % (close button)
             if ~new_figure
-                x = fn_printnumber(ones(18), 'x', 'pos', 'center')';
+                x = brick.printnumber(ones(18), 'x', 'pos', 'center')';
                 x(x == 1) = NaN;
                 x = repmat(x, [1, 1, 3]);
                 h_close = uicontrol('parent', L.h_p, 'cdata', x, 'callback', @(u,e)delete(L));
-                fn_controlpositions(h_close, L.h_p, [1, 1], [-8-18, -3-18, 18, 18])
+                brick.controlpositions(h_close, L.h_p, [1, 1], [-8-18, -3-18, 18, 18])
             end
             % (group button)
-            ctrl = fn_propcontrol(L, 'sel_mult_in', 'togglebutton', ...
+            ctrl = brick.propcontrol(L, 'sel_mult_in', 'togglebutton', ...
                 {'parent', L.h_p, 'string', 'G'});
-            fn_controlpositions(ctrl.hu, L.h_p, [0, 1], [8, -3-18, 18, 18])
+            brick.controlpositions(ctrl.hu, L.h_p, [0, 1], [8, -3-18, 18, 18])
             
             % context menu
             init_local_menu(L)
             
             % list and event (bottom-up)
-            if boolean(L.scroll_wheel)
+            if brick.boolean(L.scroll_wheel)
                 L.scroll_wheel = 'on'; % this will automaticall register scroll wheel
             end
             if isempty(get(L.h_f, 'WindowButtonMotionFcn'))
@@ -101,7 +101,7 @@ classdef List < xplr.GraphNode
             function filter_changed(~, e)
                 if strcmp(e.type, 'filter'), display_selection(L), end
             end
-            connect_listener(F, L, 'ChangedOperation', @filter_changed);
+            brick.connect_listener(F, L, 'ChangedOperation', @filter_changed);
             
             % auto-delete
             set(L.h_list, 'deletefcn', @(u,e)delete(L))
@@ -143,10 +143,10 @@ classdef List < xplr.GraphNode
 
             uimenu(m, 'label', 'Select all', 'separator', 'on', 'callback', @(u,e)event(L, 'selectall'))
             
-            fn_propcontrol(L, 'sel_mult_in', ...
+            brick.propcontrol(L, 'sel_mult_in', ...
                 {'menuval', {true, false}, {'individuals', 'group'}}, ...
                 {'parent', m, 'label', 'Temporary selection', 'separator', 'on'});
-            fn_propcontrol(L, 'selection_prompt_name', ...
+            brick.propcontrol(L, 'selection_prompt_name', ...
                 {'menu', {'all', 'groups', 'none'}, {'all selections', 'group selections only', 'none'}}, ...
                 {'parent', m, 'label', 'Prompt for selection name'});
             
@@ -157,7 +157,7 @@ classdef List < xplr.GraphNode
             % windowcallbackmanager thing needs to be replaced by calls to
             % iptaddcallback
             %             m1 = uimenu(m,'label','scroll wheel','separator','on');
-            %             fn_propcontrol(L,'scroll_wheel', ...
+            %             brick.propcontrol(L,'scroll_wheel', ...
             %                 {'menu', {'on' 'off' 'default'}}, ...
             %                 {'parent',m1,'label','Scroll wheel behavior'});
             %             uimenu(m1,'label','make default in figure', ...
@@ -166,7 +166,7 @@ classdef List < xplr.GraphNode
             % Load/save selections
             uimenu(m, 'label', 'Load selections...', 'separator', 'on', ...
                 'callback', @(u,e)L.selection_load())
-            uimenu(m, 'label', 'Save selections', 'enable', onoff(~isempty(L.selection_save_file)), ...
+            uimenu(m, 'label', 'Save selections', 'enable', brick.onoff(~isempty(L.selection_save_file)), ...
                 'callback', @(u,e)L.selection_save(L.selection_save_file))
             uimenu(m, 'label', 'Save selections as...', ...
                 'callback', @(u,e)L.selection_save())
@@ -174,7 +174,7 @@ classdef List < xplr.GraphNode
         function selection_save(L, fname)
             if nargin<2 || isempty(fname)
                 prompt = 'Select file for saving selections';
-                fname = fn_savefile('*.xpls', prompt, L.selection_save_file);
+                fname = brick.savefile('*.xpls', prompt, L.selection_save_file);
                 if isequal(fname,0), return, end
             end
             L.F.save_to_file(fname);
@@ -182,7 +182,7 @@ classdef List < xplr.GraphNode
         end
         function selection_load(L, fname)
             if nargin<2
-                fname = fn_getfile('*.xpls','Select selections file');
+                fname = brick.getfile('*.xpls','Select selections file');
                 if isequal(fname,0), return, end
             end
             try
@@ -195,7 +195,7 @@ classdef List < xplr.GraphNode
         function delete(L)
             delete@xplr.GraphNode(L)
             if ~isvalid(L) && ~isprop(L, 'h_list'), return, end
-            delete_valid(L.h_list, L.h_label)
+            brick.delete_valid(L.h_list, L.h_label)
         end
     end
        
@@ -206,7 +206,7 @@ classdef List < xplr.GraphNode
                 case 'a'
                     event(L, 'newgroup')
                 case {'insert', 'delete'}
-                    event(L, 'scroll', fn_switch(e.Key, 'insert', -1, 'delete', 1))
+                    event(L, 'scroll', brick.switch_case(e.Key, 'insert', -1, 'delete', 1))
             end
         end
         function event(L, flag, varargin)
@@ -229,7 +229,7 @@ classdef List < xplr.GraphNode
             sel_inds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
             n_sel = length(sel_inds);
             is_unis_el = false(1, n_sel);
-            for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling fn_map
+            for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling brick.map
             
             % which selections are soft
             soft_sel = L.F.F.header_out.get_value('soft_selection'); % same as above
@@ -252,7 +252,7 @@ classdef List < xplr.GraphNode
                 case 'scroll'
                     n = varargin{1};
                     soft = sel_inds(soft_sel);
-                    if length(soft) >= 2 && all(fn_map(@isscalar, soft)) ...
+                    if length(soft) >= 2 && all(brick.map(@isscalar, soft)) ...
                             && all(ismember(diff([soft{:}]), [0, 1]))
                         % current soft selection consists of a range of
                         % consecutive values -> select the same number of
@@ -282,9 +282,9 @@ classdef List < xplr.GraphNode
                                 val = soft(end) + (n-1)*n_val + (1:n_val);
                             end
                         end
-                        val = fn_coerce(val, 1, L.F.sz_in);
+                        val = brick.coerce(val, 1, L.F.sz_in);
                     else
-                        val = fn_coerce(L.F.index + n, 1, L.F.sz_in);
+                        val = brick.coerce(L.F.index + n, 1, L.F.sz_in);
                         if val == L.F.index, return, end
                     end
                     set(L.h_list, 'value', val, 'listboxtop', val(1) - 2);
@@ -364,7 +364,7 @@ classdef List < xplr.GraphNode
                     if n_soft, update_selection(L.F, 'remove', i_soft), end
                     sel_inds(i_soft) = [];
                     % reorder other selections
-                    idx_first = fn_map(sel_inds, @(v)v(1), 'array');
+                    idx_first = brick.map(sel_inds, @(v)v(1), 'array');
                     [~, ord] = sort(idx_first);
                     update_selection(L.F, 'perm', ord)
                     return
@@ -373,7 +373,7 @@ classdef List < xplr.GraphNode
                     if n_soft, update_selection(L.F, 'remove', i_soft), end
                     n_sel = n_solid;
                     % prompt for reordering
-                    ord = fn_input('new order', 1:n_sel);
+                    ord = brick.input('new order', 1:n_sel);
                     if length(unique(ord)) < length(ord) || ~all(ismember(ord, 1:n_sel))
                         waitfor(errordlg('Not a valid permutation or subset'))
                         return
@@ -401,7 +401,7 @@ classdef List < xplr.GraphNode
                         range = 1:n_sel;
                         flag = strrep(flag, 'all', '');
                     else
-                        range = fn_find(@(x)intersect(x, val), sel_inds);
+                        range = brick.find(@(x)intersect(x, val), sel_inds);
                     end
                     rm_mask = false(1, n_sel);
                     switch flag
@@ -475,13 +475,13 @@ classdef List < xplr.GraphNode
         function set.scroll_wheel(L, flag)
             switch flag
                 case 'on'
-                    fn_scroll_wheel_register(L.h_list, @(n)event(L, 'scroll', n)) %#ok<MCSUP>
+                    brick.scroll_wheel_register(L.h_list, @(n)event(L, 'scroll', n)) %#ok<MCSUP>
                     L.scroll_wheel = 'on';
                 case 'default'
-                    fn_scroll_wheel_register(L.h_list, @(n)event(L, 'scroll', n), 'default') %#ok<MCSUP>
+                    brick.scroll_wheel_register(L.h_list, @(n)event(L, 'scroll', n), 'default') %#ok<MCSUP>
                     L.scroll_wheel = 'on';
                 case 'off'
-                    fn_scroll_wheel_register(L.h_list, flag) %#ok<MCSUP>
+                    brick.scroll_wheel_register(L.h_list, flag) %#ok<MCSUP>
                     L.scroll_wheel = 'off';
                 otherwise
                     error 'scroll_wheel value must be ''off'', ''on'' or ''default'''
@@ -511,7 +511,7 @@ classdef List < xplr.GraphNode
             sel_inds = L.F.F.indices; % it is important here not to get L.F.indices, because we do not want the point selection to appear here
             n_sel = length(sel_inds);
             is_unis_el = false(1, n_sel);
-            for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling fn_map
+            for i=1:n_sel, is_unis_el(i) = isscalar(sel_inds{i}); end % faster than calling brick.map
             soft_sel = L.F.F.header_out.get_value('soft_selection'); % same as above
             soft_sel = [soft_sel{:}]; % faster than cell2mat
             if isempty(soft_sel), soft_sel = false(1, n_sel); end

@@ -32,7 +32,7 @@ classdef ListCombo < hgsetget
                 addlistener(C, 'Empty', @(u,e)delete(container));
             end
             if ~isa(container, 'panelorganizer')
-                container = panelorganizer(container, 'H');
+                container = brick.panelorganizer(container, 'H');
                 container.bordermode = 'push';
             end
             addlistener(container, 'ObjectBeingDestroyed', @(u,e)delete(C));
@@ -66,7 +66,7 @@ classdef ListCombo < hgsetget
         end
         function show_list(C, filter)
             % add filter list, only if not already present
-            if fn_find(filter, C.filters)
+            if brick.find(filter, C.filters)
                 % filter is already shown
                 return
             end
@@ -80,7 +80,7 @@ classdef ListCombo < hgsetget
             if isa(x, 'matlab.ui.container.Panel') || isa(x, 'uipanel') || isnumeric(x)
                 hp_or_id_x = x;
             elseif isa(x, 'xplr.DataOperand')
-                hp_or_id_x = fn_find(x, C.filters);
+                hp_or_id_x = brick.find(x, C.filters);
                 if isempty(hp_or_id_x)
                     return
                 end

@@ -86,13 +86,13 @@ classdef ViewDisplay < xplr.GraphNode
             set(D.ha, 'box', 'on', 'clim', [0, 1])
             try set(D.ha, 'XTickLabelRotation', 45), end % recent Matlab versions only
             try set(D.ha, 'TickLabelInterpreter', 'none'), end % recent Matlab versions only
-            D.listeners.ax_siz = fn_pixelsizelistener(D.ha, @(u,e)axis_resize(D));
+            D.listeners.ax_siz = brick.pixelsizelistener(D.ha, @(u,e)axis_resize(D));
             D.add_listener(D.ha, D.listeners.ax_siz);
-            c = disable_listener(D.listeners.ax_siz); % prevent display update following automatic change of axis position during all the following initializations
+            c = brick.disable_listener(D.listeners.ax_siz); % prevent display update following automatic change of axis position during all the following initializations
             
             % 'time courses'/'image' switch
-            p = fn_propcontrol(D, 'display_mode', {'popupmenu', 'time courses', 'image'}, 'parent', D.hp);
-            fn_controlpositions(p.hu, D.hp, [1, 1], [-90, -25, 90, 25])
+            p = brick.propcontrol(D, 'display_mode', {'popupmenu', 'time courses', 'image'}, 'parent', D.hp);
+            brick.controlpositions(p.hu, D.hp, [1, 1], [-90, -25, 90, 25])
             
             % positionning (needed by both labels and data display)
             D.graph = D.add_component(xplr.DisplayGraph(D));
@@ -219,7 +219,7 @@ classdef ViewDisplay < xplr.GraphNode
     methods
         function s = get_size(D, unit, dim)
             % function s = get_size(D, unit [, dim])
-            s = fn_objectsize(D.ha, unit);
+            s = brick.objectsize(D.ha, unit);
             if nargin >= 3
                 if isnumeric(dim)
                     s = s(dim);
@@ -241,12 +241,12 @@ classdef ViewDisplay < xplr.GraphNode
             delete(get(m, 'children'))
             
             % title
-            fn_propcontrol(D, 'do_title', 'menu', ...
+            brick.propcontrol(D, 'do_title', 'menu', ...
                 {'parent', m, 'label', 'Display title'});
 
             % time courses display
             if strcmp(D.display_mode, 'time courses')
-                fn_propcontrol(D, 'line_alpha', ...
+                brick.propcontrol(D, 'line_alpha', ...
                     {'menuval', {1, .7, .4, .1}, {'none', 'mild', 'medium', 'strong', 'manual'}}, ...
                     {'parent', m, 'label', 'Lines transparency', 'separator', 'on'});
                 do_sep = true;
@@ -255,13 +255,13 @@ classdef ViewDisplay < xplr.GraphNode
             end
             
             % cross
-            fn_propcontrol(D.navigation, 'show_cross', 'menu', ...
-                {'parent', m, 'label', 'Show cross', 'separator', onoff(do_sep)});
+            brick.propcontrol(D.navigation, 'show_cross', 'menu', ...
+                {'parent', m, 'label', 'Show cross', 'separator', brick.onoff(do_sep)});
             if D.navigation.show_cross
-                fn_propcontrol(D.navigation,'cross_color', ...
+                brick.propcontrol(D.navigation,'cross_color', ...
                     {'menu', {'k', 'b', 'r', [1, 1, 1]*.6, 'w'}, {'black', 'blue', 'red', 'gray', 'white', 'other'}}, ...
                     {'parent',m,'label','Cross color'});
-                fn_propcontrol(D.navigation, 'cross_alpha', ...
+                brick.propcontrol(D.navigation, 'cross_alpha', ...
                     {'menu', {1, .4, .05}, {'none', 'medium', 'barely visible', 'manual'}}, ...
                     {'parent', m, 'label', 'Cross transparency'});
             end
@@ -269,17 +269,17 @@ classdef ViewDisplay < xplr.GraphNode
             % separation marks
             org = D.layout_id;
             if length(org.x) > 1 || length(org.y) > strcmp(D.display_mode, 'image') || ~isempty([org.xy, org.yx])
-                fn_propcontrol(D.graph, 'show_separation', 'menu', ...
+                brick.propcontrol(D.graph, 'show_separation', 'menu', ...
                     {'parent', m, 'label', 'Show separations between lines/images', 'separator', 'on'});
                 if D.graph.show_separation
-                    fn_propcontrol(D.graph, 'separation_color', ...
+                    brick.propcontrol(D.graph, 'separation_color', ...
                         {'menu', {'k', [.8, .8, 1], [1, .8, .8], [.8, .8, .8]}, {'black', 'light blue', 'light red', 'light gray', 'other'}}, ...
                         {'parent', m, 'label', 'Separations color'});
                 end
             end            
             
             % when moving dimension label, immediate display update?
-            fn_propcontrol(D.labels, 'do_immediate_display', 'menu', ...
+            brick.propcontrol(D.labels, 'do_immediate_display', 'menu', ...
                 {'parent', m, 'label', 'Immediate display update when moving dimensions', 'separator', 'on'});
 
             % reset display
@@ -398,69 +398,69 @@ classdef ViewDisplay < xplr.GraphNode
             % (color)
             do_color = strcmp(D.display_mode, 'time courses');
             if do_color
-                uimenu(m, 'label', ['Color according to ', head.label], 'checked', onoff(isequal(D.color_dim_id,dim_id)), ...
-                    'callback', @(u,e)D.set_color_dim(fn_switch(isequal(D.color_dim_id,dim_id),[],dim_id)))
+                uimenu(m, 'label', ['Color according to ', head.label], 'checked', brick.onoff(isequal(D.color_dim_id,dim_id)), ...
+                    'callback', @(u,e)D.set_color_dim(brick.switch_case(isequal(D.color_dim_id,dim_id),[],dim_id)))
                 uimenu(m, 'label', 'Display color legend', ...
-                    'enable', onoff(isequal(D.color_dim_id,dim_id)), 'checked', onoff(D.show_color_legend), ...
+                    'enable', brick.onoff(isequal(D.color_dim_id,dim_id)), 'checked', brick.onoff(D.show_color_legend), ...
                     'callback', @(u,e)set(D,'show_color_legend',~D.show_color_legend))
             end
 
             % Binning
-            m1 = uimenu(m, 'label', 'Binning', 'Separator', onoff(do_color));
+            m1 = uimenu(m, 'label', 'Binning', 'Separator', brick.onoff(do_color));
             bin_values = {1, 2, 3, 4, 5, 10, 20, 'set'};
             bin_displays = {'none', '2', '3', '4', '5', '10', '20', 'other...'};
             cur_bin = D.zoom_filters(dim).bin;
             for i=1:length(bin_values)
                 bin = bin_values{i};
-                uimenu(m1, 'label', bin_displays{i}, 'checked', onoff(isequal(cur_bin,bin)), ...
+                uimenu(m1, 'label', bin_displays{i}, 'checked', brick.onoff(isequal(cur_bin,bin)), ...
                     'callback', @(u,e)set_bin(D,dim,bin));
             end
 
             % select ZoomFilter key (check the created menu item
             % that corresponds to the current key)
-            m2 = uimenu(m, 'label', 'zoom filter', 'Separator', onoff(do_color));
+            m2 = uimenu(m, 'label', 'zoom filter', 'Separator', brick.onoff(do_color));
             available_keys = xplr.Bank.available_filter_keys('zoomfilter');
             new_key = max(available_keys) + 1;
             key_values = [0, available_keys, new_key];
-            fn_num2str(available_keys, 'shared zoom %i', 'cell');
+            brick.num2str(available_keys, 'shared zoom %i', 'cell');
             key_displays = [ ...
                 'private zoom', ...
-                fn_num2str(available_keys, 'shared zoom %i', 'cell'), ...
+                brick.num2str(available_keys, 'shared zoom %i', 'cell'), ...
                 num2str(new_key,'shared zoom %i (new key)')
                 ];
             cur_key = D.zoom_filters(dim).link_key;
             for i=1:length(key_values)
                 key_value = key_values(i);
-                uimenu(m2, 'label', key_displays{i}, 'checked', onoff(isequal(cur_key,key_value)), ...
+                uimenu(m2, 'label', key_displays{i}, 'checked', brick.onoff(isequal(cur_key,key_value)), ...
                     'callback', @(u,e)D.zoom_slicer.change_key(dim,key_value));
             end
 
             % select crossSelector key 
             cur_filt = D.navigation.point_filters{dim};
             if ~isempty(cur_filt)
-                m2 = uimenu(m, 'label', 'cross selector key', 'Separator', onoff(do_color));
+                m2 = uimenu(m, 'label', 'cross selector key', 'Separator', brick.onoff(do_color));
 
                 available_keys = xplr.Bank.available_filter_keys('point');
                 new_key = max(available_keys) + 1;
                 key_values = [0, available_keys, new_key];
-                fn_num2str(available_keys, 'cross selector key %i', 'cell');
+                brick.num2str(available_keys, 'cross selector key %i', 'cell');
                 key_displays = [ ...
                     'private cross selector', ...
-                    fn_num2str(available_keys, 'cross selector key %i', 'cell'), ...
+                    brick.num2str(available_keys, 'cross selector key %i', 'cell'), ...
                     num2str(new_key,'cross selector key %i (new key)')
                     ];
                     cur_key = cur_filt.link_key;
                 uimenu(m2, 'label', 'show point selector','callback',@(u,e)xplr.Bank.show_list(cur_filt));
                 for i=1:length(key_values)
                     key_value = key_values(i);
-                    uimenu(m2, 'label', key_displays{i}, 'checked', onoff(isequal(cur_key,key_value)), ...
+                    uimenu(m2, 'label', key_displays{i}, 'checked', brick.onoff(isequal(cur_key,key_value)), ...
                         'callback', @(u,e)connect_point_filter(D.navigation, dim, key_value));
                 end
             end
         end
         function set_bin(D,d,bin)
             if strcmp(bin, 'set')
-                bin = fn_input('Binning', D.zoom_filters(d).bin, 'stepper 1 1 Inf 1');
+                bin = brick.input('Binning', D.zoom_filters(d).bin, 'stepper 1 1 Inf 1');
                 if isempty(bin), return, end
             end
             D.zoom_filters(d).set_bin(bin)
@@ -479,7 +479,7 @@ classdef ViewDisplay < xplr.GraphNode
             if ~do_immediate_display && isequal(new_layout_id, D.layout_id_all)
                 return
             end
-            c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
+            c = brick.disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             D.layout_id_all = new_layout_id;
             D.layout_id = new_layout_id.current_layout(); % keep only dimensions actually displayed
             % is zslice too large for being displayed
@@ -526,7 +526,7 @@ classdef ViewDisplay < xplr.GraphNode
         end
         function make_dim_active(D, dim_id, flag)
             dim_id = D.slice.dimension_id(dim_id);
-            c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
+            c = brick.disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             do_toggle = nargin >= 3 && strcmp(flag, 'toggle');
             % update active dim and connect slider
             if ismember(dim_id, [D.layout_id.x, D.layout_id.yx])
@@ -613,7 +613,7 @@ classdef ViewDisplay < xplr.GraphNode
             hl = subsref(D.h_display, s);
             % display legend
             names = D.slice.header(d).get_item_names;
-            D.h_legend = fn_colorlegend(row(hl), names, 'SouthWest', 'frame');
+            D.h_legend = brick.colorlegend(brick.row(hl), names, 'SouthWest', 'frame');
         end
     end
     
@@ -622,7 +622,7 @@ classdef ViewDisplay < xplr.GraphNode
         function clip = get.current_clip(D)
             % get clipping range of the current grid cell
             ijk = D.navigation.get_point_index_position('clip', 'round');
-            ijk = row(round(D.graph.slice_to_zslice(ijk)));
+            ijk = brick.row(round(D.graph.slice_to_zslice(ijk)));
             clip_dim_ = D.clip_dim;
             if any(ijk(clip_dim_) < 1 | ijk(clip_dim_) > D.zslice.sz(clip_dim_))
                 % cross outside of current zoom
@@ -652,9 +652,9 @@ classdef ViewDisplay < xplr.GraphNode
             else
                 if isscalar(all_cells) && islogical(all_cells)
                     ijk = D.navigation.get_point_index_position('clip',  'round');
-                    zijk = row(round(D.graph.slice_to_zslice(ijk)));
+                    zijk = brick.row(round(D.graph.slice_to_zslice(ijk)));
                 else
-                    zijk = row(all_cells);
+                    zijk = brick.row(all_cells);
                 end
                 dim_indp = D.clipping.independent_dim;
                 D.grid_clip = subsasgn_dim(D.grid_clip, [1, 1+dim_indp],[1, zijk(dim_indp)], clip(1));
@@ -666,7 +666,7 @@ classdef ViewDisplay < xplr.GraphNode
         end
         function set_grid_clip(D, clip)
             assert(isequal(size(clip), size(D.grid_clip)))
-            assert(all(row(diff(clip)) > 0))
+            assert(all(brick.row(diff(clip)) > 0))
             D.grid_clip = clip;
             update_display(D,'clip')
         end
@@ -676,14 +676,14 @@ classdef ViewDisplay < xplr.GraphNode
                 D.grid_clip(:) = NaN;
             else
                 ijk = D.navigation.get_point_index_position('clip', 'round');
-                ijk = row(round(D.graph.slice_to_zslice(ijk)));
+                ijk = brick.row(round(D.graph.slice_to_zslice(ijk)));
                 dim_indp = D.clipping.independent_dim;
                 D.grid_clip = subsasgn_dim(D.grid_clip, 1+dim_indp, ijk(dim_indp), NaN);
             end
             update_display(D, 'clip')
         end
         function clip = get_clip_range(D,data)
-            clip = fn_clip(data(:), D.clipping.auto_clip_mode, 'getrange');
+            clip = brick.clip(data(:), D.clipping.auto_clip_mode, 'getrange');
             if isinf(clip(1)), clip(1) = -1e6; end
             if isinf(clip(2)), clip(2) = 1e6; end
         end
@@ -719,7 +719,7 @@ classdef ViewDisplay < xplr.GraphNode
             if ~isempty(D.V.data.name)
                 names = [D.V.data.name, names];
             end
-            title(D.ha, {fn_strcat(names,' - '), ''}) % the second '' serves to place the title slightly higher
+            title(D.ha, {brick.strcat(names,' - '), ''}) % the second '' serves to place the title slightly higher
         end
     end
     
@@ -749,7 +749,7 @@ classdef ViewDisplay < xplr.GraphNode
             % Is data too large for being displayed?
             if D.no_display
                 % too many grid elements: cancel display!
-                delete_valid(D.grid) % this will also delete children D.h_display
+                brick.delete_valid(D.grid) % this will also delete children D.h_display
                 D.grid_clip = [];
                 delete(findall(D.ha, 'type', 'text', 'tag', 'xytick'))
                 set(D.ha, 'xtick', [], 'ytick', [])
@@ -767,7 +767,7 @@ classdef ViewDisplay < xplr.GraphNode
             end
             
             % Show watch
-            c = fn_watch(D.V.hf); %#ok<NASGU>
+            c = brick.watch(D.V.hf); %#ok<NASGU>
             
             % To really run fast, avoid accessing object properties
             % repeatedly: access them once for all here
@@ -782,22 +782,22 @@ classdef ViewDisplay < xplr.GraphNode
 
             % What to do
             if nargin < 2, flag = 'global'; end
-            if ~fn_ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'new', 'remove', 'chg', 'perm', 'pos', 'color'})
+            if ~brick.ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'new', 'remove', 'chg', 'perm', 'pos', 'color'})
                 error 'flag not handled'
             end
             do_reset = strcmp(flag, 'global');
             dim_external = ismember(dim, external_dim_);
             do_new = strcmp(flag, 'new');
             do_remove = strcmp(flag, 'remove');
-            do_position = ~fn_ismemberstr(flag, {'chg', 'chg_data', 'clip', 'color'});
-            do_data_all = fn_ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'perm', 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
-            do_data_select = fn_ismemberstr(flag, {'new', 'chg'});
+            do_position = ~brick.ismemberstr(flag, {'chg', 'chg_data', 'clip', 'color'});
+            do_data_all = brick.ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'perm', 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
+            do_data_select = brick.ismemberstr(flag, {'new', 'chg'});
             do_data = do_data_all || do_data_select;
             do_data_select_grid = do_data_select && dim_external;
             do_data_select_overlap = do_data_select && ~dim_external;
             if do_data_select, assert(do_data_select_grid || do_data_select_overlap), end
             do_chg_x = strcmp(flag, 'chg_data&blocksize');
-            do_color = do_time_courses && ~fn_ismemberstr(flag, {'chg_data', 'chg_data&blocksize', 'clip'});
+            do_color = do_time_courses && ~brick.ismemberstr(flag, {'chg_data', 'chg_data&blocksize', 'clip'});
             
             % Grid size
             grid_size = ones(1, max(D.nd, 2));
@@ -831,7 +831,7 @@ classdef ViewDisplay < xplr.GraphNode
                     if any(k_color)
                         c_map = cell2mat(color_head.values(:,k_color));
                     else
-                        c_map = fn_colorset('plot12', 1:color_head.n);
+                        c_map = brick.colorset('plot12', 1:color_head.n);
                     end
                     if size(c_map, 2) == 3 && D.line_alpha < 1
                         c_map(:, 4) = D.line_alpha;
@@ -841,7 +841,7 @@ classdef ViewDisplay < xplr.GraphNode
             
             % Prepare display and grid
             if do_reset          % reset display and grid elements
-                delete_valid(D.grid) % this will also delete children D.hdisplay
+                brick.delete_valid(D.grid) % this will also delete children D.hdisplay
                 D.grid = gobjects(grid_size);
                 D.grid_clip = NaN([2 grid_clip_size]);
                 D.h_display = gobjects(h_display_size);
@@ -854,11 +854,11 @@ classdef ViewDisplay < xplr.GraphNode
                 D.h_display = subsasgn_dim(D.h_display, dim, ind, gobjects);
             elseif do_remove     % remove grid elements
                 if ismember(dim, external_dim_)
-                    delete_valid(subsref_dim(D.grid, dim, ind)) % this also deletes the children hdisplay objects
+                    brick.delete_valid(subsref_dim(D.grid, dim, ind)) % this also deletes the children hdisplay objects
                     D.grid = subsasgn_dim(D.grid, dim, ind, []);
                 end
                 D.grid_clip = subsasgn_dim(D.grid_clip, 1+dim, ind, []);
-                delete_valid(subsref_dim(D.h_display, dim, ind)) % this also deletes the children hdisplay objects
+                brick.delete_valid(subsref_dim(D.h_display, dim, ind)) % this also deletes the children hdisplay objects
                 D.h_display = subsasgn_dim(D.h_display, dim, ind, []);
             elseif strcmp(flag, 'chg_data&blocksize') ...
                     && ~do_time_courses && ismember(dim, org.merged_data)
@@ -886,7 +886,7 @@ classdef ViewDisplay < xplr.GraphNode
                     D.signals_baseline = displayed_data;
                     if ~isempty(org.x)
                         D.signals_baseline = feval(align_signals, D.signals_baseline, org.x(1));
-                        displayed_data = fn_subtract(displayed_data, D.signals_baseline);
+                        displayed_data = brick.subtract(displayed_data, D.signals_baseline);
                     end
                 else
                     D.signals_baseline = [];
@@ -916,7 +916,7 @@ classdef ViewDisplay < xplr.GraphNode
                     sz_indpc = ones(1,D.nd);
                     sz_indpc(dim_indpc) = sz(dim_indpc);
                     for idx_indpc = 1:prod(sz_indpc)
-                        ijk_indpc = row(fn_indices(sz_indpc(dim_indpc), idx_indpc, 'g2i'));
+                        ijk_indpc = brick.row(brick.indices(sz_indpc(dim_indpc), idx_indpc, 'g2i'));
                         dat_part = subsref_dim(displayed_data, dim_indpc, ijk_indpc);
                         clip_part = subsref_dim(D.grid_clip, 1+dim_indpc, ijk_indpc);
                         idx = find(~isnan(clip_part(1, :)), 1);
@@ -938,7 +938,7 @@ classdef ViewDisplay < xplr.GraphNode
             if do_position
                 % (list of grid cell indices)
                 idx_grid_list = 1:prod(grid_size);
-                ijk_grid_list = fn_indices(grid_size, idx_grid_list, 'g2i');
+                ijk_grid_list = brick.indices(grid_size, idx_grid_list, 'g2i');
                 % (prepare dispatch)
                 M = D.graph.get_transform(ijk_grid_list);
                 % (loop on grid cells)
@@ -967,14 +967,14 @@ classdef ViewDisplay < xplr.GraphNode
                     idx_h_display_list = subsref(idx_h_display_list, subs);
                 end
                 % (reorganize list as: rows=different grid cells, columns=overlapped elements inside same grid cell)
-                idx_h_display_list = fn_reshapepermute(idx_h_display_list, {external_dim_ overlap_dim_ internal_dim_});
+                idx_h_display_list = brick.reshapepermute(idx_h_display_list, {external_dim_ overlap_dim_ internal_dim_});
                 [n_grid, n_overlap] = size(idx_h_display_list); % can be smaller than total numbers of grids/overlaps
-                ijk_h_display_list = fn_indices(h_display_size, idx_h_display_list(:),'g2i');
+                ijk_h_display_list = brick.indices(h_display_size, idx_h_display_list(:),'g2i');
                 ijk_h_display_list = reshape(ijk_h_display_list, [D.nd, n_grid, n_overlap]);
                 % (corresponding grid cells)
                 ijk_grid_list = ijk_h_display_list(:, :, 1);
                 ijk_grid_list(overlap_dim_, :) = 1;
-                idx_grid_list = fn_indices(grid_size, ijk_grid_list, 'i2g');
+                idx_grid_list = brick.indices(grid_size, ijk_grid_list, 'i2g');
 
                 % subs structure for slicing
                 subs = substruct('()', repmat({':'}, 1, length(sz)));
@@ -1000,10 +1000,10 @@ classdef ViewDisplay < xplr.GraphNode
                         ijk_h_display = ijk_h_display_list(:, u, v);
 
                         % get the data and compute clipping if necessary
-                        [subs.subs{elements_dim_}] = dealc(ijk_h_display (elements_dim_));
+                        [subs.subs{elements_dim_}] = brick.dealc(ijk_h_display (elements_dim_));
                         xi = subsref(displayed_data, subs);
                         xi = permute(xi, internal_perm);
-                        xi = fn_float(xi);
+                        xi = brick.float(xi);
                         clipi = subsref_dim(D.grid_clip, 1+elements_dim_, ...
                             ijk_h_display(elements_dim_)); % 2x1 vector, or 2xn array if color image and color channel clipped independently
                         if clip_at_elements_level && any(isnan(clipi(:)))
@@ -1111,7 +1111,7 @@ classdef ViewDisplay < xplr.GraphNode
         function zslice_change(D, e)
             if nargin < 2, flag = 'global'; else flag = e.flag; end
             xplr.debug_info('viewdisplay', 'zslice_change %s', flag)
-            c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
+            c = brick.disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             
             % Did slice change as well?
             if ~isempty(D.slice_change_event)
@@ -1135,7 +1135,7 @@ classdef ViewDisplay < xplr.GraphNode
             % update can change the size of the axes, and therefore trigger
             % labels re-positionning, which can cause error if the number
             % of labels has decreased)
-            if fn_ismemberstr(flag, {'all', 'new', 'remove', 'chg&new', 'chg&rm', 'global', 'chg_dim'})
+            if brick.ismemberstr(flag, {'all', 'new', 'remove', 'chg&new', 'chg&rm', 'global', 'chg_dim'})
                 switch flag
                     case 'global'
                         D.labels.update_labels('global')
@@ -1150,7 +1150,7 @@ classdef ViewDisplay < xplr.GraphNode
             end
 
             % Update display
-            if fn_ismemberstr(flag, {'global', 'chg_dim'})
+            if brick.ismemberstr(flag, {'global', 'chg_dim'})
                 % Reset display
                 update_display(D, 'global')
             elseif strcmp(flag, 'chg_data')
@@ -1161,7 +1161,7 @@ classdef ViewDisplay < xplr.GraphNode
                 if ismember(chg_dim_id, D.internal_dim_id)
                     % changes are within elements (the grid arrangement
                     % remains the same)
-                    if fn_ismemberstr(flag, {'perm', 'chg'}) ...
+                    if brick.ismemberstr(flag, {'perm', 'chg'}) ...
                             || (strcmp(flag, 'all') && D.zslice.header(chg_dim).n == prevsz(chg_dim))
                         flag = 'chg_data'; % no change in size
                     else
@@ -1239,10 +1239,10 @@ classdef ViewDisplay < xplr.GraphNode
             end
 
             % Update active dim and slider connections
-            if fn_ismemberstr(flag, {'global'})
+            if brick.ismemberstr(flag, {'global'})
                 D.check_active_dim(false, true)
                 D.navigation.connect_zoom_filter()
-            elseif fn_ismemberstr(flag, {'chg_data', 'chg'})
+            elseif brick.ismemberstr(flag, {'chg_data', 'chg'})
                 % slice size did not change
             else
                 D.check_active_dim(false)
@@ -1283,7 +1283,7 @@ classdef ViewDisplay < xplr.GraphNode
             % however if data has not changed in size, positioning needs to
             % be updated here
             if ~e.chg_n_out
-                c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
+                c = brick.disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
                 D.check_zslice_size % is zslice too large for being displayed
                 D.graph.compute_steps()
                 D.graph.set_ticks()
@@ -1295,7 +1295,7 @@ classdef ViewDisplay < xplr.GraphNode
             end
         end
         function axis_resize(D)
-            c = disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
+            c = brick.disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             D.graph.compute_steps()
             D.graph.set_ticks()
             D.graph.set_value_ticks()
@@ -1307,7 +1307,7 @@ classdef ViewDisplay < xplr.GraphNode
             mode = D.display_mode_;
         end
         function set.display_mode(D, mode)
-            c = disable_listener(D.listeners.ax_siz); %#ok<MCSUP,NASGU> % prevent display update following automatic change of axis position
+            c = brick.disable_listener(D.listeners.ax_siz); %#ok<MCSUP,NASGU> % prevent display update following automatic change of axis position
             % set property
             D.display_mode_ = mode;
             % for 'image' mode, check that layout is valid, and modify it if

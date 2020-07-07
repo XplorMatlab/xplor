@@ -22,6 +22,9 @@ function V = xplor(data, varargin)
 % - 'colormap'          n*3 array or the name of a recognized color map
 %                       (this automatically set display mode to 'image')
 
+% Add folders to the path if necessary
+
+
 % Lauch a demo if no argument
 if nargin == 0
     disp('---')
@@ -44,7 +47,7 @@ end
 % Gather options inside a structure
 for i = 2:2:length(varargin), varargin{i} = {varargin{i}}; end %#ok<CCAT1>
 options = reshape(varargin, 2, []);
-options(1, :) = fn_strrep(options(1, :), ' ', '_', '&', '_and_');
+options(1, :) = brick.strrep(options(1, :), ' ', '_', '&', '_and_');
 options = struct(options{:});
 
 % Convert Matlab array to xplr.XData
@@ -122,7 +125,7 @@ end
 %---
 function xplor_window
 
-hf = fn_figure('[XPLOR]', [220, 120]);
+hf = brick.figure('[XPLOR]', [220, 120]);
 delete(findall(hf, 'parent', hf))
 
 uicontrol('unit', 'normalized', 'pos', [0 .6 1 .4], ...

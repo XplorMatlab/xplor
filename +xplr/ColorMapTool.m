@@ -28,7 +28,7 @@ classdef ColorMapTool < xplr.GraphNode
         function delete(C)
             delete@xplr.GraphNode(C)
             if ~isprop(C, 'menu'), return, end
-            delete_valid(C.menu)
+            brick.delete_valid(C.menu)
         end
         function buildmenu(C, D)
             hf = D.V.hf;
@@ -50,18 +50,18 @@ classdef ColorMapTool < xplr.GraphNode
                 'black_red', 'black_green', 'black_blue', ...
                 'white_red', 'white_green', 'white_blue', ...
                 'white_black', 'maporient'};
-            fn_propcontrol(C, 'c_map_def', ['menugroup', map_names, 'user...'], m);
+            brick.propcontrol(C, 'c_map_def', ['menugroup', map_names, 'user...'], m);
             
             % Apply non-linear function to values before coloring
-            fn_propcontrol(C, 'invert_map', 'menu', ...
+            brick.propcontrol(C, 'invert_map', 'menu', ...
                 {'parent', m, 'label', 'Invert map', 'separator', 'on'});
-            fn_propcontrol(C, 'do_nonlinear', 'menu', ...
+            brick.propcontrol(C, 'do_nonlinear', 'menu', ...
                 {'parent', m, 'label', 'Apply nonlinear function before coloring'});
             
             % Control visibility depending on dislay mode
-            set(C.menu, 'visible', fn_switch(D.display_mode, 'image', 'on', 'off'));
-            connect_listener(D, C, 'display_mode', 'PostSet', ...
-                @(u,e)set(C.menu, 'visible', fn_switch(D.display_mode, 'image', 'on', 'off')));
+            set(C.menu, 'visible', brick.switch_case(D.display_mode, 'image', 'on', 'off'));
+            brick.connect_listener(D, C, 'display_mode', 'PostSet', ...
+                @(u,e)set(C.menu, 'visible', brick.switch_case(D.display_mode, 'image', 'on', 'off')));
         end
     end
     
@@ -83,7 +83,13 @@ classdef ColorMapTool < xplr.GraphNode
                         end
                     otherwise
                         try
-                            x = feval(name, 256);
+                            try
+                                % custom colormap in the +colormaps folder
+                                x = feval(['colormaps.' name], 256);
+                            catch
+                                % Matlab colormap
+                                x = feval(name, 256);
+                            end
                         catch
                             errordlg(sprintf('''%s'' is not the name of a valid color map', name), '', 'modal')
                             return
@@ -114,7 +120,7 @@ classdef ColorMapTool < xplr.GraphNode
             % of class signaleditor to control the parameters of this
             % function
             if value && (isempty(C.nonlinear_fun_editor) || ~isvalid(C.nonlinear_fun_editor))
-                C.nonlinear_fun_editor = signaleditor([1, 256], [0, 1], ...
+                C.nonlinear_fun_editor = brick.signaleditor([1, 256], [0, 1], ...
                     @(x)notify(C, 'ChangedColorMap'), 'monotonous', 'min', 0, 'max', 1);
                 % if the editor is closed, we stop applying the nonlinear
                 % function
@@ -139,8 +145,8 @@ classdef ColorMapTool < xplr.GraphNode
             idxnan = any(isnan(xi), 2);
             % clip data; note that clipi can have 3 clipping ranges for the
             % 3 image color channels
-            clipi = matrix(clipi);
-            xi = fn_div(fn_subtract(xi, clipi(1,:)), diff(clipi));
+            clipi = brick.matrix(clipi);
+            xi = brick.div(brick.subtract(xi, clipi(1,:)), diff(clipi));
             xi = max(0, min(1, xi));
             % apply nonlinear function if any
             if C.do_nonlinear

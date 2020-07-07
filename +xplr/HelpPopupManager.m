@@ -3,7 +3,7 @@ classdef HelpPopupManager < handle
     % TODO:
     % - complete methods popup_window and button_clicked
     % - add a 'Help' menu in View.m with items "Show help popups" (use
-    %   function fn_prop_control on the HelpPopupManager object to handle
+    %   function prop_control on the HelpPopupManager object to handle
     %   the check mark) and "Reset popup display" 
     
     properties
@@ -30,15 +30,15 @@ classdef HelpPopupManager < handle
         end
         function load_from_disk(self, prop)
             % loadprop
-            fsave = fn_userconfig('configfolder', 'xplor_popup');
+            fsave = brick.userconfig('configfolder', 'xplor_popup');
             warning('off', 'MATLAB:load:variableNotFound')
             try %#ok<TRYNC>
-                self.(prop) = fn_loadvar(fsave, prop);
+                self.(prop) = brick.loadvar(fsave, prop);
             end
             warning('on', 'MATLAB:load:variableNotFound')
         end
         function save_to_disk(self, prop)
-            fsave = fn_userconfig('configfolder', 'xplor_popup');
+            fsave = brick.userconfig('configfolder', 'xplor_popup');
             s = struct(prop, {self.(prop)});
             if exist(fsave, 'file')
                 save(fsave, '-STRUCT', 's', '-APPEND');

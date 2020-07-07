@@ -30,7 +30,7 @@ classdef BankRegistry < handle
     
     methods (Access='private')
         function idx = get_index(R, key)
-            idx = fn_find(key, {R.content.key}, 'first');
+            idx = brick.find(key, {R.content.key}, 'first');
         end
     end
     methods
@@ -77,7 +77,7 @@ classdef BankRegistry < handle
             end
             R.content(idx) = struct('key', key, 'value', value, 'users', {users});
             xplr.debug_info('registry', 'key %s 1st user %s (value %s)', ...
-                fn_hash(key, 3), char(user), char(value))
+                brick.hash(key, 3), char(user), char(value))
         end
         function removed = unregister(R, key, user)
             if ~isvalid(R), return, end % R has been deleted already
@@ -106,7 +106,7 @@ classdef BankRegistry < handle
             % Value index
             idx = get_index(R, key);
             if isempty(idx)
-                xplr.debug_info('registry', 'key %s was not found', fn_hash(key,3))
+                xplr.debug_info('registry', 'key %s was not found', brick.hash(key,3))
                 disp 'entry to unregister was not found'
                 if nargout, removed = false; end
                 return
@@ -116,13 +116,13 @@ classdef BankRegistry < handle
                 % remove value regardless of there are users or not
                 R.content(idx).users = [];
             else
-                idxuser = fn_find(user, R.content(idx).users(1, :), 'first');
+                idxuser = brick.find(user, R.content(idx).users(1, :), 'first');
                 if isempty(idxuser)
                     disp 'user to unregister was not found in users list'
                 else
                     c = R.content(idx);
                     xplr.debug_info('registry', 'key %s rmv user %s', ...
-                        fn_hash(c.key, 3), char(c.users{1, idxuser}))
+                        brick.hash(c.key, 3), char(c.users{1, idxuser}))
                     hld = R.content(idx).users{2, idxuser}; % handle of listener listening for object deletion
                     delete(hld)
                     R.content(idx).users(:, idxuser) = [];
@@ -133,7 +133,7 @@ classdef BankRegistry < handle
                 % an object)
                 value = R.content(idx).value;
                 xplr.debug_info('registry', 'key %s remove key (delete %s)', ...
-                    fn_hash(R.content(idx).key, 3), char(value))
+                    brick.hash(R.content(idx).key, 3), char(value))
                 R.content(idx) = [];
                 % -> and delete it! (if it is an object)
                 if isobject(value), delete(value), end
@@ -178,14 +178,14 @@ classdef BankRegistry < handle
             % registry entry and the value can be deleted at any time, upon
             % unregistration of another user
             if isempty(new_user)
-                xplr.debug_info('registry', 'key %s accessed without user',fn_hash(R.content(idx).key,3))
+                xplr.debug_info('registry', 'key %s accessed without user',brick.hash(R.content(idx).key,3))
                 return
             end
             % Add new user
-            idx_user = fn_find(new_user, R.content(idx).users(1, :), 'first');
+            idx_user = brick.find(new_user, R.content(idx).users(1, :), 'first');
             if isempty(idx_user)
                 xplr.debug_info('registry', 'key %s add user %s', ...
-                    fn_hash(R.content(idx).key, 3), char(new_user))
+                    brick.hash(R.content(idx).key, 3), char(new_user))
                 if isobject(new_user)
                     hld = addlistener(new_user,'ObjectBeingDestroyed', ...
                         @(u,e)R.unregister(key,new_user));

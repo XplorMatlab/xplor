@@ -7,7 +7,7 @@ demo_list = available_demos(:, 1);
 demo_fun = available_demos(:, 2);
 
 % Execute one demo or display the full list
-hf = fn_figure('XPLOR demo', [240 400], 'Menubar', 'none', 'Toolbar', 'none');
+hf = brick.figure('XPLOR demo', [240 400], 'Menubar', 'none', 'Toolbar', 'none');
 h_label = .05;
 uicontrol('style', 'text', 'parent', hf, ...
     'units', 'normalized', 'position', [0 1-h_label 1 h_label], ...

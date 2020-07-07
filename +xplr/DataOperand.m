@@ -173,7 +173,7 @@ classdef DataOperand < xplr.GraphNode
             % function save_to_file(O,f_name)
             %---
             % save dataOperand object from file
-            fn_savevar(f_name, O);
+            brick.savevar(f_name, O);
         end
         function load_from_file(O, f_name)
             % function load_from_file(O,f_name)
@@ -183,7 +183,7 @@ classdef DataOperand < xplr.GraphNode
             % affects any of the listener attached to it)
             
             % load from file
-            obj = fn_loadvar(f_name);
+            obj = brick.loadvar(f_name);
             
             % checks
             if ~isa(obj, class(O))
@@ -191,7 +191,7 @@ classdef DataOperand < xplr.GraphNode
             end
             if ~isequal(obj.header_in, O.header_in)
                 if ~isequal({obj.header_in.label}, {O.header_in.label})
-                    error('operand loaded from file applies to dimensions %s, expected %s instead', fn_strcat({obj.header_in.label}, ','), fn_strcat({O.header_in.label}, ','))
+                    error('operand loaded from file applies to dimensions %s, expected %s instead', brick.strcat({obj.header_in.label}, ','), brick.strcat({O.header_in.label}, ','))
                 elseif ~isequal([obj.header_in.n], [O.header_in.n])
                     error('operand loaded from file applies on data of size %s, expected %s instead', num2str([obj.header_in.n], '%i '), num2str([O.header_in.n], '%i '))
                 else

@@ -8,7 +8,7 @@
 %% Base file and url folders
 
 base_folder = fullfile(fileparts(which('xplor')),'demo','nasa_neo');
-fn_mkdir(base_folder);
+brick.mkdir(base_folder);
 base_url = 'https://neo.sci.gsfc.nasa.gov/archive/geotiff.float/';
 
 %% Download Readme
@@ -23,11 +23,11 @@ end
 
 % read Readme.txt
 file_readme = fullfile(base_folder,'README.txt');
-readme = fn_readtext(file_readme);
+readme = brick.readtext(file_readme);
 
 % process: separate lines, skip headers
 % readme = strsplit(readme,'\n');
-nheader = fn_find(@(str)strfind(str,'-------------'),readme,'first');
+nheader = brick.find(@(str)strfind(str,'-------------'),readme,'first');
 readme(1:nheader) = [];
 
 % retrieve types and descriptions
@@ -35,7 +35,7 @@ nalltype = length(readme);
 alltypes = cell(1,nalltype);
 alltypes_descriptions = cell(1,nalltype);
 for i = 1:nalltype
-    [alltypes{i}, alltypes_descriptions{i}] = fn_regexptokens(readme{i},'^([^ ]*) +(.*[^ ]) *$');
+    [alltypes{i}, alltypes_descriptions{i}] = brick.regexptokens(readme{i},'^([^ ]*) +(.*[^ ]) *$');
 end
 
 %% Manual list of datasets with 1 image per month
@@ -100,7 +100,7 @@ if eval('false')
     for type = dowload_types
         type_str = type{1}; % Get type as a string
         subfolder = fullfile(base_folder,type_str);
-        fn_mkdir(subfolder) % Create folder in current Matlab path
+        brick.mkdir(subfolder) % Create folder in current Matlab path
 
         % list from web folder all files belonging to this dataset
         listing = webread([base_url type_str]);
@@ -111,9 +111,9 @@ if eval('false')
 
         % download loop
         nfile = length(filenames);
-        fn_progress(type_str, nfile)
+        brick.progress(type_str, nfile)
         for k = 1:nfile
-            fn_progress(k)
+            brick.progress(k)
             filename = filenames{k};
             url = [base_url type_str '/' filename];
             file = fullfile(subfolder, filename);
@@ -141,7 +141,7 @@ if eval('true')
     for type = types
         type_str = type{1}; % Get type as a string
         subfolder = fullfile(base_folder,type_str);
-        fn_mkdir(subfolder) % Create folder in current Matlab path
+        brick.mkdir(subfolder) % Create folder in current Matlab path
         n_dates = 1;
         for year = years_range
             for month = 1:12
@@ -176,8 +176,8 @@ for ktype = 1:nalltype
     subfolder = fullfile(base_folder,type_str);
     d = dir(fullfile(subfolder,'*.TIFF'));
     if isempty(d), alltypes_empty(ktype) = true; continue, end
-    first_year = str2double(fn_regexptokens(d(1).name,[type_str '_(\d{4})']));
-    last_year = str2double(fn_regexptokens(d(end).name,[type_str '_(\d{4})']));
+    first_year = str2double(brick.regexptokens(d(1).name,[type_str '_(\d{4})']));
+    last_year = str2double(brick.regexptokens(d(end).name,[type_str '_(\d{4})']));
     alltypes_years_range.(type_str) = [first_year last_year];
 end
 disp(alltypes_years_range)
@@ -202,7 +202,7 @@ if eval('false')
             months{i,j} = sprintf('%.2i-%.4i',i,years_range(j));
         end
     end
-    months = row(months);
+    months = brick.row(months);
     
     % subselect months
     ok_month = ~isnan(data(265,195,:));
@@ -238,7 +238,7 @@ if eval('false')
     latitude = 89.75:-.5:-89.75;
     
     
-    fn_savevar('NEO Earth Temperature.mat', ...
+    brick.savevar('NEO Earth Temperature.mat', ...
         temperatures,temperatures_indices,readme,lat_long_unit,latitude,longitude,months)
     
     %% (custom data set)
@@ -252,7 +252,7 @@ function [data, desc, years_range] = load_data(types, xbin, years_range_restrict
 % function [data, desc, years_range] = load_data(types,[, years_range_restrict[, months_range]])
 
 % get variables from the base space
-[base_folder,alltypes,alltypes_descriptions,alltypes_years_range] = dealc( ...
+[base_folder,alltypes,alltypes_descriptions,alltypes_years_range] = brick.dealc( ...
     evalin('base','{base_folder,alltypes,alltypes_descriptions,alltypes_years_range}'));
 
 % optional inputs
@@ -262,11 +262,11 @@ if ~exist('months_range','var'), months_range = []; end
 
 % types descriptions
 ntype = length(types);
-desc = fn_map(@(type)alltypes_descriptions{strcmp(type,alltypes)},types);
+desc = brick.map(@(type)alltypes_descriptions{strcmp(type,alltypes)},types);
 
 % years range
 % (code below selects all available years for the selected types)
-years_range = fn_map(@(type)alltypes_years_range.(type),types','array');
+years_range = brick.map(@(type)alltypes_years_range.(type),types','array');
 years_range = [min(years_range(:,1)) max(years_range(:,2))];
 % (subselect years range)
 if ~isempty(years_range_restrict)
@@ -293,22 +293,22 @@ data = NaN([nx ny nmonth nyear ntype]);
 kfile = 0;
 for ktype = 1:ntype
     type_str = types{ktype}; % Get type as a string
-    fn_progress(['Load ' desc{ktype}],ntype*nmonth*nyear)
+    brick.progress(['Load ' desc{ktype}],ntype*nmonth*nyear)
     subfolder = fullfile(base_folder,type_str);
     for kyear = 1:nyear
         year = years_range(kyear);
         for kmonth = 1:nmonth
             month = months_range(kmonth);
             kfile = kfile + 1;
-            fn_progress(kfile)
+            brick.progress(kfile)
             file = [type_str '_' num2str(year) '-' num2str(month,'%02d') '.FLOAT.TIFF']; % File formatted as MOP_CO_M_2013-10.TIFF
             file = fullfile(subfolder,file);
             if exist(file,'file')
-                x = fn_readimg(file);
+                x = brick.readimg(file);
                 % undefined data: replace 99999 by NaN
                 x(x==99999) = NaN;
                 % bin
-                x = fn_bin(x,[-nx -ny]);
+                x = brick.bin(x,[-nx -ny]);
                 % put in array
                 data(:,:,kmonth,kyear,ktype) = x;
             else

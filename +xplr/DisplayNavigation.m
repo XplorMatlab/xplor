@@ -86,7 +86,7 @@ classdef DisplayNavigation < xplr.GraphNode
             set(D.ha, 'buttondownfcn', @(u,e)axes_click(N))
 
             % scroll wheel zooming
-            fn_scrollwheelregister(D.ha, @(n)N.wheel_scroll(n))
+            brick.scrollwheelregister(D.ha, @(n)N.wheel_scroll(n))
             
             % selection menu
             uimenu(N.hf, 'Label', 'Selection', 'callback', @(m, e)N.selection_menu(m))
@@ -102,35 +102,35 @@ classdef DisplayNavigation < xplr.GraphNode
             x=(0-ii)./(jj-ii) - .5;
             x(end)=0;
             u = uicontrol('parent', N.D.hp, ...
-                'enable', 'inactive', 'cdata', fn_clip(sin(pi*x), [-1, 1], 'gray'), ...
+                'enable', 'inactive', 'cdata', brick.clip(sin(pi*x), [-1, 1], 'gray'), ...
                 'buttondownfcn', @(u,e)move_clip(N));
-            fn_controlpositions(u, N.ha,[1, 1, 0, 0],[-1, -16, 16, 16])
+            brick.controlpositions(u, N.ha,[1, 1, 0, 0],[-1, -16, 16, 16])
 
             % two next buttons control extent of clipping
             u = uicontrol('parent', N.D.hp, ...
                 'string', '+', 'fontsize', 8, ...
                 'callback', @(u,e)clip_change_range(N, '+'));
-            fn_controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -32, 16, 16])
+            brick.controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -32, 16, 16])
             u = uicontrol('parent', N.D.hp, ...
                 'string', '-', 'fontsize', 8, ...
                 'callback', @(u,e)clip_change_range(N, '-'));
-            fn_controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -48, 16, 16])
+            brick.controlpositions(u, N.ha, [1, 1, 0, 0], [-1, -48, 16, 16])
         end
         function init_sliders(N)
-            N.sliders.x = fn_slider('parent', N.D.hp, 'mode', 'area', ...
+            N.sliders.x = brick.slider('parent', N.D.hp, 'mode', 'area', ...
                 'layout', 'right', 'callback', @(u, evnt)chg_zoom(N, 'x', u));
-            N.sliders.y = fn_slider('parent', N.D.hp, 'mode', 'area', ...
+            N.sliders.y = brick.slider('parent', N.D.hp, 'mode', 'area', ...
                 'layout', 'down', 'callback', @(u, evnt)chg_zoom(N, 'y', u));
             pcol = get(N.D.hp, 'backgroundcolor');
             set([N.sliders.x, N.sliders.y], 'visible', 'off', 'scrollwheel', 'on', 'value', [0, 1], ...
                 'backgroundcolor', pcol*.75, 'slidercolor', pcol*.95)
-            fn_controlpositions(N.sliders.x, N.ha, [0, 1, 1, 0], [0, 0, 0, 12]);
-            fn_controlpositions(N.sliders.y, N.ha, [1, 0, 0, 1], [0, 0, 12, -48]);
+            brick.controlpositions(N.sliders.x, N.ha, [0, 1, 1, 0], [0, 0, 0, 12]);
+            brick.controlpositions(N.sliders.y, N.ha, [1, 0, 0, 1], [0, 0, 12, -48]);
         end
         function init_value_display(N)
             N.cross_data_value = uicontrol('Parent', N.D.hp, 'style', 'text', 'enable', 'inactive', ...
                 'fontsize', 8, 'horizontalalignment', 'right');
-            fn_controlpositions(N.cross_data_value, N.D.hp, [1, 0], [-100, 10, 90, 15])
+            brick.controlpositions(N.cross_data_value, N.D.hp, [1, 0], [-100, 10, 90, 15])
         end
     end
     
@@ -149,7 +149,7 @@ classdef DisplayNavigation < xplr.GraphNode
         function move_clip(N)
             switch get(N.hf, 'selectiontype')
                 case 'normal'       % change clip
-                    clip0 = row(N.D.current_clip);
+                    clip0 = brick.row(N.D.current_clip);
                     if isempty(clip0)
                         % cross outside of current zoom
                         return
@@ -162,7 +162,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     set(ht, 'string', sprintf('min: %.3f,  max: %.3f', clip0(1), clip0(2)))
                     c = onCleanup(@()delete(ht)); 
                     % change clip
-                    fn_buttonmotion(@move_clipsub, N.hf, 'pointer', 'cross')
+                    brick.buttonmotion(@move_clipsub, N.hf, 'pointer', 'cross')
                 case 'open'         % use default clipping
                     N.D.auto_clip(~N.D.clipping.buttons_only_for_current_cells)
             end
@@ -212,9 +212,9 @@ classdef DisplayNavigation < xplr.GraphNode
             f = sum(bsxfun(@gt, e(:)*1.1 ,vals), 2);
             
             % update as specified
-            f = f + fn_switch(flag, '+', -1, '-', 1);
+            f = f + brick.switch_case(flag, '+', -1, '-', 1);
             e = e10 .* reshape(vals(f), size(e));
-            clip = fn_add(m, fn_mult([-.5; .5], e));
+            clip = brick.add(m, brick.mult([-.5; .5], e));
             
             % set clip
             if N.D.clipping.buttons_only_for_current_cells
@@ -247,7 +247,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     if point_only
                         do_zoom = false;
                     else
-                        rect = fn_mouse(N.ha, 'rectaxp-');
+                        rect = brick.mouse(N.ha, 'rectaxp-');
                         do_zoom = any(any(abs(diff(rect, 1, 2))>1e-2));
                     end
                     if do_zoom
@@ -405,10 +405,10 @@ classdef DisplayNavigation < xplr.GraphNode
 
             % Global index?
             if do_round
-                ijk = fn_coerce(round(ijk), 1, N.D.slice.sz');
+                ijk = brick.coerce(round(ijk), 1, N.D.slice.sz');
             end
             if do_global
-                ijk = fn_indices(N.D.slice.sz(dim), ijk(dim), 'i2g');
+                ijk = brick.indices(N.D.slice.sz(dim), ijk(dim), 'i2g');
             end
         end
         function reposition_cross(N)
@@ -437,7 +437,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % re-display cross if it was deleted (happens upon
             % D.resetDisplay)
             if ~all(isvalid(N.cross))
-                delete_valid(N.cross)
+                brick.delete_valid(N.cross)
                 N.display_cross()
             end
             
@@ -473,8 +473,8 @@ classdef DisplayNavigation < xplr.GraphNode
             end
             point = [];
             
-            pointer = fn_switch(il, 1, 'left', 2, 'top', 3, 'crosshair');
-            anymove = fn_buttonmotion(@move_cross_sub, N.hf, 'moved?', 'pointer', pointer);
+            pointer = brick.switch_case(il, 1, 'left', 2, 'top', 3, 'crosshair');
+            anymove = brick.buttonmotion(@move_cross_sub, N.hf, 'moved?', 'pointer', pointer);
             if do_drag_zoom
                 stop(drag_timer)
             end
@@ -502,7 +502,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 if do_drag_zoom
                     if abs(p(1)) > .5 - drag_zone
                         drag_speed = sign(p(1)) * ((abs(p(1)) - (.5-drag_zone))/drag_zone)/10;
-                        if ~boolean(drag_timer.Running)
+                        if ~brick.boolean(drag_timer.Running)
                             start(drag_timer)
                         end
                     else
@@ -525,10 +525,10 @@ classdef DisplayNavigation < xplr.GraphNode
         end        
         function manual_click_move_cross(N, point)
             % move the cross to the selected point
-            ijk = row(N.graph.graph_to_slice(point, 'invertible', true));
+            ijk = brick.row(N.graph.graph_to_slice(point, 'invertible', true));
             
             % clip to data edges
-            ijk = fn_coerce(ijk, .5001, N.D.slice.sz + .4999); 
+            ijk = brick.coerce(ijk, .5001, N.D.slice.sz + .4999);
             
             % round indices values in dimensions with categorical headers
             categorical = [N.D.slice.header.categorical];
@@ -564,13 +564,13 @@ classdef DisplayNavigation < xplr.GraphNode
             x_dim = [layout.x, layout.xy, layout.yx];
             x_singleton = isempty(x_dim);
             x_is_out_of_display = any(dim_out_of_display(x_dim));
-            N.cross(1).Visible = onoff(~x_singleton && ~x_is_out_of_display);
+            N.cross(1).Visible = brick.onoff(~x_singleton && ~x_is_out_of_display);
             
             % Same things for horizontal bar
             y_dim = [layout.y, layout.xy, layout.yx];
             y_singleton = isempty(y_dim);
             y_is_out_of_display = any(dim_out_of_display(y_dim));
-            N.cross(2).Visible = onoff(~(y_singleton|y_is_out_of_display));
+            N.cross(2).Visible = brick.onoff(~(y_singleton|y_is_out_of_display));
             
             % Cross center
             update_cross_center_visibility(N);
@@ -582,7 +582,7 @@ classdef DisplayNavigation < xplr.GraphNode
         function update_cross_center_visibility(N)
             %  if one of the dimension of the cross is hidden, hide the
             % cross center as well
-            N.cross(3).Visible = onoff(boolean(N.cross(1).Visible) && boolean(N.cross(2).Visible));
+            N.cross(3).Visible = brick.onoff(brick.boolean(N.cross(1).Visible) && brick.boolean(N.cross(2).Visible));
         end
         function update_value_display(N)
             idx = get_point_index_position(N, 'global');
@@ -599,7 +599,7 @@ classdef DisplayNavigation < xplr.GraphNode
             N.update_cross_visibility()
         end
         function set.cross_color(N,color)
-            color = fn_colorbyname(color);
+            color = brick.colorbyname(color);
             if isempty(color), error 'wrong color', end
             N.cross_color = color;
             set(N.cross, 'color', [N.cross_color, N.cross_alpha])
@@ -638,7 +638,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 if isscalar(prop_dim)
                     item_label = ['Control selection in dimension ', prop_labels{1}];
                 else
-                    item_label = ['Control selection in dimensions ', fn_strcat(prop_labels,',')];
+                    item_label = ['Control selection in dimensions ', brick.strcat(prop_labels,',')];
                 end
                 prop_dim_id = [header(prop_dim).dim_id];
                 uimenu(m, 'label', item_label, ...
@@ -651,7 +651,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 case 1
                     info = ['Control selection in dimension: ', sel_labels{1}];
                 case 2
-                    info = ['Control selection in dimensions: ', fn_strcat(sel_labels,',')];
+                    info = ['Control selection in dimensions: ', brick.strcat(sel_labels,',')];
                 otherwise
                     error 'programming: selection control in more than 2 dimensions'
             end
@@ -659,7 +659,7 @@ classdef DisplayNavigation < xplr.GraphNode
             m2 = uimenu(m, 'label', info);
             % (1D: dimension location must be x, y or xy)
             dim_ok = sort([layout.x, layout.y, layout.xy]);
-            fn_propcontrol(N, 'selection_dim_id', ...
+            brick.propcontrol(N, 'selection_dim_id', ...
                 {'menugroup', {header(dim_ok).dim_id}, {header(dim_ok).label}}, ...
                 {'parent', m2});
             % (2D: dimension locations must be respectively x and y)
@@ -670,10 +670,10 @@ classdef DisplayNavigation < xplr.GraphNode
                     for j = 1:length(layout.y)
                         d = [layout.x(i), layout.y(j)];
                         available{1, i, j} = [header(d).dim_id];
-                        available{2, i, j} = fn_strcat({header(d).label}, ',');
+                        available{2, i, j} = brick.strcat({header(d).label}, ',');
                     end
                 end
-                fn_propcontrol(N, 'selection_dim_id', ...
+                brick.propcontrol(N, 'selection_dim_id', ...
                     {'menugroup', available(1, :) available(2, :)}, ...
                     {'parent', m2});
                 % selections with first dim on y-axis, second dim on x-axis
@@ -681,10 +681,10 @@ classdef DisplayNavigation < xplr.GraphNode
                     for j = 1:length(layout.y)
                         d = [layout.y(j), layout.x(i)];
                         available{1, i, j} = [header(d).dim_id];
-                        available{2, i, j} = fn_strcat({header(d).label}, ',');
+                        available{2, i, j} = brick.strcat({header(d).label}, ',');
                     end
                 end
-                fn_propcontrol(N, 'selection_dim_id', ...
+                brick.propcontrol(N, 'selection_dim_id', ...
                     {'menugroup', available(1, :), available(2, :)}, ...
                     {'parent', m2});
             end
@@ -705,31 +705,31 @@ classdef DisplayNavigation < xplr.GraphNode
             uimenu(m, 'label', 'Clear selections', 'separator', 'on', ...
                 'callback', @(u,e)N.selection_filter.update_selection('reset'))
             if length(N.selection_dim_id) == 2
-                fn_propcontrol(N, 'selection_2d_shape', ...
+                brick.propcontrol(N, 'selection_2d_shape', ...
                     {'menuval', {'poly', 'free', 'rect', 'ellipse', 'ring', 'line', 'openpoly', 'freeline'}}, ...
                     'parent', m, 'label', 'Shape');
             end
             if length(N.selection_dim_id) == 1 && N.D.slice.header(sel_dim).is_measure
-                fn_propcontrol(N, 'selection_round_1d_measure', 'menu', ...
+                brick.propcontrol(N, 'selection_round_1d_measure', 'menu', ...
                     {'parent', m, 'label', 'Round 1D selections to data indices', 'separator', 'on'});
             end
-            fn_propcontrol(N, 'selection_prompt_name', 'menu', ...
+            brick.propcontrol(N, 'selection_prompt_name', 'menu', ...
                 {'parent', m, 'label', 'Prompt for name of new selections'});
-            fn_propcontrol(N, 'selection_at_most_one', 'menu', ...
+            brick.propcontrol(N, 'selection_at_most_one', 'menu', ...
                 {'parent', m, 'label', 'At most one selection'})
             
-            fn_propcontrol(N, 'selection_show', ...
+            brick.propcontrol(N, 'selection_show', ...
                 {'menuval', {'shape+name', 'shape', 'name', 'center'}}, ...
                 {'parent', m, 'label', 'Display mode', 'separator', 'on'});
             % selection edit mode not ready yet!!! (need first to convert
             % selection from slice to graph)
-            %             fn_propcontrol(N,'selection_do_edit','menu', ...
+            %             brick.propcontrol(N,'selection_do_edit','menu', ...
             %                 {'parent',m,'label','Selections modifyable'});
 
             % Load/save selections
             uimenu(m, 'label', 'Load...', 'separator', 'on', ...
                 'callback', @(u,e)N.selection_load())
-            uimenu(m, 'label', 'Save', 'enable', onoff(~isempty(N.selection_save_file)), ...
+            uimenu(m, 'label', 'Save', 'enable', brick.onoff(~isempty(N.selection_save_file)), ...
                 'callback', @(u,e)N.selection_save(N.selection_save_file))
             uimenu(m, 'label', 'Save as...', ...
                 'callback', @(u,e)N.selection_save())
@@ -752,14 +752,14 @@ classdef DisplayNavigation < xplr.GraphNode
             selnd = length(sel_dim);
 
             % check dimension location
-            dim_location = fn_strcat(N.D.layout_id.dim_locations(sel_dim), ',');
+            dim_location = brick.strcat(N.D.layout_id.dim_locations(sel_dim), ',');
             if ~ismember(dim_location, {'x', 'y', 'xy', 'x,y', 'y,x'})
                 disp(['selection in location ''' dim_location ''' not handled'])
                 sel_slice = [];
                 return
             end
             
-            % two different behaviors for the fn_mouse function
+            % two different behaviors for the brick.mouse function
             if nargin<2
                 % we assume the first point of the selection was already
                 % clicked
@@ -776,7 +776,7 @@ classdef DisplayNavigation < xplr.GraphNode
             if selnd == 1
                 % user interaction
                 if isscalar(dim_location)
-                    poly_ax = fn_mouse(N.ha, [dim_location, 'segment', popt], msgopt{:});
+                    poly_ax = brick.mouse(N.ha, [dim_location, 'segment', popt], msgopt{:});
                     switch dim_location
                         case 'x'
                             poly_ax = [poly_ax; 0, 0];
@@ -784,7 +784,7 @@ classdef DisplayNavigation < xplr.GraphNode
                             poly_ax = [0, 0; poly_ax];
                     end
                 else
-                    poly_ax = fn_mouse(N.ha, ['rectaxp', popt], msgopt{:});
+                    poly_ax = brick.mouse(N.ha, ['rectaxp', popt], msgopt{:});
                 end
 
                 % convert to slice indices in the selected
@@ -806,15 +806,15 @@ classdef DisplayNavigation < xplr.GraphNode
                 end
             elseif selnd == 2
                 % user interaction
-                mouse_sel_mode = fn_switch(N.selection_2d_shape, ...
+                mouse_sel_mode = brick.switch_case(N.selection_2d_shape, ...
                     'line', 'segment', {'poly', 'openpoly'}, 'polypt', 'freeline', 'free', ...
                     'ellipse', 'ellipse*', 'ring', 'ring*', ...
                     N.selection_2d_shape);
-                sel_type = fn_switch(N.selection_2d_shape, ...
+                sel_type = brick.switch_case(N.selection_2d_shape, ...
                     {'poly', 'free'}, 'poly2D', 'rect', 'rect2D', ...
                     'ellipse', 'ellipse2D', 'ring', 'ring2D', ...
                     {'line', 'openpoly', 'freeline'}, 'openpoly2D');
-                poly_ax = fn_mouse(N.D.ha, [mouse_sel_mode popt], msgopt{:});
+                poly_ax = brick.mouse(N.D.ha, [mouse_sel_mode popt], msgopt{:});
 
                 % create selection in graph coordinates
                 sel_ax = xplr.SelectionND(sel_type, poly_ax);
@@ -922,7 +922,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % function display_selection(N,'perm',perm)
            
             if isempty(N.selection_dim_id)
-                delete_valid(N.selection_display)
+                brick.delete_valid(N.selection_display)
                 N.selection_display = [];
                 return
             end
@@ -931,7 +931,7 @@ classdef DisplayNavigation < xplr.GraphNode
             selection_axis = [N.D.layout_id.dim_locations{N.selection_dim}];
             if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
                 disp('selections cannot be displayed')
-                delete_valid(N.selection_display)
+                brick.delete_valid(N.selection_display)
                 N.selection_display = [];
                 return
             end
@@ -942,8 +942,8 @@ classdef DisplayNavigation < xplr.GraphNode
             switch flag
                 case {'all', 'reset', 'new'}
                     % delete current display
-                    if fn_ismemberstr(flag, {'all', 'reset'})
-                        delete_valid(N.selection_display)
+                    if brick.ismemberstr(flag, {'all', 'reset'})
+                        brick.delete_valid(N.selection_display)
                         N.selection_display = [];
                     end
                     % draw new selections
@@ -963,7 +963,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     for k = 1:length(N.selection), display_one_sel(N, k, 'chg'), end
                 case 'remove'
                     % delete selected selections
-                    delete_valid(N.selection_display(ind))
+                    brick.delete_valid(N.selection_display(ind))
                     N.selection_display(ind) = [];
                     % index (and therefore displayed name) of some other selections have changed
                     for k = min(ind):length(N.selection), display_one_sel(N, k, 'chg'), end
@@ -988,7 +988,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % function display_one_sel(D,k,'chg')       - selection has changed
 
             % new selection?
-            new_sel = fn_switch(flag, 'new', true, 'chg', false);
+            new_sel = brick.switch_case(flag, 'new', true, 'chg', false);
             
             % position
             % selection in slice coordinates
@@ -1023,10 +1023,10 @@ classdef DisplayNavigation < xplr.GraphNode
             end
 
             % name
-            name_rotation = fn_switch(isscalar(N.selection_dim_id) && length (name)>3, 45, 0);
+            name_rotation = brick.switch_case(isscalar(N.selection_dim_id) && length (name)>3, 45, 0);
 
             % color
-            colors = fn_colorset;
+            colors = brick.colorset;
             col = colors(mod(k-1, size(colors, 1)) + 1, :);
 
             % Create / update objects
@@ -1111,7 +1111,7 @@ classdef DisplayNavigation < xplr.GraphNode
             %   execute normal axes callback
             
             % first get index of the clicked selection
-            idx = fn_find(@(hl)any(struct_to_array(hl) == u), N.selection_display, 'first');
+            idx = brick.find(@(hl)any(struct_to_array(hl) == u), N.selection_display, 'first');
             
             click_type = get(N.D.V.hf, 'SelectionType');
             if strcmp(click_type, 'alt')
@@ -1170,7 +1170,7 @@ classdef DisplayNavigation < xplr.GraphNode
             h_shape = hl(1);
             h_handle = hl(end);
             hl = htl(2:end);
-            [flag_pt, flag_lin] = fn_flags({'handle', 'line'}, flag);
+            [flag_pt, flag_lin] = brick.flags({'handle', 'line'}, flag);
             p = get(N.ha, 'currentpoint');
             p = p(1, 1:2)';
             polymark = [get(hl(2), 'xdata');
@@ -1186,10 +1186,10 @@ classdef DisplayNavigation < xplr.GraphNode
                             % the same!
                             if flag_pt
                                 % closest point
-                                dist = sum(fn_add(polymark, -p).^2);
+                                dist = sum(brick.add(polymark, -p).^2);
                                 [dum, idx] = min(dist);
                                 idx = idx(1); %#ok<*ASGLU>
-                                if idx==1 && ~fn_ismemberstr(shapetype, {'line2D', 'openpoly2D'})
+                                if idx==1 && ~brick.ismemberstr(shapetype, {'line2D', 'openpoly2D'})
                                     % need to move both the first and last point (which is a repetition of the first)
                                     idx=[1, size(polymark, s2)];
                                 end 
@@ -1199,7 +1199,7 @@ classdef DisplayNavigation < xplr.GraphNode
                                 b = polymark(:, 2:end);
                                 ab = b - a;
                                 ab2 = sum(ab.^2);
-                                ap = fn_add(p, -a);
+                                ap = brick.add(p, -a);
                                 abap = ab(1, :).*ap(2, :) - ab(2, :).*ap(1, :);
                                 dist = abs(abap) ./ ab2;
                                 [dum, idx] = min(dist);
@@ -1208,7 +1208,7 @@ classdef DisplayNavigation < xplr.GraphNode
                                 set(hl, 'xdata', polymark(1, :), 'ydata', polymark(2, :))
                                 idx = idx + 1;
                             end
-                            fn_moveobject(hl, 'point', idx)
+                            brick.moveobject(hl, 'point', idx)
                             sel_edit_update_slice(N, idx)
                         case 'rect2D'
                             desc = get_app_data(hl(2), 'description');
@@ -1221,7 +1221,7 @@ classdef DisplayNavigation < xplr.GraphNode
                             if flag_pt
                                 % move corner
                                 pol = [x, x2, x2, x; y, y, y2, y2]; % anti-clockwise from (x,y)
-                                dist = sum(fn_add(pol, -p).^2);
+                                dist = sum(brick.add(pol, -p).^2);
                                 [dum, idx] = min(dist);
                                 idx = idx(1);
                             else
@@ -1232,14 +1232,14 @@ classdef DisplayNavigation < xplr.GraphNode
                             col = get(hl(1), 'color');
                             set(hl, 'color', .5*[1, 1, 1])
                             chg_rectangle(N.ha, hl, flag_pt, idx,desc)
-                            fn_buttonmotion({@chg_rectangle, N.ha, hl, flag_pt, idx, desc}, N.hf);
+                            brick.buttonmotion({@chg_rectangle, N.ha, hl, flag_pt, idx, desc}, N.hf);
                             set(hl, 'color', col)
                             sel_edit_update_slice(N, idx)
                         case {'ellipse2D', 'ring2D'}
                             desc = get_app_data(hl(2), 'description');
                             if flag_pt
                                 % closest of two anchor points
-                                dist = sum(fn_add(polymark, -p).^2);
+                                dist = sum(brick.add(polymark, -p).^2);
                                 [dum, idx] = min(dist);
                                 idx = idx(1);
                             elseif strcmp(shapetype, 'ellipse2D')
@@ -1248,7 +1248,7 @@ classdef DisplayNavigation < xplr.GraphNode
                             else
                                 % eccentricity or secondary radius?
                                 polygon = [get(hl(1), 'xdata'); get(hl(1), 'ydata')];
-                                dist = sum(fn_add(polygon,-p).^2);
+                                dist = sum(brick.add(polygon,-p).^2);
                                 [dum, idx] = min(dist);
                                 if idx < length(polygon)/2
                                     % eccentricity
@@ -1261,7 +1261,7 @@ classdef DisplayNavigation < xplr.GraphNode
                             col = get(hl(1), 'color');
                             set(hl, 'color', .5*[1, 1, 1])
                             chg_ellipse(N.ha, hl, idx, desc)
-                            fn_buttonmotion({@chg_ellipse, N.ha, hl, idx, desc}, N.hf);
+                            brick.buttonmotion({@chg_ellipse, N.ha, hl, idx, desc}, N.hf);
                             set(hl, 'color', col)
                             sel_edit_update_slice(N, idx)
                         otherwise
@@ -1269,17 +1269,17 @@ classdef DisplayNavigation < xplr.GraphNode
                     end
                 case 'extend'               % MOVE SHAPE
                     if flag_pt
-                        dp = fn_moveobject(htl);
+                        dp = brick.moveobject(htl);
                         sel_edit_update_slice(N, idx, dp)
                     elseif flag_lin
-                        dp = fn_moveobject([N.seldisp{:}]);
+                        dp = brick.moveobject([N.seldisp{:}]);
                         sel_edit_update_slice(N, 1:length(N.seldisp), dp) % move all shapes
                     end
                 case 'alt'                  % REMOVE
-                    if fn_ismemberstr(selection_marks(idx).type, ...
+                    if brick.ismemberstr(selection_marks(idx).type, ...
                             {'poly2D', 'mixed'}) && flag_pt
                         % closest point -> remove vertex
-                        dist = sum(fn_add(polymark, -p).^2);
+                        dist = sum(brick.add(polymark, -p).^2);
                         [dum, idx] = min(dist);
                         idx = idx(1);
                         if idx == 1, idx = [1, size(polymark, 2)]; end
@@ -1290,13 +1290,13 @@ classdef DisplayNavigation < xplr.GraphNode
                     else
                         % replace the whole shape
                         set(hl, 'visible', 'off')
-                        mouse_sel_mode = fn_switch(N.shapemode, ...
+                        mouse_sel_mode = brick.switch_case(N.shapemode, ...
                             {'poly', 'openpoly'}, 'polypt', 'freeline', 'free', ...
                             N.shapemode);
-                        TYPE = fn_switch(N.shapemode, {'poly', 'free'}, 'poly2D', 'rect', 'rect2D', ...
+                        TYPE = brick.switch_case(N.shapemode, {'poly', 'free'}, 'poly2D', 'rect', 'rect2D', ...
                             'ellipse', 'ellipse2D', 'ring', 'ring2D', ...
                             'segment', 'line2D', {'openpoly', 'freeline'}, 'openpoly2D');
-                        poly_ax = fn_mouse(N.ha, mouse_sel_mode, 'select new shape');
+                        poly_ax = brick.mouse(N.ha, mouse_sel_mode, 'select new shape');
                         sel_ax = SelectionND(TYPE, poly_ax);
                         sel = AX2IJ(N.SI, sel_ax);
                         update_selection(N.SI, 'change', idx,sel)
@@ -1340,7 +1340,7 @@ classdef DisplayNavigation < xplr.GraphNode
         function selection_save(N, f_name)
             if nargin<2 || isempty(f_name)
                 prompt = 'Select file for saving selections';
-                f_name = fn_savefile('*.xpls', prompt, N.selection_save_file);
+                f_name = brick.savefile('*.xpls', prompt, N.selection_save_file);
                 if isequal(f_name,0), return, end
             end
             N.selection_filter.save_to_file(f_name);
@@ -1348,7 +1348,7 @@ classdef DisplayNavigation < xplr.GraphNode
         end
         function selection_load(N, f_name)
             if nargin < 2
-                f_name = fn_getfile('*.xpls', 'Select selections file');
+                f_name = brick.getfile('*.xpls', 'Select selections file');
                 if isequal(f_name,0), return, end
             end
             try
@@ -1427,7 +1427,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % linked object
             Z = N.D.zoom_filters(dim);
             % prevent unnecessary update of slider display
-            c = disable_listener(N.sliders.(f));
+            c = brick.disable_listener(N.sliders.(f));
             % set value
             if isequal(obj.value, obj.minmax)
                 set_zoom(Z,':')
@@ -1440,7 +1440,7 @@ classdef DisplayNavigation < xplr.GraphNode
 
             p = get(N.D.ha, 'currentpoint');
             p = p(1, 1:2);
-            origin = row(N.graph.graph_to_slice(p)); % current point in data coordinates
+            origin = brick.row(N.graph.graph_to_slice(p)); % current point in data coordinates
             zoom_factor = 1.5^n_scroll;
 
             % if we keep zooming from the same point, apply to the same
@@ -1468,8 +1468,8 @@ classdef DisplayNavigation < xplr.GraphNode
             %             zoom = N.graph.getZoom(dim); %,'effective');
             zoom = N.graph.get_zoom(zoom_dim, 'effective');
             origin_dim = origin(zoom_dim);
-            origin_dim = fn_coerce(origin_dim, zoom);
-            new_zoom = fn_add(origin_dim, fn_mult(zoom_factor, fn_subtract(zoom, origin_dim)));
+            origin_dim = brick.coerce(origin_dim, zoom);
+            new_zoom = brick.add(origin_dim, brick.mult(zoom_factor, brick.subtract(zoom, origin_dim)));
             N.D.zoom_slicer.set_zoom(zoom_dim, new_zoom)
         end
     end
@@ -1532,7 +1532,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % input
             if nargin<3, per_dim = false; end
             if isvector(ijk) && size(ijk, 2) ~= N.D.slice.nd
-                ijk = row(ijk);
+                ijk = brick.row(ijk);
             end
             
             % get the min and max slice values of the data displayed

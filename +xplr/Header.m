@@ -130,7 +130,7 @@ classdef Header < handle
             else
                 % we must still distinguish between the syntax for 2
                 % headers, or a single categorical header
-                is_multiple = ~all(fn_map(@ischar, varargin{1}));
+                is_multiple = ~all(brick.map(@ischar, varargin{1}));
             end
             if is_multiple
                 for i = 1:nargin
@@ -156,7 +156,7 @@ classdef Header < handle
             str = [class(H), ' object with following info:'];
             if ~isscalar(H)
                 sz = size(H);
-                str = [fn_strcat(sz,'x'), ' ', str];
+                str = [brick.strcat(sz,'x'), ' ', str];
             end
             fprintf(['  ', str, '\n\n'])
             fields = {'label', 'type', 'n', 'unit'};
@@ -177,16 +177,16 @@ classdef Header < handle
                             if isempty(H.all_units)
                                 val{i} = '<in_valid empty all_units>'; % old version of xplr.header class
                             else
-                                val{i} = fn_strcat({H.all_units.unit}, ',');
+                                val{i} = brick.strcat({H.all_units.unit}, ',');
                             end
                         end
                         if isempty(val{i}), val{i} = '[]'; end
                     case 'sub_labels'
-                        val{i} = fn_strcat({H.sub_labels.label}, ',');
+                        val{i} = brick.strcat({H.sub_labels.label}, ',');
                     case 'values'
                         ok_val = false;
                         if H.n_column==1 && H.n<20
-                            try val{i} = fn_strcat(H.values,',');
+                            try val{i} = brick.strcat(H.values,',');
                                 ok_val = true;
                             end %#ok<TRYNC>
                         end
@@ -194,12 +194,12 @@ classdef Header < handle
                             val{i} = sprintf('%ix%i cell array', size(H.values));
                         end
                     otherwise
-                        str = fn_strcat({H.(f)}, ',');
+                        str = brick.strcat({H.(f)}, ',');
                         if isempty(str), str = '[]'; end
                         val{i} = str;
                 end
             end
-            names = fliplr(char(fn_map(@fliplr, fields)));
+            names = fliplr(char(brick.map(@fliplr, fields)));
             for i=1:nf
                 disp(['    ', names(i,:), ': ', val{i}])
             end
@@ -235,7 +235,7 @@ classdef Header < handle
             if (n_label==1 && ~isvector(table)) || (n_label>1 && size(table,2)~=n_label)
                 error 'values should be a cell array with as many columns as there are labels'
             elseif n_label==1
-                table = column(table);
+                table = brick.column(table);
             end
             %                 if n_label==0 % if table is empty, create one column with label 'index'
             %                     lab = {'index'};
@@ -261,7 +261,7 @@ classdef Header < handle
             if ~isempty(name)
                 H.label = name;
             else
-                H.label = fn_strcat({H.sub_labels.label}, '*');
+                H.label = brick.strcat({H.sub_labels.label}, '*');
             end
         end
         function build_measure_header(H,varargin)
@@ -398,7 +398,7 @@ classdef Header < handle
                 return
             end
             if isempty(H.id)
-                H.id = fn_hash({H.n, H.sub_labels, H.label, H.categorical, H.start, H.scale, H.values}, 'num');
+                H.id = brick.hash({H.n, H.sub_labels, H.label, H.categorical, H.start, H.scale, H.values}, 'num');
             end
             id = H.id;
         end
@@ -419,7 +419,7 @@ classdef Header < handle
             end
             if H.is_measure
                 if isempty(H.measure_space_id)
-                    H.measure_space_id = fn_hash({H.label,H.unit}, 'num');
+                    H.measure_space_id = brick.hash({H.label,H.unit}, 'num');
                 end
                 id = H.measure_space_id;
             else
@@ -481,7 +481,7 @@ classdef Header < handle
                     if isempty(idx_name), idx_name = 1; end
                     item_values = H.values(:, idx_name);
                     if idx_name > 1
-                        empty = fn_isemptyc(item_values);
+                        empty = brick.isemptyc(item_values);
                         item_values(empty) = H.values(empty, 1);
                     end
                     names = cell(1, n_val);
@@ -492,18 +492,18 @@ classdef Header < handle
                         elseif ischar(val)
                             names{k} = val;
                         elseif isnumeric(val) || islogical(val)
-                            names{k} = fn_idx2str(val, ':,');
+                            names{k} = brick.idx2str(val, ':,');
                             if length(names{k}) > 12, names{k} = [names{k}(1:10), '...']; end
                         elseif iscell(val)
-                            names{k} = fn_strcat(val, ',');
+                            names{k} = brick.strcat(val, ',');
                         else
                             error 'cannot form string from value'
                         end
                     end
                 elseif H.categorical
-                    names = fn_num2str(idx, 'cell')';
+                    names = brick.num2str(idx, 'cell')';
                 else % (measure)
-                    names = fn_num2str(H.start + (idx-1)*H.scale, ['%.4g', H.unit], 'cell')';
+                    names = brick.num2str(H.start + (idx-1)*H.scale, ['%.4g', H.unit], 'cell')';
                 end
                 if do_all, H.item_names = names; end
             elseif do_all
@@ -525,7 +525,7 @@ classdef Header < handle
     methods
         function new_head = update_header(H, flag, ind, value)
             % function new_head = update_header(H,flag,ind,value)
-            if ~fn_ismemberstr(flag, {'all', 'new', 'chg', 'remove', 'chg&new', 'chg&rm', 'perm', 'chg_dim'})
+            if ~brick.ismemberstr(flag, {'all', 'new', 'chg', 'remove', 'chg&new', 'chg&rm', 'perm', 'chg_dim'})
                 error('cannot update header for flag ''%s''', flag)
             end
             new_head = copy(H);
@@ -540,7 +540,7 @@ classdef Header < handle
                                 new_head.values = cell(new_head.n, 0);
                             else
                                 if isvector(value) && length(value) == new_head.n
-                                    value = column(value);
+                                    value = brick.column(value);
                                 elseif size(value, 1) ~= new_head.n
                                     error 'number of rows of header values does not match header length'
                                 elseif size(value, 2) ~= new_head.n_column

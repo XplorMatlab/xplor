@@ -62,13 +62,13 @@ classdef SelectionND < xplr.GraphNode
             end
             
             % number of dimension
-            if fn_ismemberstr(type, {'empty', 'all'})
+            if brick.ismemberstr(type, {'empty', 'all'})
                 % the syntax SelectionND('empty', nd) is not public but
                 % corresponds to the internal encoding of type
                 sel.nd = data;
                 data = [];
             elseif regexp(type, '^(empty|all)\d+D$')
-                [type, nd] = fn_regexptokens(type, '^(empty|all)(\d+)D$');
+                [type, nd] = brick.regexptokens(type, '^(empty|all)(\d+)D$');
                 sel.nd = str2double(nd);
             elseif strfind(type, '1D')
                 sel.nd = 1;
@@ -81,7 +81,7 @@ classdef SelectionND < xplr.GraphNode
                 if nargin==2 && iscell(data)
                     sizes = data{1};
                 elseif nargin==3 && ~iscell(data)
-                    indices = row(data);
+                    indices = brick.row(data);
                     data = {sizes, indices};
                 else
                     error argument
@@ -117,7 +117,7 @@ classdef SelectionND < xplr.GraphNode
                     fprintf('    %s\n', F{k});
                 end
             else
-                strucdisp(struct(sel))
+                brick.strucdisp(struct(sel))
             end
             warning('on', 'MATLAB:structOnObject')
         end

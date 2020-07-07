@@ -11,7 +11,7 @@ function colors = colors(name, k)
 
 % named color or index in set?
 if nargin == 1
-    tokens = fn_strcut(name,'.');
+    tokens = brick.strcut(name,'.');
     colors = [];
     switch tokens{1}
         case 'gui'

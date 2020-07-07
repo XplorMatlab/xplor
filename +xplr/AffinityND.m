@@ -64,7 +64,7 @@ classdef AffinityND < handle
             warning('off', 'MATLAB:structOnObject')
             varname = inputname(1);
             eval([varname, ' = struct(impossible_name__);'])
-            fn_structdisp(varname)
+            brick.structdisp(varname)
             warning('on', 'MATLAB:structOnObject')
         end
     end
@@ -72,7 +72,7 @@ classdef AffinityND < handle
     % Operations 
     methods
         function points = move_points(mov, points)
-            points = fn_add(mov.mat(2:end, 1), mov.mat(2:end, 2:end)*points);
+            points = brick.add(mov.mat(2:end, 1), mov.mat(2:end, 2:end)*points);
         end
         function vectors = move_vectors(mov, vectors)
             vectors = mov.mat(2:end, 2:end)*vectors;

@@ -2,7 +2,7 @@
 
 files = {'673nmos', '656nmos', '502nmos'};
 folder = fullfile(fileparts(which('xplor')),'demo data','Hubble');
-fn_mkdir(folder)
+brick.mkdir(folder)
 
 % Download from internet
 if ~exist(fullfile(folder,[files{1} '.fits']),'file')
@@ -26,7 +26,7 @@ data0 = data;
 
 %% Normalize colors 
 
-data = fn_mult(data0, shiftdim([1 .15 1.3],-1));
+data = brick.mult(data0, shiftdim([1 .15 1.3],-1));
 % V.data.chgData(data)
 
 %% Header info

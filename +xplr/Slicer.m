@@ -208,7 +208,7 @@ classdef Slicer < xplr.GraphNode
                 dim_id = dim_ids{i};
                 F = new_filt(i);
                 % replace filter
-                idx = fn_find(dim_id, {S.filters.dim_id});
+                idx = brick.find(dim_id, {S.filters.dim_id});
                 if isempty(idx), error 'there is no filter in the specified dimension', end
                 prev_nd_out = S.filters(idx).obj.nd_out;
                 S.disconnect(S.filters(idx).obj)
@@ -258,7 +258,7 @@ classdef Slicer < xplr.GraphNode
         end
         function chg_filter_active(S, idx, val)
             % function chg_filter_active(S,idx,val)
-            val = boolean(val);
+            val = brick.boolean(val);
             if all([S.filters(idx).active] == val), return, end
             for i = idx
                 S.filters(i).active = val;
@@ -280,7 +280,7 @@ classdef Slicer < xplr.GraphNode
     methods
         function F = get_filter_by_dim(S, dim_id)
             dim_id = S.data.dimension_id(dim_id);
-            idx = fn_find(dim_id, {S.filters.dim_id});
+            idx = brick.find(dim_id, {S.filters.dim_id});
             F = [S.filters(idx).obj];
         end
         function idx = get_filter_index(S, F_or_dim)
@@ -295,7 +295,7 @@ classdef Slicer < xplr.GraphNode
             else
                 F = F_or_dim;
                 if ~isscalar(F), error 'input filter must be scalar', end
-                idx = fn_find(F, [S.filters.obj], 'first');
+                idx = brick.find(F, [S.filters.obj], 'first');
             end
         end
     end
@@ -337,7 +337,7 @@ classdef Slicer < xplr.GraphNode
             switch chg_origin
                 case 'data'
                     k_start = 1;
-                    if fn_ismemberstr(chg_flag,{'all', 'chg_data', 'global', 'chg_dim'})
+                    if brick.ismemberstr(chg_flag,{'all', 'chg_data', 'global', 'chg_dim'})
                         % smart update is not possible
                         S.slicing_chain(:) = [];
                     else
@@ -363,7 +363,7 @@ classdef Slicer < xplr.GraphNode
                     end
                 case 'filter'
                     % filtering in dimension(s) dim_id has changed
-                    k_filt = fn_find(chg_filter, [S.active_filters.obj], 'first');
+                    k_filt = brick.find(chg_filter, [S.active_filters.obj], 'first');
                     if isempty(k_filt)
                         % filter is not active
                         if ~any(chg_filter == [S.filters.obj]), error programming, end
