@@ -59,6 +59,14 @@ classdef HelpPopupManager < handle
             end
             manager = M0;
         end
+        function build_menu(hf)
+%             manager = xplr.HelpPopupManager.get_popup_manager();% test fn_prop
+%             fn_propcontrol(manager,'do_show_popups','menu',...  % test fn_prop
+%                {'parent',hf,'label','Help'});                   % test fn_prop
+            menu = uimenu('parent',hf,'label','Help');
+            uimenu(menu,'label','Show help popups');
+            uimenu(menu,'label','Reset popups display');
+        end
     end
     
     % Identifiers lists
@@ -102,7 +110,13 @@ classdef HelpPopupManager < handle
             % - buttons: "Do not show again" (=default), "Show me again later"
             
             manager = xplr.HelpPopupManager.get_popup_manager();
+
+            % For testing purposes
+            manager.reset_identifier_lists()
+            disp reset
             
+            ~manager.do_show_popups
+            manager.was_identifier_displayed(file_name)
             % is this message in a list of already displayed messages?
             if ~manager.do_show_popups || manager.was_identifier_displayed(file_name)
                 return
@@ -115,6 +129,22 @@ classdef HelpPopupManager < handle
             % for the moment, just display file_name and emulate button
             % click
             disp(file_name)
+            
+            % Create figure
+            popup_figure = uifigure;
+            popup_figure.Position = [500 500 380 445];
+            % Add HTML to figure
+            message = uihtml(popup_figure);
+            message.Position = [10 10 360 420];
+            message.HTMLSource = file_name;
+            % Add buttons
+            again_button = uibutton(popup_figure);
+            again_button.Text = "Show me again later";
+            again_button.Position = [25 50 150 30];
+            not_again_button = uibutton(popup_figure);
+            not_again_button.Text = "Don't show me again";
+            not_again_button.Position = [200 50 150 30];
+            
             manager.button_clicked(true);
         end
     end
