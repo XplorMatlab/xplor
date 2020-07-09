@@ -9,7 +9,8 @@ classdef View < xplr.GraphNode
         C               % control of data operation
         D               % main display
         panels          % panels for: display, control, lists, + some buttons
-        menu
+        menu_xplor
+        menu_help
     end
     properties (SetObservable = true)
         control_visible = false;  % logical - are the controls visible
@@ -51,8 +52,8 @@ classdef View < xplr.GraphNode
             % open figure and create panels
             init_panels(V)
             
-            % MENU
-            V.menu = uimenu('parent', V.hf, 'label', 'XPLOR', ...
+            % MENU XPLOR
+            V.menu_xplor = uimenu('parent', V.hf, 'label', 'XPLOR', ...
                 'callback', @(u,e)V.xplor_menu());
             
             % DISPLAY
@@ -63,6 +64,10 @@ classdef View < xplr.GraphNode
             
             % CONTROL
             V.C = V.add_component(xplr.ViewControl(V));
+            
+            % MENU HELP
+            V.menu_help = uimenu('parent', V.hf, 'label', 'Help', ...
+                'callback', @(u,e)V.help_menu());
             
             % save object in base workspace
             assignin('base', 'V', V)
@@ -149,7 +154,7 @@ classdef View < xplr.GraphNode
     % Menu
     methods
         function xplor_menu(V)
-            m = V.menu;
+            m = V.menu_xplor;
             delete(get(m,'children'))
             
             % Access View from command line
@@ -190,6 +195,26 @@ classdef View < xplr.GraphNode
             % save 
             assignin('base', name, V)
             disp(['View object has been stored in variable ''' name '''.'])
+        end
+        function help_menu(V)
+            m = V.menu_help;
+            
+            % Access View from command line
+            uimenu(m, 'label', 'TEST', ...
+                'callback', @(u,e)V.test_help())
+            
+            fn_propcontrol(m, 'reset_popups', 'menu', ...
+                {'parent', m, 'label', 'Reset popups'});
+            
+            % Close XPLOR window(s)
+%             fig_name = get(V.hf, 'name');
+%             uimenu(m, 'label', ['Close all ''' fig_name ''' windows'], 'separator', 'on', ...
+%                 'callback', @(u,e)close(findall(0, 'type', 'figure', 'name', fig_name)))
+%             uimenu(m, 'label', 'Close all XPLOR windows', ...
+%                 'callback', @(u,e)close(findall(0, 'type', 'figure', 'tag', 'XPLOR')))
+        end
+        function test_help(V)
+            disp("TEST HELP")
         end
     end
     
