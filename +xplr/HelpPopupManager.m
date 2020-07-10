@@ -1,4 +1,4 @@
-classdef HelpPopupManager < handle
+classdef HelpPopupManager < matlab.mixin.SetGet
     
     % TODO:
     % - complete methods popup_window and button_clicked
@@ -8,7 +8,6 @@ classdef HelpPopupManager < handle
     
     properties
         % "global" properties
-        do_show_popups = false;
         displayed_identifiers_session = {};
         displayed_identifiers_disk = {};
         
@@ -17,6 +16,9 @@ classdef HelpPopupManager < handle
         current_popup           % probably an uifigure
         current_object
         current_object_state
+    end
+    properties (SetObservable)
+        do_show_popups = false
     end
     
     % Help popup manager

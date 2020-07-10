@@ -198,23 +198,26 @@ classdef View < xplr.GraphNode
         end
         function help_menu(V)
             m = V.menu_help;
+            delete(get(m,'children'))
             
-            % Access View from command line
+            popup_manager = xplr.HelpPopupManager.get_popup_manager();
+            
+            % Create Help menu
             uimenu(m, 'label', 'TEST', ...
                 'callback', @(u,e)V.test_help())
             
-            fn_propcontrol(m, 'reset_popups', 'menu', ...
-                {'parent', m, 'label', 'Reset popups'});
+            % Button Show help popups
+            fn_propcontrol(popup_manager, 'do_show_popups', 'menu', ...
+                {'parent', m, 'label', 'Show help popups'});
             
-            % Close XPLOR window(s)
-%             fig_name = get(V.hf, 'name');
-%             uimenu(m, 'label', ['Close all ''' fig_name ''' windows'], 'separator', 'on', ...
-%                 'callback', @(u,e)close(findall(0, 'type', 'figure', 'name', fig_name)))
-%             uimenu(m, 'label', 'Close all XPLOR windows', ...
-%                 'callback', @(u,e)close(findall(0, 'type', 'figure', 'tag', 'XPLOR')))
+            % Button Reset popups display
+            uimenu(m, 'label', 'Reset display', 'separator', 'on', ...
+                'callback', @(u,e)popup_manager.reset_identifier_lists())
+            
         end
         function test_help(V)
             disp("TEST HELP")
+            disp(xplr.HelpPopupManager.get_popup_manager())
         end
     end
     
