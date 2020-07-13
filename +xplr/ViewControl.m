@@ -220,7 +220,7 @@ classdef ViewControl < xplr.GraphNode
                 'label', ['View ', dim_str, ', filter others'], 'separator', 'on', ...
                 'callback', @(u,e)dim_action(C, 'view', dim_id, 1))
             uimenu(m, 'label', ['View ', dim_str, ' in a new window'], ...
-                'callback', @(u,e)dim_action(C, 'new_window_view_dim', dim_id, 1))
+                'callback', @(u,e)dim_action(C, 'new_window_view', dim_id, 1))
             
             % make menu visible
             p = get(C.V.hf, 'currentpoint');
