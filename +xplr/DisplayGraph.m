@@ -1012,13 +1012,21 @@ classdef DisplayGraph < xplr.GraphNode
             % - ijk         index coordinates in the slice data
             %
             % See also xplr.DisplayGraph.conversion_options
+            
+            % if ijk0 argument, convert it to zoomed slice coordinates
+            np = size(xy, 2);
+            [sub_dim, ijk0, mode, invertible] = conversion_options(G, np, varargin{:});
+            if ~isempty(ijk0)
+                zijk0 = G.slice_to_zslice(ijk0);
+            else
+                zijk0 = [];
+            end
 
             % coordinates in zoomed slice
-            np = size(xy, 2);
-            zijk = graph_to_zslice(G, xy, varargin{:});
+            zijk = G.graph_to_zslice(xy, 'mode', mode, ...
+                'sub_dim', sub_dim, 'ijk0', zijk0, 'invertible', invertible);
             
             % convert to before zooming
-            [sub_dim, ~, mode] = G.conversion_options(np, varargin{:});
             ijk = G.zslice_to_slice(zijk, strcmp(mode,'vector'), sub_dim);
         end
 	end

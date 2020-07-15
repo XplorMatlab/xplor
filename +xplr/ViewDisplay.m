@@ -710,8 +710,10 @@ classdef ViewDisplay < xplr.GraphNode
                 head = D.slice.header(d);
                 namei = head.get_item_name(1);
                 % add dimension label if name is an integer
-                if mod(str2double(namei), 1)==0
-                    namei = [head.label ' ' namei];
+                try
+                    if mod(str2double(namei), 1)==0
+                        namei = [head.label ' ' namei];
+                    end
                 end
                 names{i} = namei;
             end
