@@ -69,14 +69,14 @@ classdef ViewControl < xplr.GraphNode
     % items are organized vertically and are uicontrols or uipanels
     methods (Access='private')
         function init_items(C)
-            fn_pixelsizelistener(C.hp, @(u,e)item_positions(C))
+            brick.pixelsizelistener(C.hp, @(u,e)item_positions(C))
             
             % note that other fields will be added, e.g. in add_filter_item
             C.items = struct('id', cell(1, 0), 'span', [], 'obj', []);
         end
         function item_positions(C, idx)
             if nargin<2, idx = 1:length(C.items); end
-            [W, H] = fn_pixelsize(C.hp);
+            [W, H] = brick.pixelsize(C.hp);
             h = 22; % item height, in pixel
             dx = 2;
             dy = 2;
@@ -84,7 +84,7 @@ classdef ViewControl < xplr.GraphNode
             w = max(1, min(w_max, W-2*dx));
             x0 = (W-w)/2;
             y_starts = [0, cumsum([C.items.span])];
-            for i=row(idx)
+            for i=brick.row(idx)
                 yspan = C.items(i).span;
                 set(C.items(i).obj, 'units', 'pixel', 'position', [x0, H-(y_starts(i)+yspan)*(h+dy), w, yspan*h+(yspan-1)*dy])
             end
@@ -109,12 +109,12 @@ classdef ViewControl < xplr.GraphNode
             if nargout == 0, clear obj, end
         end
         function item = get_item(C,id)
-            idx = fn_find(id, {C.items.id});
+            idx = brick.find(id, {C.items.id});
             item = C.items(idx);
         end
         function remove_item(C,id)
-            idx = fn_find(id, {C.items.id});
-            delete_valid([C.items(idx).obj])
+            idx = brick.find(id, {C.items.id});
+            brick.delete_valid([C.items(idx).obj])
             C.items(idx) = [];
             item_positions(C)
         end
@@ -176,8 +176,8 @@ classdef ViewControl < xplr.GraphNode
             dim_id = [C.V.data.header(dim).dim_id];
             
             % some strings to handle singular vs. plural
-            dim_str = fn_switch(isscalar(dim_id), 'this dimension', 'these dimensions');
-            filter_str = fn_switch(isscalar(dim_id), 'filter', 'filters');
+            dim_str = brick.switch_case(isscalar(dim_id), 'this dimension', 'these dimensions');
+            filter_str = brick.switch_case(isscalar(dim_id), 'filter', 'filters');
             
             % add or change filter(s)
             % (2D with key 1)
@@ -278,7 +278,7 @@ classdef ViewControl < xplr.GraphNode
             end
             
             % list of filters in the selected dimensions
-            filters_idx = find(fn_map({C.V.slicer.filters.dim_id}, @(dd)any(ismember(dd, dim_id)), 'array'));
+            filters_idx = find(brick.map({C.V.slicer.filters.dim_id}, @(dd)any(ismember(dd, dim_id)), 'array'));
             current_filters_dim = C.V.slicer.filters(filters_idx); % current filters acting on dimensions within dd
 
             % filters to remove
@@ -369,7 +369,7 @@ classdef ViewControl < xplr.GraphNode
                     for filter = current_filters_dim
                         item = C.get_item({'filter', filter.dim_id});
                         h_lab = [item.filter_label, item.dimension_label];
-                        set(h_lab, 'enable', fn_switch(active, 'inactive', 'off'))
+                        set(h_lab, 'enable', brick.switch_case(active, 'inactive', 'off'))
                         set(item.check_box, 'value', active)
                         drawnow
                     end
@@ -458,27 +458,27 @@ classdef ViewControl < xplr.GraphNode
             filter_label_name = uicontrol('parent', panel, ...
                 'style', 'text', 'string', 'filter', 'horizontalalignment', 'left', ...
                 'backgroundcolor', background_color, ...
-                'enable', fn_switch(active, 'inactive', 'off'), ...
+                'enable', brick.switch_case(active, 'inactive', 'off'), ...
                 'buttondownfcn', @(u,e)click_filter_item(C,dim_id), ...
                 'uicontextmenu', uicontextmenu(C.V.hf, 'callback', @(m,e)F.context_menu(m)));
             dimension_label = uicontrol('parent', C.hp, ...
                 'style', 'text', 'horizontalalignment', 'left', ...
-                'string', fn_strcat({F.header_in.label}, '-'), ...
+                'string', brick.strcat({F.header_in.label}, '-'), ...
                 'buttondownfcn', @(u,e)move_filtered_dimension(C, dim_id), ...
                 ... 'buttondownfcn',@(u,e)click_filter_item(C, dim_id, id), ...
-                'enable', fn_switch(active, 'inactive', 'off'));
+                'enable', brick.switch_case(active, 'inactive', 'off'));
             filter_label_op = uicontrol('parent', panel, ...
                 'style', 'text', 'string', ['(' F.F.slice_fun_str ')'], ...
                 'horizontalalignment', 'left', ...
                 'backgroundcolor', background_color, ...
-                'enable', fn_switch(active, 'inactive', 'off'), ...
+                'enable', brick.switch_case(active, 'inactive', 'off'), ...
                 'buttondownfcn', @(u,e)click_filter_item(C, dim_id), ...
                 'uicontextmenu', uicontextmenu(C.V.hf, 'callback', @(m,e)F.context_menu(m)));
             % (adjust their positions based on their extents)
             w_name = filter_label_name.Extent(3);
             w_dim = dimension_label.Extent(3);
             set(filter_label_name, 'position', [20, 5, w_name, 15])
-            fn_controlpositions(dimension_label, panel, [], [20+w_name-1, 5-1, w_dim, 15])
+            brick.controlpositions(dimension_label, panel, [], [20+w_name-1, 5-1, w_dim, 15])
             set(filter_label_op, 'position', [20+w_name+w_dim, 5, 300, 15])
             % (store handles)
             C.items(item_idx).filter_label = [filter_label_name, filter_label_op];
@@ -491,7 +491,7 @@ classdef ViewControl < xplr.GraphNode
                     set(filter_label_op, 'string', label)
                 end
             end
-            connect_listener(F.F, filter_label_op, 'ChangedOperation', @check_operation_change);
+            brick.connect_listener(F.F, filter_label_op, 'ChangedOperation', @check_operation_change);
 
             % buttons
             [ii, jj] = ndgrid(-2:2);
@@ -504,7 +504,7 @@ classdef ViewControl < xplr.GraphNode
                 'unit', 'normalized', ...
                 'position', [0.95, 0.5, 0.05, 0.5], ...
                 'callback', @(u,e)C.dim_action('rm_filter', dim_id));
-            fn_controlpositions(rm_filter_button, panel, [1, .5, 0, .5], [-11, 0, 11, 0]);
+            brick.controlpositions(rm_filter_button, panel, [1, .5, 0, .5], [-11, 0, 11, 0]);
             
             % checkbox to disable and enable the filter
             C.items(item_idx).check_box = uicontrol('parent', panel, ...
@@ -525,14 +525,14 @@ classdef ViewControl < xplr.GraphNode
             end
                                 
             % get items corresponding to filters
-            idx_filter = find(~fn_isemptyc({C.items.F}));
+            idx_filter = find(~brick.isemptyc({C.items.F}));
             if ~all(diff(idx_filter) == 1), error 'filters should be contiguous', end
             filter_items = C.items(idx_filter);
             n_filter = length(idx_filter);
             
             % index and position of selected filter
             id = {'filter', dim_id};
-            idx_item = fn_find(id, {C.items.id});
+            idx_item = brick.find(id, {C.items.id});
             idx_0 = idx_item - (idx_filter(1) - 1);
             idx_other = setdiff(1:n_filter, idx_0);
             obj = C.items(idx_item).obj;
@@ -543,17 +543,17 @@ classdef ViewControl < xplr.GraphNode
             p0 = get(hf, 'currentpoint');
             p0 = p0(1, 2); % only vertical position matters
             new_idx = [];
-            moved = fn_buttonmotion(@move, hf, 'moved?', 'pointer', 'hand');
+            moved = brick.buttonmotion(@move, hf, 'moved?', 'pointer', 'hand');
             function move
                 p = get(hf, 'currentpoint');
                 p = p(1, 2);
-                new_idx = fn_coerce(idx_0 - round((p-p0)/y_step), 1, n_filter);
+                new_idx = brick.coerce(idx_0 - round((p-p0)/y_step), 1, n_filter);
                 % set all items position
                 C.items(idx_filter) = filter_items([idx_other(1:new_idx-1), idx_0 idx_other(new_idx:end)]);
                 C.item_positions
                 % set selected item position
                 new_pos = pos_0;
-                new_pos(2) = pos_0(2) + fn_coerce(p-p0, [idx_0-n_filter idx_0-1]*y_step);
+                new_pos(2) = pos_0(2) + brick.coerce(p-p0, [idx_0-n_filter idx_0-1]*y_step);
                 set(obj, 'position', new_pos)
             end
             if moved
@@ -579,21 +579,21 @@ classdef ViewControl < xplr.GraphNode
 
             % move dimension label only if the filter is active
             id = {'filter', dim_id};
-            item_idx = fn_find(id, {C.items.id});
+            item_idx = brick.find(id, {C.items.id});
             item = C.items(item_idx);
             label = item.dimension_label;
-            active = boolean(item.check_box.Value);
+            active = brick.boolean(item.check_box.Value);
             if ~active, return, end
             
             % move
-            hf = fn_parentfigure(C.hp);
+            hf = brick.parentfigure(C.hp);
             p0 = get(hf, 'currentpoint');
             p0 = p0(1, 1:2);
             pos0 = get(label,'pos');
             controls_width = C.hp.Position(3);
             panel = [];
             
-            moved = fn_buttonmotion(@move_sub, hf, 'pointer', 'hand', 'moved?');
+            moved = brick.buttonmotion(@move_sub, hf, 'pointer', 'hand', 'moved?');
             function move_sub
                 % once filter has been removed, do not execute this
                 % callback any more
@@ -617,8 +617,8 @@ classdef ViewControl < xplr.GraphNode
                     C.items(item_idx).obj = [];
                     C.dim_action('rm_filter', dim_id)
                     % move dimension label inside graph (note that this
-                    % will call fn_buttonmotion in the same figure, and
-                    % therefore terminate the current fn_buttonmotion)
+                    % will call brick.buttonmotion in the same figure, and
+                    % therefore terminate the current brick.buttonmotion)
                     % we activate immediate display update
                     if isscalar(dim_id)
                         L = C.V.D.labels;
@@ -668,7 +668,7 @@ classdef ViewControl < xplr.GraphNode
                 disp 'warning: usage of private lists display has not been tested yet'
                 combo = xplr.ListCombo(C.V.panels.list_combo);
                 C.private_lists = combo;
-                connect_listener(combo, control_org, 'Empty', @(u,e)set(control_org, 'extents', [1, 0]));
+                brick.connect_listener(combo, control_org, 'Empty', @(u,e)set(control_org, 'extents', [1, 0]));
             end
             % Need to show it?
             if control_org.extents(2) == 0

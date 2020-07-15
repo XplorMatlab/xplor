@@ -109,7 +109,7 @@ error 'much of the code below is not working any more due to changes in code'
 % 
 % %% lists
 % 
-% fn_figure('LISTS')
+% brick.figure('LISTS')
 % xplr.list(F1,'in',subplot(121));
 % xplr.list(F2,'in',subplot(122));
 % 

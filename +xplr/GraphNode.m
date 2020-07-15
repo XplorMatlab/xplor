@@ -24,7 +24,7 @@ classdef GraphNode < matlab.mixin.SetGet
             % trigger actions on it
             for i = 1:length(self.listening)
                 s = self.listening(i);
-                delete_valid(s.listener)
+                brick.delete_valid(s.listener)
             end
         end
         function str = char(self)
@@ -92,7 +92,7 @@ classdef GraphNode < matlab.mixin.SetGet
                 s = self.listening(i);
                 if s.object == other
                     rm(i) = true;
-                    delete_valid(s.listener)
+                    brick.delete_valid(s.listener)
                 end
             end
             self.listening(rm) = [];
@@ -105,7 +105,7 @@ classdef GraphNode < matlab.mixin.SetGet
                 s = other.listening(i);
                 if s.object == self
                     rm(i) = true;
-                    delete_valid(s.listener)
+                    brick.delete_valid(s.listener)
                 end
             end
             other.listening(rm) = [];
@@ -159,7 +159,7 @@ classdef GraphNode < matlab.mixin.SetGet
             end
                
             % use disable_listener function (in brick)
-            c = disable_listener(hl);
+            c = brick.disable_listener(hl);
         end
     end
     
@@ -185,7 +185,7 @@ end
 
 function do_one_way_callback(callback, u, e, wayback_listener)
 % Execute a callback, but first inhibit temporarily a given listener
-    c = disable_listener(wayback_listener);
+    c = brick.disable_listener(wayback_listener);
     callback(u,e)
     % waybacklistener will be enable when c destroyed
 end

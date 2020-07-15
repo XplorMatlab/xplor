@@ -44,7 +44,7 @@ classdef FilterAndPoint < xplr.DataOperand
                 F.F = varargin{1};
             end
             F.header_in = F.F.header_in;
-            connect_listener(F.F, F, 'ChangedOperation', @(u,e)transit_notification(F, 'filter', e))
+            brick.connect_listener(F.F, F, 'ChangedOperation', @(u,e)transit_notification(F, 'filter', e))
             
             % set P
             if create_members
@@ -61,7 +61,7 @@ classdef FilterAndPoint < xplr.DataOperand
                 end
             end
             for i=1:F.nd_in
-                connect_listener(F.P(i), F, 'ChangedOperation', @(u,e)transit_notification(F, 'point', e))
+                brick.connect_listener(F.P(i), F, 'ChangedOperation', @(u,e)transit_notification(F, 'point', e))
             end
             
             % set output header (uses filters or P depend_ing on whether
@@ -80,7 +80,7 @@ classdef FilterAndPoint < xplr.DataOperand
                 if ~isscalar(F.header_in) 
                     disp('setting header_out for ND filter with only minimal information')
                     n_colin = 1;
-                    head_values = {fn_strcat({F.P.index}, ',')};
+                    head_values = {brick.strcat({F.P.index}, ',')};
                 elseif F.header_in.n_column > 0
                     head_values = F.header_in.values(F.P.index, :);
                     n_colin = size(head_values, 2);
@@ -114,7 +114,7 @@ classdef FilterAndPoint < xplr.DataOperand
     methods
         function data_ind = get.indices(F)
             if F.F.n_sel == 0
-                data_ind = {fn_indices(F.szin, [F.P.index])};
+                data_ind = {brick.indices(F.szin, [F.P.index])};
             else
                 data_ind = F.F.indices;
             end

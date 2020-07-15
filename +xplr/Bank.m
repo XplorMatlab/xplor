@@ -53,15 +53,15 @@ classdef Bank < handle
     methods (Access='private')
         function load_prop(B, prop)
             % load_prop
-            f_save = fn_userconfig('configfolder', 'xplor_bank');
+            f_save = brick.userconfig('configfolder', 'xplor_bank');
             warning('off', 'MATLAB:load:variableNotFound')
             try %#ok<TRYNC>
-                B.(prop) = fn_loadvar(f_save, prop);
+                B.(prop) = brick.loadvar(f_save, prop);
             end
             warning('on','MATLAB:load:variableNotFound')
         end
         function save_prop(B, prop)
-            f_save = fn_userconfig('configfolder', 'xplor_bank');
+            f_save = brick.userconfig('configfolder', 'xplor_bank');
             s = struct(prop, {B.(prop)});
             if exist(f_save, 'file')
                 save(f_save, '-STRUCT', 's', '-APPEND');
@@ -127,11 +127,11 @@ classdef Bank < handle
     methods (Static)
         function register_headers(new_header)
             B = xplr.Bank.get_bank();
-            new_header(fn_isemptyc({new_header.label})) = [];
+            new_header(brick.isemptyc({new_header.label})) = [];
             n = length(new_header);
             idx = cell(1, n);
             for i = 1:n
-                idx{i} = fn_find(new_header(i), B.recent_headers, 'first');
+                idx{i} = brick.find(new_header(i), B.recent_headers, 'first');
             end
             idx = [idx{:}];
             if isequal(idx, 1:n), return, end % new headers are already at the beginning of the list
@@ -227,7 +227,7 @@ classdef Bank < handle
         function register_filter(link_key, F, user)
             % function register_filter(link_key, F, user)
             B = xplr.Bank.get_bank();
-            for Fi = row(F)
+            for Fi = brick.row(F)
                 filter_type = strrep(class(Fi), 'xplr.', '');
                 h_id = get_id(Fi.header_in);
                 Fi.link_key = link_key;   % memorize linkkey inside filter
@@ -237,7 +237,7 @@ classdef Bank < handle
         function unregister_filter(F, user)
             % function unregister_filter(F, user)
             B = xplr.Bank.get_bank();
-            for Fi = row(F)
+            for Fi = brick.row(F)
                 filter_type = strrep(class(Fi), 'xplr.', '');
                 if ~isvalid(Fi), continue, end
                 link_key = Fi.link_key;
@@ -307,7 +307,7 @@ classdef Bank < handle
             if isempty(B.list_combo) || ~isvalid(B.list_combo)
                 B.list_combo = xplr.ListCombo();
 %                 % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
-%                 connect_listener(B.list_combo, B, 'Empty', @(u,e)set(B, 'list_combo', []));
+%                 brick.connect_listener(B.list_combo, B, 'Empty', @(u,e)set(B, 'list_combo', []));
             end
             
             B.list_combo.show_list(F)

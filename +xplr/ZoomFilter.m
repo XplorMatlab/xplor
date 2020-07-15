@@ -102,13 +102,13 @@ classdef ZoomFilter < xplr.DataOperand
                 end
             else
                 if z.bin == 1
-                    n_out = fn_coerce(floor(1+diff(z.zoom)), 1, n_in);
+                    n_out = brick.coerce(floor(1+diff(z.zoom)), 1, n_in);
                     idx_1 = round(z.zoom(1)+(1+diff(z.zoom)-n_out)/2);
                     z.indices_in = idx_1 + (0:n_out-1);
                 else
-                    n_out = fn_coerce(floor(1+diff(z.zoom)/z.bin), 1, floor(n_in/z.bin) );
+                    n_out = brick.coerce(floor(1+diff(z.zoom)/z.bin), 1, floor(n_in/z.bin) );
                     idx_1 = round(z.zoom(1) + (1+diff(z.zoom)-n_out*z.bin)/2);
-                    idx_1 = fn_coerce(idx_1, 1, n_in-z.bin*n_out + 1);
+                    idx_1 = brick.coerce(idx_1, 1, n_in-z.bin*n_out + 1);
                     z.indices_in = reshape(idx_1 + (0:z.bin*n_out-1), z.bin,n_out);
                 end
             end
@@ -211,7 +211,7 @@ classdef ZoomFilter < xplr.DataOperand
             for i=1:length(z)
                 if z(i).bin > 1
                     slic = reshape(slic, [prod(s_out(1:dims(i)-1)), z(i).bin, s_out(dims(i)), prod(scur(dims(i)+1:end))]);
-                    slic = nmean(slic, 2);
+                    slic = brick.nmean(slic, 2);
                 end
             end
             slic = reshape(slic, s_out);

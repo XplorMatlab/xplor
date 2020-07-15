@@ -96,7 +96,7 @@ function E = HeaderEdit(data, callback)
         % setting data for guesses
         if okguess
             E.cur_head(i).confirmed = false;
-            E.cur_head(i).guessaction = fn_switch( ...
+            E.cur_head(i).guessaction = brick.switch_case( ...
                     isscalar(candidates2), 'reset', 'choose' ...
                 );
             E.cur_head(i).all_guess = candidates2;
@@ -132,11 +132,11 @@ function menu_units(E)
     for i=1:length(labels)
         label = measures(i).label;
         units = {measures(i).units.unit};
-        uimenu(m, 'label', [label ' (' fn_strcat(units, ',') ')'], ...
+        uimenu(m, 'label', [label ' (' brick.strcat(units, ',') ')'], ...
             'callback', @(u,e)edit_measure(E, label))
     end
     uimenu(m, 'label', 'Create a new set', 'separator', ...
-        onoff(~isempty(labels)), 'callback', @(u,e)edit_measure(E, ''))
+        brick.onoff(~isempty(labels)), 'callback', @(u,e)edit_measure(E, ''))
 end
 
 % this function is actually completely independent from E, except
@@ -169,7 +169,7 @@ function edit_measure(E, old_label)
     ycur = H;
 
     % use a fixed size for easy positioning of elements
-    fn_setfigsize(hfm, [W, H]);
+    brick.setfigsize(hfm, [W, H]);
     set(hfm, 'defaultuicontrolunit', 'pixel')
 
     % label
@@ -181,7 +181,7 @@ function edit_measure(E, old_label)
     if create_new, set(x_label, 'ToolTipString', 'e.g. time'), end
 
     % data (add an empty line)
-    data = [column({units.unit}), column({units.value})];
+    data = [brick.column({units.unit}), brick.column({units.value})];
 
     % table
     ycur = ycur - 2*dy - htab;
@@ -195,7 +195,7 @@ function edit_measure(E, old_label)
     set(t, 'CellEditCallback', @checknewline), checknewline
     function checknewline(~, ~)
         data = get(t, 'Data');
-        if isempty(data) || fn_find(data(end, :), 'any')
+        if isempty(data) || brick.find(data(end, :), 'any')
             data = [data; repmat({'', []}, 2, 1)];
             set(t, 'Data', data)
         end
@@ -218,7 +218,7 @@ function edit_measure(E, old_label)
     close(hfm)
 
     % save edited measure in bank
-    while ~isempty(data) && ~fn_find(data(end, :), 'any')
+    while ~isempty(data) && ~brick.find(data(end, :), 'any')
         data(end, :)=[];
     end
     % remove empty lines
@@ -242,7 +242,7 @@ function init_table(E)
     % figure
     W = 560;
     H = 380;
-    fn_setfigsize(E.hf, W, H)
+    brick.setfigsize(E.hf, W, H)
 
     % ok button
     E.ok = uicontrol('parent', E.hf, 'string', 'ok', 'position', ...
@@ -272,7 +272,7 @@ function init_table(E)
     w = p(3);
     widths = {30, 55, 70, 70, [], 55, 55};
     w_avail = w - sum([widths{:}]) - 2;
-    idx_auto = find(fn_isemptyc(widths));
+    idx_auto = find(brick.isemptyc(widths));
     [widths{idx_auto}] = deal(floor(w_avail/length(idx_auto)));
     set(u, 'ColumnWidth', widths)
     set(u, 'RowName', [])
@@ -361,10 +361,10 @@ function update_label(E, i)
     if ~isempty(tokens)
         % form 'label (label1*label2)'
         [head.label, sub_labels] = deal(tokens{1}{:});
-        head.sub_labels = fn_strcut(sub_labels, '*');
+        head.sub_labels = brick.strcut(sub_labels, '*');
     elseif any(str == '*')
         head.label = str;
-        head.sub_labels = fn_strcut(str, '*');
+        head.sub_labels = brick.strcut(str, '*');
     else
         head.label = str;
         head.sub_labels = [];
@@ -396,7 +396,7 @@ function update_value(E, i)
         case 'invalid'
             % do not accept change
         case 'measure'
-            [head.scale, head.start] = dealc(value);
+            [head.scale, head.start] = brick.dealc(value);
             head.values = [];
         case 'enum'
             [head.scale, head.start, head.values] = deal([]);
@@ -453,7 +453,7 @@ function cell_select(E, e)
             case 'choose'
                 % Select among the list of all guesses: build and show
                 % a menu with all possibilities
-                delete_valid(E.contextmenu)
+                brick.delete_valid(E.contextmenu)
                 m = uicontextmenu('parent', E.hf);
                 E.contextmenu = m;
                 n_guess = length(head_i.all_guess);
@@ -461,7 +461,7 @@ function cell_select(E, e)
                     try
                         [label, unit scale_value color] = ...
                             display_header_info(head_i.all_guess(j));
-                        lab = fn_strcat( ...
+                        lab = brick.strcat( ...
                             {label, unit, scale_value color}, '; ' ...
                             );
                         uimenu(m, 'label', lab, 'callback', ...
@@ -668,17 +668,17 @@ function [type, value] = read_value(scale_value,n)
     end
 
     % list of items?
-    if isvector(x) && n > 1, x = column(x); end
+    if isvector(x) && n > 1, x = brick.column(x); end
     if isnumeric(x) && size(x, 1) == n
         list = num2cell(x);
     elseif iscell(x) && size(x, 1) == n
         list = x;
     else
-        sep = fn_switch(any(scale_value == ','), ',', ' ');
-        list = fn_strcut(scale_value, sep);
-        list = fn_regexptokens(list, '^ *(.*?) *$');
+        sep = brick.switch_case(any(scale_value == ','), ',', ' ');
+        list = brick.strcut(scale_value, sep);
+        list = brick.regexptokens(list, '^ *(.*?) *$');
         % remove blanks at the beginning and end
-        if isvector(list) && n>1, list = column(list); end
+        if isvector(list) && n>1, list = brick.column(list); end
     end
     if length(list)==n
         type = 'categorical';
@@ -700,7 +700,7 @@ function [label, unit, scale_value, color] = display_header_info(head)
     if isempty(head.sub_labels)
         label = head.label;
     else
-        autolabel = fn_strcat(head.sub_labels, '*');
+        autolabel = brick.strcat(head.sub_labels, '*');
         if strcmp(autolabel, head.label)
             label = head.label;
         else
@@ -734,7 +734,7 @@ switch type
         if isempty(value)
             str = '';
         elseif isvector(value)
-            str = fn_strcat(value, ',');
+            str = brick.strcat(value, ',');
         else
             str = sprintf('%ix%i table', size(value));
         end

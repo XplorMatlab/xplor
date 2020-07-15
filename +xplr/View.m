@@ -69,7 +69,7 @@ classdef View < xplr.GraphNode
         end
         function delete(V)
             if ~isprop(V,'hf'), return, end
-            delete_valid(V.hf, V.C, V.D)
+            brick.delete_valid(V.hf, V.C, V.D)
         end
     end
     
@@ -101,11 +101,11 @@ classdef View < xplr.GraphNode
                 'DefaultTextInterruptible', 'off')
             
             % panels: use panelorganizer tool
-            V.panels.main = panelorganizer(V.hf, 'H', 2, [0, 1],[0, 1]); % left part has fixed width, right part adjusts automatically
+            V.panels.main = brick.panelorganizer(V.hf, 'H', 2, [0, 1],[0, 1]); % left part has fixed width, right part adjusts automatically
             set(V.panels.main, 'bordermode', 'push')
             V.panels.display = V.panels.main.setSubPanel(2);
             V.panels.all_controls = V.panels.main.setSubOrg(1, 'V', 2,[1, 1], [1, 0]);
-            connect_listener(V.panels.all_controls.hobj, V, 'Visible', 'PostSet', @(u,e)set(V, 'control_visible', get(V.panels.all_controls.hobj, 'visible')));
+            brick.connect_listener(V.panels.all_controls.hobj, V, 'Visible', 'PostSet', @(u,e)set(V, 'control_visible', get(V.panels.all_controls.hobj, 'visible')));
             V.panels.controls_width = 120;
             V.panels.control = V.panels.all_controls.setSubPanel(1);
             V.panels.list_combo = V.panels.all_controls.setSubOrg(2, 'H');
@@ -113,9 +113,9 @@ classdef View < xplr.GraphNode
             
             % switch of control visibility
             ppi = get(0, 'screenpixelsPerInch');
-            control_on = fn_propcontrol(V, 'control_visible', {'pushbutton', {true, false}, {'>> Controls', '<< Controls'}}, ...
+            control_on = brick.propcontrol(V, 'control_visible', {'pushbutton', {true, false}, {'>> Controls', '<< Controls'}}, ...
             	'parent', V.panels.display, 'backgroundcolor', 'w', 'fontsize', 800/ppi);
-            fn_controlpositions(control_on.hu, V.panels.display, [0, 1], [2, -17, 65, 15])
+            brick.controlpositions(control_on.hu, V.panels.display, [0, 1], [2, -17, 65, 15])
             
             % now figure can be visible
             set(V.hf, 'visible', 'on')
@@ -124,7 +124,7 @@ classdef View < xplr.GraphNode
             if strcmp(b, 'toggle')
                 b = ~V.control_visible;
             else
-                b = boolean(b);
+                b = brick.boolean(b);
                 if b == V.control_visible, return, end
             end
             % set property
@@ -181,7 +181,7 @@ classdef View < xplr.GraphNode
             % prompt user for variable name
             if isempty(do_ask_name), do_ask_name = true; end
             if do_ask_name
-                s = fn_structedit( ...
+                s = brick.structedit( ...
                     struct('Variable__name', name, 'do__not__ask__again', false));
                 if isempty(s), return, end
                 name = s.Variable__name;
@@ -211,7 +211,7 @@ classdef View < xplr.GraphNode
                 V.ha = in;
                 V.hf = get(V.ha, 'parent');
             else
-                fn_isfigurehandle(in) % create figure if in is a positive integer but not yet a figure handle
+                brick.isfigurehandle(in) % create figure if in is a positive integer but not yet a figure handle
                 V.hf = in;
                 V.ha = axes('parent', V.hf);
             end
@@ -223,11 +223,11 @@ classdef View < xplr.GraphNode
             % axes on the side serve to generate "outside" mouse events
             col = get(V.hf, 'color')*.9;
             s.ha2 = axes('parent', V.hf, 'buttondownfcn', @(u,e)Mouse(V, 'outsidedown'));
-            fn_controlpositions(s.ha2(1), V.ha, [0, 0, 1, 0], [0, -20, 0, 20]);
+            brick.controlpositions(s.ha2(1), V.ha, [0, 0, 1, 0], [0, -20, 0, 20]);
             s.ha2(2) = axes('parent', V.hf, 'buttondownfcn', @(u,e)Mouse(V, 'outsideleft'));
-            fn_controlpositions(s.ha2(2), V.ha, [0, 0, 0, 1], [-20, 0, 20, 0]);
+            brick.controlpositions(s.ha2(2), V.ha, [0, 0, 0, 1], [-20, 0, 20, 0]);
             s.ha2(3) = axes('parent', V.hf, 'buttondownfcn', @(u,e)Mouse(V, 'outsideboth'));
-            fn_controlpositions(s.ha2(3), V.ha, [0, 0, 0, 0], [-20, -20, 20, 20]);
+            brick.controlpositions(s.ha2(3), V.ha, [0, 0, 0, 0], [-20, -20, 20, 20]);
             set(s.ha2, 'handlevisibility', 'off', 'color', col, ...
                 'xtick', [], 'xcolor', col, 'ytick', [], 'ycolor', col)
             uistack(s.ha2, 'bottom')

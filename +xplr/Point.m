@@ -90,7 +90,7 @@ classdef Point < xplr.DataOperand
                     end
                     P.value = x;
                 case 'categorical'
-                    idx = fn_find(str, head.values, 'rows');
+                    idx = brick.find(str, head.values, 'rows');
                     if isempty(idx), error 'not a possible value', end
                     P.index = idx;
             end

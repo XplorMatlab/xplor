@@ -37,7 +37,7 @@ classdef ClipTool < xplr.GraphNode
         function delete(C)
             delete@xplr.GraphNode(C)
             if ~isprop(C, 'menu'), return, end
-            delete_valid(C.menu)
+            brick.delete_valid(C.menu)
         end
         function clip_menu(C)
             m = C.menu;
@@ -45,12 +45,12 @@ classdef ClipTool < xplr.GraphNode
             
             % auto-clip specifications
             % (create a submenu whose label will update automatically)
-            P = fn_propcontrol(C, 'auto_clip_mode', ...
+            P = brick.propcontrol(C, 'auto_clip_mode', ...
                 {'menuval', {}}, ...
                 m, 'label', 'Auto-Clip Method');
             m1 = P.hparent;
             % (some possible values)
-            fn_propcontrol(C, 'auto_clip_mode_no_center', ...
+            brick.propcontrol(C, 'auto_clip_mode_no_center', ...
                 {'menugroup', {'minmax', 'std1', 'std2', 'std3', 'std5', 'std.5', 'std.2', 'prc.1', 'prc1', 'prc5'}, ...
                 {'Min to Max', '1 STD', '2 STD', '3 STD', '5 STD', '1/2 STD', '1/5 STD', '[.1% 99.9%]', '[1% 99%]', '[5% 95%]'}}, ...
                 m1);
@@ -58,7 +58,7 @@ classdef ClipTool < xplr.GraphNode
             uimenu(m1, 'label', 'Use Mean and STD...', 'separator','on', 'callback', @(u,e)set_auto_clip_mode(C, 'setstd'))
             uimenu(m1, 'label', 'Use Percentiles...', 'callback', @(u,e)set_auto_clip_mode(C, 'setprc'))
             % (fix the center)
-            fn_propcontrol(C, 'center', ...
+            brick.propcontrol(C, 'center', ...
                 {'menugroup', {0, 1, []}, {'center on 0', 'center on 1'}}, ...
                 m1);
             
@@ -66,14 +66,14 @@ classdef ClipTool < xplr.GraphNode
             if ~isempty(C.independent_dim)
                 uimenu(m, 'label', 'Do Auto-Clip (current cell(s) only)', 'callback', @(u,e)C.D.auto_clip(false))
                 uimenu(m, 'label', 'Do Auto-Clip (all cells)', 'callback', @(u,e)C.D.auto_clip(true))
-                fn_propcontrol(C, 'buttons_only_for_current_cells', 'menu', ...
+                brick.propcontrol(C, 'buttons_only_for_current_cells', 'menu', ...
                     {'parent', m, 'label', 'Use clip buttons to control only current cell(s)'});
             else
                 uimenu(m,'label', 'Do Auto-Clip', 'callback', @(u,e)C.D.auto_clip(true))
             end
             
             % adjust options
-            fn_propcontrol(C, 'adjust_to_view', 'menu', ...
+            brick.propcontrol(C, 'adjust_to_view', 'menu', ...
                 {'parent', m, 'label', 'Always adjust clipping to current view', 'separator', 'on'});
             clip_dim = C.D.clip_dim;
             if ~isempty(clip_dim)
@@ -97,7 +97,7 @@ classdef ClipTool < xplr.GraphNode
                 end
             end
             if strcmp(C.D.display_mode, 'time courses')
-                fn_propcontrol(C, 'align_signals', ...
+                brick.propcontrol(C, 'align_signals', ...
                     {'menuval', {'', 'nmean', 'nmedian'}, ...
                     {'(do not center)', 'on their mean', 'on their median'}, {'(none)', 'mean', 'median'}}, ...
                     {'parent', m, 'label', 'Align signals'});
@@ -131,7 +131,7 @@ classdef ClipTool < xplr.GraphNode
     methods
         function set_manual_clip(C, clip, all_cells)
             if nargin < 2 || isempty(clip)
-                clip = fn_input('Enter min and max', [0, 1]);
+                clip = brick.input('Enter min and max', [0, 1]);
                 if length(clip) ~= 2, return, end % value not valid, do not use it
             end
             % update display
@@ -145,11 +145,11 @@ classdef ClipTool < xplr.GraphNode
         function set_auto_clip_mode(C, comp)
             switch comp
                 case 'setstd'
-                    nstd = fn_input('Mean +/- N*std', 1, 'stepper 1 0 Inf');
+                    nstd = brick.input('Mean +/- N*std', 1, 'stepper 1 0 Inf');
                     if isempty(nstd) || nstd == 0, return, end
                     C.auto_clip_mode_no_center = ['std', num2str(nstd)];
                 case 'setprc'
-                    prc = fn_input('Percentiles (one or two values between 0 and 100)', 1);
+                    prc = brick.input('Percentiles (one or two values between 0 and 100)', 1);
                     if isempty(prc), return, end
                     switch length(prc)
                         case 1

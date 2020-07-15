@@ -37,7 +37,7 @@ classdef DisplayLabels < xplr.GraphNode
             % listener when L is deleted, because there is no reason that L
             % be deleted without D, D.ha, and the listener itself being
             % deleted as well)
-            fn_pixelsizelistener(D.ha, @(u,e)update_labels(L, 'axsiz'))
+            brick.pixelsizelistener(D.ha, @(u,e)update_labels(L, 'axsiz'))
             % note that changes in D lead to display updates through direct
             % method calls rather than notifications
         end
@@ -56,7 +56,7 @@ classdef DisplayLabels < xplr.GraphNode
             cur_headers = L.D.zslice.header;
             switch flag
                 case 'global'
-                    delete_valid(L.h)
+                    brick.delete_valid(L.h)
                     L.h = gobjects(1, L.D.nd);
                 otherwise
                     error('invalid flag ''%s''', flag)
@@ -89,7 +89,7 @@ classdef DisplayLabels < xplr.GraphNode
             font_size = get(L.D.hp, 'defaultuicontrolfontsize'); % unit: points
             hinch = 1.5*font_size/72;
             hpix = hinch*get(0, 'ScreenPixelsPerInch');
-            axsiz = fn_pixelsize(L.ha);
+            axsiz = brick.pixelsize(L.ha);
             L.height = hpix/axsiz(2);     % normalized to axis size
             L.rot_height = hpix/axsiz(1);  % normalized to axis size
             L.prev_org_set_pos = []; % next call to set_positions should have doloose set to false
@@ -113,12 +113,12 @@ classdef DisplayLabels < xplr.GraphNode
 
             % visible labels and active dimensions
             sz = L.D.slice.sz; % slice size
-            ok_dim = (sz > 1) & ~fn_isemptyc(dim_locations);
+            ok_dim = (sz > 1) & ~brick.isemptyc(dim_locations);
             isactive = false(1,length(sz));
             isactive([L.D.active_dim.x L.D.active_dim.y]) = true;
             
             % steps in the direction orthogonal to the positioning one
-            axis_pos = fn_pixelpos(L.D.ha);
+            axis_pos = brick.pixelpos(L.D.ha);
             available_space = axis_pos(1:2)./axis_pos(3:4) - L.height;
             xv_step = min(1.5*L.height, available_space(2)/(1.5+length(org.x)));
             yh_step = min(1.5*L.rot_height, available_space(1)/(1.5+length(org.y)));
@@ -140,10 +140,10 @@ classdef DisplayLabels < xplr.GraphNode
                     f = dim_locations{d};
                     % fixed properties
                     set(L.h(d), 'visible', 'on', ...
-                        'rotation', fn_switch(f, {'y', 'yx'}, 90, 0), ...
-                        'horizontalalignment', fn_switch(f, {'x', 'y'}, 'center', {'xy', 'merged_data'}, 'left', 'yx', 'right'), ...
-                        'verticalalignment', fn_switch(f, 'yx', 'bottom', 'middle'), ...
-                        'EdgeColor', fn_switch(isactive(d), 'k', 'none'))
+                        'rotation', brick.switch_case(f, {'y', 'yx'}, 90, 0), ...
+                        'horizontalalignment', brick.switch_case(f, {'x', 'y'}, 'center', {'xy', 'merged_data'}, 'left', 'yx', 'right'), ...
+                        'verticalalignment', brick.switch_case(f, 'yx', 'bottom', 'middle'), ...
+                        'EdgeColor', brick.switch_case(isactive(d), 'k', 'none'))
                     % set position
                     switch f
                         case 'x'
@@ -165,7 +165,7 @@ classdef DisplayLabels < xplr.GraphNode
                     if any(d == L.moving_dim)
                         set(L.moving_clone, 'position', new_pos, ...
                             'rotation', get(L.h(d), 'rotation'), ...
-                            'visible', onoff(true), ...
+                            'visible', brick.onoff(true), ...
                             'horizontalalignment', get(L.h(d), 'horizontalalignment'), ...
                             'verticalalignment', get(L.h(d), 'verticalalignment'))
                     else
@@ -202,7 +202,7 @@ classdef DisplayLabels < xplr.GraphNode
                     isactive = false(1, nd);
                     isactive([L.D.active_dim.x, L.D.active_dim.y]) = true;
                     for d=1:nd
-                        set(L.h(d), 'EdgeColor', fn_switch(isactive(d), 'k', 'none'))
+                        set(L.h(d), 'EdgeColor', brick.switch_case(isactive(d), 'k', 'none'))
                     end
                     return
                 otherwise
@@ -291,7 +291,7 @@ classdef DisplayLabels < xplr.GraphNode
                 x_thr = NaN(2, length(x_layout));
                 x_thr(:, ok_x) = x_thr_ok;
             end
-            x_thr = [-Inf, row(x_thr)];
+            x_thr = [-Inf, brick.row(x_thr)];
             % (y)
             y_layout = layout_id.y;
             y_thr = .5 - L.graph.label_position(y_layout); % first get threshold with d and singleton dimensions still included
@@ -311,7 +311,7 @@ classdef DisplayLabels < xplr.GraphNode
                 y_thr = NaN(2, length(y_layout));
                 y_thr(:, ok_y) = y_thr_ok;
             end
-            y_thr = [-Inf, row(y_thr)];
+            y_thr = [-Inf, brick.row(y_thr)];
                         
             % moving out of the graph to the "filter" area
             view_control = L.D.V.C; % what a nice piece of code isn't it!?
@@ -333,13 +333,13 @@ classdef DisplayLabels < xplr.GraphNode
                 move_label()
             end
             any_change = false;
-            moved = fn_buttonmotion(@move_label, L.D.V.hf, 'moved?', 'pointer', 'hand');
+            moved = brick.buttonmotion(@move_label, L.D.V.hf, 'moved?', 'pointer', 'hand');
 
             function move_label
                 p = get(L.ha,'currentpoint');
                 p = p(1, 1:2)';
-                p_fig = fn_coordinates(L.ha, 'a2p', p, 'position'); % convert to 'normalized' unit in parent panel
-                p = fn_coordinates(L.ha, 'a2c', p, 'position');    % convert to 'normalized' unit in axes
+                p_fig = brick.coordinates(L.ha, 'a2p', p, 'position'); % convert to 'normalized' unit in parent panel
+                p = brick.coordinates(L.ha, 'a2c', p, 'position');    % convert to 'normalized' unit in axes
                 % move object
                 set(obj, 'position', p)
                 % special: going outside of graph, in the controls area

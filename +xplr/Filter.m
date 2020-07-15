@@ -9,7 +9,7 @@ classdef Filter < xplr.DataOperand
     end
     properties (SetObservable, AbortSet)
         slice_fun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
-        slice_fun_str = 'nmean';
+        slice_fun_str = 'brick.nmean';
     end
     properties(Dependent, SetAccess='protected', Transient)
         n_sel
@@ -33,7 +33,7 @@ classdef Filter < xplr.DataOperand
                 if isscalar(header_in)
                     label_out = [header_in.label, ' ROI'];
                 else
-                    label_out = [fn_strcat({header_in.label}, '-'), ' ROI'];
+                    label_out = [brick.strcat({header_in.label}, '-'), ' ROI'];
                 end
             end
 
@@ -105,7 +105,7 @@ classdef Filter < xplr.DataOperand
             end
             
             % compute indices
-            if fn_ismemberstr(flag, {'all', 'new', 'chg', 'add', 'chg&new', 'chg&rm'})
+            if brick.ismemberstr(flag, {'all', 'new', 'chg', 'add', 'chg&new', 'chg&rm'})
                 value = value.compute_indices([F.header_in.n]);
                 % filter definition when data is categorical can only be
                 % indices based (but not shape based)
@@ -121,7 +121,7 @@ classdef Filter < xplr.DataOperand
                     % F.selection, we cannot just return, because
                     % add_header_info might bear some changes
                     ind = 1:length(value);
-                    F.selection = row(value); % in particular row(...) transform 0x0 array in 1x0 array
+                    F.selection = brick.row(value); % in particular brick.row(...) transform 0x0 array in 1x0 array
                 case {'new', 'chg'}
                     F.selection(ind) = value;
                 case 'add'
@@ -140,7 +140,7 @@ classdef Filter < xplr.DataOperand
             end
             
             % update header of output space
-            if fn_ismemberstr(flag, {'all', 'new', 'chg', 'chg&new', 'chg&rm'})
+            if brick.ismemberstr(flag, {'all', 'new', 'chg', 'chg&new', 'chg&rm'})
                 % make a nice name for new 1D selections
                 if F.nd_in == 1 && ~isempty(value) && ~any(strcmpi(add_header_info(1, :), 'name'))
                     n = length(value);
@@ -161,7 +161,7 @@ classdef Filter < xplr.DataOperand
                                 sub_names{j} = sprintf('%.4g-%.4g%s', start+([k_start k_stop]-1)*scale, unit);
                             end
                         end 
-                        names{i} = fn_strcat(sub_names, ',');
+                        names{i} = brick.strcat(sub_names, ',');
                     end
                     add_header_info(:, end+1) = {'Name', names};
                 end
@@ -203,7 +203,7 @@ classdef Filter < xplr.DataOperand
             f_spec = {@std, @nanstd, @nstd, @var, @nanvar, @nvar};
             for i = 1:length(f_spec)
                 if isequal(fun, f_spec{i})
-                    fun = @(x, d)fun(fn_float(x), 0, d);
+                    fun = @(x, d)fun(brick.float(x), 0, d);
                     break
                 end
             end
@@ -288,25 +288,25 @@ classdef Filter < xplr.DataOperand
             elseif F.header_in.n_column > 0
                 % track values: call to a xplr.Header method
                 head_value(:, 1:F.header_in.n_column) = F.header_in.track_values(F.indices(ind));
-                ok_column(1:F.header_in.n_column) = true;
+                ok_brick.column(1:F.header_in.n_column) = true;
             elseif F.header_in.categorical
                 % categorical with no values: keep track of indices
                 head_value(:, 1) = F.indices(ind);
-                ok_column(1) = true;
+                ok_brick.column(1) = true;
             else
                 % measure header: keep track of values
                 for i=1:n_ind
                     str = F.header_in.get_item_names(F.indices{ind(i)});
-                    if isscalar(str), str = str{1}; else str = row(str); end
+                    if isscalar(str), str = str{1}; else str = brick.row(str); end
                     head_value{i, 1} = str;
                 end
-                ok_column(1) = true;
+                ok_brick.column(1) = true;
             end
             
             % additional values set together with the selections
             if nargin < 3, add_header_info = cell(2, 0); end
             [head_value, affected_columns] = set_add_header_info(F, head_value, add_header_info);
-            ok_column(affected_columns) = true;
+            ok_brick.column(affected_columns) = true;
             
             % put default values in columns which were not set
             for i = find(~ok_column)
@@ -336,13 +336,13 @@ classdef Filter < xplr.DataOperand
             ok(dims) = false;
             ok(1:min(dims))=false;
             daft = find(ok); % faster than setdiff
-            dat = fn_reshapepermute(dat, {dbef, dims, daft}); % this won't duplicate the array if dims are consecutive
+            dat = brick.reshapepermute(dat, {dbef, dims, daft}); % this won't duplicate the array if dims are consecutive
             
             % slicing
             if n_sel_slice == 1
                 slic = F.slice_fun(dat(:, F.indices{sel_sub_idx}, :), 2);
             else
-                data_type = fn_switch(class(dat), 'double', 'double', 'single');
+                data_type = brick.switch_case(class(dat), 'double', 'double', 'single');
                 slic = zeros([prod(s(dbef)), n_sel_slice prod(s(daft))], data_type);
                 for i=1:n_sel_slice
                     slic(:, i, :) = F.slice_fun(dat(:, F.indices{sel_sub_idx(i)}, :), 2);
@@ -439,10 +439,12 @@ classdef Filter < xplr.DataOperand
     methods
         function context_menu(F, m)
             delete(get(m, 'children'))
-            fun_str = {'mean', 'nmean', 'median', 'nmedian', ...
-                'sum', 'nsum', 'min', 'max', 'std'};
-            fn_propcontrol(F, 'slice_fun_str', ...
-                {'menuval', fun_str, [fun_str, {'other...'}]}, ...
+            fun_str = {'brick.nmean', 'brick.nmedian', ...
+                'brick.nsum', 'min', 'max', 'std'};
+            fun_str_simple = {'mean', 'median', ...
+                'sum', 'min', 'max', 'std'};
+            brick.propcontrol(F, 'slice_fun_str', ...
+                {'menuval', fun_str, [fun_str_simple, {'other...'}]}, ...
                 {'parent', m, 'label', 'Filter operation'});
         end
     end

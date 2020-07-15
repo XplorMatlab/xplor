@@ -4,7 +4,7 @@ classdef XData < xplr.GraphNode
     % A container for data, associated with header information.
     % A number of different events are thrown when the data or header
     % information is being changed
-    % When headers are not provided, opens a graphic interface allowing
+    % When headers are not provided, opens a graphic brick.interface allowing
     % user to set the headers.
     %
     % Input:
@@ -169,7 +169,7 @@ classdef XData < xplr.GraphNode
             new_head(dim) = tmp;
             clear tmp
             % update data
-            if ~fn_ismemberstr(flag, {'chg_data', 'all', 'chg_dim'})
+            if ~brick.ismemberstr(flag, {'chg_data', 'all', 'chg_dim'})
                 s = substruct('()', repmat({':'}, 1, x.nd));
                 s.subs{dim} = ind;
             end

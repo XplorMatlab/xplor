@@ -22,7 +22,7 @@ date_start = min(dates_row);
 dates_row_num = days(dates_row - date_start); % convert to numeric, starting from day 0
 nday = max(dates_row_num) + 1;
 dates = date_start + (0:nday-1);
-dates = fn_map(dates,@(t)datestr(t,'dd/mm'));
+dates = brick.map(dates,@(t)datestr(t,'dd/mm'));
 
 % Countries
 countries = table2array(data(:,7)); % cell of char arrays
@@ -41,7 +41,7 @@ for i = 1:size(data,1)
 end
 
 % normalize by population
-CORONAVIRUS = cat(4,fn_div(CORONAVIRUS,pop/1e6),CORONAVIRUS);
+CORONAVIRUS = cat(4,brick.div(CORONAVIRUS,pop/1e6),CORONAVIRUS);
 
 % cumulated sums
 CORONAVIRUS = cat(5,CORONAVIRUS,cumsum(CORONAVIRUS,1));
@@ -51,7 +51,7 @@ datanames = {'cases' 'deaths'; ...
     'dayly' 'cumulated'};
 
 % % normalize by population
-% CORONAVIRUS = cat(3,CORONAVIRUS,fn_div(coronavirus,pop));
+% CORONAVIRUS = cat(3,CORONAVIRUS,brick.div(coronavirus,pop));
 % % cumulated sums
 % CORONAVIRUS = cat(3,CORONAVIRUS,cumsum(coronavirus,1));
 % % deads/cases
@@ -82,7 +82,7 @@ else
         files = unzip(url, folder);
         for i = 1:length(files)
             f = files{i};
-            if strcmp(fn_fileparts(f,'name'), 'Readme.txt')
+            if strcmp(brick.fileparts(f,'name'), 'Readme.txt')
                 delete(f)
             else
                 movefile(f, strrep(f, 'TM_WORLD_BORDERS_SIMPL-0.3', 'worldmap'))
@@ -137,7 +137,7 @@ for i = 1:nshape
     % area-preserving projection
     [x, y] = deal(S(i).x, S(i).y);        % coordinates in the Robinson projection
     [x, y] = deal(offset(1) + scale(1)*x, offset(2) + scale(2)*y);  % coordinates in image
-    mask = fn_poly2mask(x, y, nx, ny);
+    mask = brick.poly2mask(x, y, nx, ny);
     np = sum(mask(:));
     map(mask) = i;
     mapcolor(mask, :) = repmat(colors(i,:), [np 1]);
@@ -160,7 +160,7 @@ for i = 1:ncountry
     name = lower(countries{i});
 
     % some tiny differences
-    name = fn_switch(name, ...
+    name = brick.switch_case(name, ...
         'cote divoire',     'cote d''ivoire', ...
         'laos',             'lao', ...
         'timor leste',      'timor', ...
@@ -170,9 +170,9 @@ for i = 1:ncountry
         'vietnam',          'viet nam', ...
         name);
     
-    idx = fn_find(name,shapenames,'first');
+    idx = brick.find(name,shapenames,'first');
     if isempty(idx)
-        idx = fn_find(@(s)strfind(s,name), shapenames, 'first');
+        idx = brick.find(@(s)strfind(s,name), shapenames, 'first');
     end
     if ~isempty(idx)
         country2shape(i) = idx;

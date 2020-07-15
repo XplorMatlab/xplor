@@ -32,7 +32,7 @@ classdef SelectionShape
                     S.points = data(:)';
                     S.vectors = zeros(1, 0);
                 case 'line1D'
-                    lines = row(data);
+                    lines = brick.row(data);
                     if mod(length(lines), 2) || any(diff(lines(:)) <= 0)
                         error('set of lines should come as ordered non-intersecting segments')
                     end
@@ -85,7 +85,7 @@ classdef SelectionShape
                         otherwise
                             error 'too many elements in shape description'
                     end
-                    if length(logic) ~= fn_switch(type, 'ellipse2D', 1, 'ring2D', 2)
+                    if length(logic) ~= brick.switch_case(type, 'ellipse2D', 1, 'ring2D', 2)
                         error 'wrong shape definition'
                     end
                     % that's it
@@ -115,7 +115,7 @@ classdef SelectionShape
             end
             
             % Shapes that cannot be merged
-            idx = fn_ismemberstr({S.type}, {'openpoly2D', 'rect2D', 'ellipse2D', 'ring2D'});
+            idx = brick.ismemberstr({S.type}, {'openpoly2D', 'rect2D', 'ellipse2D', 'ring2D'});
             S2 = S(idx);
             S(idx) = [];
             
@@ -228,7 +228,7 @@ classdef SelectionShape
                     case 'poly2D'
                         pp = my_poly_split(points);
                         for i=1:length(pp)
-                            mask = mask | fn_poly2mask(pp{i}, sizes);
+                            mask = mask | brick.poly2mask(pp{i}, sizes);
                         end
                     case 'rect2D'
                         i_start = max(1, ceil(points(1)));
@@ -238,11 +238,11 @@ classdef SelectionShape
                         mask(i_start:i_end, j_start:j_end) = true;
                     case 'ellipse2D'
                         points = convert_poly_2D(S(k));
-                        mask = mask | fn_poly2mask(points, sizes);
+                        mask = mask | brick.poly2mask(points, sizes);
                     case 'ring2D'
                         points = convert_poly_2D(S(k));
                         pp = my_poly_split(points);
-                        mask = mask | xor(fn_poly2mask(pp{1}, sizes), fn_poly2mask(pp{2}, sizes));
+                        mask = mask | xor(brick.poly2mask(pp{1}, sizes), brick.poly2mask(pp{2}, sizes));
                     case 'indices'
                         mask(indices) = true;
                     otherwise
@@ -271,7 +271,7 @@ classdef SelectionShape
                         gaps = diff(indices) > 1;
                         start = indices([true, gaps]);
                         stop = indices([gaps, true]);
-                        lines_k = fn_add(double([start; stop]), [-.5; .5]);
+                        lines_k = brick.add(double([start; stop]), [-.5; .5]);
                         lines = [lines, lines_k]; %#ok<AGROW>
                     case 'all'
                         disp 'converting ''all1D'' selection by a [-1e30, 1e30] line'
@@ -307,7 +307,7 @@ classdef SelectionShape
                         poly_k = kron(p,ones(1,6)) + repmat([-.5, -.5, .5, .5, -.5, NaN; -.5, .5, .5, -.5, -.5, NaN], 1, np);
                         poly_k(:,end) = []; % remove last NaN
                     case 'rect2D'
-                        poly_k = fn_add(Sk.points, fn_mult(Sk.vectors, [0, 0, 1, 1, 0; 0, 1, 1, 0, 0]));
+                        poly_k = brick.add(Sk.points, brick.mult(Sk.vectors, [0, 0, 1, 1, 0; 0, 1, 1, 0, 0]));
                     case {'ellipse2D', 'ring2D'}
                         c = Sk.points;
                         u = Sk.vectors;
@@ -320,7 +320,7 @@ classdef SelectionShape
                             u_data = [u_data, NaN, r*u_data];
                             v_data = [v_data, NaN, r*v_data];
                         end
-                        poly_k = fn_add(c, fn_mult(u,u_data) + fn_mult([u(2);-u(1)], v_data));
+                        poly_k = brick.add(c, brick.mult(u,u_data) + brick.mult([u(2);-u(1)], v_data));
                     case 'openpoly2D'
                         poly_k = Sk.points;
                     case 'indices'
@@ -329,7 +329,7 @@ classdef SelectionShape
                         mask = false([sz, 1]);
                         mask(indices) = true;
                         % then convert to polygon
-                        poly_k = fn_mask2poly(mask);
+                        poly_k = brick.mask2poly(mask);
                     case 'all'
                         disp 'converting ''all2D'' selection by a [-1e30, 1e30] square'
                         poly_k = [-1, -1, 1, 1, -1; -1, 1, 1, -1, -1]*1e30;

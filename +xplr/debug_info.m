@@ -49,7 +49,7 @@ if nargin==1
 end
 
 if isempty(mem_state)
-    mem_state = fn_userconfig('xplr.debug_info');
+    mem_state = brick.userconfig('xplr.debug_info');
     if isempty(mem_state)
         mem_state = struct('active', false, 'categories', struct());
         save_state(mem_state)
@@ -63,7 +63,7 @@ state = mem_state;
 function save_state(state)
 
 % save on disk
-fn_userconfig('xplr.debug_info', state)
+brick.userconfig('xplr.debug_info', state)
 
 % replace value in get_state persistent variable
 get_state(state)
@@ -88,7 +88,7 @@ catch
     % first time this category is met
     quest = sprintf('Do you want to display debug information of new category ''%s''?', ...
         category);
-    do_display = fn_dialog_questandmem(quest,'xplr.debug_info');
+    do_display = brick.dialog_questandmem(quest,'xplr.debug_info');
     
     % memorize answer
     state.categories.(category) = do_display;

@@ -37,7 +37,7 @@ classdef DimHeader < xplr.Header
             
             % generate a unique dimension ID
             if do_copy && nargin >= 2
-                [H.dim_id] = dealc(varargin{2});
+                [H.dim_id] = brick.dealc(varargin{2});
             else
                 H.changedim_id()
             end
@@ -76,7 +76,7 @@ classdef DimHeader < xplr.Header
                 dim = zeros(1, n);
                 labels = {H.label};
                 for i = 1:n
-                    dim_i = fn_find(d{i}, labels, 'first');
+                    dim_i = brick.find(d{i}, labels, 'first');
                     if ~isempty(dim_i)
                         dim(i) = dim_i;
                     end

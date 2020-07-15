@@ -149,7 +149,7 @@ classdef DisplayLayout
                 else
                     % insert in either location 'x', 'y' or 'merged_data' at a
                     % specific position
-                    [f, index] = fn_regexptokens(f, '^(x|y|merged_data)([\-0-9]*)$');
+                    [f, index] = brick.regexptokens(f, '^(x|y|merged_data)([\-0-9]*)$');
                     if isempty(index)
                         index = 0;
                     else
@@ -310,8 +310,8 @@ classdef DisplayLayout
         function display_mode = suggest_display_mode(D)
             head = D.slice.header;
             head([head.n]==1) = [];
-            do_image = any(row(measure_grouping(head)));
-            display_mode = fn_switch(do_image, 'image', 'time courses');
+            do_image = any(brick.row(measure_grouping(head)));
+            display_mode = brick.switch_case(do_image, 'image', 'time courses');
         end
     end
     

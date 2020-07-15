@@ -24,7 +24,7 @@ classdef Parameters < handle
             if isempty(P_mem) || force_reload
                 f_name = fullfile(fileparts(which('xplor')), 'xplor parameters.xml');
                 if exist(f_name, 'file')
-                    s = fn_readxml(f_name);
+                    s = brick.readxml(f_name);
                 else
                     s = struct;
                 end
@@ -39,7 +39,7 @@ classdef Parameters < handle
         function value = get(str)
             value = xplr.Parameters.get_all_par();
             if nargin
-                strc = fn_strcut(str, '.');
+                strc = brick.strcut(str, '.');
                 for i=1:length(strc)
                     value = value.(strc{i});
                 end
@@ -55,11 +55,11 @@ classdef Parameters < handle
             % get parameter structure
             s = xplr.Parameters.get_all_par();
             % set value
-            str = fn_strcut(str, '.');
+            str = brick.strcut(str, '.');
             s = set_struct(s, str, value);
             % save
             f_name = fullfile(fileparts(which('xplor')), 'xplor parameters.xml');
-            fn_savexml(f_name, s)
+            brick.savexml(f_name, s)
             % reload
             xplr.Parameters.get_all_par(true);
         end

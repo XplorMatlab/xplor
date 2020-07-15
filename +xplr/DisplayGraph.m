@@ -108,7 +108,7 @@ classdef DisplayGraph < xplr.GraphNode
             x_head = header(x_layout);
             y_head = header(y_layout);
             [x_pair, y_pair] = checkpairs(x_head, y_head, do_signal);
-            [w, h] = fn_pixelsize(G.D.ha);
+            [w, h] = brick.pixelsize(G.D.ha);
             axis_ratio = h/w;
 
             % G.filling will get values assigned both for 'grid' and
@@ -141,10 +141,10 @@ classdef DisplayGraph < xplr.GraphNode
                     elem_ratio = 1; % this value will be only loosely respected
                 end
                 if strcmp(xy_mode,'xy')
-                    n_col = fn_coerce(round(sqrt(n_elem*elem_ratio*x_avail/y_avail/axis_ratio)), [1, n_elem]);
+                    n_col = brick.coerce(round(sqrt(n_elem*elem_ratio*x_avail/y_avail/axis_ratio)), [1, n_elem]);
                     n_row = ceil(n_elem/n_col);
                 else
-                    n_row = fn_coerce(round(sqrt(n_elem/elem_ratio/x_avail*y_avail*axis_ratio)), [1, n_elem]);
+                    n_row = brick.coerce(round(sqrt(n_elem/elem_ratio/x_avail*y_avail*axis_ratio)), [1, n_elem]);
                     n_col = ceil(n_elem/n_row);
                 end
                 [st.xy_n_col, st.xy_n_row] = deal(n_col,n_row);
@@ -272,7 +272,7 @@ classdef DisplayGraph < xplr.GraphNode
     methods (Access='private')
         function minimum_spacing = ticks_minimum_spacing(G, k)
             % k = 1 for 'x', 2 for 'y'
-            ax_siz = fn_pixelsize(G.ha);
+            ax_siz = brick.pixelsize(G.ha);
             ax_siz_inch = ax_siz/get(0, 'ScreenPixelsPerInch');
             minimum_spacing_inch = .2; % optimal space between ticks in inches
             
@@ -313,9 +313,9 @@ classdef DisplayGraph < xplr.GraphNode
                 mult = 1;
             end
             if isempty(suffix)
-                tick_labels(do_label) = fn_num2str(tick_values(do_label), 'cell');
+                tick_labels(do_label) = brick.num2str(tick_values(do_label), 'cell');
             else
-                tick_labels(do_label) = fn_num2str(tick_values(do_label) *mult, 'cell', ['%g' suffix]);
+                tick_labels(do_label) = brick.num2str(tick_values(do_label) *mult, 'cell', ['%g' suffix]);
             end
         end
     end
@@ -325,7 +325,7 @@ classdef DisplayGraph < xplr.GraphNode
             org = G.layout;
             
             % remove previous xy ticks
-            delete_valid(G.xy_ticks)
+            brick.delete_valid(G.xy_ticks)
             G.xy_ticks = [];
             
             % stop if data is too large for being displayed
@@ -333,7 +333,7 @@ classdef DisplayGraph < xplr.GraphNode
             
             % x and y ticks
             for k = 1:2
-                f = fn_cast(k, 'x', 'y');
+                f = brick.cast(k, 'x', 'y');
                 d = G.D.active_dim.(f);
                 if isempty(d) || ~any(d == org.(f))
                     % note that method setValueTicks, which is normally
@@ -360,7 +360,7 @@ classdef DisplayGraph < xplr.GraphNode
 
                 % target space between ticks
                 minimum_spacing = G.ticks_minimum_spacing(k);
-                f_span = fn_cast(k, st.x_span, st.y_span);
+                f_span = brick.cast(k, st.x_span, st.y_span);
                 minimum_spacing = minimum_spacing / min(1/f_span(jf), 2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
 
                 % target space in data coordinates
@@ -376,7 +376,7 @@ classdef DisplayGraph < xplr.GraphNode
                 else
                     % ticks for each data point (display only some of
                     % them if there is not enough space for all)
-                    tick_labels = row(head.get_item_names());
+                    tick_labels = brick.row(head.get_item_names());
                     if minimum_step <= 1                     
                         ticks_idx = 1:n;
                     else
@@ -414,14 +414,14 @@ classdef DisplayGraph < xplr.GraphNode
                 n = head.n;
 
                 % display labels for each xy/yx grid cell
-                tick_labels = row(head.get_item_names());
+                tick_labels = brick.row(head.get_item_names());
                 if isempty(st.y_span)
                     row_height = st.y_available;
                 else
                     row_height = st.y_span(end);
                 end
-                xy = fn_add([0; row_height/2], st.xy_offsets);
-                rotation = fn_switch(st.xy_n_col<10, 0, 20);
+                xy = brick.add([0; row_height/2], st.xy_offsets);
+                rotation = brick.switch_case(st.xy_n_col<10, 0, 20);
                 G.xy_ticks = gobjects(1, n);
                 for i=1:n
                     G.xy_ticks(i) = text(xy(1,i), xy(2,i), tick_labels{i}, ...
@@ -494,7 +494,7 @@ classdef DisplayGraph < xplr.GraphNode
             grid_clip = subsref_dim(G.D.grid_clip, 1+h_aligned_dims, ones(1, length(h_aligned_dims)));
             if ~isempty(G.D.signals_baseline) && same_baseline
                 signals_baseline = subsref_dim(G.D.signals_baseline, h_aligned_dims, 1);
-                grid_clip = fn_add(grid_clip, shiftdim(signals_baseline,-1));
+                grid_clip = brick.add(grid_clip, shiftdim(signals_baseline,-1));
             end
 
             % now grid_clip is nonsingleon only in the y_dims dimensions;
@@ -513,7 +513,7 @@ classdef DisplayGraph < xplr.GraphNode
             for k_row = 1:st.xy_n_row
                 for k_y = 1:ny
                     % vertical center of the row
-                    y_idx = row(fn_indices(sz(org.y), k_y, 'g2i'));
+                    y_idx = brick.row(brick.indices(sz(org.y), k_y, 'g2i'));
                     if ~isempty(org.xy)
                         y_row_offset = st.xy_offsets(2, 1+(k_row-1)*st.xy_n_col);
                     elseif ~isempty(org.yx)
@@ -545,8 +545,8 @@ classdef DisplayGraph < xplr.GraphNode
             % baselines
             if ~same_baseline
                 [y_tick_label{y_tick_values==0}] = deal(['(' G.D.clipping.align_signals(2:end) ')']);
-                idx_p = (y_tick_values>0 & ~fn_isemptyc(y_tick_label));
-                y_tick_label(idx_p) = fn_map(@(str)['+' str], y_tick_label(idx_p), 'cell');
+                idx_p = (y_tick_values>0 & ~brick.isemptyc(y_tick_label));
+                y_tick_label(idx_p) = brick.map(@(str)['+' str], y_tick_label(idx_p), 'cell');
             end
 
             % set ticks
@@ -570,7 +570,7 @@ classdef DisplayGraph < xplr.GraphNode
         function draw_separations(G)
             % no 'smart update', always delete all existing separation
             % lines and redisplay new ones
-            delete_valid(G.separation_lines)
+            brick.delete_valid(G.separation_lines)
             G.separation_lines = [];
             if ~G.show_separation, return, end
             
@@ -596,17 +596,17 @@ classdef DisplayGraph < xplr.GraphNode
                 x_pos = zeros(n-1, n_out);
                 for k_out = 1:n_out
                     % indices of external dimensions
-                    ijk = repmat(fn_indices(sz_out, k_out, 'g2i'), [1, n-1]);
+                    ijk = repmat(brick.indices(sz_out, k_out, 'g2i'), [1, n-1]);
                     % indices for dimension d
                     ijk(d, :) = 1.5:n-.5;
                     % x-positions of n-1 lines
                     x_pos(:, k_out) = ...
-                        sum(fn_add(st.x_offset(k:end)', fn_mult(ijk(org.x(k:end), :), st.x_step(k:end)')), 1) ...
+                        sum(brick.add(st.x_offset(k:end)', brick.mult(ijk(org.x(k:end), :), st.x_step(k:end)')), 1) ...
                         + st.xy_offsets(1) + (ijk(nd+1, :)-1) * st.xy_steps(1);
                 end
                 level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
                 color = 1 - (1-G.separation_color) / 2^level;
-                lines{end+1} = fn_lines('x', x_pos(:), G.D.ha, ...
+                lines{end+1} = brick.lines('x', x_pos(:), G.D.ha, ...
                     'color', color, 'hittest', 'off'); %#ok<AGROW>
             end
             
@@ -623,17 +623,17 @@ classdef DisplayGraph < xplr.GraphNode
                 y_pos = zeros(n-1, n_out);
                 for k_out = 1:n_out
                     % indices of external dimensions
-                    ijk = repmat(fn_indices(sz_out, k_out, 'g2i'), [1, n-1]);
+                    ijk = repmat(brick.indices(sz_out, k_out, 'g2i'), [1, n-1]);
                     % indices for dimension d
                     ijk(d, :) = 1.5:n-.5;
                     % y-positions of n-1 lines
                     y_pos(:, k_out) = ...
-                        sum(fn_add(st.y_offset(k:end)', fn_mult(ijk(org.y(k:end), :), st.y_step(k:end)')), 1) ...
+                        sum(brick.add(st.y_offset(k:end)', brick.mult(ijk(org.y(k:end), :), st.y_step(k:end)')), 1) ...
                         + st.xy_offsets(2) + (ijk(nd+1, :)-1) * st.xy_steps(2);
                 end
                 level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
                 color = 1 - (1-G.separation_color) / 2^level;
-                lines{end+1} = fn_lines('y', y_pos(:), G.D.ha, ...
+                lines{end+1} = brick.lines('y', y_pos(:), G.D.ha, ...
                     'color', color, 'hittest', 'off'); %#ok<AGROW>
             end
             
@@ -641,12 +641,12 @@ classdef DisplayGraph < xplr.GraphNode
             if ~isempty(st.xy_dim)
                 x_pos = -.5 + (1:st.xy_n_col-1) / st.xy_n_col;
                 y_pos = -.5 + (1:st.xy_n_row-1) / st.xy_n_row;
-                lines = [lines fn_lines(x_pos, y_pos, G.D.ha, ...
+                lines = [lines brick.lines(x_pos, y_pos, G.D.ha, ...
                     'color', G.separation_color)];
             end
             
             % put lines below other graphic elements
-            G.separation_lines = fn_map(@row, lines, 'array'); % single vector of graphic handles
+            G.separation_lines = brick.map(@row, lines, 'array'); % single vector of graphic handles
             uistack(G.separation_lines, 'bottom')
             
         end
@@ -722,7 +722,7 @@ classdef DisplayGraph < xplr.GraphNode
                 case {'value', 'effective'}
                     zoom = cat(1, z_filters.zoom_value)';
                     if strcmp(mode,'effective')
-                        zoom = fn_add(mean(zoom), fn_mult([-.5; .5], diff(zoom)./G.filling(dim)));
+                        zoom = brick.add(mean(zoom), brick.mult([-.5; .5], diff(zoom)./G.filling(dim)));
                     end
                 case {'indices', 'displaylimit'}
                     zoom = zeros(2, length(dim));
@@ -730,9 +730,9 @@ classdef DisplayGraph < xplr.GraphNode
                     if strcmp(mode, 'displaylimit') 
                         if strcmp(G.D.display_mode, 'time courses') && ~isempty(G.layout.x)
                             external_x_dim = (dim ~= G.layout.x(1));
-                            zoom(:, external_x_dim) = fn_add(zoom(:, external_x_dim), [-.5; .5]);                            
+                            zoom(:, external_x_dim) = brick.add(zoom(:, external_x_dim), [-.5; .5]);
                         else
-                            zoom = fn_add(zoom, [-.5; .5]);
+                            zoom = brick.add(zoom, [-.5; .5]);
                         end
                     end
                 case 'off&bin'
@@ -795,8 +795,8 @@ classdef DisplayGraph < xplr.GraphNode
             if ~isempty(org_y_ok), do_round(org.y(org_y_ok(1))) = false; end
             ijk(do_round, :) = round(ijk(do_round, :));
             
-            x = sum(fn_add(st.x_offset(org_x_ok)', fn_mult(ijk(org.x(org_x_ok), :), st.x_step(org_x_ok)')), 1);
-            y = sum(fn_add(st.y_offset(org_y_ok)', fn_mult(ijk(org.y(org_y_ok), :), st.y_step(org_y_ok)')), 1);
+            x = sum(brick.add(st.x_offset(org_x_ok)', brick.mult(ijk(org.x(org_x_ok), :), st.x_step(org_x_ok)')), 1);
+            y = sum(brick.add(st.y_offset(org_y_ok)', brick.mult(ijk(org.y(org_y_ok), :), st.y_step(org_y_ok)')), 1);
             xy = [x; y];
             if ~isempty(st.xy_dim)
                 xy_idx = ijk(st.xy_dim, :);
@@ -851,8 +851,8 @@ classdef DisplayGraph < xplr.GraphNode
                 % take advantage on the fact that the grid spans the full
                 % axis
                 d = st.xy_dim;
-                x = fn_coerce(.5 + xy(1, :), 0, 1); % 0 = left edge, 1 = right edge
-                y = fn_coerce(.5 - xy(2, :), 0, 1); % 0 = top edge,  1 = bottom edge
+                x = brick.coerce(.5 + xy(1, :), 0, 1); % 0 = left edge, 1 = right edge
+                y = brick.coerce(.5 - xy(2, :), 0, 1); % 0 = top edge,  1 = bottom edge
                 icol = .5 + x * st.xy_n_col;
                 irow = .5 + y * st.xy_n_row;
                 if ismember(d, sub_dim)
@@ -934,9 +934,9 @@ classdef DisplayGraph < xplr.GraphNode
                 bin = bin(sub_dim);
             end
             if do_vector
-                zijk = fn_div(ijk, bin(:));
+                zijk = brick.div(ijk, bin(:));
             else
-                zijk = fn_div(fn_subtract(ijk, idx_offset(:)) - .5, bin(:)) + .5;
+                zijk = brick.div(brick.subtract(ijk, idx_offset(:)) - .5, bin(:)) + .5;
             end
         end
         function ijk = zslice_to_slice(G, zijk, do_vector, sub_dim)
@@ -947,9 +947,9 @@ classdef DisplayGraph < xplr.GraphNode
                 bin = bin(sub_dim);
             end
             if do_vector
-                ijk = fn_mult(zijk, bin');
+                ijk = brick.mult(zijk, bin');
             else
-                ijk = fn_add(idx_offset', .5 + fn_mult(zijk-.5, bin'));
+                ijk = brick.add(idx_offset', .5 + brick.mult(zijk-.5, bin'));
             end
         end
         function xy = slice_to_graph(G, ijk, varargin)
@@ -1060,7 +1060,7 @@ classdef DisplayGraph < xplr.GraphNode
                 x_offsets = -x_scale * ones(1, n_transform);
             else
                 x_scale = st.x_step(1);
-                x_offsets = fn_add(sum(st.x_offset), sum(fn_mult(column(st.x_step(2:end)), ijk(org.x(2:end), :)), 1));
+                x_offsets = brick.add(sum(st.x_offset), sum(brick.mult(brick.column(st.x_step(2:end)), ijk(org.x(2:end), :)), 1));
             end
             % (y)
             switch G.D.display_mode
@@ -1077,7 +1077,7 @@ classdef DisplayGraph < xplr.GraphNode
                         y_offsets = y_scale * ones(1, n_transform);
                     else
                         y_scale = abs(st.y_step(1));
-                        y_offsets = fn_add(sum(st.y_offset), sum(fn_mult(column(st.y_step(2:end)), ijk(org.y(2:end), :)), 1));
+                        y_offsets = brick.add(sum(st.y_offset), sum(brick.mult(brick.column(st.y_step(2:end)), ijk(org.y(2:end), :)), 1));
                     end
                 case 'time courses'
                     % in this case, the transformation will apply not on
@@ -1085,7 +1085,7 @@ classdef DisplayGraph < xplr.GraphNode
                     % -> orient these values upward, and transform them
                     % such that [0 1] fills the available space
                     y_scale = st.y_available;
-                    y_offsets = fn_add(sum(st.y_offset), sum(fn_mult(column(st.y_step(1:end)), ijk(org.y(1:end), :)), 1) );
+                    y_offsets = brick.add(sum(st.y_offset), sum(brick.mult(brick.column(st.y_step(1:end)), ijk(org.y(1:end), :)), 1) );
                     % value .5 must be positionned at y-ordinates y_offsets, i.e. y_offsets + .5*y_scale = 0
                     y_offsets = y_offsets - y_scale/2; 
                 otherwise
@@ -1121,14 +1121,14 @@ classdef DisplayGraph < xplr.GraphNode
 %                 % the center of the available space
 %                 x_offsets = zeros(1,np); 
 %             else
-                x_offsets = fn_add(sum(st.x_offset(2:end)), sum(fn_mult(column(st.x_step(2:end)), ijk(org.x(2:end), :)), 1) );
+                x_offsets = brick.add(sum(st.x_offset(2:end)), sum(brick.mult(brick.column(st.x_step(2:end)), ijk(org.x(2:end), :)), 1) );
 %             end
             % (y)
             switch G.D.display_mode
                 case 'image'
-                    y_offsets = fn_add(sum(st.y_offset(2:end)), sum(fn_mult(column(st.y_step(2:end)), ijk(org.y(2:end), :)), 1));
+                    y_offsets = brick.add(sum(st.y_offset(2:end)), sum(brick.mult(brick.column(st.y_step(2:end)), ijk(org.y(2:end), :)), 1));
                 case 'time courses'
-                    y_offsets = fn_add(sum(st.y_offset(1:end)), sum(fn_mult(column(st.y_step(1:end)), ijk(org.y(1:end), :)), 1));
+                    y_offsets = brick.add(sum(st.y_offset(1:end)), sum(brick.mult(brick.column(st.y_step(1:end)), ijk(org.y(1:end), :)), 1));
                 otherwise
                     error 'invalid display mode'
             end
@@ -1231,7 +1231,7 @@ classdef DisplayGraph < xplr.GraphNode
 								lines = sum(st.y_offset(idx_dim:end)) + lines*st.y_step(idx_dim) + sum(st.y_step(idx_dim+1:end));
 						end
                         if ~isempty(st.xy_dim)
-                            graph_dim = fn_switch(dim_location, 'x', 1, 'y', 2);
+                            graph_dim = brick.switch_case(dim_location, 'x', 1, 'y', 2);
                             lines = lines + st.xy_offsets(graph_dim, 1); 
                         end
                         % construct polygon as union of rectangles
@@ -1299,7 +1299,7 @@ classdef DisplayGraph < xplr.GraphNode
                         center = mean(G.slice_to_graph(sel.dataind, 'sub_dim', dim), 2);
                     else
                         error 'not implemented yet'
-                        center = [nmean(polygon(1, :)), nmean(polygon(2, :))];
+                        center = [brick.nmean(polygon(1, :)), brick.nmean(polygon(2, :))];
                     end
                 case 2
                     % somehow simpler because only the x,y configuration is
@@ -1431,7 +1431,7 @@ classdef DisplayGraph < xplr.GraphNode
 
             % infer the affinity matrix graph->zslice
             % (first the linear part)
-            xy_test = fn_add(xy0, [0, 1, 0; 0, 0, 1]);
+            xy_test = brick.add(xy0, [0, 1, 0; 0, 0, 1]);
             zijk_test = G.graph_to_zslice(xy_test, 'sub_dim', dim, 'ijk0', zijk0);
             linear_part = [zijk_test(:, 2) - zijk_test(:, 1), zijk_test(:, 3) - zijk_test(:, 1)];
             % (then the offset)
@@ -1477,13 +1477,13 @@ classdef DisplayGraph < xplr.GraphNode
                 % bottom-right corner
                 rect_mod = rect; 
                 rect_mod(2, :) = -rect_mod(2, :);
-                rect_mod = fn_coerce(rect_mod, -.5, .5);
+                rect_mod = brick.coerce(rect_mod, -.5, .5);
                 rect_mod = [min(rect_mod, [], 2) max(rect_mod, [], 2)];
                 
                 % coordinates of rectangle in grid
                 grid_size = [st.xy_n_col; st.xy_n_row];
-                rect_grid_pos = round(.5 + fn_mult(rect_mod + .5, grid_size));
-                rect_in_cell = rect_mod + .5 - fn_div(rect_grid_pos - .5, grid_size);
+                rect_grid_pos = round(.5 + brick.mult(rect_mod + .5, grid_size));
+                rect_in_cell = rect_mod + .5 - brick.div(rect_grid_pos - .5, grid_size);
                 col = rect_grid_pos(1, :);
                 row = rect_grid_pos(2, :);
                 d = st.xy_dim;
@@ -1514,7 +1514,7 @@ classdef DisplayGraph < xplr.GraphNode
                 else
                     idx_inside = (rect_grid_inside(1, :)-1) * st.xy_n_row + rect_grid_inside(2, :);
                 end
-                idx_inside = fn_coerce(idx_inside, 1, sz(d));
+                idx_inside = brick.coerce(idx_inside, 1, sz(d));
                 if diff(idx_inside) >= 0
                     % yes we are covering at least one cell, so we have a
                     % zoom in the "grid" dimension
@@ -1541,7 +1541,7 @@ classdef DisplayGraph < xplr.GraphNode
                 else
                     idx = (col-1) * st.xy_n_row + row;
                 end
-                rect = fn_subtract(rect, st.xy_offsets(:, idx));
+                rect = brick.subtract(rect, st.xy_offsets(:, idx));
             end
             
             % x 
