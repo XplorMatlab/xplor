@@ -1,4 +1,0 @@
-Object Map
-***********
-
-.. image:: objectMap.png
