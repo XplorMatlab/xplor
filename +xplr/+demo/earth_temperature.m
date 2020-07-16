@@ -1,3 +1,6 @@
+% Earth temperature data from the Nasa Earth Observations
+% See nasa_neo file for download details
+
 % Data (compressed)
 s = brick.loadvar(fullfile(xplr.demo.demo_data_folder,'NEO Earth Temperature.mat'));
 
