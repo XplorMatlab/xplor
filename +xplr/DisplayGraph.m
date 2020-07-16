@@ -851,8 +851,8 @@ classdef DisplayGraph < xplr.GraphNode
                 % take advantage on the fact that the grid spans the full
                 % axis
                 d = st.xy_dim;
-                x = brick.coerce(.5 + xy(1, :), 0, 1); % 0 = left edge, 1 = right edge
-                y = brick.coerce(.5 - xy(2, :), 0, 1); % 0 = top edge,  1 = bottom edge
+                x = brick.coerce(.5 + xy(1, :), .001, .999); % 0 = left edge, 1 = right edge
+                y = brick.coerce(.5 - xy(2, :), .001, .999); % 0 = top edge,  1 = bottom edge
                 icol = .5 + x * st.xy_n_col;
                 irow = .5 + y * st.xy_n_row;
                 if ismember(d, sub_dim)
