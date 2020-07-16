@@ -200,7 +200,7 @@ brick.set(hf,state)
 % terminate(hf) has executed
 rmappdata(hf,'brick_buttonmotion_savestate')
 rmappdata(hf,'brick_buttonmotion_busy')
-if isappdata(hf,'brick.buttonmotion_queuestop'), rmappdata(hf,'brick_buttonmotion_queuestop'), end
+if isappdata(hf,'brick_buttonmotion_queuestop'), rmappdata(hf,'brick_buttonmotion_queuestop'), end
 rmappdata(hf,'brick_buttonmotion_scrolling')
 
 %---

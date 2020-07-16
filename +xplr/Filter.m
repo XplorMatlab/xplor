@@ -14,6 +14,7 @@ classdef Filter < xplr.DataOperand
     properties(Dependent, SetAccess='protected', Transient)
         n_sel
         indices
+        slice_fun_str_simple
     end
     
     % Setting and updating filter
@@ -272,6 +273,14 @@ classdef Filter < xplr.DataOperand
                 indices{i} = F.selection(i).compute_indices([F.header_in.n]).data_ind;
             end
         end
+        function str = get.slice_fun_str_simple(F)
+            [fun_str, fun_str_simple] = xplr.Filter.menu_fun_options();
+            str = F.slice_fun_str;
+            idx = fn_find(str, fun_str);
+            if ~isempty(idx)
+                str = fun_str_simple{idx};
+            end
+        end
     end
     
     % Slicing
@@ -306,7 +315,7 @@ classdef Filter < xplr.DataOperand
             % additional values set together with the selections
             if nargin < 3, add_header_info = cell(2, 0); end
             [head_value, affected_columns] = set_add_header_info(F, head_value, add_header_info);
-            ok_brick.column(affected_columns) = true;
+            ok_column(affected_columns) = true;
             
             % put default values in columns which were not set
             for i = find(~ok_column)
@@ -436,13 +445,18 @@ classdef Filter < xplr.DataOperand
     end
     
     % Context menu
-    methods
-        function context_menu(F, m)
-            delete(get(m, 'children'))
+    methods (Static)
+        function [fun_str, fun_str_simple] = menu_fun_options()
             fun_str = {'brick.nmean', 'brick.nmedian', ...
                 'brick.nsum', 'min', 'max', 'std'};
             fun_str_simple = {'mean', 'median', ...
                 'sum', 'min', 'max', 'std'};
+        end
+    end
+    methods
+        function context_menu(F, m)
+            delete(get(m, 'children'))
+            [fun_str, fun_str_simple] = xplr.Filter.menu_fun_options();
             brick.propcontrol(F, 'slice_fun_str', ...
                 {'menuval', fun_str, [fun_str_simple, {'other...'}]}, ...
                 {'parent', m, 'label', 'Filter operation'});
