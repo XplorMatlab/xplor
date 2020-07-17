@@ -128,25 +128,38 @@ classdef HelpPopupManager < matlab.mixin.SetGet
             
             manager.current_identifier = file_name;
             
-            % for the moment, just display file_name and emulate button
+            % for the moment, just display file_name
             % click
             disp(file_name)
             
-            % Create figure
-            popup_figure = uifigure;
-            popup_figure.Position = [500 500 380 445];
-            % Add HTML to figure
-            message = uihtml(popup_figure);
-            message.Position = [10 10 360 420];
-            message.HTMLSource = file_name;
-            % Add buttons
-            again_button = uibutton(popup_figure);
-            again_button.Text = "Show me again later";
-            again_button.Position = [25 50 150 30];
-            not_again_button = uibutton(popup_figure);
-            not_again_button.Text = "Don't show me again";
-            not_again_button.Position = [200 50 150 30];
+            % Test if Matlab version is earlier than R2019b
+            uihtml_ok = ~verLessThan('matlab','9.7');
             
+            if uihtml_ok
+                % Create figure
+                popup_figure = uifigure;
+                popup_figure.Position = [500 500 380 445];
+                % Add HTML to figure
+                message = uihtml(popup_figure);
+                message.Position = [10 10 360 420];
+                message.HTMLSource = file_name;
+                % Add buttons
+                again_button = uibutton(popup_figure);
+                again_button.Text = 'Show me again later';
+                again_button.Position = [25 50 150 30];
+                not_again_button = uibutton(popup_figure);
+                not_again_button.Text = 'Don''t show me again';
+                not_again_button.Position = [200 50 150 30];
+            else
+                disp('Matlab version earlier than R2019b detected')
+                % Read HTML file and delete tags to keep raw text only
+                popup_html_text = fileread(file_name);
+                popup_text = regexprep(popup_html_text, '<.*?>', '');
+                % Questdialog popup with raw text and 2 buttons
+                questdlg(popup_text, 'Help box', 'Show me again later', 'Don''t show me again later', 'Show me again later')
+            end
+            
+            % Emulate button click
             manager.button_clicked(true);
         end
     end
