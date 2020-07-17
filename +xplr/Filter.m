@@ -276,7 +276,7 @@ classdef Filter < xplr.DataOperand
         function str = get.slice_fun_str_simple(F)
             [fun_str, fun_str_simple] = xplr.Filter.menu_fun_options();
             str = F.slice_fun_str;
-            idx = fn_find(str, fun_str);
+            idx = brick.find(str, fun_str);
             if ~isempty(idx)
                 str = fun_str_simple{idx};
             end
