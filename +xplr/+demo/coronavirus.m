@@ -128,7 +128,7 @@ offset = [1.6; ny-.6] - boundingbox(1,:)'.*scale;     % offset(1) + bounddingbox
 
 % country colors
 nshape = length(S);
-colors = randomcolors(nshape);
+colors = colormaps.randomcolors(nshape);
 
 % make map!
 map = zeros(nx,ny);

@@ -26,4 +26,4 @@ sat = satrange(1)+diff(satrange)*par(:,2);
 lum = lumrange(1)+diff(lumrange)*par(:,3);
 
 % build colors
-col = matrix(hsv2rgb(hue,sat,lum));
+col = brick.matrix(hsv2rgb(hue,sat,lum));
