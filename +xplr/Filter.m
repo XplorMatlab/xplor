@@ -8,7 +8,7 @@ classdef Filter < xplr.DataOperand
         % output: header_out is already a property of the dataOperand mother class
     end
     properties (SetObservable, AbortSet)
-        slice_fun = @nmean;   % 'nmean', 'mean', 'max', 'min', etc.
+        slice_fun = @brick.nmean;   % 'nmean', 'mean', 'max', 'min', etc.
         slice_fun_str = 'brick.nmean';
     end
     properties(Dependent, SetAccess='protected', Transient)
