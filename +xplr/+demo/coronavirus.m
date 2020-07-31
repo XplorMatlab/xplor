@@ -9,7 +9,7 @@ try
 catch
     disp '(loading latest data from Internet failed, reading data from local file)'
 end
-data = readtable(file);
+data = readtable(file, 'PreserveVariableNames', true);
 
 %% Header information
 
@@ -41,13 +41,13 @@ for i = 1:size(data,1)
 end
 
 % normalize by population
-CORONAVIRUS = cat(4,brick.div(CORONAVIRUS,pop/1e6),CORONAVIRUS);
+CORONAVIRUS = cat(4, CORONAVIRUS, brick.div(CORONAVIRUS, pop/1e6));
 
 % cumulated sums
-CORONAVIRUS = cat(5,CORONAVIRUS,cumsum(CORONAVIRUS,1));
+CORONAVIRUS = cat(5, CORONAVIRUS, cumsum(CORONAVIRUS, 1));
 
 datanames = {'cases' 'deaths'; ...
-    'per million people' 'total'; ...
+    'total' 'per million people'; ...
     'dayly' 'cumulated'};
 
 % % normalize by population
@@ -209,7 +209,7 @@ header = xplr.Header( ...
     {'day' dates}, ...
     {'country' countries}, ...
     {'data' {'cases' 'deaths'}}, ...
-    {'norm.' {'per million people' 'total'}}, ...
+    {'norm.' {'total' 'per million people'}}, ...
     {'type' {'daily' 'cumulated'}});
 
 V = xplor(CORONAVIRUS, ...
