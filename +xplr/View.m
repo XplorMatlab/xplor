@@ -197,13 +197,14 @@ classdef View < xplr.GraphNode
             disp(['View object has been stored in variable ''' name '''.'])
         end
         function help_menu(V)
+            % Build the Help Menu
             m = V.menu_help;
             delete(get(m,'children'))
             
             popup_manager = xplr.HelpPopupManager.get_popup_manager();
             
             % Create Help menu
-            uimenu(m, 'label', 'TEST', ...
+            uimenu(m, 'label', 'TEST - Trigger popup', ...
                 'callback', @(u,e)V.test_help())
             
             % Button Show help popups
@@ -211,12 +212,14 @@ classdef View < xplr.GraphNode
                 {'parent', m, 'label', 'Show help popups'});
             
             % Button Reset popups display
+%             fn_propcontrol(popup_manager, 'reset_identifier_list', 'menu', ...
+%                 {'parent', m, 'label', 'Reset popups via'});
             uimenu(m, 'label', 'Reset display', 'separator', 'on', ...
-                'callback', @(u,e)popup_manager.reset_identifier_lists())
+                'callback', @(u,e)popup_manager.reset_identifier_list());
             
         end
         function test_help(V)
-            disp("TEST HELP")
+            disp("TEST HELP VIEW")
             disp(xplr.HelpPopupManager.get_popup_manager())
             xplr.HelpPopupManager.popup_window(fullfile('Documentation', 'popups', 'hello.html'))
         end

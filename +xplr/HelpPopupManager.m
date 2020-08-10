@@ -84,7 +84,8 @@ classdef HelpPopupManager < matlab.mixin.SetGet
         function add_to_session_list(self, identifier)
             self.displayed_identifiers_session{end+1} = identifier;
         end
-        function reset_identifier_lists(self)
+        function reset_identifier_list(self)
+            disp("Reset identifier list");
             self.displayed_identifiers_session = {};
             self.displayed_identifiers_disk = {};
             self.save_to_disk('displayed_identifiers_disk');
@@ -114,11 +115,11 @@ classdef HelpPopupManager < matlab.mixin.SetGet
             manager = xplr.HelpPopupManager.get_popup_manager();
 
             % For testing purposes
-            manager.reset_identifier_lists()
-            disp reset
+            manager.reset_identifier_list()
+            disp reset            
+            disp("do_show_popups: " + manager.do_show_popups)
+            disp("was_identifier_displayed: " + manager.was_identifier_displayed(file_name))
             
-            ~manager.do_show_popups
-            manager.was_identifier_displayed(file_name)
             % is this message in a list of already displayed messages?
             if ~manager.do_show_popups || manager.was_identifier_displayed(file_name)
                 return
