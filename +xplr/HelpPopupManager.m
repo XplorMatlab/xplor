@@ -72,7 +72,7 @@ classdef HelpPopupManager < matlab.mixin.SetGet
     end
     
     % Identifiers lists
-    methods (Access='private')
+    methods %(Access='private')
         function value = was_identifier_displayed(self, identifier)
             value = ismember(identifier, self.displayed_identifiers_disk) ...
                 || ismember(identifier, self.displayed_identifiers_session);
@@ -116,7 +116,7 @@ classdef HelpPopupManager < matlab.mixin.SetGet
 
             % For testing purposes
             manager.reset_identifier_list()
-            disp reset            
+          
             disp("do_show_popups: " + manager.do_show_popups)
             disp("was_identifier_displayed: " + manager.was_identifier_displayed(file_name))
             
@@ -167,13 +167,17 @@ classdef HelpPopupManager < matlab.mixin.SetGet
             end
             
             disp("do_not_show_again: " + do_not_show_again)
+            disp("current_identifier " + manager.current_identifier)
+            
             % Emulate button click
-            manager.button_clicked(true);
+            manager.button_clicked(do_not_show_again);
         end
     end
     methods
         function button_clicked(self, do_not_show_again)
             % close window, restore object previous state
+            disp("identifiers disk before: " + self.displayed_identifiers_disk)
+            disp("identifiers session before: " + self.displayed_identifiers_session)
             
             % store identifier
             if do_not_show_again
@@ -182,7 +186,12 @@ classdef HelpPopupManager < matlab.mixin.SetGet
                 self.add_to_session_list(self.current_identifier)
             end
             self.current_identifier = [];
+            
+            disp("identifiers disk after: " + self.displayed_identifiers_disk)
+            disp("identifiers session after: " + self.displayed_identifiers_session)
+            
         end
+        
     end
 
 end
