@@ -219,9 +219,9 @@ classdef View < xplr.GraphNode
             
         end
         function test_help(V)
-            disp("TEST HELP VIEW")
             disp(xplr.HelpPopupManager.get_popup_manager())
             xplr.HelpPopupManager.popup_window(fullfile('Documentation', 'popups', 'hello.html'))
+            disp(xplr.HelpPopupManager.get_popup_manager())
         end
     end
     

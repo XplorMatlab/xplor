@@ -115,7 +115,7 @@ classdef HelpPopupManager < matlab.mixin.SetGet
             manager = xplr.HelpPopupManager.get_popup_manager();
 
             % For testing purposes
-            manager.reset_identifier_list()
+            %manager.reset_identifier_list()
           
             disp("do_show_popups: " + manager.do_show_popups)
             disp("was_identifier_displayed: " + manager.was_identifier_displayed(file_name))
@@ -176,8 +176,6 @@ classdef HelpPopupManager < matlab.mixin.SetGet
     methods
         function button_clicked(self, do_not_show_again)
             % close window, restore object previous state
-            disp("identifiers disk before: " + self.displayed_identifiers_disk)
-            disp("identifiers session before: " + self.displayed_identifiers_session)
             
             % store identifier
             if do_not_show_again
@@ -186,10 +184,7 @@ classdef HelpPopupManager < matlab.mixin.SetGet
                 self.add_to_session_list(self.current_identifier)
             end
             self.current_identifier = [];
-            
-            disp("identifiers disk after: " + self.displayed_identifiers_disk)
-            disp("identifiers session after: " + self.displayed_identifiers_session)
-            
+                        
         end
         
     end
