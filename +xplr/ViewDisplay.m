@@ -580,11 +580,6 @@ classdef ViewDisplay < xplr.GraphNode
         end
         function check_color_dim(D, do_immediate_display)
             c_dim_id = D.color_dim_id;
-            if ~isempty(c_dim_id) && ~isempty(D.layout_id.x) && c_dim_id == D.layout_id.x(1)
-                % cannot color according to the first x-dimension
-                if nargin < 2, do_immediate_display = false; end
-                D.set_color_dim([], do_immediate_display)
-            end
         end
         function set.line_alpha(D, line_alpha)
             % check
@@ -824,11 +819,11 @@ classdef ViewDisplay < xplr.GraphNode
             % Prepare color
             if do_color
                 c_dim = D.color_dim;
-                color_head = D.zslice.header(c_dim);
-                if isempty(D.color_dim)
+                if isempty(c_dim) || (~isempty(org.x) && c_dim == org.x(1))
                     if ~do_reset, set(D.h_display(:), 'color', [0, 0, 0, D.line_alpha]), end
                     do_color = false;
                 else
+                    color_head = D.zslice.header(c_dim);
                     k_color = strcmp({color_head.sub_labels.label}, 'ViewColor');
                     if any(k_color)
                         c_map = cell2mat(color_head.values(:,k_color));

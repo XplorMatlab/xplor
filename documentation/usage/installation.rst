@@ -5,15 +5,7 @@ xplor needs a few components available on Github:
 Download the sources
 ------------------------
 
-	* Clone or download `brick`_
-
-	.. _brick: https://github.com/XplorMatlab/brick
-
-	* Clone or download `colormaps`_
-
-	.. _colormaps: https://github.com/XplorMatlab/colormaps
-
-	* Clone or download `xplor`_
+Download or clone `xplor`_
 	
 	.. _xplor: https://github.com/XplorMatlab/xplor
 
@@ -32,31 +24,31 @@ need to know is the following:
 Configure Matlab
 -----------------
 
-	Add those downloaded folders to your paths:
+Add the root `xplor` folder to your paths (but not sub-folders):
 
-	.. image:: image/installation-setPath03.png
-	  :width: 400
-	  :alt: Set Path
+.. image:: image/installation-setPath03.png
+  :width: 400
+  :alt: Set Path
 
 Try
 ----
 
-	Try to start xplor by typing:
+Try to start xplor by typing:
 
-	.. code-block:: javascript
+.. code-block:: javascript
 
-	    xplor
+    xplor
 
-	in the commandline. It will load a default dataset. 
+in the commandline. It will load a default dataset.
 
-	.. image:: image/installation-xplor.png
-	  :width: 700
-	  :alt: Set Path
+.. image:: image/installation-xplor.png
+  :width: 700
+  :alt: Set Path
 
-	To load your own dataset :
+To load your own dataset :
 
-	.. code-block:: javascript
+.. code-block:: javascript
 
-	    xplor my_data
+    xplor my_data
 
-    Where my_data is the name of your own data variable.
+Where my_data is the name of your own data variable.

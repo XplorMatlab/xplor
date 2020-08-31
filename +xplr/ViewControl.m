@@ -418,7 +418,7 @@ classdef ViewControl < xplr.GraphNode
                 'unit', 'normalized', ...
                 'position', [0.95, 0.5, 0.05, 0.5], ...
                 'callback', @(u,e)C.dim_action('rm_filter', dim_id));
-            fn_controlpositions(C.items(item_idx).rm_filter_button, panel, ...
+            brick.controlpositions(C.items(item_idx).rm_filter_button, panel, ...
                 [1, .5, 0, .5], [-11, 0, 11, 0]);
 
             % checkbox to disable and enable the filter
@@ -704,12 +704,12 @@ classdef ViewControl < xplr.GraphNode
             slider_panel = uipanel('parent', panel, 'BorderType', 'none', ...
                 'BackgroundColor', background_color, ...
                 'ButtonDownFcn', @(u,e)slider_step(C));
-            fn_controlpositions(slider_panel, panel, [0 0 1 1], [21 1 -32 0]);
+            brick.controlpositions(slider_panel, panel, [0 0 1 1], [21 1 -32 0]);
             label = uicontrol('parent', slider_panel, ...
                 'position', [0 5 300 15], ...
                 'style', 'text', 'string', 'smooth data', 'horizontalalignment', 'left', ...
                 'backgroundcolor', background_color, ...
-                'enable', fn_switch(active, 'inactive', 'off'));
+                'enable', brick.switch(active, 'inactive', 'off'));
 
             % slider
             slider = uicontrol('parent', slider_panel, ...
@@ -724,18 +724,18 @@ classdef ViewControl < xplr.GraphNode
         function move_slider(C, slider)
             hf = C.V.hf;
             panel = get(slider, 'parent');
-            panel_pos = fn_pixelpos(panel, 'recursive'); % position of panel in figure
+            panel_pos = brick.pixelpos(panel, 'recursive'); % position of panel in figure
             x0 = panel_pos(1) + panel_pos(3) * .06;
             w = panel_pos(3) * .88;
 
             function move
                 p = get(hf, 'CurrentPoint');
                 x = p(1);
-                u = fn_coerce((x - x0) / w, 0, 1);
+                u = brick.coerce((x - x0) / w, 0, 1);
                 set(slider, 'pos', [u*.88, 0, .12, .95])
             end
 
-            fn_buttonmotion(@move, hf)
+            brick.buttonmotion(@move, hf)
         end
     end
 end
