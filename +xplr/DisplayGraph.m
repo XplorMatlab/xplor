@@ -1304,7 +1304,7 @@ classdef DisplayGraph < xplr.GraphNode
                         
                         % center: will be better pKosition if we average
                         % after conversion from indices to graph positions
-                        center = mean(G.slice_to_graph(sel.dataind, 'sub_dim', dim), 2);
+                        center = mean(G.slice_to_graph(sel.data_ind, 'sub_dim', dim), 2);
                     else
                         error 'not implemented yet'
                         center = [brick.nmean(polygon(1, :)), brick.nmean(polygon(2, :))];
