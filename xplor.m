@@ -1,8 +1,8 @@
 function V = xplor(data, varargin)
-% function V = xplor(data, options...)
-% function xplor('demo')         [launch demo]
+% XPLOR, dynamic multidimensional data viewer
 % ---
-% xplor starter
+% function V = xplor(data, options...)
+% ---
 %
 % Input:
 % - data        data to visualize: a Matlab ND array or an xplr.XData
@@ -21,18 +21,24 @@ function V = xplor(data, varargin)
 % - 'display mode'      'time courses' or 'image'
 % - 'colormap'          n*3 array or the name of a recognized color map
 %                       (this automatically set display mode to 'image')
+% ---
+% simply type 'xplor' to launch the data import wizard
+% type 'xplor demo' to select a range of demos
+% type 'xplor test' to launch the "XPLOR logo" demo
 
 % Lauch a demo if no argument
 if nargin == 0
-    disp('---')
-    disp('xplor called without arguments calls xplr.demo.logo')
-    disp('type ''xplor demo'' to see all available demos')
-    disp('---')
-    xplr.demo.logo
+    xplr.wizard
     return
-elseif nargin == 1 && ischar(data) && strcmp(data, 'demo')
-    xplr.demo
-    return
+elseif nargin == 1 && ischar(data) 
+    switch data
+        case 'demo'
+            xplr.demo
+            return
+        case 'test'
+            xplr.demo.logo
+            return
+    end
 end
 
 % % drag & drop window

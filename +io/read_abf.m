@@ -1,4 +1,5 @@
-function x = readabf(file_name)
+function x = read_abf(file_name)
+% function x = read_abf(file_name)
 
 % file name
 if nargin < 1

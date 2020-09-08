@@ -1,4 +1,5 @@
-function x = readmovie(video_file)
+function x = read_movie(video_file)
+% function x = read_movie(video_file)
 
 % file name
 if nargin < 1
