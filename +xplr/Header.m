@@ -221,7 +221,15 @@ classdef Header < handle
                     lab = {};
                 else
                     table = table_or_n;
-                    if isnumeric(table), table = num2cell(table); end
+                    if isnumeric(table) || isdatetime(table)
+                        table = num2cell(table); 
+                    elseif isstring(table)
+                        table = cellstr(table);
+                    elseif istable(table)
+                        table = table2cell(table);
+                    elseif ~iscell(table)
+                        error('incorrect type ''%s'' for table', class(table))
+                    end
                     name = [];
                 end
             elseif length(varargin)==3
@@ -496,6 +504,8 @@ classdef Header < handle
                             if length(names{k}) > 12, names{k} = [names{k}(1:10), '...']; end
                         elseif iscell(val)
                             names{k} = brick.strcat(val, ',');
+                        elseif isdatetime(val)
+                            names{k} = char(val);
                         else
                             error 'cannot form string from value'
                         end

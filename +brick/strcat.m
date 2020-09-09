@@ -42,7 +42,18 @@ c = brick.row(c);
 % c(brick.isemptyc(c)) = [];
 
 % Replace numbers by strings
-for k=1:numel(c), if ~ischar(c{k}), c{k} = num2str(c{k}); end, end
+for k=1:numel(c)
+    ck = c{k};
+    if ~ischar(ck)
+        if isnumeric(ck) || islogical(ck)
+            c{k} = num2str(ck);
+        elseif isdatetime(ck)
+            c{k}= char(ck);
+        else
+            error('cannot convert ''%s'' to char', class(ck))
+        end
+    end
+end
 
 % Special concatenation
 [c{2,:}] = deal(sep);

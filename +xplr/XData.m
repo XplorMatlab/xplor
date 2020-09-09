@@ -39,7 +39,7 @@ classdef XData < xplr.GraphNode
             % create xplr.header objects
             if nargin < 2 || isempty(head)
                 % open user edition window to edit headers
-                head = xplr.EditHeader(dat);
+                head = xplr.edit_header(dat);
             end
             if isa(head, 'xplr.DimHeader')
                 if nargin>=4
