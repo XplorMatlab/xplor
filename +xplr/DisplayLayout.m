@@ -286,6 +286,10 @@ classdef DisplayLayout
                             && (length(L2.y) == do_image) && isempty([L.xy, L.yx])
                         % grid display looks promising
                         L.xy = d_id;
+                        L2.xy = d_id;
+                    elseif isempty(L2.x)
+                        L.x(end+1) = d_id;
+                        L2.x(end+1) = d_id;
                     elseif length(L2.y) <= length(L2.x)
                         L.y(end+1) = d_id;
                         L2.y(end+1) = d_id;

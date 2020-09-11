@@ -112,16 +112,16 @@ classdef ZoomSlicer < xplr.Slicer
                         % smart update: note that this will call
                         % maybe we need: S.slicing_chain(dim:end) = [];
                         if strcmp(e.flag, 'all'), ind = []; else, ind = e.ind; end
-                        do_slice(S, 'data', e.flag,dim,ind)
+                        do_slice(S, 'data', e.flag, dim, ind)
                     else
                         % full update
                         S.slicing_chain(:) = []; % data has changed, all previous slicing steps became invalid
                         new_filt = auto_zoom_filter(S, cur_filt.link_key, dim);
                         replace_filter_dim(S, dim, new_filt)
                     end
-                case 'chg_data'
+                case {'chg_data', 'sub_data'}
                     % no change in the input header
-                    do_slice(S, 'data', 'chg_data')
+                    do_slice(S, 'data', e.flag, e.dim, e.ind)
                 otherwise
                     error 'not implemented yet'
             end

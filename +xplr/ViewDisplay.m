@@ -716,7 +716,8 @@ classdef ViewDisplay < xplr.GraphNode
             if ~isempty(D.V.data.name)
                 names = [D.V.data.name, names];
             end
-            title(D.ha, {brick.strcat(names,' - '), ''}) % the second '' serves to place the title slightly higher
+            title(D.ha, {brick.strcat(names,' - '), ''}, ...% the second '' serves to place the title slightly higher
+                'Interpreter', 'none')
         end
     end
     
@@ -797,7 +798,7 @@ classdef ViewDisplay < xplr.GraphNode
             do_color = do_time_courses && ~brick.ismemberstr(flag, {'chg_data', 'chg_data&blocksize', 'clip'});
             
             % Grid size
-            grid_size = ones(1, max(D.nd, 2));
+            grid_size = ones(1, max(D.nd, 2)); % when reshaping, size vectors must have at least 2 elements
             grid_size(external_dim_) = sz(external_dim_);
             h_display_size = ones(1, max(D.nd, 2));
             h_display_size(elements_dim_) = sz(elements_dim_);
@@ -935,7 +936,7 @@ classdef ViewDisplay < xplr.GraphNode
             if do_position
                 % (list of grid cell indices)
                 idx_grid_list = 1:prod(grid_size);
-                ijk_grid_list = brick.indices(grid_size, idx_grid_list, 'g2i');
+                ijk_grid_list = brick.indices(grid_size(1:D.nd), idx_grid_list, 'g2i');
                 % (prepare dispatch)
                 M = D.graph.get_transform(ijk_grid_list);
                 % (loop on grid cells)
@@ -966,12 +967,12 @@ classdef ViewDisplay < xplr.GraphNode
                 % (reorganize list as: rows=different grid cells, columns=overlapped elements inside same grid cell)
                 idx_h_display_list = brick.reshapepermute(idx_h_display_list, {external_dim_ overlap_dim_ internal_dim_});
                 [n_grid, n_overlap] = size(idx_h_display_list); % can be smaller than total numbers of grids/overlaps
-                ijk_h_display_list = brick.indices(h_display_size, idx_h_display_list(:),'g2i');
+                ijk_h_display_list = brick.indices(h_display_size(1:D.nd), idx_h_display_list(:),'g2i');
                 ijk_h_display_list = reshape(ijk_h_display_list, [D.nd, n_grid, n_overlap]);
                 % (corresponding grid cells)
                 ijk_grid_list = ijk_h_display_list(:, :, 1);
                 ijk_grid_list(overlap_dim_, :) = 1;
-                idx_grid_list = brick.indices(grid_size, ijk_grid_list, 'i2g');
+                idx_grid_list = brick.indices(grid_size(1:D.nd), ijk_grid_list, 'i2g');
 
                 % subs structure for slicing
                 subs = substruct('()', repmat({':'}, 1, length(sz)));

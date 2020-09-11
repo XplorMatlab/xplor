@@ -153,13 +153,25 @@ classdef Filter < xplr.DataOperand
                             k_start = ceil(lines(1, j));
                             k_stop = floor(lines(2, j));
                             if k_start == k_stop
-                                sub_names{j} = F.header_in.get_item_names{k_start};
-                            elseif F.header_in.categorical
-                                sub_names{j} = [F.header_in.get_item_names{k_start}, '-', F.header_in.get_item_names{k_stop}];
+                                if F.header_in.categorical
+                                    try
+                                        sub_names{j} = F.header_in.get_item_names{k_start};
+                                    catch
+                                        sub_names{j} = '(out)';
+                                    end
+                                else
+                                    % measure
+                                    [start, scale, unit] = deal(F.header_in.start, F.header_in.scale, F.header_in.unit);
+                                    sub_names{j} = sprintf('%.4g', start+(k_start-1)*scale, unit);
+                                end
                             else
-                                % measure
-                                [start, scale, unit] = deal(F.header_in.start, F.header_in.scale, F.header_in.unit);
-                                sub_names{j} = sprintf('%.4g-%.4g%s', start+([k_start k_stop]-1)*scale, unit);
+                                if F.header_in.categorical
+                                    sub_names{j} = [F.header_in.get_item_names{k_start}, '-', F.header_in.get_item_names{k_stop}];
+                                else
+                                    % measure
+                                    [start, scale, unit] = deal(F.header_in.start, F.header_in.scale, F.header_in.unit);
+                                    sub_names{j} = sprintf('%.4g-%.4g%s', start+([k_start k_stop]-1)*scale, unit);
+                                end
                             end
                         end 
                         names{i} = brick.strcat(sub_names, ',');

@@ -44,11 +44,14 @@ end
 % (which case are we treating?)
 x = varargin{1};
 if length(varargin)>=2
+    % more than one coordinate -> index to global
     if strcmp(convtype,'g2i'), error argument, else convtype = 'i2g'; end
     if ~isvector(x), error 'first of several arguments should be a vector', end
     ijk = zeros(length(varargin),length(x));
     for i=1:length(varargin), ijk(i,:) = varargin{i}; end
 elseif ~isvector(x) || (~strcmp(convtype,'g2i') && length(x)==nd)
+    % x has multiple rows, i.e. multiple coordinates -> index to global
+    % x length is the number of dimension -> probably index to global
     if strcmp(convtype,'g2i'), error argument, else convtype = 'i2g'; end
     if isvector(x)
         ijk = x(:);

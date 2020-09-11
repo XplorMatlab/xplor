@@ -323,7 +323,7 @@ classdef Slicer < xplr.GraphNode
             [chg_dim, chg_dim_id] = S.data.dimension_number_and_id(chg_dim);
             % indices of the change
             switch chg_flag
-                case {'new', 'chg'}
+                case {'new', 'chg', 'sub_data'}
                     ind1 = chg_ind;
                 case 'chg&new'
                     ind1 = [chg_ind{:}];
@@ -424,7 +424,7 @@ classdef Slicer < xplr.GraphNode
                     case {'remove', 'perm'}
                         % easy
                         S.slicing_chain(k).update_data(chg_flag, chg_dim_id, chg_ind, [], head_dim)
-                    case {'new', 'chg', 'chg&new', 'chg&rm'}
+                    case {'new', 'chg', 'sub_data', 'chg&new', 'chg&rm'}
                         % do a new slicing for a subset of the data
                         dim_idk = S.active_filters(k).dim_id;
                         filt_k = S.active_filters(k).obj;
@@ -433,7 +433,7 @@ classdef Slicer < xplr.GraphNode
                         data_sub = filt_k.slicing(data_sub, dimk);
                         S.slicing_chain(k).update_data(chg_flag, chg_dim_id, chg_ind, data_sub, head_dim) % last element is the slice
                     otherwise
-                        error('data_changeSmart cannot be called with flag ''%s''', chg_flag)
+                        error('smart data change not possible with flag ''%s''', chg_flag)
                 end
                 if k == n_active_filters
                     % the slice has been updated, we are done
@@ -443,7 +443,7 @@ classdef Slicer < xplr.GraphNode
             end
             
             % 2) Regular slicing for the remaining part of the chain
-            % separate end 
+            % make current slicing chain end different from slice
             if ~isempty(S.slicing_chain) && res == S.slice
                 % res was previously the end of the chain and therefore
                 % equal to the slice; but now a new filter has been
@@ -458,6 +458,21 @@ classdef Slicer < xplr.GraphNode
             for k = length(S.slicing_chain)+1:n_active_filters
                 filt_k = S.active_filters(k);
                 dim_idk = filt_k.dim_id;
+                % if filtering occurs in the dimension along which is
+                % identified partial change of the data, we cannot keep
+                % track any more of this partial change
+                if isequal(dim_idk, chg_dim_id) && strcmp(chg_origin, 'data') 
+                    switch chg_flag
+                        case {'global', 'chg_dim', 'chg_data'}
+                            % flag remains the same
+                        case 'sub_data'
+                            % no smart update possible, no header change
+                            chg_flag = 'chg_data';
+                        otherwise
+                            % no smart update possible, header change
+                            chg_flag = 'chg_dim';
+                    end
+                end
                 obj_k = filt_k.obj;
                 if ~isempty(chg_dim_id) && any(ismember(dim_idk, chg_dim_id))
                     % dimension identified by chg_dim_id in the data
@@ -498,7 +513,7 @@ classdef Slicer < xplr.GraphNode
                     % header in dimension dim_id has changed (not necessarily,
                     % but potentially also in the case 'chg'), therefore
                     % filter in that dimension is not valid anymore
-                    S.slicing_chain(:) = []; % dRata has changed, all previous slicing steps became invalid
+                    S.slicing_chain(:) = []; % data has changed, all previous slicing steps became invalid
                     % check which filters remain valid
                     keep_filter = false(1, length(S.filters));
                     switch e.flag
@@ -531,6 +546,11 @@ classdef Slicer < xplr.GraphNode
                     % keep all existing filters
                     S.slicing_chain(:) = [];
                     do_slice(S,'data','chg_data',[],[])
+                case 'sub_data'
+                    % header was not changed, it is possible to keep all
+                    % existing filters, and to do a smart update because
+                    % only part of the data has changed
+                    do_slice(S,'data','sub_data',e.dim,e.ind)
                 case 'name'
                     % name is not passed to the slice, so nothing to do
                 otherwise

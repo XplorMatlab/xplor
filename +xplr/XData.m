@@ -11,7 +11,7 @@ classdef XData < xplr.GraphNode
     % * dat   ND array
     % * head  a cell array with as many elements as data dimensions, each
     %         element is itself a cell array containing arguments for the
-    %         xplr.header constructor, but with argument 'n' ommitted
+    %         xplr.header constructor, BUT WITH ARGUMENT 'n' OMMITED
     % * name  string
     %
     % See also xplr.header
@@ -49,6 +49,13 @@ classdef XData < xplr.GraphNode
                 if ~isa(head, 'xplr.Header')
                     % convert input header information to xplr.Header
                     if ischar(head)
+                        head = {head};
+                    end
+                    if iscolumn(dat) && ~isscalar(head)
+                        % dat has only 1 dimension and head is the header
+                        % specification for the unique dimension, make it a
+                        % scalar cell array containing the spec of the
+                        % unique dimension
                         head = {head};
                     end
                     head = xplr.Header(strict_size(dat), head{:});
@@ -137,8 +144,9 @@ classdef XData < xplr.GraphNode
             % - for flags 'new' and 'chg', value is the data only for
             %   indices ind
             % - new_head is only the header in dimension dim
-            % however giving the full updated data for value, or the full
-            % header for new_head, is tolerated
+            %
+            % use flag 'chg_data' if only the data changed but not the
+            % header
             
             dim = x.dimension_number(d);
             if isempty(dim), error('dimension %g absent from data', d); end
@@ -146,24 +154,38 @@ classdef XData < xplr.GraphNode
             % check that value is real
             if nargin >= 5 && ~isreal(value), error 'data cannot be complex', end
             
-            % check that header is a dimheader
-            if ~isa(new_head, 'xplr.DimHeader'), error 'new header must be a dimheader object', end
-            
             % update header
             if nargin>=6
                 if length(new_head) == x.nd
                     % giving the full headers instead of only the updated one
                     new_head = new_head(dim);
                 end
+                if ~isa(new_head, 'xplr.DimHeader')
+                    if isa(new_head, 'xplr.Header')
+                        new_head = xplr.DimHeader(new_head, x.header(dim).dim_id);
+                    else
+                        error 'new header must be a dimheader object'
+                    end
+                end
                 check_header_update(x.header(dim), flag, ind, new_head)
             else
                 new_head = update_header(x.header(dim), flag, ind);
+                if strcmp(flag, 'chg')
+                    % only data has changed, not header
+                    if isequal(ind, 1:x.header(dim).n)
+                        flag = 'chg_data';
+                    else
+                        flag = 'sub_data';
+                    end
+                end 
             end
             if strcmp(flag, 'all') && isequal(new_head, x.header(dim))
                 % flag 'chg_data' might be preferable to 'all' to indicate
                 % that header did not change
                 flag = 'chg_data';
             end
+            % build full new headers, but do not update x object yet (some
+            % checks must be performed first)
             tmp = new_head;
             new_head = x.header;
             new_head(dim) = tmp;
@@ -176,7 +198,7 @@ classdef XData < xplr.GraphNode
             switch flag
                 case {'all', 'chg_data', 'chg_dim'}
                     new_data = value;
-                case {'chg', 'new', 'chg&new', 'chg&rm'}
+                case {'chg', 'sub_data', 'new', 'chg&new', 'chg&rm'}
                     if size(value,dim) == new_head(dim).n
                         % giving the full data instead of only the updated part
                         new_data = value;

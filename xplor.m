@@ -21,6 +21,7 @@ function V = xplor(data, varargin)
 % - 'display mode'      'time courses' or 'image'
 % - 'colormap'          n*3 array or the name of a recognized color map
 %                       (this automatically set display mode to 'image')
+% - 'controls'          'on'/True (default) or 'off'/False - show/hide the control panel
 % ---
 % simply type 'xplor' to launch the data import wizard
 % type 'xplor demo' to select a range of demos
@@ -116,10 +117,14 @@ for i = 1:length(option_names)
     switch name
         case {'view', 'ROI', 'view_and_ROI'}
             V.C.dim_action(name, value)
+        case {'filter'}
+            V.C.dim_action('add_filter', value)
         case {'display_mode'}
             V.D.(name) = value;
         case 'colormap'
             V.D.color_map.c_map_def = value;
+        case 'controls'
+            V.control_visible = boolean(value);
         otherwise
             disp(['invalide xplor option ''' name ''''])
     end

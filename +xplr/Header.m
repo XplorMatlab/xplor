@@ -117,6 +117,7 @@ classdef Header < handle
                         end
                     else
                         label = spec{i};
+                        assert(ischar(label), 'error argument')
                         H(i) = xplr.Header(label, sz(i));
                     end
                 end
@@ -535,13 +536,19 @@ classdef Header < handle
     methods
         function new_head = update_header(H, flag, ind, value)
             % function new_head = update_header(H,flag,ind,value)
+            if strcmp(flag, 'sub_data')
+                % header did not change
+                new_head = H;
+                return
+            end
             if ~brick.ismemberstr(flag, {'all', 'new', 'chg', 'remove', 'chg&new', 'chg&rm', 'perm', 'chg_dim'})
                 error('cannot update header for flag ''%s''', flag)
             end
             new_head = copy(H);
             switch H.type
                 case 'measure'
-                    error 'not implemented yet (call updateMeasureUpdate?)'
+                    % we do nothing, simply assuming that scale and start
+                    % did not change!
                 case 'categorical'
                     switch flag
                         case {'all', 'chg_dim'}
@@ -680,7 +687,7 @@ classdef Header < handle
                         unchg = true(1, H.n);
                         unchg(ind) = false;
                         [idx_h, idx_n] = deal(find(unchg)); % (much) faster than setdiff
-                    case {'new', 'chg_data'}
+                    case {'new', 'chg_data', 'sub_data'}
                         [idx_h, idx_n] = deal(1:H.n);
                     case 'chg&new'
                         unchg = true(1, H.n);

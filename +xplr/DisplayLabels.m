@@ -229,6 +229,9 @@ classdef DisplayLabels < xplr.GraphNode
         end
         function label_move(L, dim_id, do_swap, do_initial_move)
             % function label_move(L, dim_id, do_swap, do_initial_move)
+            % function label_move(L, dim_id, location) [TODO: remove this
+            % facility for a better layout update method directly inside
+            % DisplayLayout)
             %---
             % Input:
             % - dim_id  identifier of the dimension of the label to move
@@ -239,7 +242,14 @@ classdef DisplayLabels < xplr.GraphNode
             %           under the mouse pointer
             
             % input
+            dim_id = L.D.slice.dimension_id(dim_id); 
             if nargin<3, do_swap = true; end
+            if ischar(do_swap)
+                location = do_swap;
+                do_swap = false;
+            else
+                location = [];
+            end
             if nargin<4, do_initial_move = false; end
 
             % prepare for changing organization
@@ -329,6 +339,29 @@ classdef DisplayLabels < xplr.GraphNode
             L.set_positions(L.moving_dim)
 
             % move
+            if ~isempty(location)
+                % hack: label is not being dragged with the mouse, it is
+                % directly moved to a specific location
+                new_layout_id = layout_id_d;
+                % first move away label already occupying the location if
+                % needed
+                if (strcmp(location, 'merged_data') && color_dim_id) ...
+                        || (ismember(location, {'xy' 'yx'}) && xy_dim_id)
+                    swap_dim_id = fn_switch(location, ...
+                        'merged_data', color_dim_id, xy_dim_id);
+                    tmp = new_layout_id.(d_layout);
+                    new_layout_id.(d_layout) = [tmp(1:didx-1), swap_dim_id, tmp(didx:end)];
+                    new_layout_id.(location) = [];
+                end
+                % then move the selected dimension to the specified
+                % dimension
+                new_layout_id.(location)(end+1) = dim_id;
+                L.moving_dim = [];
+                delete(L.moving_clone)
+                L.moving_clone = [];
+                L.D.set_layout_id(new_layout_id, true);
+                return
+            end
             if do_initial_move
                 move_label()
             end

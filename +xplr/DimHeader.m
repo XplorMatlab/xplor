@@ -140,5 +140,16 @@ classdef DimHeader < xplr.Header
             dim_id = [H([H.n] > 1).dim_id];
         end
     end
-    
+    methods (Access='protected')
+        function H1 = copy(H)
+            H1 = xplr.DimHeader;
+            H1.copy_in(H);            
+        end
+        function H1 = copy_in(H1, H)
+            H1.copy_in@xplr.Header(H)
+            if isa(H, 'xplr.DimHeader')
+                H1.dim_id = H.dim_id;
+            end
+        end
+    end
 end

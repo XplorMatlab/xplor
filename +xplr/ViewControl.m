@@ -258,6 +258,14 @@ classdef ViewControl < xplr.GraphNode
                 return
             end
             
+            % check flag
+            if strcmp(flag, 'filter'), flag = 'add_filter'; end
+            if ~brick.ismemberstr(flag, ...
+                    {'add_filter', 'rm_filter', 'view', 'view_and_ROI', ...
+                    'set_active', 'show_filter'})
+                error('unknown action flag ''%s''', flag)
+            end
+            
             % convert dimension numbers or labels to dimension identifiers
             dim_id = C.V.data.dimension_id(dim_id);
             

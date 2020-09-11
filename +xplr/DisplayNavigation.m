@@ -284,6 +284,8 @@ classdef DisplayNavigation < xplr.GraphNode
                         % update filter
                         if ~N.selection_at_most_one || isempty(N.selection)
                             N.selection_filter.update_selection('new', sel_slice, options{:})
+                        elseif isscalar(N.selection)
+                            N.selection_filter.update_selection('chg', 1, sel_slice, options{:})
                         else
                             N.selection_filter.update_selection('chg&rm', {1, 2:length(N.selection)}, sel_slice, options{:})
                         end
