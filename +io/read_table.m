@@ -41,6 +41,21 @@ p = a.Properties;
 column_names = p.VariableNames;
 [n_row, n_col] = size(a);
 
+% Detect dates and times where Matlab maybe didn't
+v_types = opts.VariableTypes;
+for i = find(strcmp(v_types, 'char'))
+    x = a{1, i};
+    % remove everything after sign '+' and try convert to datetime
+    x = regexprep(x, '+.*', '');
+    try
+        datetime(x);
+        % succeeded in converting to datetime! -> convert the full column
+        opts.VariableTypes{i} = 'datetime';
+        a.(i) = datetime(regexprep(a{:, i}, '+.*', ''));
+    catch
+    end
+end
+
 % So far we have a 2D table, dimensions are:
 % - columns = "variables"
 % - rows = "samples"
@@ -63,6 +78,8 @@ for k = 1:n_col
     if nk == 1
         % same value everywhere! we are not interested in this column
         internal_repeat(k) = n_row;
+        is_header(k) = false;
+        is_data(k) = isnumeric(values_k);
         continue
     elseif nk == n_row
         % no repetition
@@ -89,29 +106,30 @@ for k = 1:n_col
         end
     end
     
-    % detect whether values are likely to be header info
-    if internal_repeat(k) || ~isnumeric(values_k)
-        is_header(k) = true;
-        values{k} = values_k;
-        header_spec{k} = {values_k};
-    else
+    % detect measure
+    isnum = isnumeric(values_k) || isdatetime(values_k) || isduration(values_k);
+    if isnum
         d = diff(values_k);
         equally_spaced = all(abs(diff(d)) < d(1)*1e-6);
-        is_header(k) = equally_spaced;
-        if equally_spaced
-            % header spec = unit, n, scale, start
-            header_spec{k} = {'', nk, d(1), values_k(1)};
-        end
-        is_data(k) = ~equally_spaced;
+    else
+        equally_spaced = false;
     end
-    if is_header(k)
+    if equally_spaced
+        % header spec = unit, n, scale, start
+        header_spec{k} = {'', nk, d(1), values_k(1)};
+    else
+        header_spec{k} = {values_k};
     end
+    
+    % detect whether values are likely to be header info  
+    is_header(k) = internal_repeat(k) || ~isnum || equally_spaced;
+    is_data(k) = ~is_header(k);
 end
 
 % Header for rows/samples
 % -> Attempt to exploit repetition to build-up multidimensional array
-sub_dims = find(internal_repeat);
-if any(sub_dims)
+sub_dims = find(is_header & internal_repeat);
+if ~isempty(sub_dims)
     % Detected sub-dimensions
     cycle_length = internal_repeat(sub_dims) .* n_values(sub_dims);
     [cycle_length, dim_order] = sort(cycle_length);
@@ -142,7 +160,7 @@ else
         rows_header = xplr.Header(name, n_rows);
     elseif isscalar(header_dim)
         % use specification (can be e.g. for a measure header)
-        rows_header = xplr.Header(column_names(header_dim), header_spec{header_dim});
+        rows_header = xplr.Header(column_names(header_dim), header_spec{header_dim}{:});
     else
         % table header
         rows_header = xplr.Header(column_names(header_dim), table2cell(a(:, header_dim)));
