@@ -141,15 +141,7 @@ classdef Header < handle
             end
                 
             % categorical?
-            if nargin < 3
-                H.categorical = true;
-            elseif nargin == 3
-                num2 = isnumeric(varargin{2}) || isdatetime(varargin{2}) || isduration(varargin{2});
-                num3 = isnumeric(varargin{2}) || isdatetime(varargin{2}) || isduration(varargin{2});
-                H.categorical = (~num2 && ~num3);
-            else
-                H.categorical = false;
-            end
+            H.categorical = (nargin<3) || (nargin==3 && ~isnumeric(varargin{2}) && ~isnumeric(varargin{3}));
             if H.categorical
                 build_categorical_header(H,varargin{:})
             else
