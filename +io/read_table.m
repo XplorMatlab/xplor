@@ -4,22 +4,19 @@ function data = read_table(file)
 file = cellstr(file);
 n_file = length(file);
 
-% Detect type
-data = cell(1, n_file);
-for i = 1:n_file
-    data{i} = read_one_file(file{i});
-end
-data = [data{:}];
-
-%---
-function data = read_one_file(f)
-%%
-
 % Data name
-name = fn_fileparts(f, 'base');
+if n_file > 1
+    file_base = fn_map(@(f)fn_fileparts(f, 'base'), file);
+    name = char(file_base);
+    all_same = ~any(diff(name));
+    name = name(1,:); name(~all_same) = '*';
+else
+    name = fn_fileparts(file{1}, 'base');
+end
 
 % Fix import options:
 % if numeric values are surrounded by quotes, read them as string!
+f = file{1};
 opts = detectImportOptions(f);
 fid = fopen(f, 'r');
 for k = 1:opts.DataLines(1)
@@ -34,7 +31,7 @@ for k = find(strcmp(opts.VariableTypes, 'double'))
     end
 end
 
-% Read table
+% Read table for first table
 a = readtable(f, opts);
 
 p = a.Properties;
@@ -43,6 +40,7 @@ column_names = p.VariableNames;
 
 % Detect dates and times where Matlab maybe didn't
 v_types = opts.VariableTypes;
+column_convert_datetime = false(1, n_col);
 for i = find(strcmp(v_types, 'char'))
     x = a{1, i};
     % remove everything after sign '+' and try convert to datetime
@@ -50,7 +48,7 @@ for i = find(strcmp(v_types, 'char'))
     try
         datetime(x);
         % succeeded in converting to datetime! -> convert the full column
-        opts.VariableTypes{i} = 'datetime';
+        column_convert_datetime(i) = true;
         a.(i) = datetime(regexprep(a{:, i}, '+.*', ''));
     catch
     end
@@ -127,7 +125,7 @@ for k = 1:n_col
 end
 
 % Header for rows/samples
-% -> Attempt to exploit repetition to build-up multidimensional array
+% -> Attempt to exploit repetition to unfold multidimensional array
 sub_dims = find(is_header & internal_repeat);
 if ~isempty(sub_dims)
     % Detected sub-dimensions
@@ -160,7 +158,7 @@ else
         rows_header = xplr.Header(name, n_rows);
     elseif isscalar(header_dim)
         % use specification (can be e.g. for a measure header)
-        rows_header = xplr.Header(column_names(header_dim), header_spec{header_dim}{:});
+        rows_header = xplr.Header(column_names{header_dim}, header_spec{header_dim}{:});
     else
         % table header
         rows_header = xplr.Header(column_names(header_dim), table2cell(a(:, header_dim)));
@@ -174,15 +172,74 @@ elseif sum(is_data) == 1
     % one-dimension data, no header for columns
     columns_header = xplr.Header.empty(1, 0);
 else
-    columns_header = xplr.Header('data', column_names(is_data));
+    columns_header = xplr.Header('Data', column_names(is_data));
 end
 
-% Data
-dat = table2array(a(:, is_data));
+% Header for files
+if n_file == 1
+    files_header = xplr.Header.empty(1, 0);
+else
+    files_header = xplr.Header('File', file_base);
+end
+
+% Data -> read from all files only now!
+dat = zeros([n_row, sum(is_data), n_file]);
+for k = 1:n_file
+    if k == 1
+        ak = a;
+    else
+        % Read table from next files
+        ak = readtable(file{k}, opts);
+
+        % Checkups
+        pk = ak.Properties;
+        assert(isequal(pk.VariableNames, column_names))
+        assert(isequal(size(ak), size(a)))
+
+        % Detect dates and times where Matlab maybe didn't
+        for i = find(column_convert_datetime)
+            ak.(i) = datetime(regexprep(ak{:, i}, '+.*', ''));
+        end
+        
+        % Header identity
+        assert(isequal(ak(:, is_header), a(:, is_header)))
+    end
+    dat(:, :, k) = table2array(ak(:, is_data));
+end
 if any(sub_dims)
-    dat = reshape(dat, [n_values(sub_dims), sum(is_data)]);
+    dat = reshape(dat, [n_values(sub_dims), sum(is_data), n_file]);
+end
+
+% Separate date and time !!
+header = [rows_header columns_header files_header];
+nd = length(header);
+for k = 1:nd
+    head_k = header(k);
+    if head_k.is_datetime
+        day_scale = days(head_k.scale); % double
+        day_span = head_k.n * day_scale;
+        if day_span > 4 && day_scale < .2 && (mod(1, day_scale) == 0)
+            % separate data between days and times!!
+            day_start = dateshift(head_k.start, 'start', 'day');
+            day_header = xplr.Header('Day', '', ceil(day_span), days(1), day_start);
+            time_header = xplr.Header('Time', '', 1 / day_scale, head_k.scale, day_start);
+            % new header
+            header = [header(1:k-1) time_header day_header header(k+1:end)];
+            % new data
+            sz = size(dat);
+            sz2 = [sz(1:k-1), time_header.n day_header.n sz(k+1:end)];
+            sz_ = [prod(sz(1:k-1)), head_k.n prod(sz(k+1:end))];
+            sz2_ = [prod(sz(1:k-1)), time_header.n*day_header.n prod(sz(k+1:end))];
+            dat2_ = zeros(sz2_, 'like', dat);
+            offset = days(head_k.start - day_start) / day_scale;
+            dat_ = reshape(dat, sz_);
+            dat2_(:, offset + (1:head_k.n), :) = dat_(:, :, :);
+            dat = reshape(dat2_, sz2);
+            break
+        end
+    end
 end
 
 % Structured data
-data = xplr.XData(dat, [rows_header columns_header], name);
+data = xplr.XData(dat, header, name);
 

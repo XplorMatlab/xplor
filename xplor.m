@@ -34,10 +34,10 @@ if nargin == 0
 elseif nargin == 1 && ischar(data) 
     switch data
         case 'demo'
-            xplr.demo
+            xplor.demo
             return
         case 'test'
-            xplr.demo.logo
+            xplor.demo.logo
             return
     end
 end

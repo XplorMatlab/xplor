@@ -2,7 +2,7 @@
 % See nasa_neo file for download details
 
 % Data (compressed)
-s = brick.loadvar(fullfile(xplr.demo.demo_data_folder,'NEO Earth Temperature.mat'));
+s = brick.loadvar(fullfile(xplor.demo.demo_data_folder,'NEO Earth Temperature.mat'));
 
 % Uncompress data
 data = s.temperatures(1+s.temperatures_indices);

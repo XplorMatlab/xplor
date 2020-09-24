@@ -47,7 +47,7 @@ for k=1:numel(c)
     if ~ischar(ck)
         if isnumeric(ck) || islogical(ck)
             c{k} = num2str(ck);
-        elseif isdatetime(ck)
+        elseif isdatetime(ck) || isduration(ck)
             c{k}= char(ck);
         else
             error('cannot convert ''%s'' to char', class(ck))

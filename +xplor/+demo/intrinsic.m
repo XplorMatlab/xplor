@@ -1,5 +1,5 @@
 % load data
-data = load(fullfile(xplr.demo.demo_data_folder, 'intrinsic.mat'));
+data = load(fullfile(xplor.demo.demo_data_folder, 'intrinsic.mat'));
 
 % brain activity data measured using intrinsic imaging
 x = xplr.XData(data.x, ...

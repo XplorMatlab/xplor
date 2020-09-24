@@ -188,6 +188,11 @@ country2shape(unfound) = [];
 ncountry = length(countries);
 CORONAVIRUS(:,unfound,:,:,:) = [];
 
+%% Smooth the data
+CORONAVIRUS_RAW = CORONAVIRUS;
+CORONAVIRUS = fn_filt(CORONAVIRUS, 15, 'lk', 1);
+
+
 %% Make movie!!
 
 if eval('false')

@@ -883,7 +883,7 @@ classdef ViewDisplay < xplr.GraphNode
                 if align_signals
                     D.signals_baseline = displayed_data;
                     if ~isempty(org.x)
-                        D.signals_baseline = feval(align_signals, D.signals_baseline, org.x(1));
+                        D.signals_baseline = feval(D.clipping.align_signals, D.signals_baseline, org.x(1));
                         displayed_data = brick.subtract(displayed_data, D.signals_baseline);
                     end
                 else

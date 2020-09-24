@@ -280,12 +280,78 @@ classdef DisplayGraph < xplr.GraphNode
             minimum_spacing = minimum_spacing_inch / ax_siz_inch(k);   % target spacing in axes coordinates
         end
         function step = nice_step(G, min_step)
+            % function step = nice_step(G, min_step)
+            %---
+            % determine nice step for ticks as the smaller "round" number
+            % that is more than min_step
             t10 = log10(abs(min_step));
             tests = [1, 2, 5, 10];
             [~, idx] = find(log10(tests) >= mod(t10,1), 1, 'first');
             step = sign(min_step) * 10^floor(t10) * tests(idx);
         end
-        function [tick_values, tick_labels] = nice_values(G,value_start, value_stop, min_sub_step)
+        function [tick_values, tick_labels] = nice_values_datetime(G, value_start, value_stop, min_sub_step)
+            % there will be two sub-steps per step (i.e. one value label
+            % every two ticks)
+            n_sub_step = 2;
+            min_step = min_sub_step * n_sub_step;
+            % date format: show day / year only if difference between start
+            % and end
+            if dateshift(value_start, 'start', 'day') == dateshift(value_stop, 'start', 'day')
+                date_format = '';
+            elseif dateshift(value_start, 'start', 'year') == dateshift(value_stop, 'start', 'year')
+                date_format = 'd dd/mm';
+            else
+                date_format = 'd dd/mm/yy';
+            end
+            % if min_step is a duration, determine whether the "round"
+            % number should be calculated in seconds, minutes, hours or
+            % days
+            if min_step > days(.5)
+                step = days(G.nice_step(days(min_step))); % duration
+                if isempty(date_format), date_format = 'dd/mm'; end
+                time_format = '';
+            elseif min_step > hours(.5)
+                step = hours(G.nice_step(hours(min_step)));
+                time_format = 'hh:MM';
+            elseif min_step > minutes(.5)
+                step = minutes(G.nice_step(minutes(min_step)));
+                time_format = 'hh:MM';
+            else
+                step = seconds(G.nice_step(seconds(min_step)));
+                time_format = 'hh:MM:ss';
+            end
+            if isempty(date_format)
+                format = time_format;
+            elseif isempty(time_format)
+                format = date_format;
+            else
+                format = [date_format ' ' time_format];
+            end
+            % work in seconds in any case by substracting day of
+            % value_start
+            day_start = dateshift(value_start, 'start', 'day');
+            value_start = seconds(value_start - day_start); % double
+            value_stop = seconds(value_stop - day_start);
+            step = seconds(step); % double
+            % tick values for all substeps
+            sub_step = step / n_sub_step;
+            tick_values = sub_step * (ceil(value_start/sub_step) : floor(value_stop/sub_step)); % data coordinates
+            do_label = (mod(tick_values, step)==0);
+            % convert back to datetime
+            tick_values = day_start + seconds(tick_values);
+            % tick labels only for steps
+            n_tick = length(tick_values);
+            tick_labels = cell(1, n_tick);
+            tick_labels(do_label) = cellstr(datestr(tick_values(do_label), format));
+        end
+        function [tick_values, tick_labels] = nice_values(G, value_start, value_stop, min_sub_step)
+            % special: datetime
+            if isdatetime(value_start)
+                [tick_values, tick_labels] = nice_values_datetime(G,value_start, value_stop, min_sub_step);
+                return
+            elseif isduration(value_start)
+                error 'not implemented yet'
+            end
             % there will be two sub-steps per step (i.e. one value label
             % every two ticks)
             n_sub_step = 2;
@@ -372,7 +438,11 @@ classdef DisplayGraph < xplr.GraphNode
                     [start, scale] = deal(head.start, head.scale);
                     [start, stop] = deal(start, start+(n-1)*scale);
                     [ticks_data, tick_labels] = G.nice_values(start, stop, minimum_step*scale);
-                    ticks_idx = 1 + (ticks_data-start) / scale; % data indices coordinates
+                    if isduration(scale)
+                        ticks_idx = 1 + seconds(ticks_data-start) / seconds(scale); % data indices coordinates
+                    else
+                        ticks_idx = 1 + (ticks_data-start) / scale; % data indices coordinates
+                    end
                 else
                     % ticks for each data point (display only some of
                     % them if there is not enough space for all)
@@ -1697,20 +1767,20 @@ if ~any(xok) || ~any(yok), return, end
 % look for dimensions being in the same space!
 xunits = {x_head.unit};
 yunits = {y_head.unit};
-if xok(1) && yok(1) && isequal(xunits(1), yunits(1))
+if xok(1) && yok(1) && ~isempty(xunits{1}) && isequal(xunits(1), yunits(1))
     [x_pair(1), y_pair(1)] = deal(1, 1);
     [xok(1), yok(1)] = deal(false);
 end
-if nx >= 2 && ny >= 2 && xok(nx) && yok(ny) && isequal(xunits(nx), yunits(ny))
+if nx >= 2 && ny >= 2 && xok(nx) && yok(ny) && ~isempty(xunits{nx}) && isequal(xunits(nx), yunits(ny))
     [x_pair(nx), y_pair(ny)] = deal(ny, nx);
     [xok(nx), yok(ny)] = deal(false);
 end
-if do_signal && nx >= 2 && xok(2) && yok(1) && isequal(xunits(2), yunits(1))
+if do_signal && nx >= 2 && xok(2) && yok(1) && ~isempty(xunits{2}) && isequal(xunits(2), yunits(1))
     % (x1 cannot be paired with y2 for images)
     [x_pair(2), y_pair(1)] = deal(1, 2);
     [xok(1), yok(1)] = deal(false);
 end
-if nx >= 2 && xok(2) && ny >= 2 && yok(2) && isequal(xunits(2), yunits(2))
+if nx >= 2 && xok(2) && ny >= 2 && yok(2) && ~isempty(xunits{2}) && isequal(xunits(2), yunits(2))
     [x_pair(2), y_pair(2)] = deal(2, 2);
     [xok(2), yok(2)] = deal(false); %#ok<NASGU>
 end

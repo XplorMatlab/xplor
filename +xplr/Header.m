@@ -50,6 +50,7 @@ classdef Header < handle
         all_units
         type
         is_measure
+        is_datetime
         is_enum
         is_categorical_with_values
         n_column
@@ -184,7 +185,7 @@ classdef Header < handle
                     case 'all_units'
                         if H.is_measure
                             if isempty(H.all_units)
-                                val{i} = '<in_valid empty all_units>'; % old version of xplr.header class
+                                val{i} = '';
                             else
                                 val{i} = brick.strcat({H.all_units.unit}, ',');
                             end
@@ -341,7 +342,7 @@ classdef Header < handle
             [H1.values] = deal(H.values);
             % the copy is intended to be followed by some modifications,
             % therefore, do not copy id and item_names, which will become
-            % in_valid when these modifications will occur
+            % invalid when these modifications will occur
         end
     end
     
@@ -370,6 +371,9 @@ classdef Header < handle
         end
         function b = get.is_measure(H)
             b = ~H.categorical;
+        end
+        function b = get.is_datetime(H)
+            b = H.is_measure() && isdatetime(H.start);
         end
         function b = get.is_enum(H)
             b = H.categorical && (H.n_column == 0);
@@ -684,7 +688,7 @@ classdef Header < handle
                     case 'perm'
                         ok = false;
                     otherwise
-                        error('in_valid flag ''%s'' for header update', flag)
+                        error('invalid flag ''%s'' for header update', flag)
                 end
             else
                 switch flag
@@ -717,7 +721,7 @@ classdef Header < handle
                         idx_h = ind;
                         idx_n = 1:H.n;
                     otherwise
-                        error('in_valid flag ''%s'' for header update', flag)
+                        error('invalid flag ''%s'' for header update', flag)
                 end
                 ok = isequal(new_head.values(idx_n, 1:H.n_column), H.values(idx_h, :));
             end
