@@ -6,7 +6,7 @@ n_file = length(file);
 
 % Data name
 if n_file > 1
-    file_base = fn_map(@(f)fn_fileparts(f, 'base'), file);
+    file_base = fn_map(@(f)brick.fileparts(f, 'base'), file);
     name = char(file_base);
     all_same = ~any(diff(name));
     name = name(1,:); name(~all_same) = '*';
@@ -118,8 +118,8 @@ for k = 1:n_col
     else
         header_spec{k} = {values_k};
     end
-    
-    % detect whether values are likely to be header info  
+
+    % detect whether values are likely to be header info
     is_header(k) = internal_repeat(k) || ~isnum || equally_spaced;
     is_data(k) = ~is_header(k);
 end
@@ -200,7 +200,7 @@ for k = 1:n_file
         for i = find(column_convert_datetime)
             ak.(i) = datetime(regexprep(ak{:, i}, '+.*', ''));
         end
-        
+
         % Header identity
         assert(isequal(ak(:, is_header), a(:, is_header)))
     end

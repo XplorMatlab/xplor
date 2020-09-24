@@ -213,7 +213,7 @@ classdef Filter < xplr.DataOperand
             end
             % some functions are recognized and adapted to be called
             % with the second argument being the dimension
-            f_spec = {@std, @nanstd, @nstd, @var, @nanvar, @nvar};
+            f_spec = {@std, @nanstd, @brick.nstd, @var, @nanvar, @brick.nvar};
             for i = 1:length(f_spec)
                 if isequal(fun, f_spec{i})
                     fun = @(x, d)fun(brick.float(x), 0, d);

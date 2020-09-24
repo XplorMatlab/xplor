@@ -126,6 +126,7 @@ classdef Bank < handle
     % Headers
     methods (Static)
         function register_headers(new_header)
+            xplr.log_to_file('register_headers')
             B = xplr.Bank.get_bank();
             new_header(brick.isemptyc({new_header.label})) = [];
             n = length(new_header);
@@ -134,13 +135,17 @@ classdef Bank < handle
                 idx{i} = brick.find(new_header(i), B.recent_headers, 'first');
             end
             idx = [idx{:}];
+            xplr.log_to_file('register_headers-')
             if isequal(idx, 1:n), return, end % new headers are already at the beginning of the list
+            xplr.log_to_file('register_headers--')
             % place all new headers first in the list
             B.recent_headers(idx(idx ~= 0)) = [];
             B.recent_headers = [new_header, B.recent_headers];
             n_header_max = xplr.Parameters.get('bank.NHeaderMax');
             B.recent_headers(n_header_max+1:end) = [];
+            xplr.log_to_file('register_headers---')
             save_prop(B,'recent_headers')
+            xplr.log_to_file('register_headers----')
         end
         function head = get_recent_headers(n, num_max)
             B = xplr.Bank.get_bank();

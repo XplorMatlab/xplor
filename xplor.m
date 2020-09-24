@@ -27,9 +27,16 @@ function V = xplor(data, varargin)
 % type 'xplor demo' to select a range of demos
 % type 'xplor test' to launch the "XPLOR logo" demo
 
+% Init the log
+xplr.log_to_file([], 'init')
+
 % Lauch a demo if no argument
+if isdeployed
+    V = [];
+end
 if nargin == 0
-    xplr.wizard
+    %     xplr.wizard
+    xplr.demo.flow
     return
 elseif nargin == 1 && ischar(data) 
     switch data

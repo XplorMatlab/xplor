@@ -17,6 +17,7 @@ classdef GraphNode < matlab.mixin.SetGet
     methods
         function self = GraphNode()
             self.id_graph_node = rand();
+            xplr.debug_info('GraphNode', ['create ', class(self), num2str(floor(self.id_graph_node*1000), '%.3i')]);
         end
         function delete(self)
             xplr.debug_info('GraphNode', ['delete ', class(self), num2str(floor(self.id_graph_node*1000), '%.3i')]);

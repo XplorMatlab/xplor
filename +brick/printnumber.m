@@ -118,7 +118,11 @@ switch fontsize
         patterns = squeeze(num2cell(patterns,1:2)); % convert to cell of length npattern
     case {'8x12' '8x16'}
         dolookup = false;
-        a = brick.readimg(fullfile(brick.fileparts(which('xplor'),'path'),['+brick/ascii' fontsize '.png']));
+        try
+            a = brick.readimg(fullfile(brick.fileparts(which('xplor'),'path'),['+brick/ascii' fontsize '.png']));
+        catch
+            a = brick.readimg(fullfile(brick.fileparts(which('xplor'),'path'),['ascii' fontsize '.png']));
+        end
         a = logical(a);
         switch fontsize
             case '8x12'

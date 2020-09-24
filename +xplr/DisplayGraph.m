@@ -716,7 +716,7 @@ classdef DisplayGraph < xplr.GraphNode
             end
             
             % put lines below other graphic elements
-            G.separation_lines = brick.map(@row, lines, 'array'); % single vector of graphic handles
+            G.separation_lines = brick.map(@brick.row, lines, 'array'); % single vector of graphic handles
             uistack(G.separation_lines, 'bottom')
             
         end

@@ -79,32 +79,33 @@ ok = state.active;
 %---
 function display_info(category, message, varargin)
 
-state = get_state();
-if ~state.active, return, end
+% state = get_state();
+% if ~state.active, return, end
+% 
+% try
+%     do_display = state.categories.(category);
+% catch
+%     % first time this category is met
+%     quest = sprintf('Do you want to display debug information of new category ''%s''?', ...
+%         category);
+%     do_display = brick.dialog_questandmem(quest,'xplr.debug_info');
+%     
+%     % memorize answer
+%     state.categories.(category) = do_display;
+%     save_state(state)
+% end
+% 
+% % display if appropriate
+% if do_display
+%     fprintf([category ': ' message '\n'], varargin{:})
+%     
+%     % special: stop the debugger if category is 'stop'
+%     if strcmp(category, 'stop')
+%         keyboard
+%     end
+% end
 
-try
-    do_display = state.categories.(category);
-catch
-    % first time this category is met
-    quest = sprintf('Do you want to display debug information of new category ''%s''?', ...
-        category);
-    do_display = brick.dialog_questandmem(quest,'xplr.debug_info');
-    
-    % memorize answer
-    state.categories.(category) = do_display;
-    save_state(state)
-end
-
-% display if appropriate
-if do_display
-    fprintf([category ': ' message '\n'], varargin{:})
-    
-    % special: stop the debugger if category is 'stop'
-    if strcmp(category, 'stop')
-        keyboard
-    end
-end
-
+xplr.log_to_file([category ': ' message])
 
 %---
 function set_active(value)

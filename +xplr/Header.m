@@ -318,7 +318,7 @@ classdef Header < handle
                     if length(unit_)>1 && unit_(end)=='+'
                         % check the bank for other linked units
                         unit_(end) = [];
-                        [~, ~, measure] = xplr.bank.get_unit_info(unit_);
+                        [~, ~, measure] = xplr.Bank.get_unit_info(unit_);
                         if ~isempty(measure), unit_ = measure.units; end
                     end
                     H.sub_labels = xplr.DimensionLabel(lab, 'numeric', unit_);

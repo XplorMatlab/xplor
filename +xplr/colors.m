@@ -60,7 +60,7 @@ if infinite_map
         colors = zeros(length(k), 3);
         colors(ok_map, :) = c_map(k(ok_map), :);
         k_random = k(~ok_map) - n_map;
-        c_map_random = randomcolors(max(k_random), sat_range, lum_range);
+        c_map_random = colormaps.randomcolors(max(k_random), sat_range, lum_range);
         colors(~ok_map, :) = c_map_random(k_random, :);
     end
 end
