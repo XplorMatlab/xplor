@@ -190,7 +190,7 @@ CORONAVIRUS(:,unfound,:,:,:) = [];
 
 %% Smooth the data
 CORONAVIRUS_RAW = CORONAVIRUS;
-CORONAVIRUS = fn_filt(CORONAVIRUS, 15, 'lk', 1);
+CORONAVIRUS = brick.filt(CORONAVIRUS, 15, 'lk', 1);
 
 
 %% Make movie!!
