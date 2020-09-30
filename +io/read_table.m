@@ -210,9 +210,22 @@ for k = 1:n_file
     end
     dat(:, :, k) = table2array(ak(:, is_data));
 end
+
+% Replace 0 values by NaN
+z = (dat == 0);
+if any(z(:))
+    answer = questdlg('Replace zero values by NaNs?', 'XPLOR', ...
+        'Yes', 'No', 'Yes');
+    if strcmp(answer, 'Yes')
+        dat(z) = NaN;
+    end
+end
+
+% Unfold data (i.e. reshape if there are sub-dimensions)
 if any(sub_dims)
     dat = reshape(dat, [n_values(sub_dims), sum(is_data), n_file]);
 end
+
 
 % Separate date and time !!
 header = [rows_header columns_header files_header];
