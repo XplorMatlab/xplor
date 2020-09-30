@@ -294,38 +294,16 @@ classdef DisplayGraph < xplr.GraphNode
             % every two ticks)
             n_sub_step = 2;
             min_step = min_sub_step * n_sub_step;
-            % date format: show day / year only if difference between start
-            % and end
-            if dateshift(value_start, 'start', 'day') == dateshift(value_stop, 'start', 'day')
-                date_format = '';
-            elseif dateshift(value_start, 'start', 'year') == dateshift(value_stop, 'start', 'year')
-                date_format = 'd dd/mm';
-            else
-                date_format = 'd dd/mm/yy';
-            end
-            % if min_step is a duration, determine whether the "round"
-            % number should be calculated in seconds, minutes, hours or
-            % days
+            % determine most appopriate display format and steps
+            format = xplr.auto_datetime_format(value_start, value_stop, min_step);
             if min_step > days(.5)
                 step = days(G.nice_step(days(min_step))); % duration
-                if isempty(date_format), date_format = 'dd/mm'; end
-                time_format = '';
             elseif min_step > hours(.5)
                 step = hours(G.nice_step(hours(min_step)));
-                time_format = 'hh:MM';
             elseif min_step > minutes(.5)
                 step = minutes(G.nice_step(minutes(min_step)));
-                time_format = 'hh:MM';
             else
                 step = seconds(G.nice_step(seconds(min_step)));
-                time_format = 'hh:MM:ss';
-            end
-            if isempty(date_format)
-                format = time_format;
-            elseif isempty(time_format)
-                format = date_format;
-            else
-                format = [date_format ' ' time_format];
             end
             % work in seconds in any case by substracting day of
             % value_start
@@ -342,7 +320,8 @@ classdef DisplayGraph < xplr.GraphNode
             % tick labels only for steps
             n_tick = length(tick_values);
             tick_labels = cell(1, n_tick);
-            tick_labels(do_label) = cellstr(datestr(tick_values(do_label), format));
+            t = tick_values(do_label); t.Format = format;
+            tick_labels(do_label) = cellstr(char(t));
         end
         function [tick_values, tick_labels] = nice_values(G, value_start, value_stop, min_sub_step)
             % special: datetime

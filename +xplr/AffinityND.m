@@ -17,7 +17,7 @@ classdef AffinityND < handle
     % Constructor + Load + Display
     methods
         function mov = AffinityND(varargin)
-            if isnumeric(varargin{1})
+            if isnumeric(varargin{1}) || isduration(varargin{1})
                 [linear_part, offset] = deal(varargin{:});
                 mov.nd = length(offset);
                 if mov.nd > 1 && isvector(linear_part)

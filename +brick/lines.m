@@ -150,7 +150,7 @@ end
     
 % stack to bottom
 if dostackbottom
-    if iscell(hl), hl = brick.map(hl,@row,'array'); end
+    if iscell(hl), hl = brick.map(hl,@brick.row,'array'); end
     uistack(hl,'bottom')
 end
 

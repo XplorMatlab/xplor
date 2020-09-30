@@ -33,7 +33,7 @@ if iscell(x)
     % nothing to do
 elseif ischar(x)
     x = {x};
-elseif isnumeric(x) || islogical(x)
+elseif isnumeric(x) || islogical(x) || isdatetime(x) || isduration(x)
     x = num2cell(x);
 else
     error argument
@@ -44,7 +44,12 @@ s = x;
 for i=1:numel(x)
     xi = x{i};
     if isnumeric(xi) || islogical(xi)
-        s{i} = num2str(xi,format{:});
+        s{i} = num2str(xi, format{:});
+    elseif isdatetime(xi) || isduration(xi)
+        if ~isempty(format)
+            xi.Format = format;
+        end
+        s{i} = char(xi);
     elseif doquotestrings
         s{i} = ['"' xi '"'];
     end

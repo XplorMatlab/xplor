@@ -438,7 +438,7 @@ classdef Header < handle
                 end
                 return
             end
-            if H.is_measure
+            if H.is_measure && ~H.is_datetime
                 if isempty(H.measure_space_id)
                     H.measure_space_id = brick.hash({H.label,H.unit}, 'num');
                 end
@@ -525,7 +525,15 @@ classdef Header < handle
                     end
                 elseif H.categorical
                     names = brick.num2str(idx, 'cell')';
-                else % (measure)
+                elseif H.is_datetime
+                    % (datetime -> guess what is the best format based on start and end)
+                    v = H.start + (0:H.n-1) * H.scale;
+                    step = H.scale;
+                    v.Format = xplr.auto_datetime_format(v(1), v(end), step);
+                    H.item_names = cellstr(char(v));
+                    names = H.item_names(idx);
+                else
+                    % (measure)
                     names = brick.num2str(H.start + (idx-1)*H.scale, ['%.4g', H.unit], 'cell')';
                 end
                 if do_all, H.item_names = names; end

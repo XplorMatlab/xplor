@@ -98,7 +98,7 @@ classdef FilterAndPoint < xplr.DataOperand
                     head_values{1, i} = F.header_out.sub_labels(i).default_val;
                 end
                 % replace output header
-                F.header_out = update_header(F.header_out, 'new', 1,head_values);
+                F.header_out = update_header(F.header_out, 'new', 1, head_values);
             end
         end
         function augment_header(F,varargin)

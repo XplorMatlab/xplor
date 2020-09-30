@@ -1,17 +1,21 @@
 function data = read_table(file)
 % function data = read_table(file)
 
+if nargin<1
+    file = brick.getfile('*.csv', 'Select CSV file');
+end
+
 file = cellstr(file);
 n_file = length(file);
 
 % Data name
 if n_file > 1
-    file_base = fn_map(@(f)brick.fileparts(f, 'base'), file);
+    file_base = brick.map(@(f)brick.fileparts(f, 'base'), file);
     name = char(file_base);
     all_same = ~any(diff(name));
     name = name(1,:); name(~all_same) = '*';
 else
-    name = fn_fileparts(file{1}, 'base');
+    name = brick.fileparts(file{1}, 'base');
 end
 
 % Fix import options:

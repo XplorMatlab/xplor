@@ -99,7 +99,7 @@ if isscalar(t)
     t0 = 0;
     iseqspacing = true;
     if strcmp(inputtype,'times')
-        nper = ceil(max(brick.map(@row,x,'array')-t0)/dt);
+        nper = ceil(max(brick.map(@brick.row,x,'array')-t0)/dt);
         if isempty(nper), nper = 0; end
     else
         nper = length(x);
