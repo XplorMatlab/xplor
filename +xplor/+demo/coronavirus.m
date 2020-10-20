@@ -4,8 +4,8 @@ try
     disp 'Load coronavirus data from opendata.ecdc.europa.eu'
     % url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
     url = 'https://opendata.ecdc.europa.eu/covid19/casedistribution/csv';
-    file = fullfile(fileparts(which('xplor')),'demo data','coronavirus.csv');
-    websave(file,url);
+    file = fullfile(xplor.demo.demo_data_folder, 'coronavirus.csv');
+    websave(file, url);
 catch
     disp '(loading latest data from Internet failed, reading data from local file)'
 end
