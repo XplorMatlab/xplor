@@ -1,4 +1,4 @@
-function hostname = hostname()
+function host = hostname()
 %HOSTNAME Return an identifiant specific to the computer in use
 %---
 % function hostname = hostname()
@@ -12,13 +12,13 @@ comp = computer;
 switch comp
     case {'PCWIN' 'PCWIN64'}
         comp = 'PCWIN';
-        hostname = getenv('COMPUTERNAME');
+        host = getenv('COMPUTERNAME');
     otherwise
-        hostname = getenv('HOSTNAME');
-        if isempty(hostname)
-            [dum hostname] = system('echo $HOSTNAME');
-            hostname = strrep(hostname,char(10),''); % remove endlines
+        host = getenv('HOSTNAME');
+        if isempty(host)
+            [dum host] = system('echo $HOSTNAME');
+            host = strrep(host,char(10),''); % remove endlines
         end %#ok<*ASGLU>
 end
-hostname = [comp '-' hostname];
+host = [comp '-' host];
 

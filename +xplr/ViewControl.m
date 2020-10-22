@@ -480,7 +480,7 @@ classdef ViewControl < xplr.GraphNode
             else
                 % search for the filter in the bank with key and dimension
                 if nargin<5
-                    show_new_filter = header.categorical || header.is_datetime; 
+                    show_new_filter = any([header.categorical] | [header.is_datetime]); 
                 end
                 F = xplr.Bank.get_filter_and_point(key, header, C, show_new_filter);
             end

@@ -626,8 +626,10 @@ classdef ViewDisplay < xplr.GraphNode
             end
             clip = subsref_dim(D.grid_clip, 1+clip_dim_, ijk(clip_dim_));
             % center if 'adjust by the mean' mode
-            if strcmp(D.display_mode,'time courses') && ~isempty(D.clipping .align_signals)
-                clip = clip - feval(D.clipping.align_signals, clip, 1);
+            if strcmp(D.display_mode,'time courses') && ~isempty(D.clipping.align_signals)
+                fun = brick.switch_case(D.clipping.align_signals, ...
+                    'mean', @brick.nmean, 'median', @brick.nmedian);
+                clip = clip - fun(clip, 1);
             end
         end
         function set_clip(D, clip, all_cells)

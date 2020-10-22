@@ -63,20 +63,13 @@ end
 function [configfolder, codefolder] = userfolders
 
 basefolder = fullfile(prefdir,'..','brickuser');
+if isdeployed
+    basefolder = [basefolder '_deployed'];
+end
 configfolder = fullfile(basefolder,'userconfig');
 codefolder = fullfile(basefolder,'usercode');
 if ~exist(basefolder,'dir')
     mkdir(basefolder)
-    oldconfigfolder = fullfile(prefdir,'interface_options');
-    if exist(oldconfigfolder,'dir')
-        movefile(oldconfigfolder,configfolder)
-    else
-        mkdir(configfolder)
-    end
-    oldcodefolder = fullfile(prefdir,'interface_usercode');
-    if exist(oldcodefolder,'dir')
-        movefile(oldcodefolder,codefolder)
-    else
-        mkdir(codefolder)
-    end
+    mkdir(configfolder)
+    mkdir(codefolder)
 end

@@ -153,7 +153,7 @@ classdef Filter < xplr.DataOperand
                             k_start = ceil(lines(1, j));
                             k_stop = floor(lines(2, j));
                             if k_start == k_stop
-                                if F.header_in.categorical
+                                if F.header_in.categorical || F.header_in.is_datetime
                                     try
                                         sub_names{j} = F.header_in.get_item_names{k_start};
                                     catch
@@ -165,7 +165,7 @@ classdef Filter < xplr.DataOperand
                                     sub_names{j} = sprintf('%.4g', start+(k_start-1)*scale, unit);
                                 end
                             else
-                                if F.header_in.categorical
+                                if F.header_in.categorical || F.header_in.is_datetime
                                     sub_names{j} = [F.header_in.get_item_names{k_start}, '-', F.header_in.get_item_names{k_stop}];
                                 else
                                     % measure

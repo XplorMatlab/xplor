@@ -12,7 +12,7 @@ classdef ClipTool < xplr.GraphNode
         auto_clip_mode_no_center = 'minmax'     %
         center = []                         % [], 0 or 1
         independent_dim_id_mem = []          % dimension ID of dimensions along which clipping is not uniform
-        align_signals = ''                  % '', 'nmean', 'nmedian'
+        align_signals = ''                  % '', 'mean', 'median'
         adjust_to_view = true
         buttons_only_for_current_cells = false
     end
@@ -98,7 +98,7 @@ classdef ClipTool < xplr.GraphNode
             end
             if strcmp(C.D.display_mode, 'time courses')
                 brick.propcontrol(C, 'align_signals', ...
-                    {'menuval', {'', 'nmean', 'nmedian'}, ...
+                    {'menuval', {'', 'mean', 'median'}, ...
                     {'(do not center)', 'on their mean', 'on their median'}, {'(none)', 'mean', 'median'}}, ...
                     {'parent', m, 'label', 'Align signals'});
             end

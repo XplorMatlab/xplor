@@ -27,16 +27,23 @@ function V = xplor(data, varargin)
 % type 'xplor demo' to select a range of demos
 % type 'xplor test' to launch the "XPLOR logo" demo
 
-% Init the log
-xplr.log_to_file([], 'init')
-
-% Lauch a demo if no argument
+% When deployed, make sure the output is defined otherwise an error will
+% occur
 if isdeployed
     V = [];
 end
+
+% Init the log
+xplr.log_to_file([], 'init')
+
+% Check license when deployed
+if isdeployed && ~optimage_checklicense()
+    return
+end
+
+% Lauch a demo if no argument
 if nargin == 0
-    %     xplr.wizard
-    xplr.demo.flow
+    xplr.wizard;
     return
 elseif nargin == 1 && ischar(data) 
     switch data
@@ -131,7 +138,7 @@ for i = 1:length(option_names)
         case 'colormap'
             V.D.color_map.c_map_def = value;
         case 'controls'
-            V.control_visible = boolean(value);
+            V.control_visible = brick.boolean(value);
         otherwise
             disp(['invalide xplor option ''' name ''''])
     end
