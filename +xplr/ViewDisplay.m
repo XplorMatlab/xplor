@@ -881,7 +881,12 @@ classdef ViewDisplay < xplr.GraphNode
                 if align_signals
                     D.signals_baseline = displayed_data;
                     if ~isempty(org.x)
-                        D.signals_baseline = feval(D.clipping.align_signals, D.signals_baseline, org.x(1));
+                        switch D.clipping.align_signals
+                            case 'median'
+                                D.signals_baseline = brick.nmedian(D.signals_baseline, org.x(1));
+                            case 'mean'
+                                D.signals_baseline = brick.nmean(D.signals_baseline, org.x(1));
+                        end
                         displayed_data = brick.subtract(displayed_data, D.signals_baseline);
                     end
                 else

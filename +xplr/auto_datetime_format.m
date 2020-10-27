@@ -14,7 +14,7 @@ end
 % number should be calculated in seconds, minutes, hours or
 % days
 if min_step > days(.5)
-    if isempty(date_format), date_format = 'dd/mm'; end
+    if isempty(date_format), date_format = 'dd/MM'; end
     time_format = '';
 elseif min_step > hours(.5)
     time_format = 'hh:mm';

@@ -176,7 +176,7 @@ elseif sum(is_data) == 1
     % one-dimension data, no header for columns
     columns_header = xplr.Header.empty(1, 0);
 else
-    columns_header = xplr.Header('Data', column_names(is_data));
+    columns_header = xplr.Header('Variables', column_names(is_data));
 end
 
 % Header for files
@@ -197,8 +197,23 @@ for k = 1:n_file
 
         % Checkups
         pk = ak.Properties;
-        assert(isequal(pk.VariableNames, column_names))
-        assert(isequal(size(ak), size(a)))
+        if size(ak, 1) ~= n_row
+            error(['File ''' file_base{1} ''' has ' n_row ' samples,' ...
+                ' but file ''' file_base{k} ''' has ' num2str(size(ak, 1)) ' samples.'])
+        elseif size(ak, 2) ~= n_col
+            error(['File ''' file_base{1} ''' has ' n_col ' columns,' ...
+                ' but file ''' file_base{k} ''' has ' num2str(length(pk.VariableNames)) ' columns.'])
+        elseif ~isequal(pk.VariableNames, column_names)
+            problem = false(1, n_col);
+            for i = 1:n_col
+                problem(i) = ~strcmp(pk.VariableNames{i}, column_names{i});
+            end
+            error(sprintf( ...
+                ['File ''' file_base{1} ''' and ''' file_base{k} ''' do not have the ' ...
+                'same column names for column(s) ' fn_strcat(find(problem), ', ') '.\n' ...
+                file_base{1} ': ' fn_strcat(column_names(problem), ', ') '.\n' ...
+                file_base{k} ': ' fn_strcat(pk.VariableNames(problem), ', ') '.']))
+        end
 
         % Detect dates and times where Matlab maybe didn't
         for i = find(column_convert_datetime)

@@ -33,7 +33,7 @@ send_m_file(fullfile(base_folder, '..', 'MatlabPerso', 'work', 'optimage_checkli
 
 %% Compile (manually or using the Application Compiler app)
 
-DOMANUAL = true;
+DOMANUAL = false;
 
 if DOMANUAL
     

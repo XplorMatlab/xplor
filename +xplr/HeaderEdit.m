@@ -108,7 +108,7 @@ function E = HeaderEdit(data, callback)
 
     E.hf = figure('integerhandle', 'off', 'handlevisibility', 'off', ...
         'numbertitle', 'off', 'name', 'Set headers', ...
-        'menubar', 'none', 'resize', 'off');
+        'menubar', 'none');
     set(E.hf, 'WindowButtonMotionFcn', @do_nothing)
     % force update of CurrentPoint when moving the mouse
 
@@ -241,12 +241,15 @@ methods
 function init_table(E)
     % figure
     W = 560;
+    w_button = 80;
     H = 380;
+    h_button = 30;
     brick.setfigsize(E.hf, W, H)
 
     % ok button
-    E.ok = uicontrol('parent', E.hf, 'string', 'ok', 'position', ...
-        [W-80, 1, 80, 30], 'callback', @(u,e)done(E));
+    E.ok = uicontrol('parent', E.hf, 'string', 'ok', ...
+        'callback', @(u,e)done(E));
+    brick.controlpositions(E.ok, E.hf, [1 0 0 0], [-w_button 0 w_button h_button])
 
     % "confirm all" button masks ok button, but trigger done(E)
     % E.uconfirm = uicontrol('parent',E.hf,'string', ...
@@ -254,11 +257,12 @@ function init_table(E)
     % 'position',[W-80 1 80 30]);
 
     % reset button
-    uicontrol('parent', E.hf, 'string', 'Reset all', 'callback', ...
-        @(u,e)reset_all(E), 'position', [W-2*80, 1, 80, 30]);
+    reset = uicontrol('parent', E.hf, 'string', 'Reset all', ...
+        'callback', @(u,e)reset_all(E));
+    brick.controlpositions(reset, E.hf, [1 0 0 0], [-2*w_button 0 w_button h_button])
 
     % empty table
-    E.table = uitable('parent', E.hf, 'position', [1, 31, W, H-30], ...
+    E.table = uitable('parent', E.hf, ...
         'ColumnName', { ...
             'Dim', 'Size', 'Label', 'Unit', 'Scale/Values', 'Colors', '' ...
             }, ...
@@ -266,21 +270,27 @@ function init_table(E)
             'numeric', 'numeric', 'char', 'char', 'char', 'char', 'char', ...
             }, ...
         'ColumnEditable', logical([0, 0, 1, 1, 1, 1, 0]));
+    brick.controlpositions(E.table, E.hf, [0 0 1 1], [0 h_button 0 -h_button])
     set(E.table, 'TooltipString', 'test')
+    brick.pixelsizelistener(E.hf, @(u,e)set_column_widths(E))
+    set_column_widths(E)
     u = E.table;
-    p = get(u, 'position');
-    w = p(3);
-    widths = {30, 55, 70, 70, [], 55, 55};
-    w_avail = w - sum([widths{:}]) - 2;
-    idx_auto = find(brick.isemptyc(widths));
-    [widths{idx_auto}] = deal(floor(w_avail/length(idx_auto)));
-    set(u, 'ColumnWidth', widths)
     set(u, 'RowName', [])
     set(u, 'CellEditCallback', @(u,e)celledit(E, e), ...
         'CellSelectionCallback', @(u,e)cell_select(E, e))
 
     % fill table
     display_header(E, 1:E.nd)
+end
+function set_column_widths(E)
+    p = brick.pixelsize(E.table);
+    w = p(1);
+    widths = [30, 55, 70, 70, -3, -2, 55];
+    auto_width = (widths < 0);
+    auto_rel = abs(widths(auto_width));
+    w_avail = w - sum(widths(~auto_width)) - 2;
+    widths(auto_width) = max(80, w_avail.*auto_rel/sum(auto_rel));
+    set(E.table, 'ColumnWidth', num2cell(widths))
 end
 function display_header(E, idx)
     if nargin<2, idx = 1:E.nd; end
@@ -481,8 +491,24 @@ function cell_select(E, e)
     elseif any(e.Indices(2) == [iL, iU, iV, iC]) && ~head_i.confirmed
         % Confirm guess
         head_i.confirmed = true; % line is confirmed in any case
-        head_i.guessaction = 'choose';
-        % allow user to go back to the guess
+        head_i.guessaction = 'choose'; % allow user to go back to the guess
+        E.cur_head(i) = head_i;
+        % update display
+        E.display_header(i)
+    end
+    % Select colors
+    if e.Indices(2) == iC
+        % colors not allowed for 'measure' header
+        if ~isempty(head_i.unit), return, end
+        % use method edit_colors to edit colors
+        n = E.sz(i);
+        if n > 50, return, end % too many entries
+        if isempty(head_i.values)
+            labels = brick.num2str(1:n, 'cell');
+        else
+            labels = head_i.values(:,1);
+        end
+        head_i.colors = cell2mat(xplr.HeaderEdit.edit_colors(labels, head_i.colors));
         E.cur_head(i) = head_i;
         % update display
         E.display_header(i)
@@ -539,8 +565,13 @@ function done(E)
                 head.sub_labels = {head.label};
             end
             if ~isempty(head.colors)
-                head.sub_labels{end+1} = 'ViewColor';
-                head.values(:, end+1) = num2cell(head.colors, 2);
+                if isempty(head.values)
+                    head.sub_labels = {'ViewColor'};
+                    head.values = num2cell(head.colors, 2);
+                else
+                    head.sub_labels{end+1} = 'ViewColor';
+                    head.values(:, end+1) = num2cell(head.colors, 2);
+                end
             end
             if isempty(head.values)
                 E.header(i) = xplr.Header(head.label, E.sz(i));
@@ -561,9 +592,12 @@ function done(E)
                     head.label, 'numeric', measure.units ...
                     );
             end
+            if conversion ~= 1
+                head.scale = head.scale * conversion;
+                head.start = head.start * conversion;
+            end
             E.header(i) = xplr.Header( ...
-                dimlabel, E.sz(i), head.scale*conversion, ...
-                head.start*conversion ...
+                dimlabel, E.sz(i), head.scale, head.start ...
                 );
         end
     end
@@ -582,6 +616,25 @@ function done(E)
         E.callback(E.header);
     end
 end
+end
+
+% Static methods
+methods (Static)
+    function values = edit_colors(labels, values)        
+        n = length(labels);
+        if n > 50, error 'too many colors to edit', end
+        if nargin < 2 || isempty(values)
+            values = repmat({zeros(1, 3)}, n, 1);
+        elseif isnumeric(values)
+            values = num2cell(values, 2);
+        end
+        keys = fn_num2str((1:n)','x_%i','cell');
+        spec = repmat({'color'}, n, 1);
+        values = brick.structedit(cell2struct([values spec labels(:)], keys));
+        if ~isempty(values)
+            values = struct2cell(values);
+        end
+    end
 end
     
 end
@@ -712,6 +765,8 @@ function [label, unit, scale_value, color] = display_header_info(head)
     % scale/values
     if isempty(head.scale)
         scale_value = display_value('categorical', head.values);
+    elseif isduration(head.scale)
+        scale_value = display_value('datetime', {head.scale, head.start});
     else
         scale_value = display_value('measure', [head.scale, head.start]);
     end
@@ -730,6 +785,8 @@ function str = display_value(type, value)
 switch type
     case 'measure'
         str = [num2str(value(1), 12), ' [start ', num2str(value(2),12), ']'];
+    case 'datetime'
+        str = [char(value{1}), ' [start ', char(value{2}) ']'];
     case 'categorical'
         if isempty(value)
             str = '';

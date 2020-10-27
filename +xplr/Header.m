@@ -349,7 +349,7 @@ classdef Header < handle
     % Dependent and computed properties
     methods
         function u = get.unit(H)
-            if H.categorical
+            if H.categorical || H.is_datetime
                 u = '';
             else
                 u = H.sub_labels.unit;

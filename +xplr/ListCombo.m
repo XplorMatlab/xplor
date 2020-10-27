@@ -31,7 +31,7 @@ classdef ListCombo < hgsetget
                 delete(findall(container, 'parent', container))
                 addlistener(C, 'Empty', @(u,e)delete(container));
             end
-            if ~isa(container, 'panelorganizer')
+            if ~isa(container, 'brick.panelorganizer')
                 container = brick.panelorganizer(container, 'H');
                 container.bordermode = 'push';
             end

@@ -194,7 +194,7 @@ classdef ViewControl < xplr.GraphNode
                 'label', ['Filter with shared 1D ', filter_str], 'separator', next_separator, ...
                 'callback', @(u,e)dim_action(C, 'add_filter', num2cell(dim_id), 1))
             % (more options: select among available keys)
-            available_keys = xplr.Bank.available_filter_keys('filterAndPoint');
+            available_keys = xplr.Bank.available_filter_keys('FilterAndPoint');
             new_key = max(available_keys) + 1;
             key_values = [setdiff(available_keys, 1), new_key];
             m2 = uimenu(m, 'label', 'Filter with');
