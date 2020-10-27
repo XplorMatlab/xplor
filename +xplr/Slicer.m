@@ -129,7 +129,7 @@ classdef Slicer < xplr.GraphNode
             if isempty(idxactive), return, end
             if do_slicing
                 if all(isvalid(filt_rm)) && all([filt_rm(active).nd_out] == [filt_rm(active).nd_in])
-                    do_slice(S, 'slicer','chg_dim',chg_dim_id)
+                    do_slice(S, 'slicer', 'chg_dim', chg_dim_id)
                 else
                     do_slice(S, 'slicer', 'global')
                 end

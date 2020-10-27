@@ -140,14 +140,14 @@ classdef ViewControl < xplr.GraphNode
         end
         function edit_header(C)
             data = C.V.data;
-            cur_head = data.header;
-            new_head = xplr.edit_header(C.V.data);
+            cur_head = data.header; % xplr.DimHeader object
+            new_head = xplr.edit_header(C.V.data); % xplr.Header object
             if isempty(new_head), return, end % user closed window: cancel
             dim_chg = false(1,data.nd);
             for i=1:data.nd, dim_chg(i) = ~isequal(new_head(i), cur_head(i)); end
             if any(dim_chg)
                 dim = find(dim_chg);
-                new_head_dim = xplr.DimHeader(new_head(dim));
+                new_head_dim = xplr.DimHeader(new_head(dim), cur_head(dim).dim_id);
                 C.V.data.update_data('chg_dim', dim, [], data.data, new_head_dim)
             end
         end

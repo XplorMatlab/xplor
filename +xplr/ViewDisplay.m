@@ -569,14 +569,16 @@ classdef ViewDisplay < xplr.GraphNode
             if nargin < 3, do_immediate_display = true; end
             % set property
             D.color_dim_id = dim_id;
-            % update color legend?
-            if D.show_color_legend
-                display_color_legend(D)
-            end
             % update display
             if do_immediate_display && strcmp(D.display_mode, 'time courses')
                 D.update_display('color')
             end
+            % update color legend
+            if D.show_color_legend
+                display_color_legend(D)
+            end
+            % update grid ticks
+            D.graph.color_grid_ticks()
         end
         function check_color_dim(D, do_immediate_display)
             c_dim_id = D.color_dim_id;
@@ -826,13 +828,7 @@ classdef ViewDisplay < xplr.GraphNode
                     if ~do_reset, set(D.h_display(:), 'color', [0, 0, 0, D.line_alpha]), end
                     do_color = false;
                 else
-                    color_head = D.zslice.header(c_dim);
-                    k_color = strcmp({color_head.sub_labels.label}, 'ViewColor');
-                    if any(k_color)
-                        c_map = cell2mat(color_head.values(:,k_color));
-                    else
-                        c_map = brick.colorset('plot12', 1:color_head.n);
-                    end
+                    c_map = D.zslice.header(c_dim).get_color();
                     if size(c_map, 2) == 3 && D.line_alpha < 1
                         c_map(:, 4) = D.line_alpha;
                     end

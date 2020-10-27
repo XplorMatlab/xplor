@@ -479,6 +479,9 @@ classdef DisplayGraph < xplr.GraphNode
                         'horizontalalignment', 'center', 'verticalalignment', 'baseline', ...
                         'rotation', rotation);
                 end
+                if d == G.D.color_dim
+                    G.color_grid_ticks()
+                end
             end
             
             % show separations
@@ -486,6 +489,20 @@ classdef DisplayGraph < xplr.GraphNode
                 G.draw_separations()
             end
             
+        end
+        function color_grid_ticks(G)
+            st = G.steps;
+            if isempty(st.xy_dim), return, end
+            d = st.xy_dim;
+            head = G.D.zslice.header(d);
+            if d == G.D.color_dim
+                colors = head.get_color();
+                for i=1:head.n
+                    set(G.xy_ticks(i), 'color', colors(i, :))
+                end
+            else
+                set(G.xy_ticks, 'color', 'default')
+            end
         end
         function set_value_ticks(G)
             % do we show value ticks?

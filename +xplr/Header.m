@@ -486,6 +486,18 @@ classdef Header < handle
                 x = H.values{idx, icol};
             end
         end
+        function c_map = get_color(H, idx)
+            % function c_map = get_color(H[,idx])
+            k_color = strcmp({H.sub_labels.label}, 'ViewColor');
+            if nargin < 2
+                idx = 1:H.n;
+            end
+            if any(k_color)
+                c_map = cell2mat(H.values(idx, k_color));
+            else
+                c_map = brick.colorset('plot12', idx);
+            end
+        end
     end
     
     % List of labels for each item
