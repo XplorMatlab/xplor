@@ -309,11 +309,11 @@ classdef Filter < xplr.DataOperand
             elseif F.header_in.n_column > 0
                 % track values: call to a xplr.Header method
                 head_value(:, 1:F.header_in.n_column) = F.header_in.track_values(F.indices(ind));
-                ok_brick.column(1:F.header_in.n_column) = true;
+                ok_column(1:F.header_in.n_column) = true;
             elseif F.header_in.categorical
                 % categorical with no values: keep track of indices
                 head_value(:, 1) = F.indices(ind);
-                ok_brick.column(1) = true;
+                ok_column(1) = true;
             else
                 % measure header: keep track of values
                 for i=1:n_ind
@@ -321,7 +321,7 @@ classdef Filter < xplr.DataOperand
                     if isscalar(str), str = str{1}; else str = brick.row(str); end
                     head_value{i, 1} = str;
                 end
-                ok_brick.column(1) = true;
+                ok_column(1) = true;
             end
             
             % additional values set together with the selections
