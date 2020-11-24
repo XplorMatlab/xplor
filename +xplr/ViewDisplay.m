@@ -1102,11 +1102,12 @@ classdef ViewDisplay < xplr.GraphNode
                 D.graph.set_value_ticks()
             end
             
-            % make sur containers are below labels, selections, etc.
-            % (fater to have only one call to uistack rather than after
+            % make sur containers are below labels, selections, etc. (here
+            % at the end to have only one call to uistack rather than after
             % creating each element)
             if do_reset || do_new
-                uistack(D.grid(:), 'bottom')
+                % flip to have bottom traces over top traces
+                uistack(flipud(D.grid(:)), 'bottom')
             end
 
         end
