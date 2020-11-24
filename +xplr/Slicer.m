@@ -266,7 +266,16 @@ classdef Slicer < xplr.GraphNode
             end
             nok = sum([S.filters(1:min(idx)-1).active]);
             S.slicing_chain(nok+1:end) = [];
-            do_slice(S, 'slicer', 'global')
+            if ~S.pending_rm_filter && isscalar(idx) 
+                filt = S.filters(idx).obj;
+                if filt.nd_out == filt.nd_in
+                    do_slice(S,'slicer', 'chg_dim', S.filters(i).dim_id)
+                else
+                    do_slice(S, 'slicer', 'global')
+                end
+            else
+                do_slice(S, 'slicer', 'global')
+            end
         end
         function apply_pending(S)
             if S.pending_rm_filter

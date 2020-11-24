@@ -59,10 +59,13 @@ classdef ViewDisplay < xplr.GraphNode
         active_dim
         color_dim
         layout
+        layout_all
         internal_dim
         internal_dim_id
         external_dim
         external_dim_id
+        external_dim_all
+        external_dim_id_all
         external_size
         overlap_dim
         clip_dim
@@ -163,6 +166,9 @@ classdef ViewDisplay < xplr.GraphNode
         function layout = get.layout(D)
             layout = D.layout_id.dimension_number();
         end
+        function layout = get.layout_all(D)
+            layout = D.layout_id_all.dimension_number();
+        end
         function dim = get.internal_dim(D)
             org = D.layout;
             if isempty(org.x)
@@ -189,8 +195,18 @@ classdef ViewDisplay < xplr.GraphNode
                 org.xy, org.yx];
             dim = sort(dim);
         end
+        function dim = get.external_dim_all(D)
+            org = D.layout_all;
+            dim = [org.x(2:end), org.y(1+strcmp(D.display_mode,'image'):end) , ...
+                org.xy, org.yx];
+            dim = sort(dim);
+        end
         function dim_id = get.external_dim_id(D)
             dim = D.external_dim;
+            dim_id = [D.slice.header(dim).dim_id];
+        end
+        function dim_id = get.external_dim_id_all(D)
+            dim = D.external_dim_all;
             dim_id = [D.slice.header(dim).dim_id];
         end
         function sz = get.external_size(D)
@@ -582,6 +598,7 @@ classdef ViewDisplay < xplr.GraphNode
         end
         function check_color_dim(D, do_immediate_display)
             c_dim_id = D.color_dim_id;
+            if isempty(c_dim_id), return, end
         end
         function set.line_alpha(D, line_alpha)
             % check
@@ -778,6 +795,7 @@ classdef ViewDisplay < xplr.GraphNode
             org = D.layout; % convert from dim ID to dim numbers
             internal_dim_ = D.internal_dim;
             external_dim_ = D.external_dim;
+            external_dim_all_ = D.external_dim_all;
             overlap_dim_ = D.overlap_dim;
             clip_dim_ = D.clip_dim;
             elements_dim_ = sort([overlap_dim_ external_dim_]);
@@ -849,7 +867,7 @@ classdef ViewDisplay < xplr.GraphNode
                 D.grid_clip = subsasgn_dim(D.grid_clip, 1+dim, ind, NaN);
                 D.h_display = subsasgn_dim(D.h_display, dim, ind, gobjects);
             elseif do_remove     % remove grid elements
-                if ismember(dim, external_dim_)
+                if ismember(dim, external_dim_all_)
                     brick.delete_valid(subsref_dim(D.grid, dim, ind)) % this also deletes the children hdisplay objects
                     D.grid = subsasgn_dim(D.grid, dim, ind, []);
                 end
@@ -1151,7 +1169,7 @@ classdef ViewDisplay < xplr.GraphNode
             end
 
             % Update display
-            if brick.ismemberstr(flag, {'global', 'chg_dim'})
+            if strcmp(flag, 'global')
                 % Reset display
                 update_display(D, 'global')
             elseif strcmp(flag, 'chg_data')
@@ -1174,7 +1192,7 @@ classdef ViewDisplay < xplr.GraphNode
                     switch flag
                         case {'chg', 'new', 'remove', 'perm'}
                             update_display(D, flag, chg_dim, e.ind)
-                        case 'all'
+                        case {'chg_dim', 'all'}
                             n_cur = size(D.grid, chg_dim);
                             n = D.zslice.sz(chg_dim);
                             if n == n_cur
@@ -1204,12 +1222,10 @@ classdef ViewDisplay < xplr.GraphNode
            % update selections display
            D.navigation.display_selection('referentialchanged')
 
-            % Update legend
-            if strcmp(flag, 'global')
-                D.color_dim_id = [];
-            elseif ~strcmp(flag, 'chg_data') && isequal(chg_dim, D.color_dim)
-                display_color_legend(D)
-            end
+           % Update legend
+           if ~strcmp(flag, 'chg_data') && (strcmp(flag, 'global') || isequal(chg_dim, D.color_dim))
+               display_color_legend(D)
+           end
         end
         function slice_change(D, e)
             % function slice_change(D, e)
