@@ -398,6 +398,9 @@ classdef Header < handle
                 for i=1:numel(b), if ~isequal(H1(i), H2(i)), return, end, end
                 b = true;
                 return
+            elseif ~isvalid(H1) || ~isvalid(H2)
+                b = false;
+                return
             end
             b = (H1.n == H2.n) && isequal(H1.values, H2.values) ... % start with the most likely to be unequal
                 && isequal(H1.label, H2.label) && isequal(H1.sub_labels, H2.sub_labels) ...

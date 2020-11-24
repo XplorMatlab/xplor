@@ -1,9 +1,11 @@
 function wizard
 
+close all hidden
 fig_siz = [250 80];
 screen_pos = get(0, 'ScreenSize');
 W.hf = uifigure('name', 'XPLOR', 'pos', [5 screen_pos(4)-fig_siz(2)-30 fig_siz], ...
     'menubar', 'none', 'resize', 'off');
+addlistener(W.hf, 'ObjectBeingDestroyed', @(u,e)close('all', 'hidden'));
 h = uihtml(W.hf);
 h.HTMLSource = fullfile(fileparts(which('xplor')), '+xplr/wizard.html');
 h.DataChangedFcn = @(src,event)eval(h.Data);

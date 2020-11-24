@@ -560,7 +560,7 @@ classdef DisplayGraph < xplr.GraphNode
             % clipping range by adding baseline if possible
             grid_clip = subsref_dim(G.D.grid_clip, 1+h_aligned_dims, ones(1, length(h_aligned_dims)));
             if ~isempty(G.D.signals_baseline) && same_baseline
-                signals_baseline = subsref_dim(G.D.signals_baseline, h_aligned_dims, 1);
+                signals_baseline = subsref_dim(G.D.signals_baseline, h_aligned_dims, ones(1, length(h_aligned_dims)));
                 grid_clip = brick.add(grid_clip, shiftdim(signals_baseline,-1));
             end
 
