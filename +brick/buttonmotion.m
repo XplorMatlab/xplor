@@ -219,7 +219,7 @@ rmappdata(hf,'brick_buttonmotion_scrolling')
 %---
 function disp_if_debug(varargin)
 
-if eval('true')
+if eval('false')
     str = [];
     for k=1:nargin
         x = varargin{k};
