@@ -94,7 +94,7 @@ end
     
 % Finish
 if ~ishandle(hf), return, end % figure has been closed in the mean while
-if doup || any(getappdata(hf,'brick_buttonmotion_lastmoverejected'))
+if doup
     setappdata(hf,'brick_buttonmotion_scrolling',false)
     exec(fun,nout,hf);
     try rmappdata(hf,'brick_buttonmotion_scrolling'), end %#ok<TRYNC>
@@ -127,7 +127,7 @@ if strcmp(actionflag,'stop2'), actionflag = 'stop'; end
 if getappdata(hf,'brick_buttonmotion_busy')
     switch actionflag
         case 'move' % cancel
-            setappdata(hf,'brick_buttonmotion_lastmoverejected',true)
+            setappdata(hf,'brick_buttonmotion_lastmoverejected', debugstr)
             disp_if_debug(['rejct ' debugstr])
             return
         case 'stop' % queue
@@ -163,9 +163,22 @@ end
 disp_if_debug(['end   ' debugstr])
 drawnow % allow queued events to be processed (and canceled, because of 'brick.buttonmotion_busy' flag)
 setappdata(hf,'brick_buttonmotion_moved',true)
+
+
+% execute queued motion if any (but only the last one!)
+while any(getappdata(hf,'brick_buttonmotion_lastmoverejected'))
+    disp_if_debug(['exec queued ' getappdata(hf,'brick_buttonmotion_lastmoverejected')])
+    setappdata(hf,'brick_buttonmotion_lastmoverejected',false)
+    try
+        exec(fun,nout,hf);
+    catch ME
+        terminate(hf)
+        rethrow(ME)
+    end
+end
 setappdata(hf,'brick_buttonmotion_busy',false)
 
-% stop (queued)
+% execute queued stop if any
 try
     debugstr = getappdata(hf,'brick_buttonmotion_queuestop');
     if ~isempty(debugstr)

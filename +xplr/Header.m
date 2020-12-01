@@ -365,6 +365,8 @@ classdef Header < handle
         function type = get.type(H)
             if H.categorical
                 type = 'categorical';
+            elseif H.is_datetime
+                type = 'datetime';
             else
                 type = 'measure';
             end

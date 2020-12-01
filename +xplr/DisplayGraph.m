@@ -611,7 +611,7 @@ classdef DisplayGraph < xplr.GraphNode
             % corrected), indicate that clip values are relative to
             % baselines
             if ~same_baseline
-                [y_tick_label{y_tick_values==0}] = deal(['(' G.D.clipping.align_signals(2:end) ')']);
+                [y_tick_label{y_tick_values==0}] = deal(['(' G.D.clipping.align_signals ')']);
                 idx_p = (y_tick_values>0 & ~brick.isemptyc(y_tick_label));
                 y_tick_label(idx_p) = brick.map(@(str)['+' str], y_tick_label(idx_p), 'cell');
             end
