@@ -56,7 +56,6 @@ classdef SelectionShape
                     S.vectors = zeros(2, 0);
                 case 'rect2D'
                     if ~isvector(data) || length(data) ~= 4, error('data should be a 4-element vector (x,y,w,h)'), end
-                    if any(data(3:4) < 0), error('width and height must be >= 0'), end
                     S.points = [data(1); data(2)];
                     S.vectors = [data(3); data(4)];
                 case {'ellipse2D', 'ring2D'}

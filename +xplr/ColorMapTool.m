@@ -55,7 +55,7 @@ classdef ColorMapTool < xplr.GraphNode
             
             % Control visibility depending on dislay mode
             set(C.menu, 'visible', brick.switch_case(D.display_mode, 'image', 'on', 'off'));
-            brick.connect_listener(D, C, 'display_mode', 'PostSet', ...
+            brick.connect_listener(D, C, 'display_mode_', 'PostSet', ...
                 @(u,e)set(C.menu, 'visible', brick.switch_case(D.display_mode, 'image', 'on', 'off')));
         end
     end

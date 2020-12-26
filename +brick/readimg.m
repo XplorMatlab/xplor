@@ -1,8 +1,8 @@
-function [a, alpha] = readimg(fname,flag)
-% function [a [,alpha]] = readimg(fname[,'nopermute'])
+function [a, alpha] = readimg(fname,varargin)
+% function [a [,alpha]] = readimg(fname[,'nopermute'][,'double'])
 %---
 % read image using imread, and handles additional features:
-% - converts to double
+% - converts to double if 'double' option is set
 % - detects if color or gray-scale images (in the last case, use a 2D array per image)
 % - can read a stack of images (returns 3D array)
 %
@@ -16,17 +16,13 @@ function [a, alpha] = readimg(fname,flag)
 if nargin<1
     fname = brick.getfile;
 end
-if nargin<2
-    dopermute = true;
-else
-    if ~strcmp(flag,'nopermute'), error argument, end
-    dopermute = false;
-end
+[nopermute, dofloat] = brick.flags('nopermute', 'double', varargin);
+dopermute = ~nopermute;
 fname = cellstr(fname);
 nimages = length(fname);
 
 % first image
-[a alpha] = readoneframe(fname{1}, dopermute, true, false);
+[a, alpha] = readoneframe(fname{1}, dopermute, true, false);
 firstchannelonly = (size(a,3) == 1);
 
 % multi-gif?
@@ -73,22 +69,30 @@ if nimages*nframes>1
 end
 
 % make float-encoded color image btw 0 and 1
-if ~firstchannelonly
+if dofloat || ismember(class(a), {'single', 'double'})
     switch class(a)
         case {'single' 'double'}
             nbyte = ceil(log2(max(a(:)))/8);
-            switch nbyte
-                case 0
-                    % max(a(:)) is 1, this is fine
-                case 1
-                    a = a/255;
-                case 2
-                    a = a/65535;
-                otherwise
-                    if brick.dodebug, disp 'please help me', keyboard, end
-            end
+        case 'uint8'
+            nbyte = 1;
+        case 'uint16'
+            nbyte = 2;
         otherwise
-            %if brick.dodebug, disp 'please help me', keyboard, end
+            if brick.dodebug, disp 'please help me', keyboard, end
+    end
+    a = brick.float(a);
+    alpha = brick.float(alpha);
+    switch nbyte
+        case 0
+            % max(a(:)) is 1, this is fine
+        case 1
+            a = a/255;
+            alpha = alpha/255;
+        case 2
+            a = a/65535;
+            alpha = alpha/65535;
+        otherwise
+            if brick.dodebug, disp 'please help me', keyboard, end
     end
 end
     

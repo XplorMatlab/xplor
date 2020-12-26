@@ -187,6 +187,7 @@ classdef ClipTool < xplr.GraphNode
     % Adjusting
     methods
         function set_independent_dim(C, dim_id, independent)
+            % function set_independent_dim(C, dim_id, independent)
             if nargin<3, independent = true; end
             dim_id = C.D.slice.dimension_id(dim_id);
             if independent

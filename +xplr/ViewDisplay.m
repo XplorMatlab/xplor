@@ -32,14 +32,15 @@ classdef ViewDisplay < xplr.GraphNode
     end
     
     % Display properties
-    properties (Access='private')
+    properties (Access='private', SetObservable=true)
         display_mode_ = 'image';  % 'time courses' or 'image'
     end
-    properties (Dependent, SetObservable=true, AbortSet=true)
+    properties (Dependent, AbortSet=true)
         display_mode
     end
     properties (SetObservable=true, AbortSet=true)
         show_color_legend = false; % false by default because of bug in Matlab's legend function, which inactivates several listeners
+        line_width = 1.1;
         line_alpha = 1; % lines have a small degree of transparency!
         do_title = true;
     end    
@@ -94,7 +95,8 @@ classdef ViewDisplay < xplr.GraphNode
             c = brick.disable_listener(D.listeners.ax_siz); % prevent display update following automatic change of axis position during all the following initializations
             
             % 'time courses'/'image' switch
-            p = brick.propcontrol(D, 'display_mode', {'popupmenu', 'time courses', 'image'}, 'parent', D.hp);
+            p = brick.propcontrol(D, {'display_mode' 'display_mode_'}, ...
+                {'popupmenu', 'time courses', 'image'}, 'parent', D.hp);
             brick.controlpositions(p.hu, D.hp, [1, 1], [-90, -25, 90, 25])
             
             % positionning (needed by both labels and data display)
@@ -262,9 +264,12 @@ classdef ViewDisplay < xplr.GraphNode
 
             % time courses display
             if strcmp(D.display_mode, 'time courses')
+                brick.propcontrol(D, 'line_width', ...
+                    {'menuval', {.1, .2, .5, 1, 1.1, 1.2, 1.5, 2, 3}}, ...
+                    {'parent', m, 'label', 'Lines width', 'separator', 'on'});
                 brick.propcontrol(D, 'line_alpha', ...
                     {'menuval', {1, .7, .4, .1}, {'none', 'mild', 'medium', 'strong', 'manual'}}, ...
-                    {'parent', m, 'label', 'Lines transparency', 'separator', 'on'});
+                    {'parent', m, 'label', 'Lines transparency'});
                 do_sep = true;
             else
                 do_sep = false;
@@ -578,8 +583,8 @@ classdef ViewDisplay < xplr.GraphNode
     % Color
     methods
         function set_color_dim(D, dim, do_immediate_display)
-            if ~isnumeric(dim) || numel(dim) > 1, error 'color_dim must be empty or scalar', end
             dim_id = D.slice.dimension_id(dim);
+            if ~isnumeric(dim_id) || numel(dim_id) > 1, error 'color_dim must be empty or scalar', end
             if isequal(dim_id, D.color_dim_id), return, end
             if ~isempty(dim_id) && ~isempty(D.layout_id.x) && dim_id == D.layout_id.x(1), disp 'first x-dimension cannot be used for colors', return, end
             if nargin < 3, do_immediate_display = true; end
@@ -599,6 +604,16 @@ classdef ViewDisplay < xplr.GraphNode
         function check_color_dim(D, do_immediate_display)
             c_dim_id = D.color_dim_id;
             if isempty(c_dim_id), return, end
+        end
+        function set.line_width(D, line_width)
+            % check
+            if ~isscalar(line_width) || line_width <= 0, error 'incorrect line width value', end
+            % set value
+            D.line_width = line_width;
+            % update display
+            if strcmp(D.display_mode, 'time courses')
+                set(D.h_display, 'linewidth', D.line_width)
+            end
         end
         function set.line_alpha(D, line_alpha)
             % check
@@ -843,7 +858,11 @@ classdef ViewDisplay < xplr.GraphNode
             if do_color
                 c_dim = D.color_dim;
                 if isempty(c_dim) || (~isempty(org.x) && c_dim == org.x(1))
-                    if ~do_reset, set(D.h_display(:), 'color', [0, 0, 0, D.line_alpha]), end
+                    if ~do_reset
+                        try
+                            set(D.h_display(:), 'color', [0, 0, 0, D.line_alpha])
+                        end
+                    end
                     do_color = false;
                 else
                     c_map = D.zslice.header(c_dim).get_color();
@@ -970,6 +989,13 @@ classdef ViewDisplay < xplr.GraphNode
                         D.grid(idx_grid) = hgtransform('parent', D.ha, ...
                             'matrix', M(:, :, idx_grid), 'HitTest', 'off');
                     else
+% %                         old = get(D.grid(idx_grid), 'matrix');
+% %                         set(D.grid(idx_grid), 'user', old)
+%                         hack = get(D.grid(idx_grid), 'user');
+%                         hack(2,2) = hack(2,2)*10;
+%                         r = 1;
+%                         hack = hack * (1-r) + M(:,:,idx_grid) * r;
+%                         set(D.grid(idx_grid), 'matrix', hack)
                         set(D.grid(idx_grid), 'matrix', M(:, :, idx_grid))
                     end
                 end
@@ -1036,14 +1062,18 @@ classdef ViewDisplay < xplr.GraphNode
                         if do_time_courses
                             xi = (xi - clipi(1)) / diff(clipi);
                             nt = size(xi,1);
+                            line_style = '-';
+                            marker = 'none';
                             if nt==1
-                                line_opt = {'linestyle', 'none', 'marker', ' .'};
-                            else
-                                line_opt = {'linestyle', '-', 'marker', 'none'};
+                                line_style = 'none';
+                                marker = '.';
                             end
+                            line_opt = {'linestyle', line_style, 'marker', marker, ...
+                                'linewidth', D.line_width};
                             if ~ishandle(D.h_display(idx_h_display))
                                 hl = line(1:nt,xi, ...
-                                    'parent', D.grid(idx_grid), 'HitTest', 'off', line_opt{:});
+                                    'parent', D.grid(idx_grid), 'HitTest', 'off', ...
+                                    line_opt{:});
                                 D.h_display(idx_h_display) = hl;
                             else
                                 hl = D.h_display(idx_h_display);
@@ -1194,7 +1224,7 @@ classdef ViewDisplay < xplr.GraphNode
                         case {'chg', 'new', 'remove', 'perm'}
                             update_display(D, flag, chg_dim, e.ind)
                         case {'chg_dim', 'all'}
-                            n_cur = size(D.grid, chg_dim);
+                            n_cur = size(D.grid_clip, 1+chg_dim);
                             n = D.zslice.sz(chg_dim);
                             if n == n_cur
                                 update_display(D, 'chg_data')

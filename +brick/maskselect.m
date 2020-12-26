@@ -29,7 +29,8 @@ switch mouseflag
     case 'rect'
         mouseflag = 'rectangle';
     case 'ellipse'
-        error('not implemented yet')
+        % force conversion to polygon
+        mouseflag = 'ellipse:1:';
     case {'poly' 'free'}
         % ok
     otherwise

@@ -241,13 +241,20 @@ if domask && docomplex
     error('''mask'' and ''complex'' options not implemented together yet')
 end
 
+% Must work with non-sparse double-precision numbers
+x = full(double(x)); 
+
 % Size and type
 s = size(x);
 xtype = class(x);
 
 % Remove NaNs
-badidx = isnan(x);
-x(badidx) = full(mean(x(~badidx)));
+x_isnan = isnan(x);
+if domask
+    x(x_isnan) = mean(x(~x_isnan));
+else
+    x(x_isnan) = 0;
+end
 
 % Detrend
 if dodetrend
@@ -270,11 +277,19 @@ end
 % Mask
 if domask
     if isempty(mask)
-        smask = ones(1,length(s));
-        for i=dim, smask(i) = s(i); end
-        mask = ones(smask);
+        if any(x_isnan(:))
+            mask = double(~x_isnan);
+        else
+            % mask will be the same for every 'parallel' filtering in
+            % dimensions other than 'dim' -> mask needs to be defined only in
+            % the 'dim' dimension(s)
+            smask = ones(1,length(s));
+            for i=dim, smask(i) = s(i); end
+            mask = ones(smask);
+        end
         dopad = true;
     else
+        % old code, needs to be at least commented...
         mask = double(mask);
         dopad = false;
         maxtau = max(tau); % pad with twice the period
@@ -306,7 +321,7 @@ if domask
         otherwise
             error '''mask'' option is possible only for low-pass and high-pass'
     end
-    x = brick.mult(x,mask);
+    x = brick.mult(x, mask);
 else
     dopad = domirror || ~isempty(pad);
 end
@@ -349,7 +364,6 @@ switch filtertype
         dogaussian = strcmp(filtertype,'gaussian');
         
         % Get data in Fourier space
-        x = full(double(x)); % must work with non-sparse double-precision numbers
         if isscalar(dim)
             xf = fft(x,[],dim);
             if domask, maskf = fft(mask,[],dim); end
@@ -501,7 +515,7 @@ if dodetrend && any(type=='ln')
 end
 
 % Put back NaNs!
-y(badidx) = NaN;
+y(x_isnan) = NaN;
 
 % Back to single precision?
 if ~strcmp(xtype,'double') %#ok<STISA>

@@ -686,6 +686,7 @@ classdef slider < hgsetget
                     end
                 case 'frame'
                     % step the slider
+                    if ~strcmp(get(U.hf,'selectiontype'),'normal'), return, end
                     xf = mouseposframe(U);
                     dir = 2*(xf>U.center)-1;
                     if U.area
@@ -697,6 +698,7 @@ classdef slider < hgsetget
                     U.width = 1;
                 otherwise
                     % slide
+                    if ~strcmp(get(U.hf,'selectiontype'),'normal'), return, end
                     p0 = mouseposframe(U);
                     if strcmp(flag,'slider') && U.area && U.grab_sides
                         PIX = 4;

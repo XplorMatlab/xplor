@@ -615,12 +615,13 @@ drawnow update
 function x = interpPoly(x,mode)
 
 f = find(mode==':');
-ds = str2double(mode(f(1)+1:end));
+ds = str2double(mode(f(1)+1:f(2)-1));
+openline = ~any(mode=='@');
 if ~openline, x(:,end+1)=x(:,1); end
 np = size(x,2);
-L = zeros(1,np);
-for i=2:np, L(i) = L(i-1)+norm(x(i,:)-x(i-1,:)); end
-if ~isempty(L), x = interp1(L,x,0:ds:L(end)); end
+L = zeros(np,1);
+for i=2:np, L(i) = L(i-1)+norm(x(:,i)-x(:,i-1)); end
+if ~isempty(L), x = interp1(L,x',0:ds:L(end))'; end
 
 %------------
 % ELLIPSE

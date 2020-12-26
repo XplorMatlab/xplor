@@ -14,6 +14,12 @@ classdef propcontrol < hgsetget
 % - obj     the object whose property is observed
 % - prop    the name of the observed property THIS PROPERTY MUST BE SET AS 
 %           OBSERVABLE, AND ITS SET ACCESS MUST BE PUBLIC
+%           'prop' can also be a set of 2 elements {'prop', 'obs_prop'}
+%           defining separately the public dependent property being
+%           controlled and the underlying private property that it mirrors
+%           and that should be observed (indeed when a property is
+%           dependent and its dependent value changes because another
+%           property is changed, this does not trigger a 'PostSet' action)
 % - spec    specification of both the value type and the control style:
 %           . for logical values: 'checkbox', 'radiobutton','togglebutton'
 %             or 'menu' 
@@ -59,6 +65,7 @@ properties (SetAccess='private')
     % controled object
     obj
     prop
+    obs_prop
     % control object(s)
     hu
     hparent             % 'sub' menu style only: entry at top level
@@ -87,7 +94,12 @@ end
 methods
     function M = propcontrol(obj,prop,spec,varargin)
         M.obj = obj;
-        M.prop = prop;
+        if iscell(prop)
+            [M.prop, M.obs_prop] = deal(prop{:});
+        else
+            M.prop = prop;
+            M.obs_prop = prop;
+        end
         if isscalar(varargin) && iscell(varargin{1})
             varargin = varargin{1};
         end
@@ -219,7 +231,7 @@ methods
         updatevalue(M)
         
         % watch object property
-        M.proplistener = addlistener(obj,prop,'PostSet',@(u,e)updatevalue(M));
+        M.proplistener = addlistener(obj,M.obs_prop,'PostSet',@(u,e)updatevalue(M));
         
         % delete everything upon object deletion or control deletion
         addlistener(obj,'ObjectBeingDestroyed',@(u,e)delete(M));

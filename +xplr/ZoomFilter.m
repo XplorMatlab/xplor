@@ -52,7 +52,7 @@ classdef ZoomFilter < xplr.DataOperand
                 z.zoom = zoom;
             else
                 if ~isnumeric(zoom) || length(zoom) ~= 2, error 'wrong zoom value', end
-                zoom = [max(.5,zoom(1)), min(z.header_in.n+.5,zoom(2))];
+                zoom = [max(.50001,zoom(1)), min(z.header_in.n+.49999,zoom(2))];
                 if diff(zoom) <= 0, zoom = ':'; end % invalid zoom -> zoom reset
                 z.zoom = zoom;
             end

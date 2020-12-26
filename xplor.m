@@ -12,7 +12,7 @@ function V = xplor(data, varargin)
 % Available options:
 % - 'header'    header description of the data, either an xplr.Header
 %               object of length the number of dimensions of data or a
-%               description (see xplr.XData for the syntax)
+%               cell array description (see xplr.XData for the syntax)
 % - 'name'      name to give to the data
 % - 'view'      select which dimensions to view (others will be filtered)
 % - 'ROI'       select dimensions in which to select regions of interest
@@ -26,6 +26,8 @@ function V = xplor(data, varargin)
 % simply type 'xplor' to launch the data import wizard
 % type 'xplor demo' to select a range of demos
 % type 'xplor test' to launch the "XPLOR logo" demo
+%
+% See also xplr.XData
 
 % When deployed, make sure the output is defined otherwise an error will
 % occur
@@ -125,23 +127,32 @@ V = xplr.View(data);
 
 % apply options
 option_names = fieldnames(options);
-for i = 1:length(option_names)
-    name = option_names{i};
-    value = options.(name);
-    switch name
-        case {'view', 'ROI', 'view_and_ROI'}
-            V.C.dim_action(name, value)
-        case {'filter'}
-            V.C.dim_action('add_filter', value)
-        case {'display_mode'}
-            V.D.(name) = value;
-        case 'colormap'
-            V.D.color_map.c_map_def = value;
-        case 'controls'
-            V.control_visible = brick.boolean(value);
-        otherwise
-            disp(['invalide xplor option ''' name ''''])
+invalid_names = setdiff(option_names, ...
+    {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
+    'filter', 'displaymode', 'display_mode'});
+if ~isempty(invalid_names)
+    error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])
+end
+if isfield(options, 'controls')
+    V.control_visible = brick.boolean(options.controls);
+end
+if isfield(options, 'colormap')
+    V.D.color_map.c_map_def = options.colormap;
+end
+actions = {'view', 'ROI', 'view_and_ROI', 'filter'};
+for i = 1:length(actions)
+    name = actions{i};
+    if isfield(options, name)
+        action_name = brick.switch_case(name, ...
+            'filter', 'add_filter', ...
+            name);
+        V.C.dim_action(action_name, options.(name))
     end
+end
+if isfield(options, 'display_mode')
+    V.D.display_mode = options.display_mode;
+elseif isfield(options, 'displaymode')
+    V.D.display_mode = options.displaymode;
 end
 
 %---

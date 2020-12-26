@@ -23,28 +23,30 @@ if n==0
     return
 end
 tokens = regexp(a,expr,'tokens');       % cell array (n) of cell arrays (#match) of cell arrays (#tokens) of strings
-out = [];                               % will be a cell array (#tokens) of cell arrays (n) of strings
+if isempty(tokens) || isempty(tokens{1})
+    error 'no match'
+end
+ntoken = length(tokens{1}{1});
+if ntoken==0                
+    disp 'brick.regexptokens: no token, returning full match'
+    tokens = brick.map(@(x){x}, regexp(a,expr,'match'), 'cell');
+    ntoken = 1;
+end
+% out is a cell array (#tokens) of cell arrays (n) of strings
+out = cell(1, ntoken);
+[out{:}] = deal(cell(1,n));
 for i=1:n
     tokens_i = tokens{i};               % one or zero element depending on match or not
     if length(tokens_i)>1
         error 'more than one match'
     elseif isempty(tokens_i)
         error 'no match'
-    else
-        tokens_i = tokens_i{1};
-        if isempty(out)
-            ntoken = length(tokens_i);
-            if ntoken==0
-                error 'no token!'
-            end
-            out = cell(1, ntoken);
-            [out{:}] = deal(cell(1,n));
-        elseif length(tokens_i) ~= ntoken
-            error 'not the same number of tokens in every string, can this really happen?!'
-        end
-        for k=1:ntoken
-            out{k}{i} = tokens_i{k}; %#ok<AGROW>
-        end
+    elseif length(tokens_i{1}) ~= ntoken
+        error 'not the same number of tokens in every string, can this really happen?!'
+    end
+    tokens_i = tokens_i{1};
+    for k=1:ntoken
+        out{k}{i} = tokens_i{k}; 
     end
 end
 

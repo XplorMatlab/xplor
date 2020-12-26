@@ -151,12 +151,12 @@ switch flag
                 (1+cols(kc,:))/2, ...
                 'parent',ha, ...
                 'edgecolor','none'); %,'facealpha',.5);
-            brick.set(hl{1}(k),opt{:})
+            brick.set(hl{2}(k),opt{:})
         end
         for k=1:n
             kc = 1+mod(k-1,ncol);
             hl{1}(k) = line(x,y(:,k),'color',cols(kc,:),'parent',ha);
-            brick.set(hl{2}(k),opt{:})
+            brick.set(hl{1}(k),opt{:})
         end
     case 'xerror'
         % scatter plot with errors for both x and y

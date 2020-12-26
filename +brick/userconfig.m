@@ -1,8 +1,10 @@
 function varargout = userconfig(flag,varargin)
 % function userconfig(flag,var1,var2,var3...)                       % save
 % function [var1 var2 var3...] = userconfig(flag)                   % load
+% function s = userconfig(flag)                                     % load into a structure
 % function name = userconfig('configfolder|codefolder'[,filename])  % get file name
 % function name = userconfig('open'[,'configfolder|codefolder'])    % open folder in file browser
+% function userconfig('remove', flag)                               % remove config
 %---
 % Save or load variables in/from the file 
 % [prefdir '/../brickuser/userconfig/' flag '.mat']
@@ -10,9 +12,9 @@ function varargout = userconfig(flag,varargin)
 % Thomas Deneux
 % Copyright 2015-2017
 
-% Folder
+% Folder and special actions
 [configfolder, codefolder] = userfolders();
-if brick.ismemberstr(flag,{'configfolder' 'codefolder'})
+if brick.ismemberstr(flag, {'configfolder', 'codefolder'})
     folder = brick.switch_case(flag,'configfolder',configfolder,'codefolder',codefolder);
     if nargin>=2
         varargout = {fullfile(folder,varargin{:})};
@@ -20,7 +22,7 @@ if brick.ismemberstr(flag,{'configfolder' 'codefolder'})
         varargout = {folder};
     end
     return
-elseif strcmp(flag,'open')
+elseif strcmp(flag, 'open')
     if nargin>=2
         folderflag = varargin{1};
     else
@@ -29,6 +31,11 @@ elseif strcmp(flag,'open')
     folder = brick.switch_case(folderflag,'configfolder',configfolder,'codefolder',codefolder);
     brick.locate(folder)
     return
+elseif strcmp(flag, 'remove')
+    folderflag = varargin{1};
+    fname = fullfile(configfolder,[folderflag '.mat']);
+    fprintf('delete config file ''%s''\n', fname)
+    delete(fname)
 end
 
 % Input
@@ -55,7 +62,11 @@ switch mode
             varargout = cell(1,nargout);
         else
             s = load(fname);
-            varargout = struct2cell(s);
+            if nargout > 1 || length(fieldnames(s)) == 1
+                varargout = struct2cell(s);
+            else
+                varargout = {s};
+            end
         end
 end
 
