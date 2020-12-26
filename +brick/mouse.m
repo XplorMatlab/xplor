@@ -208,6 +208,7 @@ switch type
         % check whether mouse was released before any mouse motion
         if strcmp(type,'polypt')
             pmv = brick.pointer();
+            pmv.x = [];
             set(hf,'WindowButtonUpFcn',@(u,e)set(pmv,'x','up'))
             set(hf,'WindowButtonMotionFcn',@(u,e)set(pmv,'x','move'))
             waitfor(pmv,'x')
