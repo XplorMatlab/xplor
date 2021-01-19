@@ -3,6 +3,8 @@ classdef white2alpha < brick.interface
     % function white2alpha([filename])
     %---
     % Convert image white background to transparency
+    % 
+    % See also brick.show_image
 
     properties (SetAccess='private')
         controls

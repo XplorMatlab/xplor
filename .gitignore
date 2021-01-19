@@ -26,3 +26,7 @@ Xplor.prj
 /demo data/OpenfMRI - Milham lab 2008-2011 - Flanker task/
 /demo data/Hubble/
 /demo data/EarthData/
+/demo data/coronavirus.csv
+/build
+/distrib
+xplor.log
