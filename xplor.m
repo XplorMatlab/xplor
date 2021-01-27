@@ -83,6 +83,9 @@ elseif isfield(options,'name')
 elseif ~isa(data, 'xplr.XData')
     name = inputname(1);
 end
+if isnumeric(data) && isempty(data)
+    error 'Data is empty'
+end
 if isfield(options,'header')
     if isa(data, 'xplr.XData')
         error 'header description in the options will be ignored since data is already an xplr.XData object'

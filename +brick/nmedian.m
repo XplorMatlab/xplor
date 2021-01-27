@@ -16,6 +16,12 @@ if nargin<2
 end
 szout = sz; szout(dim) = 1;
 
+% empty array?
+if sz(dim) == 0
+    m = NaN(szout);
+    return
+end
+
 % work on 1st dimension
 x = brick.reshapepermute(x,{dim setdiff(1:length(sz),dim)});
 sz2 = size(x);

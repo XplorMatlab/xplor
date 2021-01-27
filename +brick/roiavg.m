@@ -17,7 +17,7 @@ function y = roiavg(x,ind)
 % Thomas Deneux
 % Copyright 2015-2017
 
-s = size(x); if length(s)<3, s(3)=1; end
+s = size(x); s(end+1:4) = 1;
 x = reshape(x,[s(1)*s(2) s(3:end)]);
 
 if strcmp(ind,':')
