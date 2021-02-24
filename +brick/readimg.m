@@ -13,7 +13,7 @@ function [a, alpha] = readimg(fname,varargin)
 % Copyright 2004-2017
 
 % Input
-if nargin<1
+if nargin<1 || isempty(fname)
     fname = brick.getfile;
 end
 [nopermute, dofloat] = brick.flags('nopermute', 'double', varargin);
@@ -94,6 +94,14 @@ if dofloat || ismember(class(a), {'single', 'double'})
         otherwise
             if brick.dodebug, disp 'please help me', keyboard, end
     end
+end
+
+% combine alpha with image?
+if nargout < 2 && ~isempty(alpha)
+    if firstchannelonly
+        a = repmat(a, [1 1 3]);
+    end
+    a = cat(3, a, alpha);
 end
     
 

@@ -1,6 +1,6 @@
 classdef white2alpha < brick.interface
     % function white2alpha(image)
-    % function white2alpha([filename])
+    % function white2alpha([filename|'clipboard'])
     %---
     % Convert image white background to transparency
     % 
@@ -46,10 +46,10 @@ classdef white2alpha < brick.interface
 
             % Controls
             s = struct(...
-                'outside__max__luminance',  {.99    'slider .8 1 .01 %.2f'}, ...
+                'outside__max__luminance',  {.99    'slider .3 1 .01 %.2f'}, ...
                 'holes',                    {false  'logical'}, ...
                 'flat__colors',             {true   'logical'}, ...
-                'border__typical__width',   {5      'slider 1 20 1'}, ...
+                'border__typical__width',   {0.5    'logslider 0 3 .01'}, ...
                 'flat__color__tolerance',   {.01    'slider 0 .1 .005 %.2f < flat__colors'}, ...
                 'border__max__luminance',   {.5     'slider 0 1 .005 %.2f < ~flat__colors'}, ...
                 'border__max__saturation',  {.5     'slider 0 1 .005 %.2f < ~flat__colors'}, ...
@@ -65,7 +65,20 @@ classdef white2alpha < brick.interface
             do_sub_region = brick.flags({'subregion'}, varargin);
             
             % Image
-            if nargin<2 || isempty(a)
+            if nargin<2 || isempty(a) || strcmp(a, 'clipboard')
+                % try pasting from clipboard; if there is no image in
+                % clipboard, result will be empty
+                a = permute(imclipboard('paste'), [2 1 3]);
+                switch class(a)
+                    case 'double'
+                    case 'uint8'
+                        % convert to double
+                        a = double(a) / 255;
+                    otherwise
+                        error('type %s not handled yet, please edit code', class(a))
+                end
+            end
+            if isempty(a)
                 a = brick.getfile('*','Select image');
             end
             while ischar(a)
@@ -169,7 +182,9 @@ classdef white2alpha < brick.interface
                 'callback',@(u,e)X.load_image())
             uimenu(m,'label','Load image (sub-region)...'   , ...
                 'callback',@(u,e)X.load_image([], 'subregion'))
-            uimenu(m,'label','Save result...', ...
+            uimenu(m,'label','Load image from clipboard', ...
+                'callback',@(u,e)X.load_image('clipboard'))
+            uimenu(m,'label','Save result to file...','separator','on', ...
                 'callback',@(u,e)X.save())
 
             % Image sub-part
