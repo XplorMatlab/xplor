@@ -1447,24 +1447,25 @@ classdef DisplayNavigation < xplr.GraphNode
             end
         end
         function wheel_scroll(N, n_scroll)
-            persistent last_tic last_zoom_dim
+%             persistent last_tic last_zoom_dim
 
             p = get(N.D.ha, 'currentpoint');
             p = p(1, 1:2);
             origin = brick.row(N.graph.graph_to_slice(p)); % current point in data coordinates
             zoom_factor = 1.5^n_scroll;
 
-            % if we keep zooming from the same point, apply to the same
-            % dimension if it is not the same dimensions that are pointed
-            % any more
-            if ~isempty(last_tic) && toc(last_tic) < .6
-                zoom_dim = last_zoom_dim;
-            else
-                % automatic determination of the intended dimensions for
-                % changing zoom
-                zoom_dim = N.pointed_zoom_dimension(p);
-            end
-            [last_tic, last_zoom_dim] = deal(tic, zoom_dim);
+%             % if we keep zooming from the same point, apply to the same
+%             % dimension if it is not the same dimensions that are pointed
+%             % any more
+%             if ~isempty(last_tic) && toc(last_tic) < .6
+%                 zoom_dim = last_zoom_dim;
+%             else
+%                 % automatic determination of the intended dimensions for
+%                 % changing zoom
+%                 zoom_dim = N.pointed_zoom_dimension(p);
+%             end
+%             [last_tic, last_zoom_dim] = deal(tic, zoom_dim);
+            zoom_dim = N.D.internal_dim;
 
             % This commented code had been put to replace the line below,
             % but it seems that the effect is less intuitive. Let's go back
