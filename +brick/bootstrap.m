@@ -35,7 +35,12 @@ end
 docompare = ~isempty(b); % compare two distributions (otherwise test whether single distribution mean/median is zero)
 if docompare, data = [a; b]; else data = a; end
 na = size(a,1); nb = size(b,1);
-if any(isnan(a(:))) || any(isnan(b(:))), error 'NaNs are not handled yet', end
+if any(isnan(a(:))) || any(isnan(b(:)))
+    if size(a,2) > 1, error 'NaNs not handled yet when multiple columns', end
+    disp('removing samples with NaNs')
+    a(isnan(a)) = [];
+    b(isnan(b)) = [];
+end
 fun = @mean; tail = 'both'; npermmax = 2e5;
 i = 0;
 while i<length(varargin)

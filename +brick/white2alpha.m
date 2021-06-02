@@ -65,7 +65,7 @@ classdef white2alpha < brick.interface
             do_sub_region = brick.flags({'subregion'}, varargin);
             
             % Image
-            if nargin<2 || isempty(a) || strcmp(a, 'clipboard')
+            if nargin>=2 && strcmp(a, 'clipboard')
                 % try pasting from clipboard; if there is no image in
                 % clipboard, result will be empty
                 a = permute(imclipboard('paste'), [2 1 3]);
@@ -78,7 +78,7 @@ classdef white2alpha < brick.interface
                         error('type %s not handled yet, please edit code', class(a))
                 end
             end
-            if isempty(a)
+            if nargin<2 || isempty(a)
                 a = brick.getfile('*','Select image');
             end
             while ischar(a)

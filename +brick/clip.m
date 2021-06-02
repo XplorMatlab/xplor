@@ -120,7 +120,7 @@ else
         error('erroneous clipping option')
     end
 end
-if diff(clip)==0, clip = clip+[-1 1]; end
+if diff(clip)==0, clip = double(clip)+[-1 1]; end
 
 % Check output mode
 doclip = true;
