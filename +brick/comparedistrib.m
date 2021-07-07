@@ -2,7 +2,8 @@ function [p hl] = comparedistrib(x,y,varargin)
 %COMPAREDISTRIB Perform a nonparametric test and display data points and results
 %---
 % function [pval hl] = comparedistrib(x,y[,test][,'tail','left|right|both']
-%       [,'showmean'][,'ylim',ylim][,'xlabels',xlabels][,'pdisplaymode','ns|p'])
+%       [,'showmean'][,'ylim',ylim][,'xlabels',xlabels][,'pdisplaymode','ns|p']
+%       [,'jitter'])
 %---
 % Perform any of 'ranksum', 'signrank' or 'signtest' test and display the
 % data and p-value.
@@ -34,12 +35,14 @@ if nargin<2
     end
 end
 i = 0; tail = 'both'; ylim = []; showmean = false; xlabels = {}; method = [];
-pdisplaymode = 'ns';
+pdisplaymode = 'ns'; jitter = false;
 while i<length(varargin)
     i = i+1;
     switch(varargin{i})
         case 'tail'
             i = i+1;
+            tail = varargin{i};
+        case {'left', 'right'}
             tail = varargin{i};
         case 'xlabels'
             i = i+1;
@@ -52,10 +55,13 @@ while i<length(varargin)
             pdisplaymode = varargin{i};
         case 'showmean'
             showmean = true;
-        case {'signtest' 'ranksum' 'signrank'}
+        case {'signtest' 'ranksum' 'signrank' ...
+                'bootstrap' 'bootstrapmedian' 'bootstrapsign' 'bootstrapsignmedian'}
             method = varargin{i};
         case {'p' 'ns'}
             pdisplaymode = varargin{i};
+        case 'jitter'
+            jitter = true;
         otherwise
             error('unknown flag ''%s''',varargin{i})
     end
@@ -84,6 +90,16 @@ else
         otherwise
             error('unknown test ''%s''',method);
     end
+end
+
+% add a jitter to displayed data to help see the multiplicity of identical
+% points
+if jitter
+    m = min(min(x),min(y));
+    M = max(max(x),max(y));
+    jit = (M-m) / 100;
+    x = x + randn(size(x)) * jit;
+    y = y + randn(size(y)) * jit;
 end
 
 % display

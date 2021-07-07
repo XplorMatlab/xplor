@@ -65,7 +65,7 @@ switch outtype
     case 'num'
         % convert to double -> no need for more than 64 bits (otherwise
         % error in Matlab 2020a+ versions)
-        h = hex2dec(h(1:min(end,16)));
+        h = hex2dec(h(1:min(end,12)));
 end
 
 %---

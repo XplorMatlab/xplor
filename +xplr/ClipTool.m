@@ -131,7 +131,8 @@ classdef ClipTool < xplr.GraphNode
     methods
         function set_manual_clip(C, clip, all_cells)
             if nargin < 2 || isempty(clip)
-                clip = brick.input('Enter min and max', [0, 1]);
+                cur_value = C.D.grid_clip(:, 1)';
+                clip = brick.input('Enter min and max', cur_value);
                 if length(clip) ~= 2, return, end % value not valid, do not use it
             end
             % update display

@@ -18,6 +18,8 @@ classdef SelectionND < xplr.GraphNode
     % - ND shapes: 'product' combines selection in multiple dimensions,
     %              'emptyND', 'allND' (replace 'N' by the number of
     %              dimensions)
+    % - 'shapeND' (replace 'N' by number of dimensions): data must already
+    %   be an xplr.SelectionShape object 
     %
     % If 'sizes' is specified, indices are computed according to this data
     % sizes. 'sizes' is mandatory for 'indices' selections.
@@ -67,8 +69,8 @@ classdef SelectionND < xplr.GraphNode
                 % corresponds to the internal encoding of type
                 sel.nd = data;
                 data = [];
-            elseif regexp(type, '^(empty|all)\d+D$')
-                [type, nd] = brick.regexptokens(type, '^(empty|all)(\d+)D$');
+            elseif regexp(type, '^(empty|all|shape)\d+D$')
+                [type, nd] = brick.regexptokens(type, '^(empty|all|shape)(\d+)D$');
                 sel.nd = str2double(nd);
             elseif strfind(type, '1D')
                 sel.nd = 1;
@@ -92,8 +94,13 @@ classdef SelectionND < xplr.GraphNode
             end
             
             % shape
-            if ~strcmp(type, 'empty')
-                sel.shapes = xplr.SelectionShape(type, data);
+            switch type
+                case 'empty'
+                    % no shape
+                case 'shape'
+                    sel.shapes = data;
+                otherwise
+                    sel.shapes = xplr.SelectionShape(type, data);
             end
                         
             % indices
