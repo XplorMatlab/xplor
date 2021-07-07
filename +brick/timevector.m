@@ -154,7 +154,7 @@ switch convtype
         if (~doperiod || isperiodsconnex) && (iseqspacing || length(times)<2*length(tidx))
             if iseqspacing
                 % take advantage of the fact that time instants are equally spaced
-                kper = 1+round((times-t0)/dt);
+                kper = 1+floor((times-t0)/dt);
                 kper(kper<1 | kper>nper) = [];
                 for i=1:length(kper), y(kper(i)) = y(kper(i))+1; end
             else
