@@ -54,7 +54,7 @@ end
 mask = false;
 while true
     poly = brick.mouse(mouseflag);
-    mask = xor(mask,poly2mask(poly(2,:),poly(1,:),nx,ny));
+    mask = xor(mask,brick.poly2mask(poly(1,:),poly(2,:),nx,ny));
     if dorepeat
         waitfor(more,'value',1)
         if ~ishandle(more), break, end
