@@ -428,8 +428,8 @@ classdef ViewDisplay < xplr.GraphNode
 
             % Binning
             m1 = uimenu(m, 'label', 'Binning', 'Separator', brick.onoff(do_color));
-            bin_values = {1, 2, 3, 4, 5, 10, 20, 'set'};
-            bin_displays = {'none', '2', '3', '4', '5', '10', '20', 'other...'};
+            bin_values = {1, 2, 3, 4, 5, 10, 20, 50, 100, 200, 500, 1000, 'set'};
+            bin_displays = {'none', '2', '3', '4', '5', '10', '20', '50', '100', '200', '500', '1000', 'other...'};
             cur_bin = D.zoom_filters(dim).bin;
             for i=1:length(bin_values)
                 bin = bin_values{i};

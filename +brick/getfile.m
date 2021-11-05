@@ -59,6 +59,11 @@ end
 switch flag
     case 'READ'
         if ischar(arg{1}) && ~any(arg{1}=='*'), arg{1} = {arg{1}, ['*' brick.fileparts(arg{1},'ext')]}; end
+        if strfind(computer, 'MAC') && length(arg)>=2
+            % Displqy prompt because it will not appear in the getfile
+            % window for MAC
+            disp(arg{2})
+        end
         [filename pathname filterindex] = uigetfile(arg{:},'MultiSelect','on');
         if iscell(filename), filename = char(filename{:}); end 
         if filename
@@ -66,6 +71,11 @@ switch flag
             rep = pathname;
         end
     case 'SAVE'
+        if strfind(computer, 'MAC') && length(arg)>=2
+            % Displqy prompt because it will not appear in the getfile
+            % window for MAC
+            disp(arg{2})
+        end
         [filename pathname filterindex] = uiputfile(arg{:});
         if filename
             filename = fullfile(pathname,filename);
@@ -81,6 +91,11 @@ switch flag
                 arg = arg0([2 1]);
             otherwise
                 error('too many arguments')
+        end
+        if strfind(computer, 'MAC') && length(arg)>=2
+            % Displqy prompt because it will not appear in the getfile
+            % window for MAC
+            disp(arg{2})
         end
         filename = uigetdir(arg{:});
         if filename
