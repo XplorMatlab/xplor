@@ -631,7 +631,7 @@ classdef HeaderEdit < hgsetget
             elseif isnumeric(values)
                 values = num2cell(values, 2);
             end
-            keys = fn_num2str((1:n)','x_%i','cell');
+            keys = brick.num2str((1:n)','x_%i','cell');
             spec = repmat({'color'}, n, 1);
             values = brick.structedit(cell2struct([values spec labels(:)], keys));
             if ~isempty(values)

@@ -73,15 +73,18 @@ options = struct(options{:});
 % Convert Matlab array to xplr.XData
 % create headers and launch view
 % if a parameter data is present -> evaluate it (execute and get result)
-if ischar(data)
+if isa(data, 'xplr.XData')
+    name = data.name;
+elseif ischar(data)
     name = data;
     data = evalin('base', name);
     % if no parameters are presents (same case as previous create a demo data)
 elseif isfield(options,'name')
     name = options.name;
     options = rmfield(options, 'name');
-elseif ~isa(data, 'xplr.XData')
-    name = inputname(1);
+else
+    % no name defined
+    name = '';
 end
 if isnumeric(data) && isempty(data)
     error 'Data is empty'

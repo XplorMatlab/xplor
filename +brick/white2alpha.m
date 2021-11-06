@@ -4,7 +4,7 @@ classdef white2alpha < brick.interface
     %---
     % Convert image white background to transparency
     % 
-    % See also brick.show_image
+    % See also brick.show_image, brick.combine_images
 
     properties (SetAccess='private')
         controls
@@ -80,6 +80,7 @@ classdef white2alpha < brick.interface
             end
             if nargin<2 || isempty(a)
                 a = brick.getfile('*','Select image');
+                if isequal(a, 0), return, end
             end
             while ischar(a)
                 X.filename = a;

@@ -29,7 +29,7 @@ if nc == 4
     img = img(:,:,1:3);
     if nargin < 2, background_color = [1 1 1]; end
     if strcmp(background_color, 'checker')
-        step = round(mean([nx ny])/15);
+        step = round(mean([nx ny])/min([nx ny 15]));
         xstripes = mod(floor((0:nx-1)'/step),2);
         ystripes = mod(floor((0:ny-1)/step),2);
         background = bsxfun(@xor,xstripes,ystripes);

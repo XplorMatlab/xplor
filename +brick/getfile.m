@@ -92,7 +92,7 @@ switch flag
             otherwise
                 error('too many arguments')
         end
-        if strfind(computer, 'MAC') && length(arg)>=2
+        if any(strfind(computer, 'MAC')) && length(arg)>=2
             % Displqy prompt because it will not appear in the getfile
             % window for MAC
             disp(arg{2})
