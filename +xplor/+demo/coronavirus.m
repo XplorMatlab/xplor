@@ -16,32 +16,30 @@ data = readtable(file, 'PreserveVariableNames', true);
 disp 'Process data'
 
 % Dates
-dates_row = data(:,1); % first column
-dates_row = table2array(dates_row); % convert to datetime class
-date_start = min(dates_row);
+dates_column = data.dateRep;
+date_start = min(dates_column);
 dates_row_num = days(dates_row - date_start); % convert to numeric, starting from day 0
 nday = max(dates_row_num) + 1;
 dates = date_start + (0:nday-1);
-dates = brick.map(dates,@(t)datestr(t,'dd/mm'));
 
 % Countries
-countries = table2array(data(:,7)); % cell of char arrays
+countries = data.countriesAndTerritories; % cell of char arrays
 [countries, idxcountry2row, idxrow2country] = unique(countries);
 countries = strrep(countries,'_',' ');
-pop = table2array(data(idxcountry2row,10))';
+population = data.popData2019(idxcountry2row)'; % population in Mhab
 ncountry = length(countries);
 
 %% Data
 
 % new cases and deaths
-newcasesanddeaths = table2array(data(:,[5 6]));
+newcasesanddeaths = [data.cases data.deaths];
 CORONAVIRUS = zeros(nday, ncountry, 2);
 for i = 1:size(data,1)
     CORONAVIRUS(dates_row_num(i)+1, idxrow2country(i), :) = newcasesanddeaths(i,:);
 end
 
 % normalize by population
-CORONAVIRUS = cat(4, CORONAVIRUS, brick.div(CORONAVIRUS, pop/1e6));
+CORONAVIRUS = cat(4, CORONAVIRUS, brick.div(CORONAVIRUS, population/1e6));
 
 % cumulated sums
 CORONAVIRUS = cat(5, CORONAVIRUS, cumsum(CORONAVIRUS, 1));
@@ -203,7 +201,7 @@ if eval('false')
     for i = 1:ncountry
         mask = (map == country2shape(i));
         CORONAVIRUS_MAP(:, mask, :) = repmat(CORONAVIRUS(:, i, :), [1 sum(mask(:)) 1]);
-        population(mask) = pop(i);
+        population(mask) = population(i);
     end
     CORONAVIRUS_MAP = reshape(CORONAVIRUS_MAP, [nday nx ny sdata]);
 end
