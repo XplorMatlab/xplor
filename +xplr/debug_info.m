@@ -4,7 +4,7 @@ function out = debug_info(category, message, varargin)
 % function debugactive = debug_info()
 % function debug_info(code, message [, sprintf arguments])
 % function debug_info('select')
-% function debug_info('on|off')
+% function debug_info('on|off|file')
 % function debug_info('reset')
 %---
 % This function is only for XPLOR developers.
@@ -26,8 +26,8 @@ switch nargin
     case 1
         flag = category;
         switch(flag)
-            case {'on', 'off'}
-                set_active(strcmp(flag, 'on'))
+            case {'on', 'off', 'file'}
+                set_active(flag)
             case 'select'
                 select_categories()
             otherwise
@@ -51,7 +51,7 @@ end
 if isempty(mem_state)
     mem_state = brick.userconfig('xplr.debug_info');
     if isempty(mem_state)
-        mem_state = struct('active', false, 'categories', struct());
+        mem_state = struct('active', 'off', 'categories', struct());
         save_state(mem_state)
     end
 end
@@ -70,42 +70,49 @@ get_state(state)
 
 
 %---
-function ok = debug_active()
+function flag = debug_active()
 
 state = get_state();
-ok = state.active;
+flag = state.active;
 
 
 %---
 function display_info(category, message, varargin)
 
-% state = get_state();
-% if ~state.active, return, end
-% 
-% try
-%     do_display = state.categories.(category);
-% catch
-%     % first time this category is met
-%     quest = sprintf('Do you want to display debug information of new category ''%s''?', ...
-%         category);
-%     do_display = brick.dialog_questandmem(quest,'xplr.debug_info');
-%     
-%     % memorize answer
-%     state.categories.(category) = do_display;
-%     save_state(state)
-% end
-% 
-% % display if appropriate
-% if do_display
-%     fprintf([category ': ' message '\n'], varargin{:})
-%     
-%     % special: stop the debugger if category is 'stop'
-%     if strcmp(category, 'stop')
-%         keyboard
-%     end
-% end
+state = get_state();
+switch state.active
+    case 'off'
+        return
+        
+    case 'on'
+        % check whether category is displayed
+        try
+            do_display = state.categories.(category);
+        catch
+            % first time this category is met
+            quest = sprintf('Do you want to display debug information of new category ''%s''?', ...
+                category);
+            do_display = brick.dialog_questandmem(quest,'xplr.debug_info');
 
-xplr.log_to_file([category ': ' message])
+            % memorize answer
+            state.categories.(category) = do_display;
+            save_state(state)
+        end
+
+        % display if appropriate
+        if do_display
+            fprintf([category ': ' message '\n'], varargin{:})
+
+            % special: stop the debugger if category is 'stop'
+            if strcmp(category, 'stop')
+                keyboard
+            end
+        end
+
+    case 'file'
+        xplr.log_to_file([category ': ' message])
+        
+end
 
 %---
 function set_active(value)
@@ -113,11 +120,14 @@ function set_active(value)
 state = get_state();
 state.active = value;
 save_state(state)
-if value
-    disp 'xplor debug information enabled'
-    disp 'select which categories to display with xplr.debug_info(''select'')'
-else
-    disp 'xplor debug information disabled'
+switch value
+    case 'on'
+        disp 'xplor debug information enabled'
+        disp 'select which categories to display with xplr.debug_info(''select'')'
+    case 'off'
+        disp 'xplor debug information disabled'
+    case 'file'
+        disp 'all xplor debug information will be logged to file xplor.log'
 end
 
 

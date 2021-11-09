@@ -9,7 +9,7 @@ function b = dodebug(varargin)
 % user is a registered developer.
 
 hostlist = {'PCWIN-PCT_HP8570P_EQB', 'PCWIN-DESKTOP-CR6ES64', ...
-    'GLNXA64-textorm-2-st'};
+    'GLNXA64-textorm-2-st', 'PCWIN-CM-1-ST'};
 b = brick.ismemberstr(brick.hostname,hostlist);
 
 if nargin>0
