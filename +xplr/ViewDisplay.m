@@ -1023,6 +1023,7 @@ classdef ViewDisplay < xplr.GraphNode
 
                 % subs structure for slicing
                 subs = substruct('()', repmat({':'}, 1, length(sz)));
+                subs_clip = substruct('()', repmat({':'}, 1, 1+length(sz)));
                 % (and permutation that follows)
                 nd_perm = max(3, D.nd);
                 internal_perm = zeros(1, nd_perm);
@@ -1045,12 +1046,12 @@ classdef ViewDisplay < xplr.GraphNode
                         ijk_h_display = ijk_h_display_list(:, u, v);
 
                         % get the data and compute clipping if necessary
-                        [subs.subs{elements_dim_}] = brick.dealc(ijk_h_display (elements_dim_));
+                        [subs.subs{elements_dim_}] = brick.dealc(ijk_h_display(elements_dim_));
                         xi = subsref(displayed_data, subs);
                         xi = permute(xi, internal_perm);
                         xi = brick.float(xi);
-                        clipi = subsref_dim(D.grid_clip, 1+elements_dim_, ...
-                            ijk_h_display(elements_dim_)); % 2x1 vector, or 2xn array if color image and color channel clipped independently
+                        [subs_clip.subs{1+elements_dim_}] = brick.dealc(ijk_h_display(elements_dim_));
+                        clipi = subsref(D.grid_clip, subs_clip); % 2x1 vector, or 2xn array if color image and color channel clipped independently
                         if clip_at_elements_level && any(isnan(clipi(:)))
                             % independent clip for this element
                             clipi = D.get_clip_range(xi);
@@ -1102,7 +1103,8 @@ classdef ViewDisplay < xplr.GraphNode
                             elseif nc == 4
                                 [im, alpha] = deal(im(:, :, 1:3), im(:, :, 4));
                             end
-                            if ~ishandle(D.h_display(idx_h_display))
+                            hi = D.h_display(idx_h_display);
+                            if ~ishandle(hi)
                                 % y coordinates are negative to orient the
                                 % image downward (see also comment inside of
                                 % displaygaph.gettransform method, where the
@@ -1116,11 +1118,11 @@ classdef ViewDisplay < xplr.GraphNode
                                     'CData', im, 'AlphaData', alpha, ...
                                     'HitTest', 'off');
                             elseif do_chg_x
-                                set(D.h_display(idx_h_display), ...
+                                set(hi, ...
                                     'xdata', [.5, size(im,2)+.5], 'ydata', [-.5, -.5-size(im, 1)], ...
                                     'CData', im, 'AlphaData', alpha)
                             else
-                                set(D.h_display(idx_h_display), 'CData', im, 'AlphaData', alpha)
+                                set(hi, 'CData', im, 'AlphaData', alpha)
                             end
                         end
                     end
