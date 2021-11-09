@@ -59,7 +59,7 @@ end
 switch flag
     case 'READ'
         if ischar(arg{1}) && ~any(arg{1}=='*'), arg{1} = {arg{1}, ['*' brick.fileparts(arg{1},'ext')]}; end
-        if strfind(computer, 'MAC') && length(arg)>=2
+        if any(strfind(computer, 'MAC')) && length(arg)>=2
             % Displqy prompt because it will not appear in the getfile
             % window for MAC
             disp(arg{2})
@@ -71,7 +71,7 @@ switch flag
             rep = pathname;
         end
     case 'SAVE'
-        if strfind(computer, 'MAC') && length(arg)>=2
+        if any(strfind(computer, 'MAC')) && length(arg)>=2
             % Displqy prompt because it will not appear in the getfile
             % window for MAC
             disp(arg{2})
