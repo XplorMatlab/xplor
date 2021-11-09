@@ -467,26 +467,34 @@ classdef Slicer < xplr.GraphNode
             for k = length(S.slicing_chain)+1:n_active_filters
                 filt_k = S.active_filters(k);
                 dim_idk = filt_k.dim_id;
-                % if filtering occurs in the dimension along which is
-                % identified partial change of the data, we cannot keep
-                % track any more of this partial change
-                if isequal(dim_idk, chg_dim_id) && strcmp(chg_origin, 'data') 
-                    switch chg_flag
-                        case {'global', 'chg_dim', 'chg_data'}
-                            % flag remains the same
-                        case 'sub_data'
-                            % no smart update possible, no header change
-                            chg_flag = 'chg_data';
-                        otherwise
-                            % no smart update possible, header change
-                            chg_flag = 'chg_dim';
-                    end
-                end
                 obj_k = filt_k.obj;
+                
+                % does filtering occurs in the dimension along which a
+                % partial changed was notified?
+                if any(ismember(dim_idk, chg_dim_id))
+                    % for the moment this is supposed to happen only when a
+                    % new ZoomFilter has been created for this dimension,
+                    % which does not have any action (no filtering) -> make
+                    % sure that this is the case indeed
+                    assert(strcmp(chg_origin, 'data') && obj_k.no_effect)
+                    % old code taht was 'forgetting' some info about the
+                    % partial change; but this is not necessary if the
+                    % filter has no effect
+                    %                     switch chg_flag
+                    %                         case {'global', 'chg_dim', 'chg_data'}
+                    %                             % flag remains the same
+                    %                         case 'sub_data'
+                    %                             % no smart update possible, no header change
+                    %                             chg_flag = 'chg_data';
+                    %                         otherwise
+                    %                             % no smart update possible, header change
+                    %                             chg_flag = 'chg_dim';
+                    %                     end
+                end
                 if ~isempty(chg_dim_id) && any(ismember(dim_idk, chg_dim_id))
                     % dimension identified by chg_dim_id in the data
                     % disappears in the slice; get the identifier of the
-                    % correspond_ing dimension in the slice
+                    % corresponding dimension in the slice
                     chg_dim_id = obj_k.get_dim_id_out(dim_idk);
                 end
                 res = obj_k.operation(res, dim_idk);

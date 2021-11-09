@@ -162,6 +162,11 @@ classdef ZoomFilter < xplr.DataOperand
     end
     
     % Get Dependent
+    methods (Access='protected')
+        function b = has_no_effect(z)
+            b = z.no_zoom && (z.bin == 1);
+        end
+    end
     methods
         function x = get.zoom_value(z)
             x = z.zoom;

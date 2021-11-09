@@ -12,6 +12,7 @@ classdef DataOperand < xplr.GraphNode
         sz_out
         nd_out
         reduction_factor
+        no_effect
     end
     % properties below are not handled by dataOperand class and
     % sub-classes, but rather by the objects that use them; they should not
@@ -59,6 +60,11 @@ classdef DataOperand < xplr.GraphNode
         update_operation_(O, data, dims, old_data_op, varargin)    % data is an xplr.XData object
     end
     methods (Access='protected')
+        function b = has_no_effect(O)
+            % This method should be overwritten when it can happen that a
+            % filter has no effect
+            b = false;
+        end
         function accepts_input(O, header)
             % Input header must match O.header_in for operation to apply.
             % This method can be overwritten in sub-classes for more
@@ -82,6 +88,9 @@ classdef DataOperand < xplr.GraphNode
         end
     end
     methods
+        function b = get.no_effect(O)
+            b = O.has_no_effect();
+        end
         function dim_id_out = get_dim_id_out(O, dim_id_in)
             % function dim_id_out = get_dim_id_out(O,dim_id_in)
             %---
