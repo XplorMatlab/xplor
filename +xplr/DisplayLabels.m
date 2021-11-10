@@ -375,9 +375,9 @@ classdef DisplayLabels < xplr.GraphNode
                 p = brick.coordinates(L.ha, 'a2c', p, 'position');    % convert to 'normalized' unit in axes
                 % move object
                 set(obj, 'position', p)
-                % special: going outside of graph, in the controls area
-                % -> filter dimension, new layout has no more dimension dimID
                 if p_fig(1) < 0
+                    % special: going outside of graph, in the controls area
+                    % -> filter dimension, new layout has no more dimension dimID
                     if ~do_filter
                         do_filter = true;
                         view_control.show_inoperant_filter(dim_id)

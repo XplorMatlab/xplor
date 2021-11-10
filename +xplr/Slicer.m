@@ -472,30 +472,27 @@ classdef Slicer < xplr.GraphNode
                 % does filtering occurs in the dimension along which a
                 % partial changed was notified?
                 if any(ismember(dim_idk, chg_dim_id))
-                    % for the moment this is supposed to happen only when a
-                    % new ZoomFilter has been created for this dimension,
-                    % which does not have any action (no filtering) -> make
-                    % sure that this is the case indeed
-                    assert(strcmp(chg_origin, 'data') && obj_k.no_effect)
-                    % old code taht was 'forgetting' some info about the
-                    % partial change; but this is not necessary if the
-                    % filter has no effect
-                    %                     switch chg_flag
-                    %                         case {'global', 'chg_dim', 'chg_data'}
-                    %                             % flag remains the same
-                    %                         case 'sub_data'
-                    %                             % no smart update possible, no header change
-                    %                             chg_flag = 'chg_data';
-                    %                         otherwise
-                    %                             % no smart update possible, header change
-                    %                             chg_flag = 'chg_dim';
-                    %                     end
-                end
-                if ~isempty(chg_dim_id) && any(ismember(dim_idk, chg_dim_id))
+                    % if the partial change is not in the current filter
+                    % (filt_k) but was in a previous stage of the slicing
+                    % chain, then the operation of filt_k will probably
+                    % modify the partial in a way that might be difficult
+                    % to calculate;
+                    % however in the current state of the code, we never
+                    % have two successive filters applying in the same
+                    % dimensions, so this can happen only with a change in
+                    % data; and in this case this occurs only because a new
+                    % zoom filter has been created for this dimension,
+                    % which does not have any action -> test that this is
+                    % the case indeed
+                    if strcmp(chg_origin, 'data')
+                        assert(obj_k.no_effect)
+                    end
                     % dimension identified by chg_dim_id in the data
                     % disappears in the slice; get the identifier of the
                     % corresponding dimension in the slice
-                    chg_dim_id = obj_k.get_dim_id_out(dim_idk);
+                    if ~isempty(chg_dim_id)
+                        chg_dim_id = obj_k.get_dim_id_out(dim_idk);
+                    end
                 end
                 res = obj_k.operation(res, dim_idk);
                 S.slicing_chain(k) = res;
