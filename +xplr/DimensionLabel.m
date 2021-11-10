@@ -4,7 +4,7 @@ classdef DimensionLabel
 % 
 % Input:
 % * label   a string (e.g. 'time')
-% * type    'numeric', 'logical', 'char' or 'mixed'
+% * type    'numeric', 'logical', 'char', 'color' or 'mixed'
 % * unit    string, cell array with 2 columns, or struct with fields unit and value
 %
 % Examples:
@@ -25,7 +25,7 @@ classdef DimensionLabel
         function L = DimensionLabel(label, type, unit)
             if ~ischar(label), error 'label must be a character array', end
             L.label = label;
-            if ~ismember(type, {'numeric', 'logical', 'char', 'mixed'}), error 'type must be either ''numeric'', ''logical'' or ''char''', end
+            assert(ismember(type, {'numeric', 'logical', 'char', 'color', 'mixed'}))
             L.type = type;
             if nargin<3
                 return

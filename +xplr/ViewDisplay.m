@@ -512,7 +512,8 @@ classdef ViewDisplay < xplr.GraphNode
             if do_immediate_display, D.check_active_dim(false), end
             D.labels.update_labels()
             drawnow
-            % check whether color dim and active dim remain valid
+            % check whether color dim and active dim remain valid, set them
+            % as most appropriate
             D.check_color_dim(false)
             D.check_active_dim(false, true)
             % update ticks and display
@@ -590,20 +591,38 @@ classdef ViewDisplay < xplr.GraphNode
             if nargin < 3, do_immediate_display = true; end
             % set property
             D.color_dim_id = dim_id;
-            % update display
-            if do_immediate_display && strcmp(D.display_mode, 'time courses')
-                D.update_display('color')
-            end
             % update color legend
             if D.show_color_legend
                 display_color_legend(D)
             end
-            % update grid ticks
+            % update display
+            if ~do_immediate_display, return, end            
+            if strcmp(D.display_mode, 'time courses')
+                D.update_display('color')
+            end
             D.graph.color_grid_ticks()
         end
         function check_color_dim(D, do_immediate_display)
-            c_dim_id = D.color_dim_id;
-            if isempty(c_dim_id), return, end
+            % if no color is selected at the present time, attempt picking
+            % a meaningful dimension for coloring
+            if ~strcmp(D.display_mode, 'time courses'), return, end
+            eligible_dim = ~[D.slice.header.singleton];
+            if ~isempty(D.layout.x), eligible_dim(D.layout.x(1)) = false; end
+            c_dim = D.color_dim;
+            if eligible_dim(c_dim), return, end
+            % first look for a dimension that specifically defines color
+            available_color = D.slice.header.has_color();
+            c_dim = find(available_color & eligible_dim, 1, 'first');
+            % second, look for a dimension with 'ROI' in its label
+            if isempty(c_dim)
+                is_ROI = ~brick.isemptyc(strfind({D.slice.header.label}, 'ROI'));
+                c_dim = find(is_ROI & eligible_dim, 1, 'first');
+            end
+            % set color dimension if any was found
+            if ~isempty(c_dim)
+                c_dim_id = D.slice.header(c_dim).dim_id;
+                D.set_color_dim(c_dim_id, do_immediate_display);
+            end
         end
         function set.line_width(D, line_width)
             % check

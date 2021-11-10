@@ -45,7 +45,8 @@ classdef Header < handle
         scale           % scalar - for measure only
         values          % cell array (categorical) or vector (measure)
     end
-    properties (Dependent, Transient)
+    properties (Dependent, SetAccess='private', Transient)
+        singleton
         unit
         all_units
         type
@@ -348,6 +349,9 @@ classdef Header < handle
     
     % Dependent and computed properties
     methods
+        function b = get.singleton(H)
+            b = (H.n == 1);
+        end
         function u = get.unit(H)
             if H.categorical || H.is_datetime
                 u = '';
@@ -472,7 +476,7 @@ classdef Header < handle
         end
     end
     
-    % Access value in table
+    % Access value in table and special values
     methods
         function x = get_value(H, label, idx)
             % function x = get_value(H,label[,idx])
@@ -491,13 +495,33 @@ classdef Header < handle
                 x = H.values{idx, icol};
             end
         end
+        function idx = get_column_index(H, field, case_sensitive)
+            % if H is non-scalar, returns an array of same size as H
+            if nargin < 3, case_sensitive = true; end
+            idx = zeros(size(H));
+            for k = 1:numel(H)
+                if ~H(k).categorical, continue, end
+                sub_labels_ = {H(k).sub_labels.label};
+                if case_sensitive
+                    ok = strcmp(sub_labels_, field);
+                else
+                    ok = strcmpi(sub_labels_, field);
+                end
+                idxk = find(ok, 1, 'first');
+                if idxk, idx(k) = idxk; end
+            end
+        end
+        function idx = has_color(H)
+            % tell whether colors are defined for this header
+            idx = get_column_index(H, 'ViewColor');
+        end
         function c_map = get_color(H, idx)
             % function c_map = get_color(H[,idx])
-            k_color = strcmp({H.sub_labels.label}, 'ViewColor');
+            k_color = get_column_index(H, 'ViewColor');
             if nargin < 2
                 idx = 1:H.n;
             end
-            if any(k_color)
+            if k_color
                 c_map = cell2mat(H.values(idx, k_color));
             else
                 c_map = brick.colorset('plot12', idx);
@@ -513,15 +537,14 @@ classdef Header < handle
             if isempty(H.item_names)
                 % compute names
                 n_val = length(idx);
-                if H.n_column > 0
+                column_ok_for_name = H.categorical & brick.ismemberstr({H.sub_labels.type}, {'char', 'numeric'});
+                if any(column_ok_for_name)
                     % any column 'name' in the values table?
-                    idx_name = find(strcmpi({H.sub_labels.label}, 'name'));
-                    if isempty(idx_name), idx_name = 1; end
-                    item_values = H.values(:, idx_name);
-                    if idx_name > 1
-                        empty = brick.isemptyc(item_values);
-                        item_values(empty) = H.values(empty, 1);
+                    idx_name = get_column_index(H, 'Name', false);
+                    if ~idx_name
+                        idx_name = find(column_ok_for_name, 1, 'first'); 
                     end
+                    item_values = H.values(:, idx_name);
                     names = cell(1, n_val);
                     for k=1:n_val
                         val = item_values{idx(k)};

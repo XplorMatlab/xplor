@@ -78,7 +78,8 @@ classdef FilterAndPoint < xplr.DataOperand
                 % set header values
                 % (tracking of input header values)
                 if ~isscalar(F.header_in) 
-                    disp('setting header_out for ND filter with only minimal information')
+                    % do not track values in tables of each input dimension
+                    % if any
                     n_colin = 1;
                     head_values = {brick.strcat({F.P.index}, ',')};
                 elseif F.header_in.n_column > 0
