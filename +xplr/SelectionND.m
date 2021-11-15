@@ -301,7 +301,7 @@ classdef SelectionND < xplr.GraphNode
             end
         end     
         function polygon = get.polygon(sel)
-            if 1 %isempty(sel.polygon)
+            if isempty(sel.polygon)
                 switch sel.nd
                     case 1
                         sel.polygon = sel.shapes.convert_line_1D();

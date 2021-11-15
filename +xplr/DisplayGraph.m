@@ -3,22 +3,26 @@ classdef DisplayGraph < xplr.GraphNode
 	% and of x/y ticks
 
     % properties
-    properties (SetAccess='private')
+    properties (SetAccess='private') % Meant to be private!
         D % parent xplr.viewdisplay object
         % graphic objects
         xy_ticks 
         separation_lines
     end
     properties (SetObservable, AbortSet=true)
+        use_ROI2D_map = true;
         show_separation = false;
         separation_color = [.8, .8, .8];
     end
     % shortcuts
-    properties (Dependent, SetAccess='private')
+    properties (Dependent, SetAccess='private') % Meant to be private!
         ha
     end
+    properties (Dependent, SetAccess='private')
+        map_drawing
+    end
     % parameters
-    properties (SetAccess='private')
+    properties (SetAccess='private') % Meant to be private!
         x_sep = .2;
         y_sep = .2;
     end
@@ -27,6 +31,8 @@ classdef DisplayGraph < xplr.GraphNode
         layout
         zslice_sz    % current size of the zoomed slice
         filling     % how much of the space available for each dimension if filled (vector of values <=1)
+    end
+    properties (SetAccess='private') % Meant to be private!
         steps
     end
           
@@ -38,6 +44,13 @@ classdef DisplayGraph < xplr.GraphNode
         end
         function ha = get.ha(G)
             ha = G.D.ha;
+        end
+        function hp = get.map_drawing(G)
+            if G.steps.xy_use_map
+                hp = G.separation_lines;
+            else
+                hp = [];
+            end
         end
     end
     
@@ -113,6 +126,7 @@ classdef DisplayGraph < xplr.GraphNode
 
             % G.filling will get values assigned both for 'grid' and
             % 'linear' arrangements
+            st = struct;
             [fill, st.x_span, st.y_span] = deal(zeros(1, nd), zeros(1, nx), zeros(1, ny));
             
             % does one dimension have 2D grid organization
@@ -127,52 +141,112 @@ classdef DisplayGraph < xplr.GraphNode
                     st.xy_dim = org_in.yx;
                     xy_mode = 'yx';
                 end
+                xy_header = header(st.xy_dim);
                 
-                % TODO: the lines below are not correct, remove?
-                % % span
-                % [st.x_span(st.xy_dim) st.y_span(st.xy_dim)] = deal(x_avail,y_avail);
-                                
-                % determine number of column: what aspect ratio is desired
-                % for the grid elements?
-                n_elem = header(st.xy_dim).n;
-                if nx && ny && x_pair(end) && y_pair(end)
-                    elem_ratio = abs((y_head(end).scale*y_head(end).n)/(x_head(end).scale*x_head(end).n));
-                else
-                    elem_ratio = 1; % this value will be only loosely respected
-                end
-                if strcmp(xy_mode,'xy')
-                    n_col = brick.coerce(round(sqrt(n_elem*elem_ratio*x_avail/y_avail/axis_ratio)), [1, n_elem]);
-                    n_row = ceil(n_elem/n_col);
-                else
-                    n_row = brick.coerce(round(sqrt(n_elem/elem_ratio/x_avail*y_avail*axis_ratio)), [1, n_elem]);
-                    n_col = ceil(n_elem/n_row);
-                end
-                [st.xy_n_col, st.xy_n_row] = deal(n_col,n_row);
-                
-                % set grid positions
-                st.xy_offsets = zeros(2, n_elem);
-                i0 = (n_col+1)/2;
-                x_step = x_avail/n_col;
-                j0 = (n_row+1)/2;
-                y_step = -y_avail/n_row;
-                st.xy_steps = [x_step, y_step];
-                for k=1:n_elem
-                    switch xy_mode
-                        case 'xy'
-                            [i, j] = ind2sub([n_col, n_row], k);
-                        case 'yx'
-                            [j, i] = ind2sub([n_row, n_col], k);
+                % Use ROI informations instead of a grid?
+                idx_roi2d = xy_header.get_column_index('ROI2D');
+                st.xy_use_map = idx_roi2d && G.use_ROI2D_map;
+                if st.xy_use_map
+                    % Get the map!
+                    rois = [xy_header.values{:,idx_roi2d}]; % xplr.SelectionND object
+                    n_roi = length(rois);
+                    polys = {rois.polygon};
+                    
+                    % Coordinates of map sides (use data sizes if available)
+                    data_sizes = rois(1).data_sizes;
+                    if ~isempty(data_sizes)
+                        range = [.5 data_sizes(1)+.5; .5 data_sizes(2)+.5];
+                    else
+                        % calculate rectangle that contains all ROIs
+                        range = zeros(2,2,n_roi);
+                        for k = 1:n_roi
+                            poly_k = polys{k};
+                            range(:,1,k) = min(poly_k,[],2);
+                            range(:,2,k) = max(poly_k,[],2);
+                        end
+                        range = [min(range(:,1,:),[],3) max(range(:,2,:),[],3)];
+                        % (add a small gap)
+                        range = range + diff(range,1,2)*[-1 1]/20;
                     end
-                    st.xy_offsets(:, k) = [(i-i0)*x_step;
-                    (j-j0)*y_step];
+                    
+                    % ROI centers
+                    centers = zeros(2,n_roi);
+                    for k = 1:n_roi
+                        centers(:,k) = mean(polys{k},2);
+                    end
+                    
+                    % Map map sides to the graph sides
+                    scale = [1/diff(range(1,:)); -1/diff(range(2,:))];
+                    offset = - mean(range,2) .* scale;
+                    st.xy_offsets = brick.add(offset, brick.mult(scale, centers)); % values between -.5 and .5
+                    for k = 1:n_roi
+                        polys{k} = brick.add(offset, brick.mult(scale, polys{k}));
+                    end
+                    st.map_polys = polys;
+                    
+                    % Space available inside each ROI: choose it such that,
+                    % if all regions where non-intersecting, a specific
+                    % ratio (<1) of the total space would be covered
+                    target_coverage = .25;
+                    coverage_per_region = target_coverage / n_roi;
+                    st.xy_steps = ones(2,1) * sqrt(coverage_per_region);
+                    [x_avail, y_avail] = brick.dealc(st.xy_steps);
+                
+                    % xy_n_col and xy_n_row will be used for particular
+                    % display features such as separations; do as if there
+                    % was only one grid cell occupying the full space
+                    [st.xy_n_col, st.xy_n_row] = deal(1);
+
+                else
+                    % TODO: the lines below are not correct, remove?
+                    % % span
+                    % [st.x_span(st.xy_dim) st.y_span(st.xy_dim)] = deal(x_avail,y_avail);
+
+                    % determine number of column: what aspect ratio is desired
+                    % for the grid elements?
+                    n_elem = xy_header.n;
+                    if nx && ny && x_pair(end) && y_pair(end)
+                        elem_ratio = abs((y_head(end).scale*y_head(end).n)/(x_head(end).scale*x_head(end).n));
+                    else
+                        elem_ratio = 1; % this value will be only loosely respected
+                    end
+                    if strcmp(xy_mode,'xy')
+                        n_col = brick.coerce(round(sqrt(n_elem*elem_ratio*x_avail/y_avail/axis_ratio)), [1, n_elem]);
+                        n_row = ceil(n_elem/n_col);
+                    else
+                        n_row = brick.coerce(round(sqrt(n_elem/elem_ratio/x_avail*y_avail*axis_ratio)), [1, n_elem]);
+                        n_col = ceil(n_elem/n_row);
+                    end
+                    [st.xy_n_col, st.xy_n_row] = deal(n_col,n_row);
+
+                    % set grid positions
+                    st.xy_offsets = zeros(2, n_elem);
+                    i0 = (n_col+1)/2;
+                    x_step = x_avail/n_col;
+                    j0 = (n_row+1)/2;
+                    y_step = -y_avail/n_row;
+                    st.xy_steps = [x_step, y_step];
+                    for k=1:n_elem
+                        switch xy_mode
+                            case 'xy'
+                                [i, j] = ind2sub([n_col, n_row], k);
+                            case 'yx'
+                                [j, i] = ind2sub([n_row, n_col], k);
+                        end
+                        st.xy_offsets(:, k) = [(i-i0)*x_step;
+                        (j-j0)*y_step];
+                    end
+                    if sz_orig(st.xy_dim)>1
+                        x_avail = x_avail/n_col/(1+G.x_sep);
+                        y_avail = y_avail/n_row/(1+G.y_sep);
+                    end
+                    fill(st.xy_dim) = 1;
                 end
-                if sz_orig(st.xy_dim)>1
-                    x_avail = x_avail/n_col/(1+G.x_sep);
-                    y_avail = y_avail/n_row/(1+G.y_sep);
-                end
-                fill(st.xy_dim) = 1;
             else
                 st.xy_dim = [];
+                st.xy_use_map = false;
+                % there will be only a single grid element, which fits the
+                % full available space
                 st.xy_offsets = zeros(2, 1);
                 st.xy_steps = ones(2,1);
                 [st.xy_n_col, st.xy_n_row] = deal(1);
@@ -537,12 +611,21 @@ classdef DisplayGraph < xplr.GraphNode
             h_aligned_dims = [org.merged_data, org.x(2:end)];
             h_aligned_dims(G.D.slice.sz(h_aligned_dims)==1) = [];
             y_dims = org.y;
-            xy_ok = false;
-            if ~isempty(st.xy_dim)
-                if st.xy_n_col==1
-                    xy_ok = true;
+            if isempty(st.xy_dim)
+                xy_n_show = 1;
+                xy_on_single_column = false;
+            elseif st.xy_use_map
+                % show value ticks only for the first map element
+                xy_n_show = 1;
+                xy_on_single_column = false;
+                h_aligned_dims(end+1) = G.steps.xy_dim;
+            else
+                % show one set of value ticks per row of the xy grid
+                xy_n_show = st.xy_n_row;
+                xy_on_single_column = (st.xy_n_col==1);
+                if xy_on_single_column
                     y_dims(end+1) = G.steps.xy_dim;
-                else
+                elseif ~isempty(st.xy_dim)
                     h_aligned_dims(end+1) = G.steps.xy_dim;
                 end
             end
@@ -567,17 +650,17 @@ classdef DisplayGraph < xplr.GraphNode
             % now grid_clip is nonsingleon only in the y_dims dimensions;
             % permute dimensions (put these dimensions first)
             grid_clip = permute(grid_clip, [1, 1+y_dims, 1+setdiff(1:G.D.nd, y_dims)]);
-            if xy_ok
-                grid_clip = reshape(grid_clip, [2, prod(sz(org.y)), st.xy_n_row]);
+            if xy_on_single_column
+                grid_clip = reshape(grid_clip, [2, prod(sz(org.y)), xy_n_show]);
             else
                 grid_clip = reshape(grid_clip, [2, prod(sz(org.y))]);
-                grid_clip = repmat(grid_clip, [1, 1, st.xy_n_row]);
+                grid_clip = repmat(grid_clip, [1, 1, xy_n_show]);
             end
             
             % build y_tick and y_tick_values
             ny = prod(sz(org.y));
-            [y_tick, y_tick_values, y_tick_labels] = deal(cell([ny, st.xy_n_row]));
-            for k_row = 1:st.xy_n_row
+            [y_tick, y_tick_values, y_tick_labels] = deal(cell([ny, xy_n_show]));
+            for k_row = 1:xy_n_show
                 for k_y = 1:ny
                     % vertical center of the row
                     y_idx = brick.row(brick.indices(sz(org.y), k_y, 'g2i'));
@@ -626,6 +709,10 @@ classdef DisplayGraph < xplr.GraphNode
 
     % Separations mark for 'external' dimensions
     methods
+        function set.use_ROI2D_map(G, value)
+            G.use_ROI2D_map = value;
+            G.D.reset_display()
+        end
         function set.show_separation(G, value)
             G.show_separation = value;
             G.draw_separations()
@@ -635,11 +722,16 @@ classdef DisplayGraph < xplr.GraphNode
             set(G.separation_lines, 'color', value)
         end
         function draw_separations(G)
+            % Draw either the separations between all grid elements, or the
+            % regions when using map display
+            
             % no 'smart update', always delete all existing separation
             % lines and redisplay new ones
             brick.delete_valid(G.separation_lines)
-            G.separation_lines = [];
-            if ~G.show_separation, return, end
+            if ~G.show_separation
+                G.separation_lines = [];
+                return
+            end
             
             % some properties
             org = G.D.layout;
@@ -647,73 +739,92 @@ classdef DisplayGraph < xplr.GraphNode
             sz = G.D.zslice.sz;
             st = G.steps;
             
-            % store lines in a cell array
-            lines = {};
-            
-            % x
-            for k = 2:length(org.x)
-                d = org.x(k);                      % dimension for which we will draw vertical lines
-                d_out = [org.x(k+1:end), st.xy_dim];  % other dimensions more external than di in x location
-                n = sz(d);
-                if n == 1, continue, end
-                sz_out = ones(1, nd);
-                sz_out(d_out) = sz(d_out);
-                sz_out(nd+1) = st.xy_n_col;
-                n_out = prod(sz_out);
-                x_pos = zeros(n-1, n_out);
-                for k_out = 1:n_out
-                    % indices of external dimensions
-                    ijk = repmat(brick.indices(sz_out, k_out, 'g2i'), [1, n-1]);
-                    % indices for dimension d
-                    ijk(d, :) = 1.5:n-.5;
-                    % x-positions of n-1 lines
-                    x_pos(:, k_out) = ...
-                        sum(brick.add(st.x_offset(k:end)', brick.mult(ijk(org.x(k:end), :), st.x_step(k:end)')), 1) ...
-                        + st.xy_offsets(1) + (ijk(nd+1, :)-1) * st.xy_steps(1);
+            % Map or Grid?
+            if st.xy_use_map
+                % Map
+                n_roi = length(st.map_polys);
+                n_points = brick.itemlengths(st.map_polys);
+                vertices = [st.map_polys{:}]';
+                n_max = max(n_points);
+                faces = NaN(n_roi, n_max);
+                for k = 1:n_roi
+                    faces(k, 1:n_points(k)) = sum(n_points(1:k-1)) + (1:n_points(k));
                 end
-                level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
-                color = 1 - (1-G.separation_color) / 2^level;
-                lines{end+1} = brick.lines('x', x_pos(:), G.D.ha, ...
-                    'color', color, 'hittest', 'off'); %#ok<AGROW>
-            end
-            
-            % y
-            for k = (1+strcmp(G.D.display_mode, 'image')) : length(org.y)
-                d = org.y(k);                      % dimension for which we will draw vertical lines
-                d_out = [org.y(k+1:end), st.xy_dim];  % other dimensions more external than di in x location
-                n = sz(d);
-                if n == 1, continue, end
-                sz_out = ones(1,nd);
-                sz_out(d_out) = sz(d_out);
-                sz_out(nd+1) = st.xy_n_row;
-                n_out = prod(sz_out);
-                y_pos = zeros(n-1, n_out);
-                for k_out = 1:n_out
-                    % indices of external dimensions
-                    ijk = repmat(brick.indices(sz_out, k_out, 'g2i'), [1, n-1]);
-                    % indices for dimension d
-                    ijk(d, :) = 1.5:n-.5;
-                    % y-positions of n-1 lines
-                    y_pos(:, k_out) = ...
-                        sum(brick.add(st.y_offset(k:end)', brick.mult(ijk(org.y(k:end), :), st.y_step(k:end)')), 1) ...
-                        + st.xy_offsets(2) + (ijk(nd+1, :)-1) * st.xy_steps(2);
+                lines = patch('Faces', faces, 'Vertices', vertices, ...
+                    'FaceColor', 'none', 'EdgeColor', G.separation_color, ...
+                    'Parent', G.D.ha, 'HitTest', 'off');
+            else
+                % Grid
+                lines = {};
+                
+                % x
+                for k = 2:length(org.x)
+                    d = org.x(k);                      % dimension for which we will draw vertical lines
+                    d_out = [org.x(k+1:end), st.xy_dim];  % other dimensions more external than di in x location
+                    n = sz(d);
+                    if n == 1, continue, end
+                    sz_out = ones(1, nd);
+                    sz_out(d_out) = sz(d_out);
+                    sz_out(nd+1) = st.xy_n_col;
+                    n_out = prod(sz_out);
+                    x_pos = zeros(n-1, n_out);
+                    for k_out = 1:n_out
+                        % indices of external dimensions
+                        ijk = repmat(brick.indices(sz_out, k_out, 'g2i'), [1, n-1]);
+                        % indices for dimension d
+                        ijk(d, :) = 1.5:n-.5;
+                        % x-positions of n-1 lines
+                        x_pos(:, k_out) = ...
+                            sum(brick.add(st.x_offset(k:end)', brick.mult(ijk(org.x(k:end), :), st.x_step(k:end)')), 1) ...
+                            + st.xy_offsets(1) + (ijk(nd+1, :)-1) * st.xy_steps(1);
+                    end
+                    level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
+                    color = 1 - (1-G.separation_color) / 2^level;
+                    lines{end+1} = brick.lines('x', x_pos(:), G.D.ha, ...
+                        'color', color, 'hittest', 'off'); %#ok<AGROW>
                 end
-                level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
-                color = 1 - (1-G.separation_color) / 2^level;
-                lines{end+1} = brick.lines('y', y_pos(:), G.D.ha, ...
-                    'color', color, 'hittest', 'off'); %#ok<AGROW>
+
+                % y
+                for k = (1+strcmp(G.D.display_mode, 'image')) : length(org.y)
+                    d = org.y(k);                      % dimension for which we will draw vertical lines
+                    d_out = [org.y(k+1:end), st.xy_dim];  % other dimensions more external than di in x location
+                    n = sz(d);
+                    if n == 1, continue, end
+                    sz_out = ones(1,nd);
+                    sz_out(d_out) = sz(d_out);
+                    sz_out(nd+1) = st.xy_n_row;
+                    n_out = prod(sz_out);
+                    y_pos = zeros(n-1, n_out);
+                    for k_out = 1:n_out
+                        % indices of external dimensions
+                        ijk = repmat(brick.indices(sz_out, k_out, 'g2i'), [1, n-1]);
+                        % indices for dimension d
+                        ijk(d, :) = 1.5:n-.5;
+                        % y-positions of n-1 lines
+                        y_pos(:, k_out) = ...
+                            sum(brick.add(st.y_offset(k:end)', brick.mult(ijk(org.y(k:end), :), st.y_step(k:end)')), 1) ...
+                            + st.xy_offsets(2) + (ijk(nd+1, :)-1) * st.xy_steps(2);
+                    end
+                    level = ~isempty(st.xy_dim) + length(org.x) - k + 1;
+                    color = 1 - (1-G.separation_color) / 2^level;
+                    lines{end+1} = brick.lines('y', y_pos(:), G.D.ha, ...
+                        'color', color, 'hittest', 'off'); %#ok<AGROW>
+                end
+
+                % xy
+                if ~isempty(st.xy_dim)
+                    x_pos = -.5 + (1:st.xy_n_col-1) / st.xy_n_col;
+                    y_pos = -.5 + (1:st.xy_n_row-1) / st.xy_n_row;
+                    lines = [lines brick.lines(x_pos, y_pos, G.D.ha, ...
+                        'color', G.separation_color)];
+                end
+                
+                % single vector of graphic handles
+                lines = brick.map(@brick.row, lines, 'array'); 
             end
-            
-            % xy
-            if ~isempty(st.xy_dim)
-                x_pos = -.5 + (1:st.xy_n_col-1) / st.xy_n_col;
-                y_pos = -.5 + (1:st.xy_n_row-1) / st.xy_n_row;
-                lines = [lines brick.lines(x_pos, y_pos, G.D.ha, ...
-                    'color', G.separation_color)];
-            end
-            
+
             % put lines below other graphic elements
-            G.separation_lines = brick.map(@brick.row, lines, 'array'); % single vector of graphic handles
+            G.separation_lines = lines;
             uistack(G.separation_lines, 'bottom')
             
         end

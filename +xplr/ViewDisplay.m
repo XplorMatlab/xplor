@@ -270,14 +270,14 @@ classdef ViewDisplay < xplr.GraphNode
                 brick.propcontrol(D, 'line_alpha', ...
                     {'menuval', {1, .7, .4, .1}, {'none', 'mild', 'medium', 'strong', 'manual'}}, ...
                     {'parent', m, 'label', 'Lines transparency'});
-                do_sep = true;
+                no_item = true;
             else
-                do_sep = false;
+                no_item = false;
             end
             
             % cross
             brick.propcontrol(D.navigation, 'show_cross', 'menu', ...
-                {'parent', m, 'label', 'Show cross', 'separator', brick.onoff(do_sep)});
+                {'parent', m, 'label', 'Show cross', 'separator', brick.onoff(no_item)});
             if D.navigation.show_cross
                 brick.propcontrol(D.navigation,'cross_color', ...
                     {'menu', {'k', 'b', 'r', [1, 1, 1]*.6, 'w'}, {'black', 'blue', 'red', 'gray', 'white', 'other'}}, ...
@@ -287,17 +287,35 @@ classdef ViewDisplay < xplr.GraphNode
                     {'parent', m, 'label', 'Cross transparency'});
             end
             
-            % separation marks
-            org = D.layout_id;
-            if length(org.x) > 1 || length(org.y) > strcmp(D.display_mode, 'image') || ~isempty([org.xy, org.yx])
+            % separation marks and map display
+            org = D.layout;
+            xy_dim = [org.xy, org.yx];
+            idx_roi2d = D.slice.header(xy_dim).get_column_index('ROI2D');
+            no_item = true;
+            if ~isempty(idx_roi2d)
+                brick.propcontrol(D.graph, 'use_ROI2D_map', 'menu', ...
+                    {'parent', m, 'label', 'Use regions mapping', 'separator', brick.onoff(no_item)});
+                no_item = false;
+            end
+            if ~isempty(idx_roi2d) && D.graph.use_ROI2D_map
+                separations_available = true;
+                separation_label = 'Show map';
+                line_label = 'Map color';
+            else
+                separations_available = (~isempty(xy_dim) && D.slice.sz(xy_dim)>1) ...
+                    || length(org.x) > 1 || length(org.y) > strcmp(D.display_mode, 'image');
+                separation_label = 'Show separations between lines/images';
+                line_label = 'Separation color';
+            end
+            if separations_available
                 brick.propcontrol(D.graph, 'show_separation', 'menu', ...
-                    {'parent', m, 'label', 'Show separations between lines/images', 'separator', 'on'});
+                    {'parent', m, 'label', separation_label, 'separator', brick.onoff(no_item)});
                 if D.graph.show_separation
                     brick.propcontrol(D.graph, 'separation_color', ...
                         {'menu', {'k', [.8, .8, 1], [1, .8, .8], [.8, .8, .8]}, {'black', 'light blue', 'light red', 'light gray', 'other'}}, ...
-                        {'parent', m, 'label', 'Separations color'});
+                        {'parent', m, 'label', line_label});
                 end
-            end            
+            end
             
             % when moving dimension label, immediate display update?
             brick.propcontrol(D.labels, 'do_immediate_display', 'menu', ...
@@ -827,6 +845,17 @@ classdef ViewDisplay < xplr.GraphNode
             do_time_courses = strcmp(D.display_mode, 'time courses');
             sz = D.zslice.sz;
             org = D.layout; % convert from dim ID to dim numbers
+            
+            % Special! If we use a map display and data for each map
+            % element consists in a single scalar, color the map regions!
+            use_map = strcmp(D.display_mode, 'image') ...
+                && ~isempty(D.graph.map_drawing) && all(sz([org.x org.y])==1);
+            if use_map
+                xy_dim = [org.xy org.yx];
+                map_data = zeros(sz(xy_dim), 3);
+            end
+                
+            % Dimension categories
             internal_dim_ = D.internal_dim;
             external_dim_ = D.external_dim;
             external_dim_all_ = D.external_dim_all;
@@ -843,7 +872,7 @@ classdef ViewDisplay < xplr.GraphNode
             dim_external = ismember(dim, external_dim_);
             do_new = strcmp(flag, 'new');
             do_remove = strcmp(flag, 'remove');
-            do_position = ~brick.ismemberstr(flag, {'chg', 'chg_data', 'clip', 'color'});
+            do_position = ~brick.ismemberstr(flag, {'chg', 'chg_data', 'clip', 'color'}) && ~use_map;
             do_data_all = brick.ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'perm', 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
             do_data_select = brick.ismemberstr(flag, {'new', 'chg'});
             do_data = do_data_all || do_data_select;
@@ -868,7 +897,7 @@ classdef ViewDisplay < xplr.GraphNode
             end
             if ~isequal(strict_size(D.grid,length(grid_size)),prev_size_check) ...
                     || ~all(ishandle(D.grid(:)))
-                [do_reset, do_position, do_data_all] = deal(true);
+                [do_reset, do_position, do_data] = deal(true);
                 do_color = do_time_courses;
                 do_data_select = false;
             end
@@ -892,12 +921,19 @@ classdef ViewDisplay < xplr.GraphNode
             end
             
             % Prepare display and grid
-            if do_reset          % reset display and grid elements
+            if use_map
+                % nothing to prepare when using map!
+                if do_reset
+                    brick.delete_valid(D.grid) % this will also delete children D.hdisplay
+                    D.grid = [];
+                    D.grid_clip = NaN([2 grid_clip_size]);
+                    D.h_display = [];
+                end
+            elseif do_reset          % reset display and grid elements
                 brick.delete_valid(D.grid) % this will also delete children D.hdisplay
                 D.grid = gobjects(grid_size);
                 D.grid_clip = NaN([2 grid_clip_size]);
                 D.h_display = gobjects(h_display_size);
-                [do_position, do_data_all] = deal(true);
             elseif do_new      	% new grid elements
                 if ismember(dim, external_dim_)
                     D.grid = subsasgn_dim(D.grid, dim, ind, gobjects);
@@ -956,7 +992,7 @@ classdef ViewDisplay < xplr.GraphNode
                         D.grid_clip(:) = NaN;
                     end
                     % all data will need to be re-displayed
-                    [do_data_select, do_data_all] = deal(false, true);
+                    [do_data_select, do_data] = deal(false, true);
                 end
                 % compute clip
                 dim_indpc = D.clipping.independent_dim; % dimensions with independent clipping
@@ -1122,8 +1158,12 @@ classdef ViewDisplay < xplr.GraphNode
                             elseif nc == 4
                                 [im, alpha] = deal(im(:, :, 1:3), im(:, :, 4));
                             end
-                            hi = D.h_display(idx_h_display);
-                            if ~ishandle(hi)
+                            if ~use_map
+                                hi = D.h_display(idx_h_display);
+                            end
+                            if use_map
+                                map_data(u, :) = im;
+                            elseif ~ishandle(hi)
                                 % y coordinates are negative to orient the
                                 % image downward (see also comment inside of
                                 % displaygaph.gettransform method, where the
@@ -1148,6 +1188,11 @@ classdef ViewDisplay < xplr.GraphNode
                 end
             end
             
+            % Color the map
+            if use_map
+                set(D.graph.map_drawing, 'FaceVertexCData', map_data, 'FaceColor', 'flat')
+            end
+            
             % update value y-ticks
             if do_data
                 D.graph.set_value_ticks()
@@ -1158,7 +1203,8 @@ classdef ViewDisplay < xplr.GraphNode
             % creating each element)
             if do_reset || do_new
                 % flip to have bottom traces over top traces
-                uistack(flipud(D.grid(:)), 'bottom')
+                % keep the separation lines or map below everything
+                uistack([flipud(D.grid(:)); D.graph.separation_lines(:)], 'bottom')
             end
 
         end
@@ -1200,7 +1246,9 @@ classdef ViewDisplay < xplr.GraphNode
             
             % Update graph (will be needed by both labels and data display)
             prevsz = D.graph.zslice_sz;
-            D.graph.compute_steps()
+            if ~brick.ismemberstr(flag, {'chg_data', 'chg'})
+                D.graph.compute_steps()
+            end
             
             % Update labels and ticks (do the labels first because ticks
             % update can change the size of the axes, and therefore trigger

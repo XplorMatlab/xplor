@@ -563,22 +563,13 @@ classdef DisplayNavigation < xplr.GraphNode
             % Hide the vertical bar if all dimensions on x are singletons or if
             % cross_center is out of display on any dimension on x
             layout = N.D.layout;
-            steps = N.D.graph.steps;
-            if steps.xy_n_col > 1
-                x_dim = [layout.x, layout.xy, layout.yx];
-            else
-                x_dim = layout.x;
-            end
+            x_dim = [layout.x, layout.xy, layout.yx];
             x_singleton = isempty(x_dim);
             x_is_out_of_display = any(dim_out_of_display(x_dim));
             N.cross(1).Visible = brick.onoff(~x_singleton && ~x_is_out_of_display);
             
             % Same things for horizontal bar
-            if steps.xy_n_row > 1
-                y_dim = [layout.y, layout.xy, layout.yx];
-            else
-                y_dim = layout.y;
-            end
+            y_dim = [layout.y, layout.xy, layout.yx];
             y_singleton = isempty(y_dim);
             y_is_out_of_display = any(dim_out_of_display(y_dim));
             N.cross(2).Visible = brick.onoff(~(y_singleton|y_is_out_of_display));

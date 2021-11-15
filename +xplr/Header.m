@@ -428,7 +428,9 @@ classdef Header < handle
                 return
             end
             if isempty(H.id)
-                H.id = brick.hash({H.n, H.sub_labels, H.label, H.categorical, H.start, H.scale, H.values}, 'num');
+                % do not include the table  in the hash to spare time!!!
+                sub_labels_ = {H.sub_labels.label};
+                H.id = brick.hash({H.n, H.label, H.categorical, sub_labels_, H.start, H.scale}, 'num');
             end
             id = H.id;
         end

@@ -25,7 +25,8 @@ classdef DimensionLabel
         function L = DimensionLabel(label, type, unit)
             if ~ischar(label), error 'label must be a character array', end
             L.label = label;
-            assert(ismember(type, {'numeric', 'logical', 'char', 'color', 'mixed'}))
+            assert(ismember(type, {'numeric', 'logical', 'char', 'color', ...
+                'Selection1D', 'Selection2D', 'mixed'}))
             L.type = type;
             if nargin<3
                 return
@@ -61,6 +62,15 @@ classdef DimensionLabel
                 type = 'logical';
             elseif ischar(x)
                 type = 'char';
+            elseif isa(x, 'xplr.SelectionND')
+                switch x.nd
+                    case 1
+                        type = 'Selection1D';
+                    case 2
+                        type = 'Selection2D';
+                    otherwise
+                        error 'SelectionND header values with nd>2 not handled'
+                end
             else
                 type = 'mixed';
             end
@@ -73,9 +83,20 @@ end
 
 %---
 function default_val = get_default_value(type)
-    default_val = brick.switch_case(type, ...
-        'numeric',  0, ...
-        'logical',  false, ...
-        'char',     '', ...
-        'mixed',    []);
+    switch type
+        case 'numeric'
+            default_val = 0;
+        case 'logical'
+            default_val = false;
+        case 'char'
+            default_val = '';
+        case 'color'
+            default_val = [0, 0, 0];
+        case 'Selection1D'
+            default_val = xplr.SelectionND('empty', 1);
+        case 'Selection2D'
+            default_val = xplr.SelectionND('empty', 2);
+        case 'mixed'
+            default_val = [];
+    end
 end

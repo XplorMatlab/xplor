@@ -335,11 +335,11 @@ classdef SelectionShape
                     otherwise
                         error programming
                 end
-            end
-            if k == 1
-                poly = poly_k;
-            else
-                poly = [poly, [NaN; NaN], poly_k];
+                if k == 1
+                    poly = poly_k;
+                else
+                    poly = [poly, [NaN; NaN], poly_k];
+                end
             end
         end
     end

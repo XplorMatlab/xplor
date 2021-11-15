@@ -52,6 +52,14 @@ classdef Filter < xplr.DataOperand
                 % measure header: keep track of values
                 F.header_out = xplr.Header(label_out, header_in.sub_labels, cell(0, 1));
             end
+            
+            % additional information: ROI
+            switch F.nd_in
+                case 1
+                    F.augment_header('ROI1D', 'Selection1D');
+                case 2
+                    F.augment_header('ROI2D', 'Selection2D');
+            end
         end
         function update_selection(F, varargin)
             % function update_selection(F,value)
@@ -178,6 +186,9 @@ classdef Filter < xplr.DataOperand
                     end
                     add_header_info(:, end+1) = {'Name', names};
                 end
+                % ROI
+                roi_label = brick.cast(F.nd_in, 'ROI1D', 'ROI2D');
+                add_header_info(:, end+1) = {roi_label, value};
                 % track header values
                 switch flag
                     case 'chg&new'
@@ -193,7 +204,7 @@ classdef Filter < xplr.DataOperand
             else
                 F.header_out = update_header(F.header_out, flag, ind);
             end
-            
+
             % notification
             e = xplr.EventInfo('filter', flag, ind, value);
             notify(F, 'ChangedOperation', e)
@@ -374,7 +385,7 @@ classdef Filter < xplr.DataOperand
             s_final = s;
             s_final(dims(1)) = n_sel_slice;
             s_final(dims(2:end)) = [];
-            slic = reshape(slic, s_final);
+            slic = reshape(slic, [s_final 1]);
         end
     end
     methods (Access='protected')
