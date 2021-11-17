@@ -1,5 +1,11 @@
 
 %% Read data after attempting to update it from the internet
+% This data stops 14/12/2020!!! Better read now data from "Our world in
+% data" at https://github.com/owid/covid-19-data/tree/master/public/data
+% Either https://covid.ourworldindata.org/data/owid-covid-data.csv
+% or https://github.com/owid/covid-19-data/blob/master/public/data/ecdc/locations.csv
+% + https://github.com/owid/covid-19-data/blob/master/public/data/ecdc/full_data.csv
+
 try
     disp 'Load coronavirus data from opendata.ecdc.europa.eu'
     % url = 'https://www.ecdc.europa.eu/sites/default/files/documents/COVID-19-geographic-disbtribution-worldwide.csv';
