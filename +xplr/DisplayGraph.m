@@ -1138,8 +1138,8 @@ classdef DisplayGraph < xplr.GraphNode
                     else
                         ijk(d, :) = ijk0(d, :);
                     end
-                    xy = xy - st.xy_offsets(:, round(ijk(d, :)));
                 end
+                xy = xy - st.xy_offsets(:, round(ijk(d, :)));
             end
             
             % x 
