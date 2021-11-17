@@ -1,12 +1,8 @@
-classdef GraphNode < matlab.mixin.SetGet
+classdef GraphNode < xplr.Object
     
     properties (Transient) %(Access='private')
         % objects the graph node is listening to
         listening = struct('object', {}, 'listener', {});
-    end
-    
-    properties (Transient)
-        id_graph_node
     end
     
     events
@@ -15,24 +11,12 @@ classdef GraphNode < matlab.mixin.SetGet
     
     % Constructor, display
     methods
-        function self = GraphNode()
-            self.id_graph_node = rand();
-            xplr.debug_info('GraphNode', ['create ', class(self), num2str(floor(self.id_graph_node*1000), '%.3i')]);
-        end
         function delete(self)
-            xplr.debug_info('GraphNode', ['delete ', class(self), num2str(floor(self.id_graph_node*1000), '%.3i')]);
             % when object is being deleted, make sure no more listener can
             % trigger actions on it
             for i = 1:length(self.listening)
                 s = self.listening(i);
                 brick.delete_valid(s.listener)
-            end
-        end
-        function str = char(self)
-            if isvalid(self)
-                str = [class(self), num2str(floor(self.id_graph_node*1000), '%.3i')];
-            else
-                str = ['deleted ', class(self)];
             end
         end
     end

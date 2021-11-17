@@ -1,4 +1,4 @@
-classdef Header < handle
+classdef Header < xplr.Object
     % function H = header(label, n, unit, scale[, start])   [measure]
     % function H = header(label, unit, n, scale[, start])   [measure]
     % function H = header(dim_label, n, scale[, start])     [measure]
@@ -394,6 +394,12 @@ classdef Header < handle
     
     % Header comparisons
     methods
+        function id = get_id(H)
+            % The identifier for the header object is the object itself!
+            % Methods isequal and find_item below are written for fast
+            % search of a given id in a list
+            id = H;
+        end
         function b = isequal(H1, H2)
             % cannot use the default isqual function, because property
             % item_names or id might be computed for one header and not for
@@ -408,31 +414,21 @@ classdef Header < handle
                 b = false;
                 return
             end
-            b = (H1.n == H2.n) && isequal(H1.values, H2.values) ... % start with the most likely to be unequal
+            b = eq(H1,H2) ... % if objects share the same pointer, they are necessarily equal, no need to go further!
+                || ( ...
+                (H1.n == H2.n) ... % start with the most likely to be unequal
                 && isequal(H1.label, H2.label) && isequal(H1.sub_labels, H2.sub_labels) ...
-                && isequal({H1.categorical, H1.start, H1.scale}, {H2.categorical, H2.start, H2.scale});
+                && isequal(H1.values, H2.values) && isequal({H1.categorical, H1.start, H1.scale}, {H2.categorical, H2.start, H2.scale}) ...
+                );
         end
-%        function b = isequal(H1, H2)
-%            % function b = isequal(H1,H2)
-%            %---
-%            % alias to isequal, needed when both H1 and H2 are instances of
-%            % subclasses of xplr.header
-%            b = isequal(H1, H2);
-%        end
-        function id = get_id(H)
-            % Get a unique identifier that identifies the header (we will
-            % have H1 == H2 if and only if H1.get_id() == H2.get_id())
-            if ~isscalar(H)
-                id = zeros(size(H));
-                for i=1:numel(H), id(i) = get_id(H(i)); end
-                return
+        function idx = find_item(H1, H2)
+            % Look for item in list, first by searching the same pointers,
+            % and if no success by comparing contents.
+            lookup = eq(H1, H2);
+            if ~any(lookup)
+                lookup = isequal(H1, H2);
             end
-            if isempty(H.id)
-                % do not include the table  in the hash to spare time!!!
-                sub_labels_ = {H.sub_labels.label};
-                H.id = brick.hash({H.n, H.label, H.categorical, sub_labels_, H.start, H.scale}, 'num');
-            end
-            id = H.id;
+            idx = find(lookup, 1, 'first');
         end
         function id = get_measure_space_id(H)
             % Get a unique identifier that identifies the space inside

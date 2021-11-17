@@ -45,9 +45,9 @@ classdef ViewDisplay < xplr.GraphNode
         do_title = true;
     end    
     properties (SetAccess='private')
-        layout_id                              % layout, i.e. which data dimension appear on which location; set with function set_layout_id
+        layout_id                               % layout, i.e. which data dimension appear on which location; set with function set_layout_id
         layout_id_all                           % layout, including singleton dimensions; set with function set_layout_id
-        active_dim_id = struct('x', [], 'y', [])   % dimensions on which zooming mouse actions and sliders apply; change with function make_dim_active(D,d)
+        active_dim_id = struct('x', [], 'y', [])% dimensions on which zooming mouse actions and sliders apply; change with function make_dim_active(D,d)
         color_dim_id = [];                      % set with set_color_dim
     end
     
@@ -179,7 +179,10 @@ classdef ViewDisplay < xplr.GraphNode
                 dim = org.x(1);
             end
             if strcmp(D.display_mode, 'image')
-                if ~isempty(org.y)
+                if D.graph.map_display()
+                    % map mode! -> xy is an internal dimension!
+                    dim = [org.xy, org.merged_data];
+                elseif ~isempty(org.y)
                     dim = [dim org.y(1), org.merged_data];
                 elseif ~isempty(org.merged_data)
                     dim = [dim, org.merged_data];
@@ -193,14 +196,15 @@ classdef ViewDisplay < xplr.GraphNode
         end
         function dim = get.external_dim(D)
             org = D.layout;
-            dim = [org.x(2:end), org.y(1+strcmp(D.display_mode,'image'):end) , ...
-                org.xy, org.yx];
+            dim = [org.x(2:end), org.y(1+strcmp(D.display_mode,'image'):end)];
+            if ~isempty(org.xy) && ~D.graph.map_display()
+                dim = [dim org.xy];
+            end
             dim = sort(dim);
         end
         function dim = get.external_dim_all(D)
             org = D.layout_all;
-            dim = [org.x(2:end), org.y(1+strcmp(D.display_mode,'image'):end) , ...
-                org.xy, org.yx];
+            dim = [org.x(2:end), org.y(1+strcmp(D.display_mode,'image'):end), org.xy];
             dim = sort(dim);
         end
         function dim_id = get.external_dim_id(D)
@@ -227,8 +231,15 @@ classdef ViewDisplay < xplr.GraphNode
             % mergeddata and external dimensions together: these are the
             % dimensions where clipping range can be defined independently
             org = D.layout;
+            if D.graph.map_display
+                % xy is an internal dimension -> not a clip dimension
+                xy_ext = [];
+            else
+                % if there is an xy dimension, it is a clip dimension
+                xy_ext = org.xy;
+            end
             dim = [org.x(2:end), org.y(1+strcmp(D.display_mode,'image'):end), ...
-                org.xy, org.yx, org.merged_data];
+                xy_ext, org.merged_data];
             dim = sort(dim);
         end
     end
@@ -289,7 +300,7 @@ classdef ViewDisplay < xplr.GraphNode
             
             % separation marks and map display
             org = D.layout;
-            xy_dim = [org.xy, org.yx];
+            xy_dim = org.xy;
             idx_roi2d = D.slice.header(xy_dim).get_column_index('ROI2D');
             no_item = true;
             if ~isempty(idx_roi2d)
@@ -301,11 +312,13 @@ classdef ViewDisplay < xplr.GraphNode
                 separations_available = true;
                 separation_label = 'Show map';
                 line_label = 'Map color';
+                names_label = 'Show map names';
             else
                 separations_available = (~isempty(xy_dim) && D.slice.sz(xy_dim)>1) ...
                     || length(org.x) > 1 || length(org.y) > strcmp(D.display_mode, 'image');
                 separation_label = 'Show separations between lines/images';
                 line_label = 'Separation color';
+                names_label = 'Show grid names';
             end
             if separations_available
                 brick.propcontrol(D.graph, 'show_separation', 'menu', ...
@@ -315,6 +328,8 @@ classdef ViewDisplay < xplr.GraphNode
                         {'menu', {'k', [.8, .8, 1], [1, .8, .8], [.8, .8, .8]}, {'black', 'light blue', 'light red', 'light gray', 'other'}}, ...
                         {'parent', m, 'label', line_label});
                 end
+                brick.propcontrol(D.graph, 'show_grid_labels', 'menu', ...
+                    {'parent', m, 'label', names_label});
             end
             
             % when moving dimension label, immediate display update?
@@ -351,10 +366,6 @@ classdef ViewDisplay < xplr.GraphNode
                 % no valid active dim: set some if do_auto is set to true
                 if ~do_auto
                     % do not set active dims
-                %                 elseif ~isempty(org_id.xy)
-                %                     dy = org_id.xy;
-                %                 elseif ~isempty(org_id.yx)
-                %                     dx = org_id.yx;
                 else
                     % (x)
                     if isempty(dx) && ~isempty(org_id.x)
@@ -392,14 +403,16 @@ classdef ViewDisplay < xplr.GraphNode
                     [dx, dy] = deal(dy, []);
                 elseif ismember(dy, org_id.y)
                     [dx, dy] = deal([], dy);
-                elseif ismember(dx, org_id.xy)
-                    [dx, dy] = deal([], dx);
-                elseif ismember(dx, org_id.yx)
-                    [dx, dy] = deal(dx, []);
-                elseif ismember(dy, org_id.xy)
-                    [dx, dy] = deal([], dy);
-                elseif ismember(dy, org_id.yx)
-                    [dx, dy] = deal(dy, []);
+                elseif isequal(dx, org_id.xy) || isequal(dy, org_id.xy)
+                    switch org_id.xy_mode
+                        case 'xy'
+                            [dx, dy] = deal([], org_id.xy);
+                        case 'yx'
+                            [dx, dy] = deal(org_id.xy, []);
+                        case 'map'
+                            % do not set any active dim
+                            [dx, dy] = deal([]);
+                    end
                 else
                     % should not happen
                     [dx, dy] = deal([], []);
@@ -519,8 +532,11 @@ classdef ViewDisplay < xplr.GraphNode
                 return
             end
             c = brick.disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
+            % use map mode?
+            new_layout_id = D.graph.set_map_mode(new_layout_id);
+            % set layout
             D.layout_id_all = new_layout_id;
-            D.layout_id = new_layout_id.current_layout(); % keep only dimensions actually displayed
+            D.layout_id = new_layout_id.current_layout(); % this will keep only dimensions actually displayed
             % is zslice too large for being displayed
             D.check_zslice_size()
             % first update graph (new positionning will be needed for both
@@ -566,32 +582,54 @@ classdef ViewDisplay < xplr.GraphNode
         end
         function make_dim_active(D, dim_id, flag)
             dim_id = D.slice.dimension_id(dim_id);
+            org_id = D.layout_id;
             c = brick.disable_listener(D.listeners.ax_siz); %#ok<NASGU> % prevent display update following automatic change of axis position
             do_toggle = nargin >= 3 && strcmp(flag, 'toggle');
-            % update active dim and connect slider
-            if ismember(dim_id, [D.layout_id.x, D.layout_id.yx])
-                if do_toggle && any(dim_id == D.active_dim_id.x)
-                    D.active_dim_id.x = [];
-                else
-                    D.active_dim_id.x = dim_id;
-                    if ismember(dim_id, D.layout_id.yx) || any(ismember(D.active_dim_id.y, [D.layout_id.xy, D.layout_id.yx]))
-                        D.active_dim_id.y = [];
-                        D.navigation.connect_zoom_filter('y')
-                    end
+            
+            % where should the slider appear
+            no_slider = false;
+            if dim_id == org_id.xy
+                switch org_id.xy_mode
+                    case 'xy'
+                        slider_position = 'y';
+                        slider_remove = 'x';
+                    case 'yx'
+                        slider_position = 'x';
+                        slider_remove = 'y';
+                    case 'map'
+                        % SPECIAL: no zooming implemented, no slider
+                        no_slider = true;
+                        slider_position = 'x'; % slider will be removed
+                        slider_remove = 'y';
                 end
-                D.navigation.connect_zoom_filter('x')
-            elseif ismember(dim_id, [D.layout_id.y, D.layout_id.xy])
-                if do_toggle && any(dim_id == D.active_dim_id.y)
-                    D.active_dim_id.y = [];
+            else
+                if ismember(dim_id, org_id.x)
+                    slider_position = 'x';
                 else
-                    D.active_dim_id.y = dim_id;
-                    if ismember(dim_id, D.layout_id.xy) || any(ismember(D.active_dim_id.x, [D.layout_id.xy, D.layout_id.yx]))
-                        D.active_dim_id.x = [];
-                        D.navigation.connect_zoom_filter('x')
-                    end
+                    slider_position = 'y';
                 end
-                D.navigation.connect_zoom_filter('y')
+                slider_remove = [];
             end
+            
+            % update active dim and connect slider(s)
+            if no_slider
+                D.active_dim_id.x = [];
+                D.active_dim_id.y = [];
+            elseif isequal(D.active_dim_id.(slider_position), dim_id) && do_toggle
+                % cancel active dim
+                D.active_dim_id.(slider_position) = [];
+            else
+                % set active dim
+                D.active_dim_id.(slider_position) = dim_id;
+                if ~isempty(slider_remove)
+                    D.active_dim_id.(slider_remove) = [];
+                end
+            end
+            D.navigation.connect_zoom_filter(slider_position)
+            if ~isempty(slider_remove)
+                D.navigation.connect_zoom_filter(slider_remove)
+            end      
+            
             % update ticks and labels
             D.graph.set_ticks()
             D.graph.set_value_ticks()
@@ -846,14 +884,10 @@ classdef ViewDisplay < xplr.GraphNode
             sz = D.zslice.sz;
             org = D.layout; % convert from dim ID to dim numbers
             
-            % Special! If we use a map display and data for each map
-            % element consists in a single scalar, color the map regions!
-            use_map = strcmp(D.display_mode, 'image') ...
-                && ~isempty(D.graph.map_drawing) && all(sz([org.x org.y])==1);
-            if use_map
-                xy_dim = [org.xy org.yx];
-                map_data = zeros(sz(xy_dim), 3);
-            end
+            % Special! If we use a map display the graphic elements will
+            % not be created in this function, rather we will use the patch
+            % stored in D.graph.map_drawing
+            map_display = D.graph.map_display();
                 
             % Dimension categories
             internal_dim_ = D.internal_dim;
@@ -872,7 +906,7 @@ classdef ViewDisplay < xplr.GraphNode
             dim_external = ismember(dim, external_dim_);
             do_new = strcmp(flag, 'new');
             do_remove = strcmp(flag, 'remove');
-            do_position = ~brick.ismemberstr(flag, {'chg', 'chg_data', 'clip', 'color'}) && ~use_map;
+            do_position = ~brick.ismemberstr(flag, {'chg', 'chg_data', 'clip', 'color'}) && ~map_display;
             do_data_all = brick.ismemberstr(flag, {'clip', 'global', 'chg_data', 'chg_data&blocksize', 'perm', 'color'}); % color is set when updating ydata, but updating ydata is actually not necessary when only color changes...
             do_data_select = brick.ismemberstr(flag, {'new', 'chg'});
             do_data = do_data_all || do_data_select;
@@ -921,7 +955,7 @@ classdef ViewDisplay < xplr.GraphNode
             end
             
             % Prepare display and grid
-            if use_map
+            if map_display
                 % nothing to prepare when using map!
                 if do_reset
                     brick.delete_valid(D.grid) % this will also delete children D.hdisplay
@@ -1082,7 +1116,11 @@ classdef ViewDisplay < xplr.GraphNode
                 % (and permutation that follows)
                 nd_perm = max(3, D.nd);
                 internal_perm = zeros(1, nd_perm);
-                if do_time_courses
+                if map_display
+                    % reorder dimensions as xy-channel-others
+                    internal_perm(1) = org.xy;
+                    if ~isempty(org.merged_data), internal_perm(2) = org .merged_data; end
+                elseif do_time_courses
                     % reorder dimensions as x-others
                     if ~isempty(org.x), internal_perm(1) = org.x(1); end
                 else
@@ -1158,11 +1196,12 @@ classdef ViewDisplay < xplr.GraphNode
                             elseif nc == 4
                                 [im, alpha] = deal(im(:, :, 1:3), im(:, :, 4));
                             end
-                            if ~use_map
+                            if ~map_display
                                 hi = D.h_display(idx_h_display);
                             end
-                            if use_map
-                                map_data(u, :) = im;
+                            if map_display
+                                set(D.graph.map_drawing, 'FaceColor', 'flat', ...
+                                    'FaceVertexCData', D.graph.map_face_coloring * im(:,:))
                             elseif ~ishandle(hi)
                                 % y coordinates are negative to orient the
                                 % image downward (see also comment inside of
@@ -1188,11 +1227,6 @@ classdef ViewDisplay < xplr.GraphNode
                 end
             end
             
-            % Color the map
-            if use_map
-                set(D.graph.map_drawing, 'FaceVertexCData', map_data, 'FaceColor', 'flat')
-            end
-            
             % update value y-ticks
             if do_data
                 D.graph.set_value_ticks()
@@ -1204,7 +1238,7 @@ classdef ViewDisplay < xplr.GraphNode
             if do_reset || do_new
                 % flip to have bottom traces over top traces
                 % keep the separation lines or map below everything
-                uistack([flipud(D.grid(:)); D.graph.separation_lines(:)], 'bottom')
+                uistack([flipud(D.grid(:)); D.graph.separation_lines(:); D.graph.map_lines(:)], 'bottom')
             end
 
         end

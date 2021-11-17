@@ -11,13 +11,13 @@ classdef DisplayLayout
         % numbers)
         x
         y
-        merged_data
         xy
-        yx
+        merged_data
+        % other layout options
+        xy_mode = 'xy'; % xy, yx or map
     end
     properties (Dependent, SetAccess='private')
         dim_locations
-        grid_display
     end
     
     % Create
@@ -31,20 +31,13 @@ classdef DisplayLayout
         end
     end
     
-    % Simple get dependent
-    methods
-        function d = get.grid_display(L)
-            d = [L.xy, L.yx];
-        end
-    end
-    
     % Manipulation
     methods
         function pos = get.dim_locations(L)
             pos = cell(1, L.D.nd);
             data_head = L.D.slice.header;
             data_dim_id = [data_head.dim_id];
-            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
+            F = {'x', 'y', 'merged_data', 'xy'};
             for i=1:length(F)
                 f = F{i};
                 dim_id = L.(f);
@@ -55,7 +48,7 @@ classdef DisplayLayout
         function pos = dim_location(L, dim)
             if ~isscalar(dim), error 'argument ''dim'' must be scalar', end
             dim_id = L.D.slice.dimension_id(dim);
-            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
+            F = {'x', 'y', 'merged_data', 'xy'};
             for i=1:length(F)
                 f = F{i};
                 if any(L.(f) == dim_id)
@@ -68,13 +61,13 @@ classdef DisplayLayout
         function s = dimension_number(L)
             % function s = dimension_number(L)
             %---
-            % Return a structure with same fields x, y, merged_data, xy and yx
+            % Return a structure with same fields x, y, merged_data, and xy
             % as L, but where values will be dimension numbers instead of
             % identifiers.
             s = struct;
             data_head = L.D.slice.header;
             data_dim_id = [data_head.dim_id];
-            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
+            F = {'x', 'y', 'merged_data', 'xy'};
             for i=1:length(F)
                 f = F{i};
                 dim_id = L.(f);
@@ -84,6 +77,7 @@ classdef DisplayLayout
                 end
                 s.(f) = dim;
             end
+            s.xy_mode = L.xy_mode;
         end
         function L2 = current_layout(L)
             % function L2 = current_layout(L)
@@ -92,7 +86,7 @@ classdef DisplayLayout
             L2 = L; % copy (displaylayout is not a handle class)
             data_head = L.D.slice.header;
             data_dim_id = [data_head.dim_id];
-            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
+            F = {'x', 'y', 'merged_data', 'xy'};
             for i = 1:length(F)
                 f = F{i};
                 dim_idf = L.(f);      % dimension identifiers
@@ -112,7 +106,7 @@ classdef DisplayLayout
             %
             % Input:
             % - dim_id       dimension identifier(s)
-            % - location    character arrays: 'x', 'y', 'xy', 'yx' or
+            % - location    character arrays: 'x', 'y', 'xy' or
             %               'merged_data', with, for 'x' and 'y' optional
             %               indication of index where to insert the
             %               location ('x0' = at the beginning = default,
@@ -129,21 +123,20 @@ classdef DisplayLayout
             if length(dim_id) ~= length(location), error 'input lengths mismatch', end
             
             % remove these dimensions from the layout
-            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
+            F = {'x', 'y', 'merged_data', 'xy'};
             for i = 1:length(F)
                 f = F{i};
                 L.(f)(ismember(L.(f), dim_id)) = [];
             end
             
             % add them at the requested locations
-%             dim_idmove = []; 
+            use_indices = struct('x', 0, 'y', 0, 'merged_data', 0);
             for i = 1:length(dim_id)
                 f = location{i};
-                if ismember(f, {'xy', 'yx'})
-                    % dimension that is already at 'xy' or 'yx' location if
+                if strcmp(f, 'xy')
+                    % dimension that is already at 'xy' location if
                     % any will need to be moved somewhere else
-%                     dim_idmove = [L.xy, L.yx];
-                    [L.xy, L.yx] = deal([]);
+                    L.xy = [];
                     % assign requested dimension to the requested location
                     L.(f) = dim_id(i);
                 else
@@ -151,7 +144,8 @@ classdef DisplayLayout
                     % specific position
                     [f, index] = brick.regexptokens(f, '^(x|y|merged_data)([\-0-9]*)$');
                     if isempty(index)
-                        index = 0;
+                        index = use_indices.(f);
+                        use_indices.(f) = index + 1;
                     else
                         index = str2double(index);
                         if index < 0
@@ -220,7 +214,7 @@ classdef DisplayLayout
             % dimensions already positionned + remove dimensions that
             % disappeared
             dim_positionned = false(1, L.D.nd);
-            F = {'x', 'y', 'merged_data', 'xy', 'yx'};
+            F = {'x', 'y', 'merged_data', 'xy'};
             for i = 1:length(F)
                 f = F{i};
                 dim_idf = L.(f);      % dimension identifiers
@@ -283,7 +277,7 @@ classdef DisplayLayout
                     % keep L2 balanced between number of dimensions in x
                     % and y
                     if n_remain == 1 && isscalar(L2.x) ...
-                            && (length(L2.y) == do_image) && isempty([L.xy, L.yx])
+                            && (length(L2.y) == do_image) && isempty(L.xy)
                         % grid display looks promising
                         L.xy = d_id;
                         L2.xy = d_id;

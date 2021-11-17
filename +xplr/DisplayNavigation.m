@@ -563,13 +563,13 @@ classdef DisplayNavigation < xplr.GraphNode
             % Hide the vertical bar if all dimensions on x are singletons or if
             % cross_center is out of display on any dimension on x
             layout = N.D.layout;
-            x_dim = [layout.x, layout.xy, layout.yx];
+            x_dim = [layout.x, layout.xy];
             x_singleton = isempty(x_dim);
             x_is_out_of_display = any(dim_out_of_display(x_dim));
             N.cross(1).Visible = brick.onoff(~x_singleton && ~x_is_out_of_display);
             
             % Same things for horizontal bar
-            y_dim = [layout.y, layout.xy, layout.yx];
+            y_dim = [layout.y, layout.xy];
             y_singleton = isempty(y_dim);
             y_is_out_of_display = any(dim_out_of_display(y_dim));
             N.cross(2).Visible = brick.onoff(~(y_singleton|y_is_out_of_display));
@@ -625,17 +625,25 @@ classdef DisplayNavigation < xplr.GraphNode
 
             % Set selection dimension
             % (no active control? -> propose selection in the 'internal' dimensions)
-            if isempty(N.selection_dim_id) && ~isempty([layout.x, layout.y])
-                if ~isempty(layout.x) && (strcmp(N.D.display_mode, 'time courses') || isempty(layout.y))
-                    % time courses (or image without y dimension) -> 1D selection
-                    prop_dim = layout.x(1);
-                elseif strcmp(N.D.display_mode, 'image') && isempty(layout.x)
-                    % image but no x dimension -> 1D vertical selection
-                    prop_dim = layout.y(1);
+            prop_dim = [];
+            if isempty(N.selection_dim_id)
+                if strcmp(N.D.display_mode, 'time courses')
+                    % time courses -> 1D vertical selection
+                    if ~isempty(layout.x), prop_dim = layout.x(1); end
                 else
-                    % image -> 2D selection
-                    prop_dim = [layout.x(1), layout.y(1)];
+                    if ~isempty(layout.x) && ~isempty(layout.y)
+                        % image -> 2D selection
+                        prop_dim = [layout.x(1), layout.y(1)];
+                    elseif ~isempty(layout.x)
+                        % image but no Y dimension -> 1D horizontal selection
+                        prop_dim = layout.x(1);
+                    elseif ~isempty(layout.y)
+                        % image but no x dimension -> 1D vertical selection
+                        prop_dim = layout.y(1);
+                    end
                 end
+            end
+            if ~isempty(prop_dim)
                 prop_labels = {header(prop_dim).label};
                 if isscalar(prop_dim)
                     item_label = ['Control selection in dimension ', prop_labels{1}];
@@ -931,7 +939,7 @@ classdef DisplayNavigation < xplr.GraphNode
             
             % before all, check that selections can be displayed
             selection_axis = [N.D.layout_id.dim_locations{N.selection_dim}];
-            if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
+            if ~ismember(selection_axis, {'x', 'y', 'xy'})
                 disp('selections cannot be displayed')
                 brick.delete_valid(N.selection_display)
                 N.selection_display = [];
@@ -999,7 +1007,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % convert selection to displayable polygon
             sel_dim = N.selection_dim;
             selection_axis = [N.D.layout_id.dim_locations{sel_dim}];
-            if ~ismember(selection_axis, {'x', 'y', 'xy', 'yx'})
+            if ~ismember(selection_axis, {'x', 'y', 'xy'})
                 error('selection cannot be displayed')
             end
             % selection shape
@@ -1393,9 +1401,9 @@ classdef DisplayNavigation < xplr.GraphNode
             org = N.D.layout;
             zoom_dim = [org.x(find(ok_dim(org.x), 1, 'first')), ...
                 org.y(find(ok_dim(org.y), 1, 'first'))];
-            % if empty, grid (xy or yx) dimension
+            % if empty, grid (xy) dimension
             if isempty(zoom_dim)
-                zoom_dim = [org.xy, org.yx];
+                zoom_dim = org.xy;
             end
         end
         function [zoom_dim, zoom] = zoom_in_rect(N, rect)
@@ -1462,7 +1470,7 @@ classdef DisplayNavigation < xplr.GraphNode
             % but it seems that the effect is less intuitive. Let's go back
             % to the previous code and see if we get errors or unintuitive
             % behaviors to decide what to do. (TD 12/11/2019)
-            %             if n_scroll<0 && ~any([N.D.layout.xy N.D.layout.yx])
+            %             if n_scroll<0 && ~any(N.D.layout.xy)
             %                 % it does not make sense to zoom-in in a dimensions which
             %                 % does not fill its available space due to aspect ratio
             %                 % constraints

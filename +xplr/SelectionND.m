@@ -1,4 +1,4 @@
-classdef SelectionND < xplr.GraphNode
+classdef SelectionND < xplr.Object
     % function sel = SelectionND('type', data[, sizes])
     %---
     % selection_nd class defines selection in an formal manner, i.e. by
@@ -24,7 +24,7 @@ classdef SelectionND < xplr.GraphNode
     % If 'sizes' is specified, indices are computed according to this data
     % sizes. 'sizes' is mandatory for 'indices' selections.
     % 
-    % 'selection_nd' is a handle class to make a = b faster (no copy), but
+    % 'SelectionND' is a handle class to make a = b faster (no copy), but
     % be careful when using it.
     % 
     % See xplr.SelectionShape for details on the 'data' argument.

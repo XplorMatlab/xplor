@@ -18,8 +18,8 @@ disp 'Process data'
 % Dates
 dates_column = data.dateRep;
 date_start = min(dates_column);
-dates_row_num = days(dates_row - date_start); % convert to numeric, starting from day 0
-nday = max(dates_row_num) + 1;
+dates_num = days(dates_column - date_start); % convert to numeric, starting from day 0
+nday = max(dates_num) + 1;
 dates = date_start + (0:nday-1);
 
 % Countries
@@ -35,7 +35,7 @@ ncountry = length(countries);
 newcasesanddeaths = [data.cases data.deaths];
 CORONAVIRUS = zeros(nday, ncountry, 2);
 for i = 1:size(data,1)
-    CORONAVIRUS(dates_row_num(i)+1, idxrow2country(i), :) = newcasesanddeaths(i,:);
+    CORONAVIRUS(dates_num(i)+1, idxrow2country(i), :) = newcasesanddeaths(i,:);
 end
 
 % normalize by population
@@ -67,6 +67,7 @@ world_map_mat = fullfile(folder,'world_map.mat');
 if exist(world_map_mat, 'file')
     disp 'load world map'
     load(world_map_mat)
+    nshape = length(S);
 else
     %% Get world map from internet (requires Mapping Toolbox and Internet connection)
 
@@ -115,37 +116,12 @@ else
     save(world_map_mat,'S','boundingbox')
 end
 
-%% Project map shapes into image
+%% Convert map shapes to SelectionND objects
 
-% image size and scaling
-nx = 1000; % image width
-scale = (nx-2.2) / diff(boundingbox(:,1));
-ny = ceil(diff(boundingbox(:,2)) * scale + 1.7);
-scale(2,1) = -scale; % Y goes from bottom to top, but image indices go from top to bottom
-offset = [1.6; ny-.6] - boundingbox(1,:)'.*scale;     % offset(1) + bounddingbox(2,1) will be equal to [1+0.6 nx-0.6]
-
-% country colors
-nshape = length(S);
-colors = colormaps.randomcolors(nshape);
-
-% make map!
-map = zeros(nx,ny);
-mapcolor = zeros(nx*ny, 3);
+shapes = xplr.SelectionND(nshape);
 for i = 1:nshape
-    % area-preserving projection
-    [x, y] = deal(S(i).x, S(i).y);        % coordinates in the Robinson projection
-    [x, y] = deal(offset(1) + scale(1)*x, offset(2) + scale(2)*y);  % coordinates in image
-    mask = brick.poly2mask(x, y, nx, ny);
-    np = sum(mask(:));
-    map(mask) = i;
-    mapcolor(mask, :) = repmat(colors(i,:), [np 1]);
+    shapes(i) = xplr.SelectionND('poly2D',[S(i).x; S(i).y]);
 end
-mapcolor = reshape(mapcolor,[nx ny 3]);
-
-% % display
-% figure(1)
-% imagesc(permute(mapcolor,[2 1 3]))
-% axis image
 
 %% Link coronavirus dataset countries with map shapes
 
@@ -185,6 +161,7 @@ countries(unfound) = [];
 country2shape(unfound) = [];
 ncountry = length(countries);
 CORONAVIRUS(:,unfound,:,:,:) = [];
+country_shapes = shapes(country2shape);
 
 %% Smooth the data
 CORONAVIRUS_RAW = CORONAVIRUS;
@@ -208,21 +185,32 @@ end
 
 %% Display data
 
-header = xplr.Header( ...
-    {'day' dates}, ...
-    {'country' countries}, ...
-    {'data' {'cases' 'deaths'}}, ...
+
+headers = xplr.Header( ...
+    {'day' nday days(1) dates(1)}, ...
+    {'country' {'Name', 'ROI2D'} [countries, num2cell(country_shapes)']}, ...
+    {'data', {'Name', 'ViewColor'}, [{'cases'; 'deaths'}, {[1 .2 0]; [0 0 0]}]}, ...
     {'norm.' {'total' 'per million people'}}, ...
     {'type' {'daily' 'cumulated'}});
+data = xplr.XData(CORONAVIRUS, headers);
 
-V = xplor(CORONAVIRUS, ...
-    'header', header, ...
-    'view', {'day' 'country'}, ...
-    'colormap', 'white_red', ...
+V1 = xplor(data, ...
+    'view', {'day' 'data' 'type'}, ...
     'display mode', 'time courses');
-V.D.clipping.auto_clip_mode_no_center = 'prc1';
-V.D.clipping.adjust_to_view = true;
-V.D.set_dim_location('country', 'xy')
+V1.D.clipping.auto_clip_mode_no_center = 'prc1';
+V1.D.clipping.adjust_to_view = true;
+V1.D.set_dim_location({'day' 'data' 'type'}, {'x' 'y' 'merged_data'})
+V1.D.clipping.set_independent_dim({'data', 'type'})
+
+V2 = xplor(data, ...
+    'view', 'country', ...
+    'colormap', 'white_red', ...
+    'display mode', 'image');
+V2.D.clipping.auto_clip_mode_no_center = 'prc.1';
+V2.D.clipping.adjust_to_view = false;
+V2.D.graph.show_grid_labels = false;
+V2.D.graph.show_separation = true;
+V2.D.set_dim_location('country', 'xy')
 
 %% Display some info
 disp('---')

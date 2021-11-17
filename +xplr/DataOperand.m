@@ -98,7 +98,7 @@ classdef DataOperand < xplr.GraphNode
             % will be created when applying the operation to some
             % dimensions (identified by dim_id_in) of an xdata object.
             if O.change_dimension_id()
-                dim_id_out = mod(sum(dim_id_in) + O.id_graph_node + (0:O.nd_out-1)*pi, 1);
+                dim_id_out = mod(sum(dim_id_in) + O.object_id + (0:O.nd_out-1)*pi, 1);
             else
                 dim_id_out = dim_id_in;
             end

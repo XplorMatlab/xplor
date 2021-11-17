@@ -8,11 +8,14 @@ classdef DisplayGraph < xplr.GraphNode
         % graphic objects
         xy_ticks 
         separation_lines
+        map_lines
+        map_face_coloring
     end
     properties (SetObservable, AbortSet=true)
         use_ROI2D_map = true;
         show_separation = false;
         separation_color = [.8, .8, .8];
+        show_grid_labels = true;
     end
     % shortcuts
     properties (Dependent, SetAccess='private') % Meant to be private!
@@ -46,11 +49,7 @@ classdef DisplayGraph < xplr.GraphNode
             ha = G.D.ha;
         end
         function hp = get.map_drawing(G)
-            if G.steps.xy_use_map
-                hp = G.separation_lines;
-            else
-                hp = [];
-            end
+            hp = G.map_lines;
         end
     end
     
@@ -97,7 +96,7 @@ classdef DisplayGraph < xplr.GraphNode
             %             % Choose method 2 for internal coordinates anf for "2D grid"
             %             % organization. Choose method 1 otherwise.
             %             [zm ze] = deal(zm1, ze1);
-            %             if any(org_in.xy) || any(org_in.yx)
+            %             if org_in.xy
             %                 din = [x_layout y_layout];
             %             else
             %                 lastx = find(ok_dim(x_layout),1,'last'); % index of "extern" x dimension
@@ -132,22 +131,16 @@ classdef DisplayGraph < xplr.GraphNode
             % does one dimension have 2D grid organization
             x_avail = 1;
             y_avail = 1; % total available x- and y-span
-            if any(org_in.xy) || any(org_in.yx)
+            if ~isempty(org_in.xy)
                 % which dimension
-                if any(org_in.xy)
-                    st.xy_dim = org_in.xy;
-                    xy_mode = 'xy';
-                else
-                    st.xy_dim = org_in.yx;
-                    xy_mode = 'yx';
-                end
+                st.xy_dim = org_in.xy;
+                xy_mode = org_in.xy_mode;
                 xy_header = header(st.xy_dim);
                 
-                % Use ROI informations instead of a grid?
-                idx_roi2d = xy_header.get_column_index('ROI2D');
-                st.xy_use_map = idx_roi2d && G.use_ROI2D_map;
-                if st.xy_use_map
+                if strcmp(xy_mode, 'map')
                     % Get the map!
+                    idx_roi2d = xy_header.get_column_index('ROI2D');
+                    if ~idx_roi2d, error 'no map available for map display mode!'; end
                     rois = [xy_header.values{:,idx_roi2d}]; % xplr.SelectionND object
                     n_roi = length(rois);
                     polys = {rois.polygon};
@@ -155,8 +148,10 @@ classdef DisplayGraph < xplr.GraphNode
                     % Coordinates of map sides (use data sizes if available)
                     data_sizes = rois(1).data_sizes;
                     if ~isempty(data_sizes)
+                        flip_up_down = true; % ROIs were drawn from an image, put the smaller y-ordinates top (first line in image)
                         range = [.5 data_sizes(1)+.5; .5 data_sizes(2)+.5];
                     else
+                        flip_up_down = false; % ROIs were not drawn from an image, keep small y-ordinates bottom
                         % calculate rectangle that contains all ROIs
                         range = zeros(2,2,n_roi);
                         for k = 1:n_roi
@@ -172,11 +167,14 @@ classdef DisplayGraph < xplr.GraphNode
                     % ROI centers
                     centers = zeros(2,n_roi);
                     for k = 1:n_roi
-                        centers(:,k) = mean(polys{k},2);
+                        centers(:,k) = brick.nmean(polys{k},2);
                     end
                     
                     % Map map sides to the graph sides
-                    scale = [1/diff(range(1,:)); -1/diff(range(2,:))];
+                    scale = [1/diff(range(1,:)); 1/diff(range(2,:))];
+                    if flip_up_down
+                        scale(2) = -scale(2);
+                    end
                     offset = - mean(range,2) .* scale;
                     st.xy_offsets = brick.add(offset, brick.mult(scale, centers)); % values between -.5 and .5
                     for k = 1:n_roi
@@ -244,7 +242,6 @@ classdef DisplayGraph < xplr.GraphNode
                 end
             else
                 st.xy_dim = [];
-                st.xy_use_map = false;
                 % there will be only a single grid element, which fits the
                 % full available space
                 st.xy_offsets = zeros(2, 1);
@@ -316,7 +313,7 @@ classdef DisplayGraph < xplr.GraphNode
             st.x_available = x_avail;
             if do_signal && y_avail == 1
                 % signals would occupy the full vertical space, because
-                % there are no data dimensions in y, xy or yx location ->
+                % there are no data dimensions in y or xy location ->
                 % get a nicer display by leaving some gaps above and below
                 y_avail = 1/(1 + G.y_sep/2);
             end
@@ -324,6 +321,25 @@ classdef DisplayGraph < xplr.GraphNode
         end
     end
     methods
+        function layout_id = set_map_mode(G, layout_id)
+            % Set map mode to layout if appropriate
+            if ~G.use_ROI2D_map, return, end
+            xy_dim_id = layout_id.xy;
+            if isempty(xy_dim_id), return, end
+            xy_header = G.D.zslice.header_by_id(xy_dim_id);
+            if isempty(xy_header), return, end
+            idx_roi2d = xy_header.get_column_index('ROI2D');
+            if ~idx_roi2d, return, end
+            % all conditions are satisfied for map mode
+            layout_id.xy_mode = 'map';
+        end
+        function b = map_display(G)
+            % beware, map display is not synonymous of map mode! map
+            % display is map mode when there are no x and y
+            org = G.D.layout;
+            b = strcmp(G.D.display_mode, 'image') ...
+                && strcmp(org.xy_mode, 'map') && isempty(org.x) && isempty(org.y);
+        end
         function any_chg = compute_steps(G)
             % function any_chg = compute_steps(G)
             %---
@@ -439,6 +455,10 @@ classdef DisplayGraph < xplr.GraphNode
         end
     end
     methods
+        function set.show_grid_labels(G, value)
+            G.show_grid_labels = value;
+            G.set_ticks()
+        end
         function set_ticks(G)
             st = G.steps;
             org = G.layout;
@@ -529,14 +549,14 @@ classdef DisplayGraph < xplr.GraphNode
             end
             
             % grid
-            if ~isempty(st.xy_dim)
+            if ~isempty(st.xy_dim) && G.show_grid_labels
                 d = st.xy_dim;
                 
                 % header
                 head = G.D.zslice.header(d);
                 n = head.n;
 
-                % display labels for each xy/yx grid cell
+                % display labels for each xy grid cell
                 tick_labels = brick.row(head.get_item_names());
                 if isempty(st.y_span)
                     row_height = st.y_available;
@@ -559,9 +579,7 @@ classdef DisplayGraph < xplr.GraphNode
             end
             
             % show separations
-            if G.show_separation
-                G.draw_separations()
-            end
+            G.draw_separations()
             
         end
         function color_grid_ticks(G)
@@ -607,14 +625,14 @@ classdef DisplayGraph < xplr.GraphNode
             
             % do clipping ranges and baselines differ along 'horizontal'
             % dimensions (i.e. dimensions at location x, mergeddata or
-            % xy/yx)?
+            % xy)?
             h_aligned_dims = [org.merged_data, org.x(2:end)];
             h_aligned_dims(G.D.slice.sz(h_aligned_dims)==1) = [];
             y_dims = org.y;
             if isempty(st.xy_dim)
                 xy_n_show = 1;
                 xy_on_single_column = false;
-            elseif st.xy_use_map
+            elseif strcmp(org.xy_mode, 'map')
                 % show value ticks only for the first map element
                 xy_n_show = 1;
                 xy_on_single_column = false;
@@ -664,12 +682,13 @@ classdef DisplayGraph < xplr.GraphNode
                 for k_y = 1:ny
                     % vertical center of the row
                     y_idx = brick.row(brick.indices(sz(org.y), k_y, 'g2i'));
-                    if ~isempty(org.xy)
-                        y_row_offset = st.xy_offsets(2, 1+(k_row-1)*st.xy_n_col);
-                    elseif ~isempty(org.yx)
-                        y_row_offset = st.xy_offsets(2, k_row);
-                    else
-                        y_row_offset = 0;
+                    switch org.xy_mode
+                        case {'xy' 'map'}
+                            y_row_offset = st.xy_offsets(2, 1+(k_row-1)*st.xy_n_col);
+                        case 'yx'
+                            y_row_offset = st.xy_offsets(2, k_row);
+                        case ''
+                            y_row_offset = 0;
                     end
                     yoffset = y_row_offset + sum(st.y_offset) + sum(st.y_step .* y_idx);
                     % tick values
@@ -707,7 +726,7 @@ classdef DisplayGraph < xplr.GraphNode
         end
     end
 
-    % Separations mark for 'external' dimensions
+    % Separations marks for 'external' dimensions and map display
     methods
         function set.use_ROI2D_map(G, value)
             G.use_ROI2D_map = value;
@@ -715,11 +734,28 @@ classdef DisplayGraph < xplr.GraphNode
         end
         function set.show_separation(G, value)
             G.show_separation = value;
-            G.draw_separations()
+            if G.map_display()
+                % patch is created any way; just show or not the edges
+                G.update_separation_color()
+            else
+                G.draw_separations()
+            end
         end
         function set.separation_color(G, value)
             G.separation_color = value;
-            set(G.separation_lines, 'color', value)
+            update_separation_color(G)
+        end
+        function update_separation_color(G)
+            if G.show_separation
+                color = G.separation_color;
+            else
+                color = 'None';
+            end
+            if G.use_ROI2D_map
+                set(G.map_lines, 'EdgeColor', color)
+            else
+                set(G.separation_lines, 'Color', color)
+            end
         end
         function draw_separations(G)
             % Draw either the separations between all grid elements, or the
@@ -728,10 +764,12 @@ classdef DisplayGraph < xplr.GraphNode
             % no 'smart update', always delete all existing separation
             % lines and redisplay new ones
             brick.delete_valid(G.separation_lines)
-            if ~G.show_separation
-                G.separation_lines = [];
-                return
-            end
+            brick.delete_valid(G.map_lines)
+            [G.separation_lines, G.map_lines] = deal([]); 
+            
+            % no display?
+            no_display = ~G.show_separation && ~G.map_display();
+            if no_display, return, end
             
             % some properties
             org = G.D.layout;
@@ -740,19 +778,59 @@ classdef DisplayGraph < xplr.GraphNode
             st = G.steps;
             
             % Map or Grid?
-            if st.xy_use_map
+            if ~isempty(org.xy) && strcmp(org.xy_mode, 'map')
                 % Map
-                n_roi = length(st.map_polys);
-                n_points = brick.itemlengths(st.map_polys);
+                do_map_display = G.map_display();
+                
+                % vertices: easy
                 vertices = [st.map_polys{:}]';
+
+                % faces: we need to cut ROI into polygon subregions
+                % separated by NaNs (that's a bit difficult)
+                n_roi = length(st.map_polys);
+                n_face_per_roi = zeros(1, n_roi);
+                faces = cell(1, n_roi);
+                if do_map_display
+                    face_coloring = cell(1, n_roi);
+                end
+                idx_offset = 0;
+                n_points = brick.itemlengths(st.map_polys);
                 n_max = max(n_points);
-                faces = NaN(n_roi, n_max);
                 for k = 1:n_roi
-                    faces(k, 1:n_points(k)) = sum(n_points(1:k-1)) + (1:n_points(k));
+                    poly_k = st.map_polys{k};
+                    idx_nan = find(any(isnan(poly_k),1));
+                    idx_sub = [0 idx_nan; idx_nan n_points(k)+1];
+                    n_p_sub = diff(idx_sub) - 1;
+                    idx_sub(:, n_p_sub<3) = []; % we want only faces with at least 3 vertices
+                    n_sub = size(idx_sub, 2);
+                    faces_k = NaN(n_sub, n_max);
+                    for i = 1:n_sub
+                        faces_k(i, 1:n_p_sub(i)) = idx_sub(1,i)+1:idx_sub(2,i)-1;
+                    end
+                    faces{k} = idx_offset + faces_k;
+                    idx_offset = idx_offset + n_points(k);
+                    n_points(k) = max(n_p_sub);
+                    if do_map_display
+                        face_coloring{k} = zeros(n_sub, n_roi);
+                        face_coloring{k}(:, k) = 1;
+                    end
+                end
+                faces = cat(1, faces{:});
+                faces = faces(:, 1:max(n_points));
+                if do_map_display
+                    G.map_face_coloring = cat(1, face_coloring{:});
+                end
+                
+                % display
+                if G.show_separation
+                    edge_color = G.separation_color;
+                else
+                    edge_color = 'None';
                 end
                 lines = patch('Faces', faces, 'Vertices', vertices, ...
-                    'FaceColor', 'none', 'EdgeColor', G.separation_color, ...
+                    'FaceColor', 'none', 'EdgeColor', edge_color, ...
                     'Parent', G.D.ha, 'HitTest', 'off');
+                G.map_lines = lines;
             else
                 % Grid
                 lines = {};
@@ -821,11 +899,11 @@ classdef DisplayGraph < xplr.GraphNode
                 
                 % single vector of graphic handles
                 lines = brick.map(@brick.row, lines, 'array'); 
+                G.separation_lines = lines;
             end
 
             % put lines below other graphic elements
-            G.separation_lines = lines;
-            uistack(G.separation_lines, 'bottom')
+            uistack(lines, 'bottom')
             
         end
     end
@@ -1009,12 +1087,11 @@ classdef DisplayGraph < xplr.GraphNode
                 if np == 1, ijk = ijk0(sub_dim); return, end
             end
             
-            % If mode is 'vector', we cannot operate in xy/yx dims, and
+            % If mode is 'vector', we cannot operate in xy dims, and
             % operate at most on one x and one y dims
             org = G.layout;
             if strcmp(mode, 'vector')
                 ok = ~any(ismember(sub_dim, org.xy)) ...
-                    && ~any(ismember(sub_dim, org.yx)) ...
                     && sum(ismember(sub_dim, org.x)) <= 1 ...
                     && sum(ismember(sub_dim, org.y)) <= 1;
                 if ~ok
@@ -1022,7 +1099,7 @@ classdef DisplayGraph < xplr.GraphNode
                 end
             end          
                         
-            % xy/yx
+            % xy
             st = G.steps;
             sz = G.zslice_sz;
             if strcmp(mode, 'point') && ~isempty(st.xy_dim)
@@ -1400,8 +1477,7 @@ classdef DisplayGraph < xplr.GraphNode
                     % convert from slice to zslice coordinates
                     lines = G.slice_to_zslice(lines, false, dim);
                     % display selections as rectangles (for 'x' and 'y'
-                    % locations), or as more complex polygon (for 'xy' and
-                    % 'yx')
+                    % locations), or as more complex polygon (for 'xy')
                     st = G.steps;
                     dim_location = G.D.layout_id.dim_locations{dim};
 					if ismember(dim_location, {'x', 'y'})
@@ -1656,7 +1732,7 @@ classdef DisplayGraph < xplr.GraphNode
             % they are valid for zooming in; if not, go to more internal
             % dimensions
             
-            % xy/yx
+            % xy
             if ~isempty(st.xy_dim)
                 % correct the rectangle: flip y to go from top to bottom,
                 % coerce to within the graph, go from top-left to

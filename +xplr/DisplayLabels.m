@@ -140,9 +140,9 @@ classdef DisplayLabels < xplr.GraphNode
                     f = dim_locations{d};
                     % fixed properties
                     set(L.h(d), 'visible', 'on', ...
-                        'rotation', brick.switch_case(f, {'y', 'yx'}, 90, 0), ...
-                        'horizontalalignment', brick.switch_case(f, {'x', 'y'}, 'center', {'xy', 'merged_data'}, 'left', 'yx', 'right'), ...
-                        'verticalalignment', brick.switch_case(f, 'yx', 'bottom', 'middle'), ...
+                        'rotation', brick.switch_case(f, 'y', 90, 0), ...
+                        'horizontalalignment', brick.switch_case(f, {'x', 'y'}, 'center', {'xy', 'merged_data'}, 'left'), ...
+                        'verticalalignment', 'middle', ...
                         'EdgeColor', brick.switch_case(isactive(d), 'k', 'none'))
                     % set position
                     switch f
@@ -159,8 +159,6 @@ classdef DisplayLabels < xplr.GraphNode
                             new_pos = [-4*L.rot_height, (length(org.merged_data) + .5 - i)*L.height];
                         case 'xy'
                             new_pos = [0, 1 + 1.5*L.height];
-                        case 'yx'
-                            new_pos = [1+2. 2*L.rot_height, 1];
                     end
                     if any(d == L.moving_dim)
                         set(L.moving_clone, 'position', new_pos, ...
@@ -258,11 +256,11 @@ classdef DisplayLabels < xplr.GraphNode
             didx = find(layout_id.(d_layout) == dim_id);
             layout_id_d.(d_layout) = setdiff(layout_id.(d_layout), dim_id, 'stable');
             
-            % only one dimension gan go to either xy or yx, and if image
+            % only one dimension gan go to xy, and if image
             % display only one dimension can go to merged_data=color_dim
             % -> remember the current dimension in these location for a
             % swap
-            xy_dim_id = [layout_id_d.xy, layout_id_d.yx];
+            xy_dim_id = layout_id_d.xy;
             if strcmp(L.D.display_mode, 'image')
                 color_dim_id = layout_id_d.merged_data;
             else
@@ -346,7 +344,7 @@ classdef DisplayLabels < xplr.GraphNode
                 % first move away label already occupying the location if
                 % needed
                 if (strcmp(location, 'merged_data') && color_dim_id) ...
-                        || (ismember(location, {'xy' 'yx'}) && xy_dim_id)
+                        || (strcmp(location, 'xy') && xy_dim_id)
                     swap_dim_id = brick.switch_case(location, ...
                         'merged_data', color_dim_id, xy_dim_id);
                     tmp = new_layout_id.(d_layout);
@@ -393,8 +391,9 @@ classdef DisplayLabels < xplr.GraphNode
                 % update organization and object location
                 new_layout_id = layout_id_d;
                 if p_fig(1) < -2
-                    % nothing to do: newlayout_id is already the current
-                    % layout without dimension d
+                    % label left of the panel, towards the filters area 
+                    % no particular display update needed: newlayout_id is
+                    % already the current layout without dimension d
                     % however we cannot perform a complete display update
                     % because the slice is not recomputed yet
                     immediate_display = false;
@@ -444,25 +443,16 @@ classdef DisplayLabels < xplr.GraphNode
                         new_layout_id.y = [new_layout_id.y(1:idx-1), dim_id, new_layout_id.y(idx:end)];
                     end
                 elseif any(p>=1)
-                    % xy and yx
-                    if p(2) >= p(1)
-                        % (zone above the graph)
-                        [new_layout_id.xy, new_layout_id.yx] = deal(dim_id, []);
-                    else
-                        % (zone to the right of the graph)
-                        [new_layout_id.xy, new_layout_id.yx] = deal([], dim_id);
-                    end
+                    % xy
+                    new_layout_id.xy = dim_id;
                     if xy_dim_id
-                        % move away dimension that was occupying xy or yx
+                        % move away dimension that was occupying xy
                         % (swap with dim_id previous location)
                         tmp = new_layout_id.(d_layout);
                         new_layout_id.(d_layout) = [tmp(1:didx-1), xy_dim_id, tmp(didx:end)];
                     end
                 else
                     % no change in layout, return
-                    % note that there is no more zone for yx!, meaning that
-                    % this display option is no longer accessible, it
-                    % seemed to be too useless
                     return
                 end
                 % update organization (-> will trigger automatic display

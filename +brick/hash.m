@@ -12,7 +12,7 @@ function h = hash(inp,varargin)
 % - input   Matlab numerical array, cell array, or structure; subelements
 %           of cell arrays and structures must themselves be numerical
 %           arrays, cell arrays or structures
-% - meth    methods, default is 'MD2', see function brick/private/hash.m
+% - meth    methods, default is 'MD2', see function brick/private/hash_matlabexchange.m
 % - outtype 'char', 'hexa' or 'num' - indicates whether output will be a
 %           number or a word [default='char']
 % - n       number of digits of the hexadecimal hash number to return; if
@@ -25,7 +25,7 @@ function h = hash(inp,varargin)
 % Note that structures with fields in different order give the same hash
 % key.
 
-% Michael Kleder (function hash.m)
+% Michael Kleder (function hash_matlabexchange.m)
 % Copyright 2005-2007
 % Thomas Deneux
 % Copyright 2007-2017
@@ -47,7 +47,7 @@ for i=1:length(varargin)
 end
 
 inp = flatten(inp);
-h = hash(inp,meth);
+h = hash_matlabexchange(inp,meth);
 
 % crop to n digits
 if n, h = h(1:n); end
