@@ -10,6 +10,8 @@ classdef DisplayGraph < xplr.GraphNode
         separation_lines
         map_lines
         map_face_coloring
+        map_index_buffer
+        map_index_size
     end
     properties (SetObservable, AbortSet=true)
         use_ROI2D_map = true;
@@ -170,7 +172,8 @@ classdef DisplayGraph < xplr.GraphNode
                         centers(:,k) = brick.nmean(polys{k},2);
                     end
                     
-                    % Map map sides to the graph sides
+                    % Map map sides to the graph sides (i.e. btw -.5 and
+                    % .5)
                     scale = [1/diff(range(1,:)); 1/diff(range(2,:))];
                     if flip_up_down
                         scale(2) = -scale(2);
@@ -761,11 +764,12 @@ classdef DisplayGraph < xplr.GraphNode
             % Draw either the separations between all grid elements, or the
             % regions when using map display
             
-            % no 'smart update', always delete all existing separation
-            % lines and redisplay new ones
+            % no 'smart update', always delete all existing lines and
+            % redisplay new ones; note that map_index_buffer calculation will
+            % be postponed to next need in graph_to_zslice
             brick.delete_valid(G.separation_lines)
             brick.delete_valid(G.map_lines)
-            [G.separation_lines, G.map_lines] = deal([]); 
+            [G.separation_lines, G.map_lines, G.map_index_buffer] = deal([]); 
             
             % no display?
             no_display = ~G.show_separation && ~G.map_display();
@@ -915,7 +919,7 @@ classdef DisplayGraph < xplr.GraphNode
             % - 'invertible'  [default false] if set to true, exterior
             %               coordinates are rounded, this make the
             %               conversion invertible by calling slice_to_graph
-            % - 'sub_dim'    [default all dims] dimensions in ijk for which
+            % - 'sub_dim'   [default all dims] dimensions in ijk for which
             %               we perform the conversion; other dimensions
             %               will be assigned to the fixed default values in
             %               ijk0
@@ -1103,24 +1107,39 @@ classdef DisplayGraph < xplr.GraphNode
             st = G.steps;
             sz = G.zslice_sz;
             if strcmp(mode, 'point') && ~isempty(st.xy_dim)
-                % take advantage on the fact that the grid spans the full
-                % axis
+                use_map = strcmp(org.xy_mode, 'map');
                 d = st.xy_dim;
-                x = brick.coerce(.5 + xy(1, :), .001, .999); % 0 = left edge, 1 = right edge
-                y = brick.coerce(.5 - xy(2, :), .001, .999); % 0 = top edge,  1 = bottom edge
-                icol = .5 + x * st.xy_n_col;
-                irow = .5 + y * st.xy_n_row;
-                if ismember(d, sub_dim)
-                    if d == G.layout.xy
-                        ijk(d, :) = icol + st.xy_n_col * round(irow-1);
-                    else
-                        ijk(d, :) = irow + st.xy_n_row * round(icol-1);
-                    end
-                    ijk(d, :) = min(ijk(d, :), sz(d) + .4999);
+                if use_map
+                    % create map index buffer if needed
+                    map_indices = G.map_index_buffer;
+                    % convert points to pixel coordinate
+                    map_size = G.map_index_size;
+                    scale = map_size;
+                    center = (1 + map_size)/2;
+                    xy_pixel = round(brick.add(center, brick.mult(scale, xy)));
+                    xy_pixel(1,:) = brick.coerce(xy_pixel(1,:), 1, map_size(1));
+                    xy_pixel(2,:) = brick.coerce(xy_pixel(2,:), 1, map_size(1));
+                    idx = sub2ind(map_size, xy_pixel(1,:), xy_pixel(2,:));
+                    ijk(d, :) = map_indices(idx);
                 else
-                    ijk(d, :) = ijk0(d, :);
+                    % take advantage on the fact that the grid spans the full
+                    % axis
+                    x = brick.coerce(.5 + xy(1, :), .001, .999); % 0 = left edge, 1 = right edge
+                    y = brick.coerce(.5 - xy(2, :), .001, .999); % 0 = top edge,  1 = bottom edge
+                    icol = .5 + x * st.xy_n_col;
+                    irow = .5 + y * st.xy_n_row;
+                    if ismember(d, sub_dim)
+                        if d == G.layout.xy
+                            ijk(d, :) = icol + st.xy_n_col * round(irow-1);
+                        else
+                            ijk(d, :) = irow + st.xy_n_row * round(icol-1);
+                        end
+                        ijk(d, :) = min(ijk(d, :), sz(d) + .4999);
+                    else
+                        ijk(d, :) = ijk0(d, :);
+                    end
+                    xy = xy - st.xy_offsets(:, round(ijk(d, :)));
                 end
-                xy = xy - st.xy_offsets(:, round(ijk(d, :)));
             end
             
             % x 
@@ -1283,6 +1302,45 @@ classdef DisplayGraph < xplr.GraphNode
             
             % convert to before zooming
             ijk = G.zslice_to_slice(zijk, strcmp(mode,'vector'), sub_dim);
+        end
+        function map = get.map_index_buffer(G)
+            map_size = ceil(brick.pixelsize(G.D.ha))';
+            if isempty(G.map_index_buffer) || ~isequal(G.map_index_size, map_size)
+                % convertion between relative position in graph (btw -.5
+                % and .5) and absolute pixel positions
+                G.map_index_size = map_size;
+                scale = map_size;
+                center = (1 + map_size)/2;
+                % fill buffer
+                G.map_index_buffer = zeros(brick.row(map_size));
+                polys = G.steps.map_polys;
+                for k = 1:length(polys)
+                    poly_k = brick.add(center, brick.mult(polys{k}, scale));
+                    mask = brick.poly2mask(poly_k, map_size);
+                    G.map_index_buffer(mask) = k;
+                end
+                % fill regions with zeros with the closest region!!!
+                map_extend = [zeros(1, map_size(2)+2); ...
+                    zeros(map_size(1), 1) G.map_index_buffer zeros(map_size(1), 1); ...
+                    zeros(1, map_size(2)+2)];
+                [we, he] = size(map_extend);
+                mask = [false(1, map_size(2)+2); ...
+                    false(map_size(1), 1) true(map_size') false(map_size(1), 1); ...
+                    false(1, map_size(2)+2)];
+                moves = [-1, 1, -we, we]; % up, down, left, right
+                unfilled = ~map_extend & mask;
+                for k = 1:we+he
+                    idx_zero = find(unfilled);
+                    if isempty(idx_zero), break, end
+                    idx_moved = idx_zero + moves(brick.mod(k, 4));
+                    map_moved = map_extend(idx_moved);
+                    ok = find(map_moved);
+                    map_extend(idx_zero(ok)) = map_extend(idx_moved(ok));
+                    unfilled(idx_zero(ok)) = false;
+                end
+                G.map_index_buffer = map_extend(2:end-1, 2:end-1);
+            end
+            map = G.map_index_buffer;
         end
 	end
 
