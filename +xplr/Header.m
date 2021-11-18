@@ -552,7 +552,6 @@ classdef Header < xplr.Object
                             names{k} = val;
                         elseif isnumeric(val) || islogical(val)
                             names{k} = brick.idx2str(val, ':,');
-                            if length(names{k}) > 12, names{k} = [names{k}(1:10), '...']; end
                         elseif iscell(val)
                             names{k} = brick.strcat(val, ',');
                         elseif isdatetime(val)
@@ -560,6 +559,7 @@ classdef Header < xplr.Object
                         else
                             error 'cannot form string from value'
                         end
+                        if length(names{k}) > 14, names{k} = [names{k}(1:12), '...']; end
                     end
                 elseif H.categorical
                     names = brick.num2str(idx, 'cell')';

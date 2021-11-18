@@ -126,8 +126,11 @@ end
 
 shapes = xplr.SelectionND(nshape);
 for i = 1:nshape
-    shapes(i) = xplr.SelectionND('poly2D',[S(i).x; S(i).y]);
+    poly = [S(i).x; S(i).y];
+    poly = brick.poly_simplify(poly, 2e-4);
+    shapes(i) = xplr.SelectionND('poly2D', poly);
 end
+
 
 %% Link coronavirus dataset countries with map shapes
 
@@ -172,22 +175,6 @@ country_shapes = shapes(country2shape);
 %% Smooth the data
 CORONAVIRUS_RAW = CORONAVIRUS;
 CORONAVIRUS = brick.filt(CORONAVIRUS, 15, 'lk', 1);
-
-
-%% Make movie!!
-
-if eval('false')
-    %% ()
-    disp 'Make movie from countries data'
-    CORONAVIRUS_MAP = NaN(nday, nx*ny, prod(sdata));
-    population = NaN(nx,ny);
-    for i = 1:ncountry
-        mask = (map == country2shape(i));
-        CORONAVIRUS_MAP(:, mask, :) = repmat(CORONAVIRUS(:, i, :), [1 sum(mask(:)) 1]);
-        population(mask) = population(i);
-    end
-    CORONAVIRUS_MAP = reshape(CORONAVIRUS_MAP, [nday nx ny sdata]);
-end
 
 %% Display data
 

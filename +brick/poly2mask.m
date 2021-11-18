@@ -3,7 +3,7 @@ function mask = poly2mask(xpoly,ypoly,m,n)
 %---
 % function mask = poly2mask(xpoly,ypoly,m,n)
 % function mask = poly2mask(poly,sizes)
-% function movie = poly2mask('demo')
+% function [movie =] poly2mask('demo')
 %---
 % Do the same as Matlab poly2mask without needing the Image Toolbox
 % Except use different convention!! I.e. x = first coordinate, y = second
@@ -32,21 +32,27 @@ switch nargin
     case 4
         % the default input formatting, nothing to do
     case 2
-        [poly sizes] = deal(xpoly,ypoly);
-        xpoly = poly(1,:); ypoly = poly(2,:);
+        [poly, sizes] = deal(xpoly,ypoly);
+        xpoly = poly(1,:);
+        ypoly = poly(2,:);
         m = sizes(1); n = sizes(2);
     case 3
         if isscalar(xpoly)
             error 'input is ambiguous'
         elseif isscalar(ypoly)
-            [poly m n] = deal(xpoly,ypoly,m);
-            xpoly = poly(1,:); ypoly = poly(2,:);
+            [poly, m, n] = deal(xpoly,ypoly,m);
         else
-            [xpoly ypoly sizes] = deal(xpoly,ypoly,m);
+            [xpoly, ypoly, sizes] = deal(xpoly,ypoly,m);
             m = sizes(1); n = sizes(2);
         end
     otherwise
         error 'wrong number of inputs'
+end
+
+% empty region
+if isempty(xpoly)
+    mask = false(m, n);
+    return
 end
 
 % need to test only a sub-rectangle
@@ -59,19 +65,21 @@ else
     jmax = min(n,round(max(ypoly)));
 end
 
-% apply function taken from Matplotlib
-try
+% compute sub-mask: apply function taken from Matplotlib
+% try
     submask = point_in_path_impl(xpoly-(imin-1),ypoly-(jmin-1),imax-imin+1,jmax-jmin+1,domovie);
-catch
-    if brick.dodebug
-        disp 'please check what happened here!'
-        keyboard
-    end
-end
-if domovie
+% catch
+%     if brick.dodebug
+%         disp 'please check what happened here!'
+%         keyboard
+%     end
+% end
+
+% make up the full mask
+if isequal([imin imax jmin jmax], [1, m, 1, n])
     mask = submask;
 else
-    mask = false(m,n);
+    mask = false(m, n);
     mask(imin:imax,jmin:jmax) = submask;
 end
 
@@ -103,8 +111,8 @@ if domovie
     hf = brick.figure('brick.poly2mask demo',msize);
     ha = axes('parent',hf,'pos',[0 0 1 1]);
     colormap(ha,[1 1 1; .5 .5 1])
-    im = image(mask','parent',ha);
-    line(xpoly([1:end 1]),ypoly([1:end 1]),'parent',ha,'color','k')
+    im = imagesc(mask','parent',ha);
+    line(xpoly,ypoly,'parent',ha,'color','k')
     seg = line([1],[1],'parent',ha,'color','k','linewidth',2);
     set(ha,'visible','off')
     movie = zeros([msize 3 nsegment+2], 'uint8');
@@ -113,14 +121,33 @@ if domovie
 end
 
 % first vertex
-[sx sy] = deal(xpoly(1),ypoly(1));
+[sx, sy] = deal(xpoly(1),ypoly(1));
 
 % loop on path segments
 for isegment = 1:nsegment
-    % 2 points of the segment
-    ipt0 = isegment; ipt1 = 1+mod(isegment,nsegment);
-    [x0 x1 y0 y1] = deal(xpoly(ipt0),xpoly(ipt1),ypoly(ipt0),ypoly(ipt1));
-        
+    % first point of segment
+    ipt0 = isegment; 
+    [x0, y0] = deal(xpoly(ipt0), ypoly(ipt0));
+    
+    % second point of segment
+    if isegment == nsegment
+        % last segment: connect to first point of this component
+        [x1, y1] = deal(sx, sy);
+    else
+        ipt1 = isegment+1;
+        [x1, y1] = deal(xpoly(ipt1),ypoly(ipt1));
+        if isnan(x1)
+            % finish compontent -> conncect to first point of this component
+            [x1, y1] = deal(sx, sy);
+        end
+    end
+
+    % start a new component?
+    if isnan(x0)
+        [sx, sy] = deal(x1, y1);
+        continue
+    end
+
     % invert values of points below the segment
     icheck = xor(ii<=x0,ii<=x1); % points in grid with abscissae inside the x-span of the segment
     if ~any(icheck), continue, end
@@ -136,7 +163,7 @@ for isegment = 1:nsegment
         set(seg,'xdata',[x0 x1],'ydata',[y0 y1])
         M = getframe(ha);
         movie(:,:,:,isegment+1) = permute(M.cdata,[2 1 3]);
-        pause(.5)
+%         pause(.5)
     end
 end
 

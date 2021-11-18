@@ -139,7 +139,7 @@ switch outtype
 end
 if dooutput && doarray
     try
-        B = cell2mat(B);
+        B = reshape([B{:}], size(B));
         if isempty(A), B = reshape(B,size(A)); end % cell2mat applied to empty cell array A returned [] instead of zeros(size(A)) 
     catch
         for i=2:n, B{i} = cast(B{i},'like',B{1}); end

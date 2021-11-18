@@ -35,10 +35,12 @@ classdef SelectionND < xplr.Object
         nd
         shapes = xplr.SelectionShape.empty(1,0);
         data_sizes = [];
+    end
+    properties (SetAccess='private', Transient)
         data_ind = [];  % not computed yet, to not be mistaken with zeros(1,0) = empty selection
         polygon = []; % lines(1D)/polygon(2D) to display, not computed yet, to not be mistaken with zeros(2,0) = empty selection
     end
-    properties (Dependent, SetAccess='private')
+    properties (Dependent, SetAccess='private', Transient)
         type % either a possible value for shapes.type (e.g. point1D, ellipse2D), or 'mixed' if several types are present
         mask
     end
@@ -64,6 +66,7 @@ classdef SelectionND < xplr.Object
             end
             
             % number of dimension
+            if nargin == 3, sizes = brick.row(sizes); end
             if brick.ismemberstr(type, {'empty', 'all'})
                 % the syntax SelectionND('empty', nd) is not public but
                 % corresponds to the internal encoding of type
@@ -81,7 +84,7 @@ classdef SelectionND < xplr.Object
                 % xplr.SelectionND('indices', indices,datasize)
                 % xplr.SelectionND('indices', {datasize indices})
                 if nargin==2 && iscell(data)
-                    sizes = data{1};
+                    sizes = brick.row(data{1});
                 elseif nargin==3 && ~iscell(data)
                     indices = brick.row(data);
                     data = {sizes, indices};
@@ -100,7 +103,13 @@ classdef SelectionND < xplr.Object
                 case 'shape'
                     sel.shapes = data;
                 otherwise
-                    sel.shapes = xplr.SelectionShape(type, data);
+                    if isempty(data)
+                        % happens sometimes: points selection with no
+                        % poins, empty region, etc.
+                        type = 'empty';
+                    else
+                        sel.shapes = xplr.SelectionShape(type, data);
+                    end
             end
                         
             % indices
@@ -227,6 +236,7 @@ classdef SelectionND < xplr.Object
             elseif nargin<3
                 data_sizesnew = sel1.data_sizes;
             end
+            data_sizesnew = brick.row(data_sizesnew);
             
             % multiple object
             if ~isscalar(sel1)

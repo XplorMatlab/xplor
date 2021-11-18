@@ -621,25 +621,28 @@ classdef DisplayNavigation < xplr.GraphNode
             header = N.D.slice.header;
             sel_dim = N.selection_dim;
             sel_labels = {header(sel_dim).label};
-            layout = N.D.layout;
+            org = N.D.layout;
 
             % Set selection dimension
             % (no active control? -> propose selection in the 'internal' dimensions)
             prop_dim = [];
             if isempty(N.selection_dim_id)
-                if strcmp(N.D.display_mode, 'time courses')
+                if ~isempty(org.xy) && strcmp(org.xy_mode, 'map')
+                    % map -> 1D selection in map
+                    prop_dim = org.xy;
+                elseif strcmp(N.D.display_mode, 'time courses')
                     % time courses -> 1D vertical selection
-                    if ~isempty(layout.x), prop_dim = layout.x(1); end
+                    if ~isempty(org.x), prop_dim = org.x(1); end
                 else
-                    if ~isempty(layout.x) && ~isempty(layout.y)
+                    if ~isempty(org.x) && ~isempty(org.y)
                         % image -> 2D selection
-                        prop_dim = [layout.x(1), layout.y(1)];
-                    elseif ~isempty(layout.x)
+                        prop_dim = [org.x(1), org.y(1)];
+                    elseif ~isempty(org.x)
                         % image but no Y dimension -> 1D horizontal selection
-                        prop_dim = layout.x(1);
-                    elseif ~isempty(layout.y)
+                        prop_dim = org.x(1);
+                    elseif ~isempty(org.y)
                         % image but no x dimension -> 1D vertical selection
-                        prop_dim = layout.y(1);
+                        prop_dim = org.y(1);
                     end
                 end
             end
@@ -668,17 +671,17 @@ classdef DisplayNavigation < xplr.GraphNode
             % (submenu for other possibilities)
             m2 = uimenu(m, 'label', info);
             % (1D: dimension location must be x, y or xy)
-            dim_ok = sort([layout.x, layout.y, layout.xy]);
+            dim_ok = sort([org.x, org.y, org.xy]);
             brick.propcontrol(N, 'selection_dim_id', ...
                 {'menugroup', {header(dim_ok).dim_id}, {header(dim_ok).label}}, ...
                 {'parent', m2});
             % (2D: dimension locations must be respectively x and y)
-            available = cell(2, length(layout.x), length(layout.y));
+            available = cell(2, length(org.x), length(org.y));
             if ~isempty(available)
                 % selections with first dim on x-axis, second dim on y-axis
-                for i = 1:length(layout.x)
-                    for j = 1:length(layout.y)
-                        d = [layout.x(i), layout.y(j)];
+                for i = 1:length(org.x)
+                    for j = 1:length(org.y)
+                        d = [org.x(i), org.y(j)];
                         available{1, i, j} = [header(d).dim_id];
                         available{2, i, j} = brick.strcat({header(d).label}, ',');
                     end
@@ -687,9 +690,9 @@ classdef DisplayNavigation < xplr.GraphNode
                     {'menugroup', available(1, :) available(2, :)}, ...
                     {'parent', m2});
                 % selections with first dim on y-axis, second dim on x-axis
-                for i = 1:length(layout.x)
-                    for j = 1:length(layout.y)
-                        d = [layout.y(j), layout.x(i)];
+                for i = 1:length(org.x)
+                    for j = 1:length(org.y)
+                        d = [org.y(j), org.x(i)];
                         available{1, i, j} = [header(d).dim_id];
                         available{2, i, j} = brick.strcat({header(d).label}, ',');
                     end
@@ -760,14 +763,17 @@ classdef DisplayNavigation < xplr.GraphNode
             
             sel_dim = N.selection_dim;
             selnd = length(sel_dim);
+            sz = N.D.slice.sz(sel_dim); % size of data in the dimension where selection is made
 
             % check dimension location
-            dim_location = brick.strcat(N.D.layout_id.dim_locations(sel_dim), ',');
+            org_id = N.D.layout_id;
+            dim_location = brick.strcat(org_id.dim_locations(sel_dim), ',');
             if ~ismember(dim_location, {'x', 'y', 'xy', 'x,y', 'y,x'})
                 disp(['selection in location ''' dim_location ''' not handled'])
                 sel_slice = [];
                 return
             end
+            use_map = strcmp(dim_location, 'xy') && strcmp(org_id.xy_mode, 'map');
             
             % two different behaviors for the brick.mouse function
             if nargin<2
@@ -783,7 +789,7 @@ classdef DisplayNavigation < xplr.GraphNode
             end
 
             % define selection
-            if selnd == 1
+            if selnd == 1 && ~use_map
                 % user interaction
                 if isscalar(dim_location)
                     poly_ax = brick.mouse(N.ha, [dim_location, 'segment', popt], msgopt{:});
@@ -804,7 +810,6 @@ classdef DisplayNavigation < xplr.GraphNode
                 poly_slice = sort(poly_slice);
 
                 % create selection in slice indices coordinates
-                sz = N.D.slice.sz(sel_dim); % size of data in the dimension where selection is made
                 if N.D.slice.header(sel_dim).categorical
                     sel_slice = xplr.SelectionND('indices', round(poly_slice(1)):round(poly_slice(2)), sz);
                 elseif diff(poly_slice)==0
@@ -814,7 +819,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 else
                     sel_slice = xplr.SelectionND('line1D', poly_slice);
                 end
-            elseif selnd == 2
+            elseif selnd == 2 || (selnd == 1 && use_map)
                 % user interaction
                 mouse_sel_mode = brick.switch_case(N.selection_2d_shape, ...
                     'line', 'segment', {'poly', 'openpoly'}, 'polypt', 'freeline', 'free', ...
@@ -830,7 +835,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 sel_ax = xplr.SelectionND(sel_type, poly_ax);
                 % if selection is too small, convert it to a single point
                 sel_ax.check_point(.005)
-                
+
                 % convert to slice coordinates
                 sel_slice = N.graph.selection_to_slice(sel_dim, sel_ax);
             end
@@ -1129,6 +1134,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 % move, show the context menu instead of creating a point
                 % selection
                 sel_slice = N.selection_mouse();
+                if isempty(sel_slice), return, end
                 if ~is_point(sel_slice)
                     % prompt for selection name
                     options = {};

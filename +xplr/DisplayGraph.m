@@ -10,8 +10,9 @@ classdef DisplayGraph < xplr.GraphNode
         separation_lines
         map_lines
         map_face_coloring
+        map_index_buffer_
         map_index_buffer
-        map_index_size
+        map_index_buffer_extend
     end
     properties (SetObservable, AbortSet=true)
         use_ROI2D_map = true;
@@ -158,8 +159,12 @@ classdef DisplayGraph < xplr.GraphNode
                         range = zeros(2,2,n_roi);
                         for k = 1:n_roi
                             poly_k = polys{k};
-                            range(:,1,k) = min(poly_k,[],2);
-                            range(:,2,k) = max(poly_k,[],2);
+                            if isempty(poly_k)
+                                range(:,:,k) = [inf -inf; inf -inf];
+                            else
+                                range(:,1,k) = min(poly_k,[],2);
+                                range(:,2,k) = max(poly_k,[],2);
+                            end
                         end
                         range = [min(range(:,1,:),[],3) max(range(:,2,:),[],3)];
                         % (add a small gap)
@@ -769,7 +774,8 @@ classdef DisplayGraph < xplr.GraphNode
             % be postponed to next need in graph_to_zslice
             brick.delete_valid(G.separation_lines)
             brick.delete_valid(G.map_lines)
-            [G.separation_lines, G.map_lines, G.map_index_buffer] = deal([]); 
+            [G.separation_lines, G.map_lines, ...
+                G.map_index_buffer_] = deal([]); 
             
             % no display?
             no_display = ~G.show_separation && ~G.map_display();
@@ -802,10 +808,13 @@ classdef DisplayGraph < xplr.GraphNode
                 n_max = max(n_points);
                 for k = 1:n_roi
                     poly_k = st.map_polys{k};
+                    if isempty(poly_k), continue, end
                     idx_nan = find(any(isnan(poly_k),1));
                     idx_sub = [0 idx_nan; idx_nan n_points(k)+1];
                     n_p_sub = diff(idx_sub) - 1;
-                    idx_sub(:, n_p_sub<3) = []; % we want only faces with at least 3 vertices
+                    bad = n_p_sub<3;
+                    idx_sub(:, bad) = []; % we want only faces with at least 3 vertices
+                    n_p_sub(bad) = [];
                     n_sub = size(idx_sub, 2);
                     faces_k = NaN(n_sub, n_max);
                     for i = 1:n_sub
@@ -942,6 +951,45 @@ classdef DisplayGraph < xplr.GraphNode
                 ijk0 = repmat(ijk0, [1, np]);
             end
 
+        end
+        function check_map_index_buffer(G)
+            map_size = ceil(brick.pixelsize(G.D.ha))';
+            if isempty(G.map_index_buffer_) || ~isequal(G.map_index_buffer_.size, map_size)
+                % convertion between relative position in graph (btw -.5
+                % and .5) and absolute pixel positions
+                G.map_index_buffer_ = struct('size', map_size);
+                scale = map_size;
+                center = (1 + map_size)/2;
+                % fill buffer
+                buffer = zeros(brick.row(map_size));
+                polys = G.steps.map_polys;
+                for k = 1:length(polys)
+                    poly_k = brick.add(center, brick.mult(polys{k}, scale));
+                    mask = brick.poly2mask(poly_k, map_size);
+                    buffer(mask) = k;
+                end
+                G.map_index_buffer_.buffer = buffer;
+                % fill regions with zeros with the closest region!!!
+                map_extend = [zeros(1, map_size(2)+2); ...
+                    zeros(map_size(1), 1) buffer zeros(map_size(1), 1); ...
+                    zeros(1, map_size(2)+2)];
+                [we, he] = size(map_extend);
+                mask = [false(1, map_size(2)+2); ...
+                    false(map_size(1), 1) true(map_size') false(map_size(1), 1); ...
+                    false(1, map_size(2)+2)];
+                moves = [-1, 1, -we, we]; % up, down, left, right
+                unfilled = ~map_extend & mask;
+                for k = 1:we+he
+                    idx_zero = find(unfilled);
+                    if isempty(idx_zero), break, end
+                    idx_moved = idx_zero + moves(brick.mod(k, 4));
+                    map_moved = map_extend(idx_moved);
+                    ok = find(map_moved);
+                    map_extend(idx_zero(ok)) = map_extend(idx_moved(ok));
+                    unfilled(idx_zero(ok)) = false;
+                end
+                G.map_index_buffer_.extend = map_extend(2:end-1, 2:end-1);
+            end
         end
     end
     methods
@@ -1111,14 +1159,14 @@ classdef DisplayGraph < xplr.GraphNode
                 d = st.xy_dim;
                 if use_map
                     % create map index buffer if needed
-                    map_indices = G.map_index_buffer;
+                    map_indices = G.map_index_buffer_extend;
                     % convert points to pixel coordinate
-                    map_size = G.map_index_size;
+                    map_size = size(map_indices)';
                     scale = map_size;
                     center = (1 + map_size)/2;
                     xy_pixel = round(brick.add(center, brick.mult(scale, xy)));
                     xy_pixel(1,:) = brick.coerce(xy_pixel(1,:), 1, map_size(1));
-                    xy_pixel(2,:) = brick.coerce(xy_pixel(2,:), 1, map_size(1));
+                    xy_pixel(2,:) = brick.coerce(xy_pixel(2,:), 1, map_size(2));
                     idx = sub2ind(map_size, xy_pixel(1,:), xy_pixel(2,:));
                     ijk(d, :) = map_indices(idx);
                 else
@@ -1304,43 +1352,12 @@ classdef DisplayGraph < xplr.GraphNode
             ijk = G.zslice_to_slice(zijk, strcmp(mode,'vector'), sub_dim);
         end
         function map = get.map_index_buffer(G)
-            map_size = ceil(brick.pixelsize(G.D.ha))';
-            if isempty(G.map_index_buffer) || ~isequal(G.map_index_size, map_size)
-                % convertion between relative position in graph (btw -.5
-                % and .5) and absolute pixel positions
-                G.map_index_size = map_size;
-                scale = map_size;
-                center = (1 + map_size)/2;
-                % fill buffer
-                G.map_index_buffer = zeros(brick.row(map_size));
-                polys = G.steps.map_polys;
-                for k = 1:length(polys)
-                    poly_k = brick.add(center, brick.mult(polys{k}, scale));
-                    mask = brick.poly2mask(poly_k, map_size);
-                    G.map_index_buffer(mask) = k;
-                end
-                % fill regions with zeros with the closest region!!!
-                map_extend = [zeros(1, map_size(2)+2); ...
-                    zeros(map_size(1), 1) G.map_index_buffer zeros(map_size(1), 1); ...
-                    zeros(1, map_size(2)+2)];
-                [we, he] = size(map_extend);
-                mask = [false(1, map_size(2)+2); ...
-                    false(map_size(1), 1) true(map_size') false(map_size(1), 1); ...
-                    false(1, map_size(2)+2)];
-                moves = [-1, 1, -we, we]; % up, down, left, right
-                unfilled = ~map_extend & mask;
-                for k = 1:we+he
-                    idx_zero = find(unfilled);
-                    if isempty(idx_zero), break, end
-                    idx_moved = idx_zero + moves(brick.mod(k, 4));
-                    map_moved = map_extend(idx_moved);
-                    ok = find(map_moved);
-                    map_extend(idx_zero(ok)) = map_extend(idx_moved(ok));
-                    unfilled(idx_zero(ok)) = false;
-                end
-                G.map_index_buffer = map_extend(2:end-1, 2:end-1);
-            end
-            map = G.map_index_buffer;
+            G.check_map_index_buffer()
+            map = G.map_index_buffer_.buffer;
+        end
+        function map = get.map_index_buffer_extend(G)
+            G.check_map_index_buffer()
+            map = G.map_index_buffer_.extend;
         end
 	end
 
@@ -1511,134 +1528,140 @@ classdef DisplayGraph < xplr.GraphNode
             
 			% checks
 			nd = length(dim);
-            dim = G.D.slice.dimension_number(dim);
 			if sel.nd ~= nd, error 'selection has incorrect number of dimensions', end
+            
+            % dimension info
+            dim = G.D.slice.dimension_number(dim);
+            use_map = any(dim == org.xy) && strcmp(org.xy_mode, 'map');
             
             % default polygon is empty (no display)
             polygon = nan(2, 1); 
             center = nan(2, 1); % out of display
 
-			switch nd
-				case 1
-					lines = sel.polygon; % 2*n array: set of lines
-					n_line = size(lines, 2);
-                    % remove lines that are completely out of current view
-					zoom = G.get_zoom(dim, 'value');
-                    lines(:, lines(1, :) > zoom(2) | lines(2, :) < zoom(1)) = [];
-                    if isempty(lines), return, end
-                    % lines spanning beyond the left or right side
-                    beyond_left = lines(1, :) < zoom(1);
-                    beyond_right = lines(2, :) > zoom(2);
-                    % clip lines to current view
-                    lines(1, beyond_left) = zoom(1);
-                    lines(2, beyond_right) = zoom(2);
-                    % convert from slice to zslice coordinates
-                    lines = G.slice_to_zslice(lines, false, dim);
-                    % display selections as rectangles (for 'x' and 'y'
-                    % locations), or as more complex polygon (for 'xy')
-                    st = G.steps;
-                    dim_location = G.D.layout_id.dim_locations{dim};
-					if ismember(dim_location, {'x', 'y'})
-						% convert from zslice to graph coordinates:
-						% ignore dimensions that are more internal than dim
-						% take value 1 for dimensiont that are more external than dim
-						dim_layout = org.(dim_location);
-						idx_dim = find(dim_layout == dim, 1);
-						switch dim_location
-							case 'x'
-								lines = sum(st.x_offset(idx_dim:end)) + lines*st.x_step(idx_dim) + sum(st.x_step(idx_dim+1:end));
-							case 'y'
-								lines = sum(st.y_offset(idx_dim:end)) + lines*st.y_step(idx_dim) + sum(st.y_step(idx_dim+1:end));
-						end
-                        if ~isempty(st.xy_dim)
-                            graph_dim = brick.switch_case(dim_location, 'x', 1, 'y', 2);
-                            lines = lines + st.xy_offsets(graph_dim, 1); 
-                        end
-                        % construct polygon as union of rectangles
-                        polygon = cell(1, 2*n_line - 1);
-                        for i = 1:n_line
-                            switch 2*beyond_left(i) + beyond_right(i)
-                                case 0
-                                    % segment within view: full rectangle
-                                    polygon{2*i - 1} = [lines([1, 2, 2, 1, 1], i)'; -.5, -.5, .5, .5, -.5];
-                                case 1
-                                    % 'rectangle' open on the right side
-                                    polygon{2*i - 1} = [lines([2, 1, 1, 2], i)'; -.5, -.5, .5, .5];
-                                case 2
-                                    % 'rectangle' open on the left side
-                                    polygon{2*i - 1} = [lines([1, 2, 2, 1], i)'; -.5, -.5, .5, .5];
-                                case 3
-                                    % 'rectangle' open on both sides: 2
-                                    % lines
-                                    polygon{2*i - 1} = [lines([1, 2], :)', NaN, lines([2, 1], i)'; ...
-                                        -.5, -.5, NaN, .5, .5];
-                            end
-                        end
-                        [polygon{2:2:end}] = deal([NaN; NaN]);
-                        polygon = [polygon{:}];
-                        center = [mean(lines(:)); 0];
-                        
-                        % invert coordinates if dim location is 'y'
-                        if strcmp(dim_location, 'y')
-                            polygon = polygon([2, 1], :);
-                            center = center([2, 1]);
-                        end
-                    elseif strcmp(dim_location, 'xy')
-                        % fancy display of selections in grid !
-                        hh = abs(st.xy_steps(2)) *.46; % half height of the frame around a single grid element
-                        polygon = cell(1, 2*n_line - 1);
-                        for i = 1:n_line
-                            % corners: convert from zslice to graph coordinates
-                            r_line = round(lines(:, i) + [1; -1]*.01);
-                            c = st.xy_offsets(:, r_line); % 2*2, i.e. x/y * start/stop
-                            c(1, :) = c(1, :) + st.xy_steps(1) * (lines(:, i) - r_line)';
-                            % sub-polygon
-                            single_row = (diff(c(2, :)) == 0);
-                            if single_row
-                                % the easy case: a simple rectangle
-                                % spanning a single line in the grid
-                                polygon{2*i - 1} = [c(1,[1, 2, 2, 1, 1]); c(2,[1, 1, 2, 2, 1]) + [-1, -1, 1, 1, -1]*hh];
-                            elseif diff(r_line) < st.xyn_col
-                                % two non-intersecting rectangles on two successive lines
-                                polygon{2*i-1} = ...
-                                    [c(1,1), .5*ones(1,2), c(1,[1 1]), NaN, -.5, c(1,[2, 2]), -.5*ones(1,2); ...
-                                    (c(2,[1, 1])+hh), (c(2,[1, 1])-hh), (c(2,1)+hh), NaN, (c(2,[2, 2])+hh), (c(2,[2, 2])-hh), (c(2,2)+hh)];
-                            else
-                                % more difficult: spanning multiple lines
-                                hhc = abs(st.xy_steps(2)) - hh;
-                                polygon{2*i-1} = ...
-                                    [c(1,1), .5*ones(1,3), c(1,2)*ones(1,2), -.5*ones(1,3), c(1,1)*ones(1,2); ...
-                                    (c(2,[1, 1])+hh), (c(2,1)-hhc), (c(2,[2, 2])+hhc), (c(2,[2, 2])-hh), (c(2,2)+hhc), (c(2,[1, 1])-hhc), c(2,1)+hh];
-                            end
-                        end
-                        [polygon{2:2:end}] = deal([NaN; NaN]);
-                        polygon = [polygon{:}];
-                        
-                        % center: will be better positioned if we average
-                        % after conversion from indices to graph positions
-                        center = mean(G.slice_to_graph(sel.data_ind, 'sub_dim', dim), 2);
-                    else
-                        error 'not implemented yet'
-                        center = [brick.nmean(polygon(1, :)), brick.nmean(polygon(2, :))];
+			if nd==1 && use_map
+                % display the union of the selected regions
+                polygon = brick.poly_simplify(G.steps.map_polys(sel.data_ind), 'union');
+                center = brick.nmean(polygon, 2);
+            elseif nd ==1
+                lines = sel.polygon; % 2*n array: set of lines
+                n_line = size(lines, 2);
+                % remove lines that are completely out of current view
+                zoom = G.get_zoom(dim, 'value');
+                lines(:, lines(1, :) > zoom(2) | lines(2, :) < zoom(1)) = [];
+                if isempty(lines), return, end
+                % lines spanning beyond the left or right side
+                beyond_left = lines(1, :) < zoom(1);
+                beyond_right = lines(2, :) > zoom(2);
+                % clip lines to current view
+                lines(1, beyond_left) = zoom(1);
+                lines(2, beyond_right) = zoom(2);
+                % convert from slice to zslice coordinates
+                lines = G.slice_to_zslice(lines, false, dim);
+                % display selections as rectangles (for 'x' and 'y'
+                % locations), or as more complex polygon (for 'xy')
+                st = G.steps;
+                dim_location = G.D.layout_id.dim_locations{dim};
+                if ismember(dim_location, {'x', 'y'})
+                    % convert from zslice to graph coordinates:
+                    % ignore dimensions that are more internal than dim
+                    % take value 1 for dimensiont that are more external than dim
+                    dim_layout = org.(dim_location);
+                    idx_dim = find(dim_layout == dim, 1);
+                    switch dim_location
+                        case 'x'
+                            lines = sum(st.x_offset(idx_dim:end)) + lines*st.x_step(idx_dim) + sum(st.x_step(idx_dim+1:end));
+                        case 'y'
+                            lines = sum(st.y_offset(idx_dim:end)) + lines*st.y_step(idx_dim) + sum(st.y_step(idx_dim+1:end));
                     end
-                case 2
-                    % somehow simpler because only the x,y configuration is
-                    % allowed
-                    % get polygon in slice coordinates
-                    poly_slice = sel.polygon;
-                    center_slice = [mean(poly_slice(1, 1:end-1)); mean(poly_slice(2, 1:end-1))]; % remove the last point as it repeats the first one
-                    % restrict to the part that is visible within the
-                    % current zoom
-                    poly_slice = G.visible_polygon(poly_slice, dim);
-                    display_limit = G.get_zoom(dim, 'displaylimit');
-                    if any(center_slice < display_limit(1, :)' | center_slice > display_limit(2, :)')
-                        center_slice(:) = NaN;
+                    if ~isempty(st.xy_dim)
+                        graph_dim = brick.switch_case(dim_location, 'x', 1, 'y', 2);
+                        lines = lines + st.xy_offsets(graph_dim, 1); 
                     end
-                    % convert to graph
-                    polygon = G.slice_to_graph(poly_slice, 'sub_dim', dim);
-                    center = G.slice_to_graph(center_slice, 'sub_dim', dim);
-				otherwise
-					error 'case not handled yet'
+                    % construct polygon as union of rectangles
+                    polygon = cell(1, 2*n_line - 1);
+                    for i = 1:n_line
+                        switch 2*beyond_left(i) + beyond_right(i)
+                            case 0
+                                % segment within view: full rectangle
+                                polygon{2*i - 1} = [lines([1, 2, 2, 1, 1], i)'; -.5, -.5, .5, .5, -.5];
+                            case 1
+                                % 'rectangle' open on the right side
+                                polygon{2*i - 1} = [lines([2, 1, 1, 2], i)'; -.5, -.5, .5, .5];
+                            case 2
+                                % 'rectangle' open on the left side
+                                polygon{2*i - 1} = [lines([1, 2, 2, 1], i)'; -.5, -.5, .5, .5];
+                            case 3
+                                % 'rectangle' open on both sides: 2
+                                % lines
+                                polygon{2*i - 1} = [lines([1, 2], :)', NaN, lines([2, 1], i)'; ...
+                                    -.5, -.5, NaN, .5, .5];
+                        end
+                    end
+                    [polygon{2:2:end}] = deal([NaN; NaN]);
+                    polygon = [polygon{:}];
+                    center = [mean(lines(:)); 0];
+
+                    % invert coordinates if dim location is 'y'
+                    if strcmp(dim_location, 'y')
+                        polygon = polygon([2, 1], :);
+                        center = center([2, 1]);
+                    end
+                elseif strcmp(dim_location, 'xy')
+                    % fancy display of selections in grid !
+                    hh = abs(st.xy_steps(2)) *.46; % half height of the frame around a single grid element
+                    polygon = cell(1, 2*n_line - 1);
+                    for i = 1:n_line
+                        % corners: convert from zslice to graph coordinates
+                        r_line = round(lines(:, i) + [1; -1]*.01);
+                        c = st.xy_offsets(:, r_line); % 2*2, i.e. x/y * start/stop
+                        c(1, :) = c(1, :) + st.xy_steps(1) * (lines(:, i) - r_line)';
+                        % sub-polygon
+                        single_row = (diff(c(2, :)) == 0);
+                        if single_row
+                            % the easy case: a simple rectangle
+                            % spanning a single line in the grid
+                            polygon{2*i - 1} = [c(1,[1, 2, 2, 1, 1]); c(2,[1, 1, 2, 2, 1]) + [-1, -1, 1, 1, -1]*hh];
+                        elseif diff(r_line) < st.xyn_col
+                            % two non-intersecting rectangles on two successive lines
+                            polygon{2*i-1} = ...
+                                [c(1,1), .5*ones(1,2), c(1,[1 1]), NaN, -.5, c(1,[2, 2]), -.5*ones(1,2); ...
+                                (c(2,[1, 1])+hh), (c(2,[1, 1])-hh), (c(2,1)+hh), NaN, (c(2,[2, 2])+hh), (c(2,[2, 2])-hh), (c(2,2)+hh)];
+                        else
+                            % more difficult: spanning multiple lines
+                            hhc = abs(st.xy_steps(2)) - hh;
+                            polygon{2*i-1} = ...
+                                [c(1,1), .5*ones(1,3), c(1,2)*ones(1,2), -.5*ones(1,3), c(1,1)*ones(1,2); ...
+                                (c(2,[1, 1])+hh), (c(2,1)-hhc), (c(2,[2, 2])+hhc), (c(2,[2, 2])-hh), (c(2,2)+hhc), (c(2,[1, 1])-hhc), c(2,1)+hh];
+                        end
+                    end
+                    [polygon{2:2:end}] = deal([NaN; NaN]);
+                    polygon = [polygon{:}];
+
+                    % center: will be better positioned if we average
+                    % after conversion from indices to graph positions
+                    center = mean(G.slice_to_graph(sel.data_ind, 'sub_dim', dim), 2);
+                else
+                    error 'not implemented yet'
+                    center = [brick.nmean(polygon(1, :)), brick.nmean(polygon(2, :))];
+                end
+            elseif nd ==2
+                % somehow simpler because only the x,y configuration is
+                % allowed
+                % get polygon in slice coordinates
+                poly_slice = sel.polygon;
+                center_slice = [mean(poly_slice(1, 1:end-1)); mean(poly_slice(2, 1:end-1))]; % remove the last point as it repeats the first one
+                % restrict to the part that is visible within the
+                % current zoom
+                poly_slice = G.visible_polygon(poly_slice, dim);
+                display_limit = G.get_zoom(dim, 'displaylimit');
+                if any(center_slice < display_limit(1, :)' | center_slice > display_limit(2, :)')
+                    center_slice(:) = NaN;
+                end
+                % convert to graph
+                polygon = G.slice_to_graph(poly_slice, 'sub_dim', dim);
+                center = G.slice_to_graph(center_slice, 'sub_dim', dim);
+            else
+                error 'case not handled yet'
 			end
 
         end
@@ -1742,31 +1765,63 @@ classdef DisplayGraph < xplr.GraphNode
             % selectionnd object -> use appropriate method for affinity.
             % Works currently only with 2D selections.
             
-            if length(dim)~=2, error 'number of dimensions must be 2', end
+            selnd = length(dim);
+            org = G.D.layout;
+            use_map = (selnd==1) && isequal(dim, org.xy) && strcmp(org.xy_mode, 'map');
+            if ~use_map && length(dim)~=2
+                error 'number of dimensions must be 2, or 1 with a map display'
+            end
             
-            % use the first point as the origin, work in the zslice to
-            % avoid difficulties due to binning
-            xy0 = sel_ax.shapes(1).points(:, 1);
-            zijk0 = round(G.graph_to_zslice(xy0));
+            % infer the affinity matrix graph->slice
+            if selnd == 2
+                % use the first point as the origin, work in the zslice to
+                % avoid difficulties due to binning
+                xy0 = sel_ax.shapes(1).points(:, 1);
+                zijk0 = round(G.graph_to_zslice(xy0));
+                % graph->zslice: linear part
+                xy_test = brick.add(xy0, [0, 1, 0; 0, 0, 1]);
+                zijk_test = G.graph_to_zslice(xy_test, 'sub_dim', dim, 'ijk0', zijk0);
+                linear_part = [zijk_test(:, 2) - zijk_test(:, 1), zijk_test(:, 3) - zijk_test(:, 1)];
+                % graph->zslice: offset
+                offset = zijk_test(:, 1) - linear_part * xy0;
+                % now the affinity matrix graph->slice
+                [idx_offset, bin] = G.get_zoom('off&bin');
+                linear_part = diag(bin(dim)) * linear_part;
+                offset = idx_offset(dim)' + .5 + (offset - .5) .* bin(dim)';
+            elseif selnd == 1 && use_map
+                % there is no zoom for the moment, so slice and zslice are
+                % the same
+                % create map index buffer if needed
+                map_indices = G.map_index_buffer;
+                % convert points to pixel coordinate
+                map_size = size(map_indices)';
+                scale = map_size;
+                linear_part = diag(scale);
+                offset = (1 + map_size)/2;
+            end
 
-            % infer the affinity matrix graph->zslice
-            % (first the linear part)
-            xy_test = brick.add(xy0, [0, 1, 0; 0, 0, 1]);
-            zijk_test = G.graph_to_zslice(xy_test, 'sub_dim', dim, 'ijk0', zijk0);
-            linear_part = [zijk_test(:, 2) - zijk_test(:, 1), zijk_test(:, 3) - zijk_test(:, 1)];
-            % (then the offset)
-            offset = zijk_test(:, 1) - linear_part * xy0;
-            
-            % now the affinity matrix graph->slice
-            [idx_offset, bin] = G.get_zoom('off&bin');
-            linear_part = diag(bin(dim)) * linear_part;
-            offset = idx_offset(dim)' + .5 + (offset - .5) .* bin(dim)';
-            
             % construct affinitynd object
             affinity = xplr.AffinityND(linear_part,offset);
-            
+
             % use the selectionnd method
-            sel_slice = sel_ax.apply_affinity(affinity, G.D.slice.sz(dim));
+            if selnd == 2
+                sz = G.D.slice.sz(dim);
+            else
+                sz = map_size;
+            end
+            sel_slice = sel_ax.apply_affinity(affinity, sz);
+            
+            % when using map, convert to region indices
+            if selnd == 1 && use_map
+                indices = unique(map_indices(sel_slice.mask));
+                indices = setdiff(indices, 0);
+                if isempty(indices)
+                    sel_slice = [];
+                else
+                    sel_slice = xplr.SelectionND('indices', indices, G.D.slice.sz(dim));
+                end
+            end
+                
         end
         function [zoom_dim, zslice_zoom, clip_zijk, clip_zoom] = zoom_in_rect(G, rect)
             % determine in which dimension to zoom and zoom values

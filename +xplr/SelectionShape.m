@@ -50,7 +50,6 @@ classdef SelectionShape
                     S.vectors = zeros(2, 0);
                 case 'poly2D'
                     if size(data,1) ~= 2, error('data should have 2 rows'), end
-                    if ~all(data(:,1) == data(:,end)), data = data(:, [1:end 1]); end
                     [px, py] = deal(data(1,:), data(2,:)); % poly2cw(data(1,:),data(2,:));
                     S.points = [px(:)'; py(:)'];
                     S.vectors = zeros(2, 0);
@@ -201,6 +200,7 @@ classdef SelectionShape
                 ind = ':';
                 return
             end
+            sizes = brick.row(sizes);
             mask = false(sizes);
             for k=1:length(S)
                 points = S(k).points;
@@ -299,7 +299,16 @@ classdef SelectionShape
                 Sk = S(k);
                 switch Sk.type
                     case 'poly2D'
-                        poly_k = Sk.points;
+                        % repeat start point for every component!!
+                        idxnan = [find(isnan(Sk.points(1,:))) size(Sk.points,2)+1];
+                        n_component = length(idxnan);
+                        poly_k = NaN(2, size(Sk.points,2)+n_component);
+                        offset = 0;
+                        for k = 1:n_component
+                            nk = idxnan(k) - offset;
+                            poly_k(:, offset+k-1+(1:nk)) = Sk.points(:, offset+[(1:nk-1) 1]);
+                            offset = offset + nk;
+                        end
                     case 'point2D'
                         p = round(Sk.points);
                         np = size(p,2);

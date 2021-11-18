@@ -8,8 +8,11 @@ function b = dodebug(varargin)
 % registered developer. In the second form, display a message only if the
 % user is a registered developer.
 
-hostlist = {'PCWIN-PCT_HP8570P_EQB', 'PCWIN-DESKTOP-CR6ES64', ...
-    'GLNXA64-textorm-2-st', 'PCWIN-CM-1-ST'};
+hostlist = { ...
+    'PCWIN-PCT_HP8570P_EQB', 'PCWIN-DESKTOP-CR6ES64', ... old
+    'PCWIN-CM-1-ST', ...        office T
+    'PCWIN-PREC7540-1-ST', ...  laptop T
+    };
 b = brick.ismemberstr(brick.hostname,hostlist);
 
 if nargin>0
