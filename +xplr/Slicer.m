@@ -30,6 +30,16 @@ classdef Slicer < xplr.GraphNode
         active_filters
     end
     
+    events
+        % this event is called whenever the slicing chain changes, i.e.
+        % when filters are added, removed or replaced by another, but not
+        % when the filtering action of a filter has changed;
+        % it is called BEFORE slicing actually occurs, so that display of
+        % filters by the ViewControl object can be fast, even if slicing
+        % and subsequent full display update can take a bit more time
+        changed_slicing_def
+    end
+    
     % Constructor, destructor, basic access and get/set dependent
     methods
         function S = Slicer(V, data, dim_id, filters)
@@ -84,17 +94,23 @@ classdef Slicer < xplr.GraphNode
             elseif ~isequal([new_filt.header_in], S.data.header_by_id(dim_id_add))
                 error 'some filter header does not match data'
             end
-            % check header
+            
             % add filters
             if isempty(idx), idx = length(S.filters) + 1; end
             S.filters = [S.filters(1:idx-1), struct('active',num2cell(active),'dim_id',dim_id,'obj',num2cell(new_filt)), S.filters(idx:end)];
+
             % remove invalid part of the slicing chain
-            nok = sum([S.filters(1:idx-1).active]);
-            S.slicing_chain(nok+1:end) = [];
+            slicing_idx = sum([S.filters(1:idx-1).active]) + 1;
+            S.slicing_chain(slicing_idx:end) = [];
+            
             % install listeners
             for i=1:nadd
                 S.add_listener(new_filt(i), 'changed_operation', @(u,e)filter_change(S, new_filt(i), dim_id{i}, e));
             end
+            
+            % notify change
+            notify(S, 'changed_slicing_def')
+                        
             % update slice
             if ~S.pending_rm_filter && isscalar(new_filt) && new_filt.nd_out == new_filt.nd_in
                 do_slice(S,'slicer', 'chg_dim', dim_id_add)
@@ -113,18 +129,28 @@ classdef Slicer < xplr.GraphNode
             if nargin < 3, do_slicing = true; end
             filt_rm = [S.filters(idx).obj];
             S.disconnect(filt_rm)
+            
             % among the dimensions for which filters will be removed, which
             % are those where the filters were really active
             active = [S.filters(idx).active];
             idxactive = idx(active);
             chg_dim_id = [S.filters(idxactive).dim_id];
+            
             % remove invalid part of slicing chain
             if ~isempty(idxactive)
-                nok = sum([S.filters(1:idxactive(1)-1).active]);
-                S.slicing_chain(nok+1:end) = [];
+                first_slicing_idx = sum([S.filters(1:min(idxactive)-1).active]) + 1;
+                S.slicing_chain(first_slicing_idx:end) = [];
             end
+            
             % remove the filters
             S.filters(idx) = [];
+            
+            % unregister filter usage from the bank
+            xplr.Bank.unregister_filter(F,S)
+            
+            % notify change
+            notify(S, 'changed_slicing_def')
+            
             % update slice
             if isempty(idxactive), return, end
             if do_slicing
@@ -150,8 +176,8 @@ classdef Slicer < xplr.GraphNode
             end
             rm_filter(S, idxrm, do_slicing)
         end
-        function replace_filter(S, idxs, dim_ids, new_filt)
-            % function replace_filter(S,idxs,dim_ids,new_filt)
+        function replace_filters_by_index(S, idxs, dim_ids, new_filt)
+            % function replace_filters_by_index(S,idxs,dim_ids,new_filt)
             
             % there can be several filters: dim_ids must be a cell array
             dim_ids = S.data.dimension_id(dim_ids);
@@ -162,38 +188,38 @@ classdef Slicer < xplr.GraphNode
 
             % replace filter(s)
             nd_out_changed = false;
-            chg_dim = zeros(1, 0);
             for i = 1:length(dim_ids)
-                dim_id = dim_ids{i};
-                F = new_filt(i);
-                idx = idxs(i);
+                % unregister previous filter from the bank
+                prev_filt = S.filters(idx).obj;
+                xplr.Bank.unregister_filter(prev_filt,S)
+
                 % replace filter
                 prev_nd_out = S.filters(idx).obj.nd_out;
                 S.disconnect(S.filters(idx).obj)
                 S.filters(idx).obj = F;
                 S.filters(idx).dim_id = dim_id;
                 S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
-                % no need for update if the filter is not active
-                if S.filters(idx).active
-                    if F.nd_out ~= prev_nd_out, nd_out_changed = true; end
-                    chg_dim = [chg_dim, dim_id]; %#ok<AGROW>
-                else
-                    S.activate_connection(F, false)
-                end
-                % remove invalid part of slicing chain
-                nok = sum([S.filters(1:idx(1)-1).active]);
-                S.slicing_chain(nok+1:end) = [];
+
+                % change in the number of output dimensions?
+                nd_out_changed = nd_out_changed || (F.nd_out ~= prev_nd_out);
             end
+            
+            % remove invalid part of the slicing chain
+            first_slicing_idx = sum([S.filters(1:min(idxs)-1).active]) + 1;
+            S.slicing_chain(first_slicing_idx:end) = [];
+            
+            % notify change
+            notify(S, 'changed_slicing_def')
             
             % update slice
             if nd_out_changed
                 do_slice(S, 'slicer', 'global')
             else
-                do_slice(S, 'slicer', 'chg_dim', chg_dim)
+                do_slice(S, 'slicer', 'chg_dim', [dim_ids{:}])
             end
         end
-        function replace_filter_dim(S, dim_ids, new_filt)
-            % function replace_filter_dim(S,dims,new_filt)
+        function replace_filters_by_dim_id(S, dim_ids, new_filt)
+            % function replace_filters_by_dim_id(S,dims,new_filt)
             
             % there can be several filters: dim_ids must be a cell array
             dim_ids = S.data.dimension_id(dim_ids);
@@ -201,37 +227,14 @@ classdef Slicer < xplr.GraphNode
                 if ~isscalar(new_filt), dim_ids = num2cell(dim_ids); else, dim_ids = {dim_ids}; end
             end               
 
-            % replace filter(s)
-            nd_out_changed = false;
-            chg_dim = zeros(1, 0);
+            % get filter index for each dimension
+            idx = zeros(1, length(dim_ids));
             for i = 1:length(dim_ids)
-                dim_id = dim_ids{i};
-                F = new_filt(i);
-                % replace filter
-                idx = brick.find(dim_id, {S.filters.dim_id});
-                if isempty(idx), error 'there is no filter in the specified dimension', end
-                prev_nd_out = S.filters(idx).obj.nd_out;
-                S.disconnect(S.filters(idx).obj)
-                S.filters(idx).obj = F;
-                S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
-                % no need for update if the filter is not active
-                if S.filters(idx).active
-                    if F.nd_out~=prev_nd_out, nd_out_changed = true; end
-                    chg_dim = [chg_dim, dim_id]; %#ok<AGROW>
-                else
-                    S.activate_connection(F, false)
-                end
-                % remove invalid part of slicing chain
-                nok = sum([S.filters(1:idx(1)-1).active]);
-                S.slicing_chain(nok+1:end) = [];
+                idx(i) = brick.find(dim_ids{i}, {S.filters.dim_id});
             end
             
-            % update slice
-            if nd_out_changed
-                do_slice(S, 'slicer', 'global')
-            else
-                do_slice(S, 'slicer', 'chg_dim', chg_dim)
-            end
+            % replace filters
+            S.replace_filters_by_index(S, idx, dim_ids, new_filt)
         end
         function perm_filters(S, perm)
             % function perm_filters(S,perm)
@@ -250,22 +253,32 @@ classdef Slicer < xplr.GraphNode
             % permutation
             S.filters = S.filters(perm);
             
+            % notify change
+            notify(S, 'changed_slicing_def')
+            
             % update slice: note that all output header will remain the
             % same, so best is to signal the change as a change in the data
-            nok = sum([S.filters(1:idx_first-1).active]);
-            S.slicing_chain(nok+1:end) = [];
+            first_slicing_idx = sum([S.filters(1:idx_first-1).active]) + 1;
+            S.slicing_chain(first_slicing_idx:end) = [];
             do_slice(S, 'slicer', 'chg_data')
         end
         function chg_filter_active(S, idx, val)
             % function chg_filter_active(S,idx,val)
+            
+            % activate/deactivate filter
             val = brick.boolean(val);
             if all([S.filters(idx).active] == val), return, end
             for i = idx
                 S.filters(i).active = val;
                 S.activate_connection(S.filters(i).obj, val)
             end
-            nok = sum([S.filters(1:min(idx)-1).active]);
-            S.slicing_chain(nok+1:end) = [];
+            first_slicing_idx = sum([S.filters(1:min(idx)-1).active]) + 1;
+            S.slicing_chain(first_slicing_idx:end) = [];
+            
+            % notify change
+            notify(S, 'changed_slicing_def')
+            
+            % update slice
             if ~S.pending_rm_filter && isscalar(idx) 
                 filt = S.filters(idx).obj;
                 if filt.nd_out == filt.nd_in

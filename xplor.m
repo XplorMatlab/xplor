@@ -128,17 +128,19 @@ else
     data = x;
 end
 
-% create view
-V = xplr.View(data);
-
-% apply options
+% check options
 option_names = fieldnames(options);
-invalid_names = setdiff(option_names, ...
-    {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
-    'filter', 'displaymode', 'display_mode'});
+valid_names =  {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
+    'filter', 'displaymode', 'display_mode'};
+invalid_names = setdiff(option_names, valid_names);
 if ~isempty(invalid_names)
     error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])
 end
+
+% create view
+V = xplr.View(data, options);
+
+% apply options
 if isfield(options, 'controls')
     V.control_visible = brick.boolean(options.controls);
 end

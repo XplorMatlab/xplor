@@ -34,9 +34,12 @@ classdef ViewControl < xplr.GraphNode
                 'callback', @(u,e)C.dimension_context_menu()});
             C.context_menu = uicontextmenu(V.hf);
             
-            % some changes needed when data header is changed
+            % some display update needed when data header is changed
             C.add_listener(V.data, 'changed_data', @(u,e)data_change(C, e));
 
+            % display update when the slicing chain has changed
+            C.add_listener(C.V.S, 'changed_slicing_def', @(u,e)slicing_change(C, e));
+            
             % create initial list of filters
             % (determine which filters should be active for the slice to be
             % displayable)
@@ -75,6 +78,7 @@ classdef ViewControl < xplr.GraphNode
             C.items = struct('id', cell(1, 0), 'span', [], 'obj', []);
         end
         function item_positions(C, idx)
+            % set position of selected (or all) items
             if nargin<2, idx = 1:length(C.items); end
             [W, H] = brick.pixelsize(C.hp);
             h = 22; % item height, in pixel
@@ -112,8 +116,11 @@ classdef ViewControl < xplr.GraphNode
             idx = brick.find(id, {C.items.id});
             item = C.items(idx);
         end
-        function remove_item(C,id)
+        function remove_items_by_id(C,id)
             idx = brick.find(id, {C.items.id});
+            remove_items_by_positions(C,idx)
+        end
+        function remove_items_by_positions(C,idx)
             brick.delete_valid([C.items(idx).obj])
             C.items(idx) = [];
             item_positions(C)
@@ -161,6 +168,11 @@ classdef ViewControl < xplr.GraphNode
                 otherwise
                     % no change needed
             end
+        end
+        function slicing_change(C, ~)
+            % No "smart" update, simply redisplay the full list of filters,
+            % this takes minimal time anyway
+            C.display_filters()
         end
     end
     
@@ -291,11 +303,6 @@ classdef ViewControl < xplr.GraphNode
 
             % filters to remove
             if ismember(flag, {'add_filter', 'rm_filter', 'view', 'view_and_ROI'})
-                % remove filter from the viewcontrol and the bank
-                for filter = current_filters_dim
-                    C.remove_filter_item(filter.dim_id);
-                end
-                
                 % remove filters from the slicer
                 do_slicing = strcmp(flag, 'rm_filter'); % no need to reslice yet for 'add_filter', reslice will occur when adding the new filter(s)
                 C.V.slicer.rm_filter(filters_idx, do_slicing);
@@ -405,8 +412,18 @@ classdef ViewControl < xplr.GraphNode
         end
     end
 
-    % Generic operation item
+    % Filters display
     methods (Access='private')
+        function display_filters(C)
+            % Remove existing filter items
+            C.remove_items_by_positions(2:length(C.items))
+            
+            % Display filters
+            filters = C.V.S.filters;
+            for k = 1:length(filters)
+                display_filter(C, filters(k))
+            end
+        end
         function [panel, item_idx] = operation_item(C, dim_id, F, ...
                 background_color, active)
             % panel
@@ -436,55 +453,7 @@ classdef ViewControl < xplr.GraphNode
                 'position', [6, 6, 13, 12], ...
                 'callback', @(u,e)C.dim_action('set_active', dim_id, get(u, 'value')));
         end
-    end
-
-    % Filters display
-    methods (Access='private')
-        function remove_filter_item(C, dim_id)
-            % remove the filter from the view_control and the bank
-            % this function does not remove the filter from the slicer
-
-            % if filter is empty, does nothing and leave the function
-            if isempty(dim_id), return, end
-            % get filter
-            id = {'filter', dim_id};
-            F = C.get_item(id).F;
-            % remove filter from the items
-            C.remove_item(id)
-            % remove filter from the lists display
-            % if the filter is private
-            if F.link_key == 0
-                % remove the filter from the combo
-                combo = C.get_private_lists();
-                combo.remove_list(F)
-            else
-                % viewcontrol object C will be unregistered for the users
-                % list of filter F; if this list will become empty, F will
-                % be unregistered from the filters set
-                xplr.Bank.unregister_filter(F,C)
-            end
-        end
-        function F = create_filter_and_item(C, dim_id, key, active, show_new_filter)
-            % create filter or get existing one from the
-            % related public filters set
-            header = C.V.data.header_by_id(dim_id);
-            % if the filter has to be private
-            if key == 0
-                % create private filter
-                F = xplr.FilterAndPoint(header);
-                % show filter in combo
-                if isscalar(dim_id)
-                    combo = C.get_private_lists();
-                    if active, combo.show_list(F), end
-                end
-            else
-                % search for the filter in the bank with key and dimension
-                if nargin<5
-                    show_new_filter = any([header.categorical] | [header.is_datetime]); 
-                end
-                F = xplr.Bank.get_filter_and_point(key, header, C, show_new_filter);
-            end
-
+        function display_filter(C, F)
             % panel
             background_color = xplr.colors('link_key', F.link_key);
             [panel, item_idx] = operation_item(C, dim_id, F, ...
@@ -532,6 +501,30 @@ classdef ViewControl < xplr.GraphNode
             
             % bring closing cross above the labels
             uistack(C.items(item_idx).rm_filter_button, 'top')
+        end
+        function F = create_filter_and_item(C, dim_id, key, active, show_new_filter)
+            % create filter or get existing one from the
+            % related public filters set
+            header = C.V.data.header_by_id(dim_id);
+            % if the filter has to be private
+            if key == 0
+                % create private filter
+                F = xplr.FilterAndPoint(header);
+                % show filter in combo
+                if isscalar(dim_id)
+                    combo = C.get_private_lists();
+                    if active, combo.show_list(F), end
+                end
+            else
+                % search for the filter in the bank with key and dimension
+                if nargin<5
+                    show_new_filter = any([header.categorical] | [header.is_datetime]); 
+                end
+                F = xplr.Bank.get_filter_and_point(key, header, C, show_new_filter);
+            end
+            
+            % display filter
+            C.display_filter(F)
         end
         function click_filter_item(C, dim_id)
             hf = C.V.hf;
@@ -727,7 +720,7 @@ classdef ViewControl < xplr.GraphNode
 
             % for the moment no real filter; so replace the item close
             % button callback with removing only the item
-            C.items(item_idx).rm_filter_button.Callback = @(u,e)C.remove_item({'filter', dim_id});
+            C.items(item_idx).rm_filter_button.Callback = @(u,e)C.remove_items_by_id({'filter', dim_id});
         end
         function move_slider(C, slider)
             hf = C.V.hf;

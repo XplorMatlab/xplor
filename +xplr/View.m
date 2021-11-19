@@ -23,7 +23,7 @@ classdef View < xplr.GraphNode
         
     % Constructor
     methods
-        function V = View(data, varargin)
+        function V = View(data, options)
             % function V = view(data[,optional slicer arguments...])
 
             % define headers if needed

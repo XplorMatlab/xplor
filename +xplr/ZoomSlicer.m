@@ -89,7 +89,7 @@ classdef ZoomSlicer < xplr.Slicer
                     % replace filters in modified dimensions
                     S.slicing_chain(:) = []; % data and dimensions have changed, all previous slicing steps became invalid
                     Z = auto_zoom_filter(S, S.default_link_key, dim);
-                    S.replace_filter(dim, dim, Z)
+                    S.replace_filters_by_index(dim, dim, Z)
                 case {'new', 'remove', 'chg&new', 'chg&rm', 'perm', 'chg'}
                     % In this case we do not use methods of the parent
                     % 'slicer' class, but do all the update here in a
@@ -102,7 +102,8 @@ classdef ZoomSlicer < xplr.Slicer
                         % the concerned dimension will share the same dim_id
                         % (xplr.dataOperand.changedimension_id)
                         
-                        % replace filter (as in slicer.replace_filter_dim)
+                        % replace filter (this code replaces that of
+                        % replace_filters_by_dim_id)
                         cur_key = cur_filt.link_key;
                         S.disconnect(cur_filt) % cur_filt will be deleted if it is not used elsewhere
                         new_filt = auto_zoom_filter(S, cur_key, dim);
@@ -117,7 +118,7 @@ classdef ZoomSlicer < xplr.Slicer
                         % full update
                         S.slicing_chain(:) = []; % data has changed, all previous slicing steps became invalid
                         new_filt = auto_zoom_filter(S, cur_filt.link_key, dim);
-                        replace_filter_dim(S, dim, new_filt)
+                        replace_filters_by_dim_id(S, dim, new_filt)
                     end
                 case {'chg_data', 'sub_data'}
                     % no change in the input header
@@ -173,7 +174,7 @@ classdef ZoomSlicer < xplr.Slicer
     % Replace a filter by a new one with another link_key
     methods
         function change_key(S, dim, key)
-            S.replace_filter_dim(dim, S.auto_zoom_filter(key,dim));
+            S.replace_filters_by_dim_id(dim, S.auto_zoom_filter(key,dim));
         end
     end
 end
