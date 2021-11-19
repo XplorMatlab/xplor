@@ -1,26 +1,26 @@
 classdef WorldOperand < xplr.GraphNode
-% Similarly to dataOperand, a worldOperand object defines an operation to
-% perform on data, but it is not associated with specific data headers;
-% rather it will link data headers corresponding to the same measure space,
-% for example time data headers with different temporal resolutions and
-% offsets.
-% When the bank creates a dataOperand object applying on measure headers,
-% it immediately looks for (and creates if necessary) a worldOperand object
-% to link this dataOperand object to.
-% 
-% See also xplr.dataOperand, xplr.Bank
-
-properties (SetAccess='private')
-    type        % type of operation: the class of the dataOperand objects it is linked to
-    space_id     % identifier of the measure space the object operate on
-end
-properties
-    operation   % operation definition: will be defined by the dataOperand objects it is linked to
-end
-   
-events
-    ChangedOperation
-end
+    % Similarly to dataOperand, a worldOperand object defines an operation to
+    % perform on data, but it is not associated with specific data headers;
+    % rather it will link data headers corresponding to the same measure space,
+    % for example time data headers with different temporal resolutions and
+    % offsets.
+    % When the bank creates a dataOperand object applying on measure headers,
+    % it immediately looks for (and creates if necessary) a worldOperand object
+    % to link this dataOperand object to.
+    %
+    % See also xplr.dataOperand, xplr.Bank
+    
+    properties (SetAccess='private')
+        type        % type of operation: the class of the dataOperand objects it is linked to
+        space_id     % identifier of the measure space the object operate on
+    end
+    properties
+        operation   % operation definition: will be defined by the dataOperand objects it is linked to
+    end
+    
+    events
+        changed_operation
+    end
     
 
 methods
@@ -34,8 +34,8 @@ methods
         wo.space_id = do.header_in.get_measure_space_id();
         % connect dataOperand and worldOperand together
         wo.add_listener_exclusive_pair(do, ...
-            'ChangedOperation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
-            'ChangedOperation', @(u,e)do.update_operation_data_to_space(wo,e));
+            'changed_operation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
+            'changed_operation', @(u,e)do.update_operation_data_to_space(wo,e));
         do.world_operand = wo;
         % obtain world operation by running dataOperand method
         wo.operation = do.operation_data_to_space();
@@ -47,8 +47,8 @@ methods
         end
         % connect
         wo.add_listener_exclusive_pair(do, ...
-            'ChangedOperation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
-            'ChangedOperation', @(u,e)do.update_operation_data_to_space(wo,e));
+            'changed_operation', @(u,e)do.update_operation_space_to_data(wo.operation,e), ...
+            'changed_operation', @(u,e)do.update_operation_data_to_space(wo,e));
         do.world_operand = wo;
         % set data operation
         do.update_operation_space_to_data(wo.operation)

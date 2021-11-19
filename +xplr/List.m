@@ -103,7 +103,7 @@ classdef List < xplr.GraphNode
             function filter_changed(~, e)
                 if strcmp(e.type, 'filter'), display_selection(L), end
             end
-            brick.connect_listener(F, L, 'ChangedOperation', @filter_changed);
+            brick.connect_listener(F, L, 'changed_operation', @filter_changed);
             
             % auto-delete
             set(L.h_list, 'deletefcn', @(u,e)delete(L))

@@ -28,7 +28,7 @@ classdef XData < xplr.GraphNode
     end
     
     events
-        ChangedData % sent with info xplr.EventInfo('data',chg_head)
+        changed_data % sent with info xplr.EventInfo('data',chg_head)
     end
     
     % Constructor and simple access
@@ -114,7 +114,7 @@ classdef XData < xplr.GraphNode
         function set_name(x, name)
             if strcmp(name, x.name), return, end
             x.name = name;
-            notify(x, 'ChangedData', xplr.EventInfo('data', 'name'))
+            notify(x, 'changed_data', xplr.EventInfo('data', 'name'))
         end
         function chg_data(x, data)
             if isequal(data, x.data), return, end
@@ -127,14 +127,14 @@ classdef XData < xplr.GraphNode
             if ~isreal(data), error 'data cannot be complex', end
             x.data = data;
             if ~any(chg_sz)
-                notify(x, 'ChangedData', xplr.EventInfo('data', 'chg_data'))
+                notify(x, 'changed_data', xplr.EventInfo('data', 'chg_data'))
                 return
             end
             % update dimension headers if necessary
             for i=find(chg_sz)
                 x.header(i) = update_measure_header(x.header(i), data_sz(i));
             end
-            notify(x, 'ChangedData', xplr.EventInfo('data', 'chg_dim', find(chg_sz))) %#ok<FNDSB>
+            notify(x, 'changed_data', xplr.EventInfo('data', 'chg_dim', find(chg_sz))) %#ok<FNDSB>
         end
         function update_data(x, flag, d, ind, value, new_head)
             % function update_data(x,flag,dim,ind,value,new_head)
@@ -228,7 +228,7 @@ classdef XData < xplr.GraphNode
             x.header = new_head;
             x.data = new_data;
             % notification
-            notify(x, 'ChangedData', xplr.EventInfo('data', flag, dim, ind))
+            notify(x, 'changed_data', xplr.EventInfo('data', flag, dim, ind))
         end
         function update_data_dim(x, flag, dim, new_data, new_head)
             % update header
@@ -263,7 +263,7 @@ classdef XData < xplr.GraphNode
             end
             x.data = new_data;
             % notification
-            notify(x, 'ChangedData', xplr.EventInfo('data', flag, [x.header(dim).dim_id]))
+            notify(x, 'changed_data', xplr.EventInfo('data', flag, [x.header(dim).dim_id]))
         end
     end
     

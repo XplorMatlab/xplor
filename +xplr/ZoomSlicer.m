@@ -19,7 +19,7 @@ classdef ZoomSlicer < xplr.Slicer
     end
     
     events
-        ChangedZoom % transit changes in the observed zoom filters
+        changed_zoom % transit changes in the observed zoom filters
     end
     
     % Constructor
@@ -63,7 +63,7 @@ classdef ZoomSlicer < xplr.Slicer
                     zi = xplr.ZoomFilter(S.data.header(dim));
                 end
                 Z(i) = zi;
-                S.add_listener(Z(i), 'ChangedOperation', @(u,e)zoom_filter_change(S,d,e));
+                S.add_listener(Z(i), 'changed_operation', @(u,e)zoom_filter_change(S,d,e));
             end
         end       
     end
@@ -107,7 +107,7 @@ classdef ZoomSlicer < xplr.Slicer
                         S.disconnect(cur_filt) % cur_filt will be deleted if it is not used elsewhere
                         new_filt = auto_zoom_filter(S, cur_key, dim);
                         S.filters(dim).obj = new_filt;
-                        S.add_listener(new_filt, 'ChangedOperation', @(u,e)filter_change(S,new_filt,dim,e));
+                        S.add_listener(new_filt, 'changed_operation', @(u,e)filter_change(S,new_filt,dim,e));
 
                         % smart update: note that this will call
                         % maybe we need: S.slicing_chain(dim:end) = [];
@@ -139,11 +139,11 @@ classdef ZoomSlicer < xplr.Slicer
                 Z.set_zoom(new_zoom(:, i))
                 chg_n_out = chg_n_out || (Z.sz_out ~= cur_n_out);
             end
-            notify(S, 'ChangedZoom', xplr.EventInfo('zoom', chg_n_out,dim)) % to do: check whether chg_n_out is true or false...
+            notify(S, 'changed_zoom', xplr.EventInfo('zoom', chg_n_out,dim)) % to do: check whether chg_n_out is true or false...
         end
         function zoom_filter_change(S, dim, e)
             if strcmp(e.type, 'zoom')
-                notify(S, 'ChangedZoom', xplr.EventInfo('zoom', e.chg_n_out, dim))
+                notify(S, 'changed_zoom', xplr.EventInfo('zoom', e.chg_n_out, dim))
             end
         end
     end

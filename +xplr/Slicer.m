@@ -38,7 +38,7 @@ classdef Slicer < xplr.GraphNode
             xplr.debug_info('TODO', 'can a slicer exist without being aware of its possessing view?')
             % set data
             S.data = data;
-            S.add_listener(data, 'ChangedData', @(u,e)data_change(S,e));
+            S.add_listener(data, 'changed_data', @(u,e)data_change(S,e));
             % without any filter, slice is identical data
             S.slice = data.copy();
 
@@ -93,7 +93,7 @@ classdef Slicer < xplr.GraphNode
             S.slicing_chain(nok+1:end) = [];
             % install listeners
             for i=1:nadd
-                S.add_listener(new_filt(i), 'ChangedOperation', @(u,e)filter_change(S, new_filt(i), dim_id{i}, e));
+                S.add_listener(new_filt(i), 'changed_operation', @(u,e)filter_change(S, new_filt(i), dim_id{i}, e));
             end
             % update slice
             if ~S.pending_rm_filter && isscalar(new_filt) && new_filt.nd_out == new_filt.nd_in
@@ -172,7 +172,7 @@ classdef Slicer < xplr.GraphNode
                 S.disconnect(S.filters(idx).obj)
                 S.filters(idx).obj = F;
                 S.filters(idx).dim_id = dim_id;
-                S.add_listener(F, 'ChangedOperation', @(u,e)filter_change(S, F, dim_id, e));
+                S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
                 % no need for update if the filter is not active
                 if S.filters(idx).active
                     if F.nd_out ~= prev_nd_out, nd_out_changed = true; end
@@ -213,7 +213,7 @@ classdef Slicer < xplr.GraphNode
                 prev_nd_out = S.filters(idx).obj.nd_out;
                 S.disconnect(S.filters(idx).obj)
                 S.filters(idx).obj = F;
-                S.add_listener(F, 'ChangedOperation', @(u,e)filter_change(S, F, dim_id, e));
+                S.add_listener(F, 'changed_operation', @(u,e)filter_change(S, F, dim_id, e));
                 % no need for update if the filter is not active
                 if S.filters(idx).active
                     if F.nd_out~=prev_nd_out, nd_out_changed = true; end

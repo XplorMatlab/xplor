@@ -16,7 +16,7 @@ classdef BankRegistry < handle
     end
     
     events
-        Empty
+        register_empty
     end
     
     methods
@@ -47,7 +47,7 @@ classdef BankRegistry < handle
                         idx = R.n + 1;
                         R.content(idx) = struct('key', key{1}, 'value', R1, 'users', {cell(1, 0)});
                         % watch for it to become empty
-                        addlistener(R1, 'Empty', @(u,e)unregister(R,key{1}));
+                        addlistener(R1, 'register_empty', @(u,e)unregister(R,key{1}));
                     elseif ~isa(R1, 'xplr.BankRegistry')
                         error 'key is invalid: encountered a leave instead of a sub-registry'
                     end
@@ -95,9 +95,9 @@ classdef BankRegistry < handle
                         error 'key is invalid: encoutered a leave instead of a sub-registry'
                     end
                     if nargin<3
-                        rm = unregister(R1, key(2:end)); % note that if R1 becomes empty, it will emit 'Empty' and automatically get removed from R and be deleted
+                        rm = unregister(R1, key(2:end)); % note that if R1 becomes empty, it will emit 'register_empty' and automatically get removed from R and be deleted
                     else
-                        rm = unregister(R1, key(2:end), user); % note that if R1 becomes empty, it will emit 'Empty' and automatically get removed from R and be deleted
+                        rm = unregister(R1, key(2:end), user); % note that if R1 becomes empty, it will emit 'register_empty' and automatically get removed from R and be deleted
                     end
                     if nargout, removed = rm; end
                     return
@@ -142,9 +142,9 @@ classdef BankRegistry < handle
                 rm = false;
             end
             if nargout, removed = rm; end
-            % Raise 'Empty' event if registry becomes empty
+            % Raise 'register_empty' event if registry becomes empty
             if R.n == 0
-                notify(R, 'Empty')
+                notify(R, 'register_empty')
             end
         end
         function value = get_value(R, key, new_user)

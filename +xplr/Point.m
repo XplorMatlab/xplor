@@ -31,7 +31,7 @@ classdef Point < xplr.DataOperand
             chg_ij = (i ~= P.index);
             P.index = i;
             % notification
-            notify(P, 'ChangedOperation', xplr.EventInfo('point', chg_ij))
+            notify(P, 'changed_operation', xplr.EventInfo('point', chg_ij))
         end
         function copy_in(P, obj)
             P.index = obj.index;
@@ -147,7 +147,7 @@ classdef Point < xplr.DataOperand
         end
         function update_operation_data_to_space(P, WO, ~)
             WO.operation = P.operation_data_to_space();
-            notify(WO, 'ChangedOperation')
+            notify(WO, 'changed_operation')
         end
         function update_operation_space_to_data(P, point_world, ~)
             P.index_exact = 1 + (point_world - P.header_in.start)/P.header_in.scale;

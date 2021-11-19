@@ -80,7 +80,7 @@ error 'much of the code below is not working any more due to changes in code'
 % %%
 % ZC = xplr.zoomcentral('y', 'px');
 % 
-% % notify(ZF1,'ChangedZoom',xplr.eventinfo('zoom',0))
+% % notify(ZF1,'changed_zoom',xplr.eventinfo('zoom',0))
 % 
 % ZC.connectZoomFilter(ZF1);
 % ZC.connectZoomFilter(ZF2);

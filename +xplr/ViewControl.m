@@ -35,8 +35,8 @@ classdef ViewControl < xplr.GraphNode
             C.context_menu = uicontextmenu(V.hf);
             
             % some changes needed when data header is changed
-            C.add_listener(V.data, 'ChangedData', @(u,e)data_change(C, e));
-            
+            C.add_listener(V.data, 'changed_data', @(u,e)data_change(C, e));
+
             % create initial list of filters
             % (determine which filters should be active for the slice to be
             % displayable)
@@ -528,7 +528,7 @@ classdef ViewControl < xplr.GraphNode
                     set(filter_label_op, 'string', label)
                 end
             end
-            brick.connect_listener(F.F, filter_label_op, 'ChangedOperation', @check_operation_change);
+            brick.connect_listener(F.F, filter_label_op, 'changed_operation', @check_operation_change);
             
             % bring closing cross above the labels
             uistack(C.items(item_idx).rm_filter_button, 'top')
@@ -687,7 +687,7 @@ classdef ViewControl < xplr.GraphNode
                 disp 'warning: usage of private lists display has not been tested yet'
                 combo = xplr.ListCombo(C.V.panels.list_combo);
                 C.private_lists = combo;
-                brick.connect_listener(combo, control_org, 'Empty', @(u,e)set(control_org, 'extents', [1, 0]));
+                brick.connect_listener(combo, control_org, 'register_empty', @(u,e)set(control_org, 'extents', [1, 0]));
             end
             % Need to show it?
             if control_org.extents(2) == 0

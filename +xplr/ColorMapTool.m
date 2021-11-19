@@ -14,7 +14,7 @@ classdef ColorMapTool < xplr.GraphNode
     end
     
     events
-        ChangedColorMap
+        changed_color_map
     end
    
     % Constructor, destructor, menu
@@ -124,7 +124,7 @@ classdef ColorMapTool < xplr.GraphNode
             % Set name
             C.c_map_def = name;
             % Notify
-            notify(C, 'ChangedColorMap')
+            notify(C, 'changed_color_map')
         end
     end
     
@@ -139,18 +139,18 @@ classdef ColorMapTool < xplr.GraphNode
             % function
             if value && (isempty(C.nonlinear_fun_editor) || ~isvalid(C.nonlinear_fun_editor))
                 C.nonlinear_fun_editor = brick.signaleditor([1, 256], [0, 1], ...
-                    @(x)notify(C, 'ChangedColorMap'), 'monotonous', 'min', 0, 'max', 1);
+                    @(x)notify(C, 'changed_color_map'), 'monotonous', 'min', 0, 'max', 1);
                 % if the editor is closed, we stop applying the nonlinear
                 % function
                 C.add_listener(C.nonlinear_fun_editor, 'ObjectBeingDestroyed', @(u,e)set(C, 'do_nonlinear', false))
             else
-                notify(C, 'ChangedColorMap')
+                notify(C, 'changed_color_map')
             end
         end
         function set.invert_map(C, value)
             C.invert_map = value;
             % update diplay
-            notify(C, 'ChangedColorMap')
+            notify(C, 'changed_color_map')
         end
     end
     

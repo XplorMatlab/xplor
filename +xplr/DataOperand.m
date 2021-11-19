@@ -27,7 +27,7 @@ classdef DataOperand < xplr.GraphNode
     % a time cursor its position (operation definition) has changed, but
     % not the pixel it selects (underlying slicing operation is unchanged).
     events
-        ChangedOperation
+        changed_operation
     end
     
     % Constructor
@@ -169,7 +169,7 @@ classdef DataOperand < xplr.GraphNode
     % worldOperand object)
     methods (Abstract)
         world_op = operation_data_to_space(O)       % get world operation based on opeartion definition in O
-        update_operation_data_to_space(O, WO, event)   % updates WO.operation based on operation definition in O and argument event; must take care of launching WO 'ChangedOperation' event
+        update_operation_data_to_space(O, WO, event)   % updates WO.operation based on operation definition in O and argument event; must take care of launching WO 'changed_operation' event
         update_operation_space_to_data(O, world_operation, event)   % updates operation definition in O based on world operation and optional argument event
     end
     

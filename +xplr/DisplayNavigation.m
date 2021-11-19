@@ -322,7 +322,7 @@ classdef DisplayNavigation < xplr.GraphNode
                 P = xplr.Bank.get_point_filter(link_key, head, N); % FilterAndPoint filter
                 N.point_filters{d} = P;
                 % listen to the point filter event
-                N.add_listener(P, 'ChangedOperation', @(u,e)moved_point(N, e))
+                N.add_listener(P, 'changed_operation', @(u,e)moved_point(N, e))
             end
         end
         function disconnect_point_filter(N, dim)
@@ -904,7 +904,7 @@ classdef DisplayNavigation < xplr.GraphNode
             N.selection_filter = F;
             
             % watch changes in filter to update display!
-            N.add_listener(F, 'ChangedOperation', @(u,e)selection_filter_change(N, e));
+            N.add_listener(F, 'changed_operation', @(u,e)selection_filter_change(N, e));
             
             % update display
             N.display_selection()
@@ -1522,7 +1522,7 @@ classdef DisplayNavigation < xplr.GraphNode
                     set(obj,'value',Z.zoom_value)
                 end
             end
-            N.add_listener(Z, 'ChangedOperation', @zoom_change);
+            N.add_listener(Z, 'changed_operation', @zoom_change);
         end
     end
     

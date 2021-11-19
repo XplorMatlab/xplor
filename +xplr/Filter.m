@@ -207,7 +207,7 @@ classdef Filter < xplr.DataOperand
 
             % notification
             e = xplr.EventInfo('filter', flag, ind, value);
-            notify(F, 'ChangedOperation', e)
+            notify(F, 'changed_operation', e)
         end
         function set.slice_fun_str(F, fun)
             F.slice_fun_str = fun;
@@ -247,7 +247,7 @@ classdef Filter < xplr.DataOperand
             % update property
             F.slice_fun = fun;
             % notification
-            notify(F, 'ChangedOperation', xplr.EventInfo('operation'))
+            notify(F, 'changed_operation', xplr.EventInfo('operation'))
         end
         function set_fun(F, fun)
             % convert char to function handle
@@ -270,7 +270,7 @@ classdef Filter < xplr.DataOperand
             % update slicing function
             F.slice_fun = fun;
             % notification
-            notify(F, 'ChangedOperation', xplr.EventInfo('filter', 'chg', 1:F.n_sel))
+            notify(F, 'changed_operation', xplr.EventInfo('filter', 'chg', 1:F.n_sel))
         end
         function copy_in(F, obj)
             % do not call updateing methods because there might be
@@ -280,7 +280,7 @@ classdef Filter < xplr.DataOperand
             F.selection = obj.selection;
             F.header_out = obj.header_out;
             e = xplr.EventInfo('filter', 'all', 1:length(F.selection), F.selection);
-            notify(F, 'ChangedOperation', e)
+            notify(F, 'changed_operation', e)
         end
     end
     
@@ -449,7 +449,7 @@ classdef Filter < xplr.DataOperand
                 otherwise
                     error('flag ''%s'' not handled', flag)
             end
-            notify(WO,'ChangedOperation',xplr.EventInfo('filter', flag, ind, value))
+            notify(WO,'changed_operation',xplr.EventInfo('filter', flag, ind, value))
         end
         function update_operation_space_to_data(F, selection_world, e)
             if nargin >= 3

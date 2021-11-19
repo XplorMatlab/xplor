@@ -61,7 +61,7 @@ classdef ZoomFilter < xplr.DataOperand
                 if bin == 0 || mod(bin,1), error 'binn_ing value must be a positive integer', end
                 z.bin = bin;
             end
-            prepare_filter(z, chg_zoom, chg_bin) % this will raise 'ChangedOperation' event
+            prepare_filter(z, chg_zoom, chg_bin) % this will raise 'changed_operation' event
         end
         function move_zoom(z, n_step)
             if strcmp(z.zoom, ':'), return, end
@@ -80,7 +80,7 @@ classdef ZoomFilter < xplr.DataOperand
             if bin == 0 || mod(bin, 1), error 'binn_ing value must be a positive integer', end
             % assign and update output
             z.bin = bin;
-            prepare_filter(z, false, true) % this will raise 'ChangedOperation' event
+            prepare_filter(z, false, true) % this will raise 'changed_operation' event
         end
         function copy_in(z, obj)
             z.set_zoom(obj.zoom, obj.bin);
@@ -140,10 +140,10 @@ classdef ZoomFilter < xplr.DataOperand
             % notifications
             chg_n_out = (n_out ~= length(cur_i_out));
             if chg_zoom
-                notify(z, 'ChangedOperation', xplr.EventInfo('zoom',chg_n_out))
+                notify(z, 'changed_operation', xplr.EventInfo('zoom',chg_n_out))
             end
             if chg_bin
-                notify(z, 'ChangedOperation', xplr.EventInfo('bin'))
+                notify(z, 'changed_operation', xplr.EventInfo('bin'))
             end
             any_chg = chg_n_out || (z.indices_out(1) ~= cur_i_out(1));
             zoom_in = any_chg && (isempty(z.indices_out) ...
@@ -152,11 +152,11 @@ classdef ZoomFilter < xplr.DataOperand
                 idx_first = find(cur_i_out==z.indices_out(1), 1, 'first');
                 idx_last = find(cur_i_out==z.indices_out(end), 1, 'last');
                 idx_rm = [1:idx_first-1, idx_last+1:length(cur_i_out)];
-                notify(z, 'ChangedOperation', xplr.EventInfo('filter','remove',idx_rm))
+                notify(z, 'changed_operation', xplr.EventInfo('filter','remove',idx_rm))
             elseif chg_n_out
-                notify(z, 'ChangedOperation', xplr.EventInfo('filter','all'))
+                notify(z, 'changed_operation', xplr.EventInfo('filter','all'))
             elseif any_chg
-                notify(z, 'ChangedOperation', xplr.EventInfo('filter','chg',1:n_out))
+                notify(z, 'changed_operation', xplr.EventInfo('filter','chg',1:n_out))
             end
         end
     end
@@ -249,7 +249,7 @@ classdef ZoomFilter < xplr.DataOperand
         function update_operation_data_to_space(z, wo, evnt)
             if ~strcmp(evnt.type,'zoom'), return, end
             wo.operation = z.operation_data_to_space();
-            notify(wo, 'ChangedOperation')
+            notify(wo, 'changed_operation')
         end
         function update_operation_space_to_data(z, world_operation, ~)
             if strcmp(world_operation, ':')

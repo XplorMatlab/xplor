@@ -312,7 +312,7 @@ classdef Bank < handle
             if isempty(B.list_combo) || ~isvalid(B.list_combo)
                 B.list_combo = xplr.ListCombo();
 %                 % no need to delete the listener upon filterSet deletion: filterSet are supposed never to be deleted
-%                 brick.connect_listener(B.list_combo, B, 'Empty', @(u,e)set(B, 'list_combo', []));
+%                 brick.connect_listener(B.list_combo, B, 'register_empty', @(u,e)set(B, 'list_combo', []));
             end
             
             B.list_combo.show_list(F)

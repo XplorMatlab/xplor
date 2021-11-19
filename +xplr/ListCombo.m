@@ -10,7 +10,7 @@ classdef ListCombo < hgsetget
     end
     
     events
-        Empty
+        register_empty
     end
     
     % Constructor, add and remove lists
@@ -29,7 +29,7 @@ classdef ListCombo < hgsetget
                     'name', 'Shared Filters', ...
                     'position', [min(80, screen_size(3)/20), max(screen_size(4)*.6-275, 45), 150, 550]);
                 delete(findall(container, 'parent', container))
-                addlistener(C, 'Empty', @(u,e)delete(container));
+                addlistener(C, 'register_empty', @(u,e)delete(container));
             end
             if ~isa(container, 'brick.panelorganizer')
                 container = brick.panelorganizer(container, 'H');
@@ -43,7 +43,7 @@ classdef ListCombo < hgsetget
         end
         function delete(C)
             if ~isprop(C, 'filters'), return, end
-            if ~isempty(C.filters), notify(C, 'Empty'), end
+            if ~isempty(C.filters), notify(C, 'register_empty'), end
         end
         function add_list(C, filter)
             % empty or multiple filters?
@@ -94,7 +94,7 @@ classdef ListCombo < hgsetget
             C.filters(id_x) = [];
             % signal whether there are no more list being displayed
             if C.container.nchildren == 0
-                notify(C, 'Empty')
+                notify(C, 'register_empty')
             end
         end
     end

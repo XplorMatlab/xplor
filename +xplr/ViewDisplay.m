@@ -113,7 +113,7 @@ classdef ViewDisplay < xplr.GraphNode
             
             % color_map tool
             D.color_map = D.add_component(xplr.ColorMapTool(D)); % creates a menu
-            D.add_listener(D.color_map, 'ChangedColorMap', @(u,e)D.update_display('clip'));
+            D.add_listener(D.color_map, 'changed_color_map', @(u,e)D.update_display('clip'));
             
             % navigation (sliders, mouse actions)
             D.navigation = D.add_component(xplr.DisplayNavigation(D)); % creates a menu
@@ -123,9 +123,9 @@ classdef ViewDisplay < xplr.GraphNode
             zslice_change(D)
             
             % listeners
-            D.add_listener(D.slice, 'ChangedData', @(u,e)set(D, 'slice_change_event', e)); % mark that slice has changed, but treat it only later
-            D.add_listener(D.zoom_slicer, 'ChangedZoom', @(u,e)zoom_change(D,e));
-            D.add_listener(D.zslice, 'ChangedData', @(u,e)zslice_change(D,e));
+            D.add_listener(D.slice, 'changed_data', @(u,e)set(D, 'slice_change_event', e)); % mark that slice has changed, but treat it only later
+            D.add_listener(D.zoom_slicer, 'changed_zoom', @(u,e)zoom_change(D,e));
+            D.add_listener(D.zslice, 'changed_data', @(u,e)zslice_change(D,e));
             
             % problem: c won't be deleted automatically (and ax_siz listener
             % might not be re-enabled) because the workspace continue to

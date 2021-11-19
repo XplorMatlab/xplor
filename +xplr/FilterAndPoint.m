@@ -44,7 +44,7 @@ classdef FilterAndPoint < xplr.DataOperand
                 F.F = varargin{1};
             end
             F.header_in = F.F.header_in;
-            brick.connect_listener(F.F, F, 'ChangedOperation', @(u,e)transit_notification(F, 'filter', e))
+            brick.connect_listener(F.F, F, 'changed_operation', @(u,e)transit_notification(F, 'filter', e))
             
             % set P
             if create_members
@@ -61,7 +61,7 @@ classdef FilterAndPoint < xplr.DataOperand
                 end
             end
             for i=1:F.nd_in
-                brick.connect_listener(F.P(i), F, 'ChangedOperation', @(u,e)transit_notification(F, 'point', e))
+                brick.connect_listener(F.P(i), F, 'changed_operation', @(u,e)transit_notification(F, 'point', e))
             end
             
             % set output header (uses filters or P depend_ing on whether
@@ -144,9 +144,9 @@ classdef FilterAndPoint < xplr.DataOperand
             
             % generation of a single event
             chg_ij = ~isequal(F.point_index, cur_ind);
-            notify(F, 'ChangedOperation', xplr.EventInfo('point', chg_ij))
+            notify(F, 'changed_operation', xplr.EventInfo('point', chg_ij))
             if chg_ij && F.F.n_sel == 0
-                notify(F, 'ChangedOperation', xplr.EventInfo('filter', 'chg', 1))
+                notify(F, 'changed_operation', xplr.EventInfo('filter', 'chg', 1))
             end
         end
     end
@@ -184,14 +184,14 @@ classdef FilterAndPoint < xplr.DataOperand
                         % e: make a copy of it
                         e2 = xplr.EventInfo('filter', e.flag,e.ind, e.value);
                     end
-                    notify(F, 'ChangedOperation', e2)
+                    notify(F, 'changed_operation', e2)
                 case 'point'
                     if F.do_listen_point % 'do_listen_point' property is manipulated in F.set.point_index
                         % same as above: copy e
                         e2 = xplr.EventInfo('point', e.chg_ij);
-                        notify(F, 'ChangedOperation', e2)
+                        notify(F, 'changed_operation', e2)
                         if e.chg_ij && F.F.n_sel == 0
-                            notify(F, 'ChangedOperation', xplr.EventInfo('filter', 'chg', 1))
+                            notify(F, 'changed_operation', xplr.EventInfo('filter', 'chg', 1))
                         end
                     end
             end
