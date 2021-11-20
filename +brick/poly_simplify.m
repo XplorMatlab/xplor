@@ -59,6 +59,10 @@ end
 %---
 function poly2 = repeat_start_point(poly)
 
+if isempty(poly)
+    poly2 = poly;
+    return
+end
 idxnan = [find(isnan(poly(1,:))) size(poly,2)+1];
 n_component = length(idxnan);
 poly2 = NaN(2, size(poly,2)+n_component);
