@@ -13,10 +13,11 @@ classdef Slicer < xplr.GraphNode
     % <1 ; conversion of either number, identifier or label to identifier
     % is performed by the xplr.xdata.dimension_id method).
     
-    properties 
-        V
+    properties (SetAccess='protected')
+        C       % ViewControl parent
         data
         slice
+        control
         filters = struct('active', [], 'dim_id', cell(1,0), 'obj', []);
     end
     properties (SetAccess='protected')
@@ -32,14 +33,16 @@ classdef Slicer < xplr.GraphNode
     
     % Constructor, destructor, basic access and get/set dependent
     methods
-        function S = Slicer(V, data, dim_id, filters)
+        function S = Slicer(C, data, dim_id, filters)
             % link to parent view
-            S.V = V;
+            S.C = C;
             xplr.debug_info('TODO', 'can a slicer exist without being aware of its possessing view?')
+            
             % set data
             S.data = data;
             S.add_listener(data, 'changed_data', @(u,e)data_change(S,e));
-            % without any filter, slice is identical data
+            
+            % without any filter, slice is identical to data
             S.slice = data.copy();
 
             % set filters
@@ -547,12 +550,12 @@ classdef Slicer < xplr.GraphNode
                             idx_dim = S.get_filter_index(e.dim);                            
                             keep_filter(idx_dim) = false;
                     end
-                    % remove invalid filters: we must call viewcontrol
+                    % remove invalid filters: we must call SlicerControl
                     % method so that filter display is updated as well;
                     % TODO: better way of synchronizing slicer and
-                    % viewcontrol's filters display
+                    % SlicerControl's filters display
                     rm_dim = [S.filters(~keep_filter).dim_id];
-                    S.V.C.dim_action('rm_filter',rm_dim)
+                    S.control.dim_action('rm_filter',rm_dim)
                     % reslice
                     do_slice(S,'data','global')
                 case 'chg_data'

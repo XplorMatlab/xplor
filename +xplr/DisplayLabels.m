@@ -322,7 +322,7 @@ classdef DisplayLabels < xplr.GraphNode
             y_thr = [-Inf, brick.row(y_thr)];
                         
             % moving out of the graph to the "filter" area
-            view_control = L.D.V.C; % what a nice piece of code isn't it!?
+            view_control = L.D.V.slicer.control; % what a nice piece of code isn't it!?
             do_filter = false;
 
             % label object, make sure it will not be covered by data display
