@@ -1,5 +1,5 @@
-function a = readmovie(filename,varargin)
-% function a = readmovie(filename,frames[,'nodisplay'][,'nopermute'],['bin',[xbin tbin]])
+function [a, framerate] = readmovie(filename,varargin)
+% function [a framerate] = readmovie(filename,frames[,'nodisplay'][,'nopermute'],['bin',[xbin tbin]])
 %---
 % read an avi file and stores it into a 2D+time array 
 % (2D+time+channel if color movie)
@@ -45,6 +45,7 @@ if dodisplay, disp 'reading', end
     % recent Matlab version
     if ~isempty(frames), frames = {frames([1 end])}; end
     v = VideoReader(filename);
+    framerate = v.FrameRate;
     if all(bin == 1)
         a = read(v,frames{:},'native');
     else
@@ -56,6 +57,7 @@ if dodisplay, disp 'reading', end
         n_per_block = round(100 / tbin);
         nblock = floor(nframe / n_per_block);
         nframe = nblock * n_per_block;
+        framerate = framerate / tbin;
         img = v.read(1,'native');
         nc = size(img,3);
         a = zeros(w, h, nc, nframe, class(img));
