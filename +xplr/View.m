@@ -23,7 +23,7 @@ classdef View < xplr.GraphNode
         
     % Constructor
     methods
-        function V = View(data, varargin)
+        function V = View(data, options)
             % function V = view(data[,optional slicer arguments...])
 
             % define headers if needed
@@ -73,7 +73,7 @@ classdef View < xplr.GraphNode
         end
         function delete(V)
             if ~isprop(V,'hf'), return, end
-            brick.delete_valid(V.hf, V.slicer.control, V.D)
+            brick.delete_valid(V.hf)
         end
     end
     

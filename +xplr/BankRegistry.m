@@ -32,6 +32,23 @@ classdef BankRegistry < handle
         function idx = get_index(R, key)
             idx = brick.find(key, {R.content.key}, 'first');
         end
+        function add_user_to_entry(R, idx, new_user)
+            key = R.content(idx).key;
+            idx_user = brick.find(new_user, R.content(idx).users(1, :), 'first');
+            if isempty(idx_user)
+                xplr.debug_info('registry', 'key %s add user %s', ...
+                    key_to_char(key), char(new_user))
+                if isobject(new_user)
+                    hld = addlistener(new_user,'ObjectBeingDestroyed', ...
+                        @(u,e)R.unregister(key,new_user));
+                else
+                    hld = [];
+                end
+                R.content(idx).users(:, end+1) = {new_user; hld};
+            else
+                disp 'new user to register was already found in users list'
+            end
+        end
     end
     methods
         function register(R, key, value, user)
@@ -55,29 +72,37 @@ classdef BankRegistry < handle
                     return
                 end
             end
-            % Verify that no entry exists yet
-            if ~isempty(get_index(R, key))
-                if ischar(key) || isnumeric(key)
-                    error('Register already has a value for key ''%s''.', num2str(key))
+            % Does entry exist already?
+            idx = get_index(R, key);
+            if isempty(idx)
+                % Create new entry
+                idx = R.n+1;
+                if isempty(user)
+                    if brick.dodebug
+                        disp 'What is the point of registering a value without a user?!'
+                        keyboard
+                    end
+                    users = cell(2, 0);
                 else
-                    error('Register already has a value for the specified key.')
+                    if isobject(user)
+                        hld = addlistener(user, 'ObjectBeingDestroyed', @(u,e)R.unregister(key, user));
+                    else
+                        hld = [];
+                    end
+                    users = {user; hld};
                 end
-            end
-            % Create new entry
-            idx = R.n+1;
-            if isempty(user)
-                users = cell(2, 0);
+                R.content(idx) = struct('key', key, 'value', value, 'users', {users});
+                xplr.debug_info('registry', 'key %s 1st user %s (value %s)', ...
+                    key_to_char(key), char(user), char(value))
             else
-                if isobject(user)
-                    hld = addlistener(user, 'ObjectBeingDestroyed', @(u,e)R.unregister(key, user));
-                else
-                    hld = [];
+                if ~isequal(value, R.content(idx).value)
+                    error('Register already has a different value for key ''%s''.', key_to_char(key))
                 end
-                users = {user; hld};
+                if isempty(user)
+                    error 'Does not make sense to register empty user to already existing value'
+                end
+                R.add_user_to_entry(idx, user);
             end
-            R.content(idx) = struct('key', key, 'value', value, 'users', {users});
-            xplr.debug_info('registry', 'key %s 1st user %s (value %s)', ...
-                key_to_char(key), char(user), char(value))
         end
         function removed = unregister(R, key, user)
             if ~isvalid(R), return, end % R has been deleted already
@@ -182,20 +207,7 @@ classdef BankRegistry < handle
                 return
             end
             % Add new user
-            idx_user = brick.find(new_user, R.content(idx).users(1, :), 'first');
-            if isempty(idx_user)
-                xplr.debug_info('registry', 'key %s add user %s', ...
-                    key_to_char(R.content(idx).key), char(new_user))
-                if isobject(new_user)
-                    hld = addlistener(new_user,'ObjectBeingDestroyed', ...
-                        @(u,e)R.unregister(key,new_user));
-                else
-                    hld = [];
-                end
-                R.content(idx).users(:, end+1) = {new_user; hld};
-            else
-                disp 'new user to register was already found in users list'
-            end
+            R.add_user_to_entry(idx, new_user);
         end
         function clear(R)
             R.content(:) = [];
@@ -208,7 +220,9 @@ end
 %---
 function str = key_to_char(key)
     
-if isnumeric(key)
+if ~isscalar(key)
+    str = brick.map(@key_to_char, key, 'array');
+elseif isnumeric(key)
     str = num2str(key);
 else
     str = char(key);

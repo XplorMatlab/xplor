@@ -163,7 +163,7 @@ for isegment = 1:nsegment
         set(seg,'xdata',[x0 x1],'ydata',[y0 y1])
         M = getframe(ha);
         movie(:,:,:,isegment+1) = permute(M.cdata,[2 1 3]);
-%         pause(.5)
+        pause(1)
     end
 end
 

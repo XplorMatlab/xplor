@@ -170,7 +170,7 @@ classdef Filter < xplr.DataOperand
                                 else
                                     % measure
                                     [start, scale, unit] = deal(F.header_in.start, F.header_in.scale, F.header_in.unit);
-                                    sub_names{j} = sprintf('%.4g', start+(k_start-1)*scale, unit);
+                                    sub_names{j} = sprintf('%.4g%s', start+(k_start-1)*scale, unit);
                                 end
                             else
                                 if F.header_in.categorical || F.header_in.is_datetime

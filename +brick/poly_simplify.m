@@ -7,7 +7,8 @@ function poly = poly_simplify(poly, flag)
 %---
 % Performs polygon simplification, union or intersection.
 % For simplification: tol is the tolerance used in rmslivers function,
-% default value is 2e-4.
+% default value is 2e-4. Use tol=0 for simply fixing up duplicate vertices
+% and other degeneracies.
 
 % Operation specification
 if nargin<2
@@ -35,7 +36,7 @@ end
 % Operation
 switch flag
     case 'simplify'
-        poly = rmslivers(poly, tol);
+        if tol>0, poly = rmslivers(poly, tol); end
     case 'union'
         poly = poly.union();
         poly = rmslivers(poly, 1e-6); % small cleanup

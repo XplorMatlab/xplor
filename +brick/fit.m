@@ -1,7 +1,7 @@
-function varargout = fit(x,y,fun,startpoint)
+function varargout = fit(x,y,fun,startpoint,varargin)
 %FIT Fit the parameters of a given function
 %---
-% function [par1 ... parN yfit] = fit(x,y,@(x,par1,..,parN)fun,startpoint)
+% function [par1 ... parN yfit] = fit(x,y,@(x,par1,..,parN)fun,startpoint[,'display'])
 % function [a b yfit] = fit(x,y,'affine')
 % function [low high thr slope yfit] = fit(x,y,'sigmoid')
 %---
@@ -12,6 +12,10 @@ function varargout = fit(x,y,fun,startpoint)
 
 if nargin==0, help brick.fit, return, end
 
+% Input
+dodisplay = brick.flags('display',varargin);
+
+% Size checks
 if ~any(size(x)==1), error('x must be a vector'), end
 x =  x(:);
 nx = length(x);
@@ -48,8 +52,19 @@ else
         'maxfunevals',10000,'maxiter',1000);
     pars = fmincon(@(p)energy(x,y,fun,p),startpoint,[],[],[],[],bounds(:,1),bounds(:,2),[],opt);
 end
-[e fit] = energy(x,y,fun,pars); %#ok<ASGLU>
+[e, fit] = energy(x,y,fun,pars); %#ok<ASGLU>
 varargout = [num2cell(pars) fit];
+
+% display
+if dodisplay
+    brick.figure('brick.fit')
+    xx = linspace(min(x),max(x),100);
+    c = num2cell(pars);
+    plot(xx,fun(xx,c{:}))
+    hold on
+    plot(x,y,'s','markersize',8,'MarkerEdgeColor','none','MarkerFaceColor','k')
+    hold off
+end
 
 %---
 function [e ypred] = energy(x,y,fun,p)
