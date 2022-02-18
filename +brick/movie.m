@@ -307,7 +307,11 @@ classdef movie < hgsetget
                         end
                     end
                 else
-                    p.cmap = feval(M.opt.cmap,256);
+                    if exist(M.opt.cmap, 'file')
+                        p.cmap = feval(M.opt.cmap,256);
+                    else
+                        p.cmap = feval(['colormaps.' M.opt.cmap],256);
+                    end
                 end
             end
             % speed

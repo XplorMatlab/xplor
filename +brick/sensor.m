@@ -1,4 +1,4 @@
-classdef sensor < uicontrol
+classdef sensor < brick.uicontrol
     %SENSOR     Special control whose value is changed by clicking and dragging
     %---
     % function S = sensor(propname1,propvalue1,...)

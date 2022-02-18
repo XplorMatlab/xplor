@@ -4,7 +4,7 @@ function y = filt(x,tau,varargin)
 % function y = filt(x,tau[,'l|h|b|n'][,dim][,filtertype][,'mirror']
 %       ['mask'[,mask]][,'zero'][,'pad',value][,'detrend']['complex|phase'])
 % function y = filt(x,tau[,options][,dim])
-% function y = filt(x,'detrend|detrendz'[,dim])
+% function y = filt(x,'detrend|detrendz|pink'[,dim])
 %---
 % FFT-based filter
 %
@@ -30,6 +30,10 @@ function y = filt(x,tau,varargin)
 %           'gaussian'  [default] performs a Gaussian fft filter
 %           'sharp'     performs a 0-1 fft filter (warning: this creates
 %                       oscillations at near-threshold frequencies)
+%           'pink'      if type is low-pass, performs a fft filter where
+%                       frequencies f higher than f0=1/tau are damped by
+%                       f0/f; if type is high-pass, keeps only high
+%                       frequencies filtered by (1-f0/f)
 %           'butterN'   Butterworth filter of order N (if N is omitted,
 %                       default value of N=2 is used)
 % - 'mirror'      
@@ -50,6 +54,9 @@ function y = filt(x,tau,varargin)
 %           low-pass or notch) a linear trend; use brick.filt(x,'detrend')
 %           to perform only a detrending!, and brick.filt(x,'detrendz') to
 %           remove only the trend but not the constant
+% - 'pink'  dampen high frequencies in a way that would transform white
+%           noise into pink noise (lower frequency f0 unfiltered, other
+%           frequencies dampened by f0/f) 
 % - 'complex'
 %           return a complex signal
 % - 'phase' or 'phase01'
@@ -83,11 +90,21 @@ dozero = false; dodetrend = false;
 docomplex = false; 
 dim = [];
 if ischar(tau)
-    if ~brick.ismemberstr(tau,{'detrend','detrendz'}) error 'argument', end
-    dodetrend = true;
-    filtertype = 'detrend';
-    dozero = strcmp(tau,'detrendz');
-    tau = [0 0];
+    switch tau
+        case {'detrend','detrendz'}
+            dodetrend = true;
+            filtertype = 'detrend';
+            dozero = strcmp(tau,'detrendz');
+            tau = [];
+        case 'pink'
+            % dampen high frequenncies with cut-off frequency the lowest
+            % one 
+            type = 'l';
+            tau = [];  % will be defined later
+            filtertype = 'pink';
+        otherwise
+            error 'argument'
+    end
 end
 k=0;
 while k<length(varargin)
@@ -113,8 +130,10 @@ while k<length(varargin)
                 filtertype = a;
             case 'zero'
                 dozero = true;
-            case 'detrend'
-                dodetrend = true;
+            case {'detrend', 'detrendz'}
+                error("'detrend', 'detrendz', 'pink' should come as second argument")
+            case 'pink'
+                filtertype = 'pink';
             case 'complex'
                 docomplex = true;
                 phaseflag = '';
@@ -168,26 +187,42 @@ if isempty(dim)
         disp(['dimension for filtering was not specified: using dimension ' num2str(dim)])
     end
 end
+
+% Size and type
+s = size(x);
+xtype = class(x);
+
+% Must work with non-sparse double-precision numbers
+x = full(double(x)); 
+
+% Remove NaNs
+x_isnan = isnan(x);
+if domask
+    x(x_isnan) = mean(x(~x_isnan));
+else
+    x(x_isnan) = 0;
+end
+
+% Cutoff frequency(ies)
 % (tau: time constants)
 if iscell(tau)
     for k=1:2, if isempty(tau{k}), tau{k}=0; end, end
     tau = [tau{:}];
 end
+if strcmp(filtertype, 'pink') && isempty(tau)
+    tau = max(s(dim));
+end
 if all(tau==0)
-    if dodetrend
-        filtertype = 'detrend';
-    else
-        % nothing to do
-        y = x;
-        return
-    end
+    % nothing to do
+    y = x;
+    return
 elseif isscalar(tau) 
     if isempty(type)
         type = 'l'; 
         tau = [tau 0];
     elseif type=='l'
         tau = [tau 0];
-    elseif type=='h';
+    elseif type=='h'
         tau = [0 tau];
     else
         error 'two time (or space) constants must be supplied for a band-pass or notch filter'
@@ -199,7 +234,7 @@ elseif isempty(type) || (type=='b' && any(tau==0))
 elseif (type=='l' && tau(2)~=0) || (type=='h' && tau(1)~=0)
     error 'incorrect frequency specification'
 end
-if diff(tau)<0 && ismember(type,'bn')
+if ~isempty(tau) && diff(tau)<0 && ismember(type,'bn')
     % time or space constants in decreasing order lead to trivial
     % filtering!
     if type=='n'
@@ -217,6 +252,8 @@ if diff(tau)<0 && ismember(type,'bn')
     end
     return
 end
+
+% Checks
 % (check dim)
 if ~isscalar(dim) && ~isequal(dim,[1 2])
     error 'dim must be a scalar or [1 2]'
@@ -239,21 +276,6 @@ if domirror && ~isempty(pad)
 end
 if domask && docomplex
     error('''mask'' and ''complex'' options not implemented together yet')
-end
-
-% Must work with non-sparse double-precision numbers
-x = full(double(x)); 
-
-% Size and type
-s = size(x);
-xtype = class(x);
-
-% Remove NaNs
-x_isnan = isnan(x);
-if domask
-    x(x_isnan) = mean(x(~x_isnan));
-else
-    x(x_isnan) = 0;
 end
 
 % Detrend
@@ -289,17 +311,17 @@ if domask
         end
         dopad = true;
     else
-        % old code, needs to be at least commented...
+        % check whether we need padding: in the case where there is data
+        % near the edges
         mask = double(mask);
         dopad = false;
-        maxtau = max(tau); % pad with twice the period
         subs0 = repmat({':'},1,length(dim));
         if isscalar(dim), mask = brick.column(mask); end
         for k=1:length(dim)
             nk = s(dim(k));
-            npad(k) = ceil(min(nk,2*maxtau)); %#ok<AGROW>
+            npadk = ceil(min(nk,2*max(tau)));  % pad with twice the period
             subs = subs0;
-            subs{k} = [1:npad(k) nk-npad(k)+1:nk];
+            subs{k} = [1:npadk nk-npadk+1:nk];
             bands = brick.subsref(mask,subs{:});
             if any(bands(:))
                 dopad = true;
@@ -319,7 +341,7 @@ if domask
             tau = [tau(2) 0];
             highpassmask = true;
         otherwise
-            error '''mask'' option is possible only for low-pass and high-pass'
+            error '''mask'' option is possible only for low-pass and high-pass filtering'
     end
     x = brick.mult(x, mask);
 else
@@ -328,15 +350,15 @@ end
 
 % Padding / Mirroring
 if dopad
-    maxtau = max(tau); % pad with twice the period
     subs0 = repmat({':'},1,ndims(x));
     if domask
         % padding value
         pad = 0;
     end
+    npad = zeros(1, length(dim));
     for k=1:length(dim)
         nk = s(dim(k));
-        npad(k) = ceil(min(nk,2*maxtau)); %#ok<AGROW>
+        npad(k) = ceil(min(nk,2*max(tau))); % pad with twice the period
         if domirror
             subs = subs0;
             subs{dim(k)} = [npad(k):-1:1 1:nk nk:-1:nk-npad(k)+1];
@@ -359,9 +381,8 @@ s1 = size(x);
 
 % Filter
 switch filtertype
-    case {'gaussian' 'sharp'}
-        % fft filtering
-        dogaussian = strcmp(filtertype,'gaussian');
+    case {'gaussian' 'sharp' 'pink'}
+        % FFT filtering
         
         % Get data in Fourier space
         if isscalar(dim)
@@ -385,36 +406,53 @@ switch filtertype
             if ~isequal(dim,[1 2]), error programming, end
             freqi = [0:ceil((s1(1)-1)/2) -floor((s1(1)-1)/2):-1]' / s1(1); % cycles / pixel
             freqj = [0:ceil((s1(2)-1)/2) -floor((s1(2)-1)/2):-1]' / s1(2);
-            [freqi freqj] = ndgrid(freqi,freqj);
+            [freqi, freqj] = ndgrid(freqi,freqj);
             freq2 = freqi.^2 + freqj.^2;
         end
         HWHH = sqrt(2*log(2)); % factor that translates standard deviation of a Gaussian to half-width at half-maximum
         freqthr = (1./tau);
-        if dogaussian
-            sigma = freqthr/HWHH;
-            K = 1./(2*sigma.^2);
-            K(isinf(K)) = 1e6; % handle Inf
-            switch type
-                case 'l'
-                    g = exp(-K(1)*freq2);
-                case 'h'
-                    g = 1 - exp(-K(2)*freq2);
-                case 'b'
-                    g = exp(-K(1)*freq2) - exp(-K(2)*freq2);
-                case 'n'
-                    g = 1 - exp(-K(1)*freq2) + exp(-K(2)*freq2);
-            end
-        else
-            switch type
-                case 'l'
-                    g = (freq2 <= freqthr(1)^2);
-                case 'h'
-                    g = (freq2 > freqthr(2)^2);
-                case 'b'
-                    g = (freq2 <= freqthr(1)^2) & (freq2 > freqthr(2)^2);
-                case 'n'
-                    g = (freq2 > freqthr(1)^2) | (freq2 <= freqthr(2)^2);
-            end
+        switch filtertype
+            case 'gaussian'
+                sigma = freqthr/HWHH;
+                K = 1./(2*sigma.^2);
+                K(isinf(K)) = 1e6; % handle Inf
+                switch type
+                    case 'l'
+                        g = exp(-K(1)*freq2);
+                    case 'h'
+                        g = 1 - exp(-K(2)*freq2);
+                    case 'b'
+                        g = exp(-K(1)*freq2) - exp(-K(2)*freq2);
+                    case 'n'
+                        g = 1 - exp(-K(1)*freq2) + exp(-K(2)*freq2);
+                end
+            case 'sharp'
+                switch type
+                    case 'l'
+                        g = (freq2 <= freqthr(1)^2);
+                    case 'h'
+                        g = (freq2 > freqthr(2)^2);
+                    case 'b'
+                        g = (freq2 <= freqthr(1)^2) & (freq2 > freqthr(2)^2);
+                    case 'n'
+                        g = (freq2 > freqthr(1)^2) | (freq2 <= freqthr(2)^2);
+                end
+            case 'pink'
+                if isscalar(dim)
+                    freqa = abs(freqs);
+                else
+                    freqa = sqrt(freq2);
+                end
+                switch type
+                    case 'l'
+                        g = min(1, freqthr(1) ./ freqa);
+                    case 'h'
+                        g = 1 - min(1, freqthr(2) ./ freqa);
+                    case 'b'
+                        g = min(1, freqthr(1) ./ freqa) .* (1 - min(1, freqthr(2) ./ freqa));
+                    case 'n'
+                        g = 1 - (min(1, freqthr(1) ./ freqa) .* (1 - min(1, freqthr(2) ./ freqa)));
+                end
         end
         if dozero
             g(1) = 1;

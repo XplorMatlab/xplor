@@ -35,6 +35,8 @@ function out = framedisplay(varargin)
 %           option, this image is slighlty larger since there is a 1-pixel
 %           wide separation between all frames
 % - ha      if axflax is 'multaxes', the output is the set of axes handles
+%
+% See also brick.eegplot, brick.gridplot
 
 % Thomas Deneux
 % Copyright 2011-2017
