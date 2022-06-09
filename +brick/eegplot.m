@@ -18,7 +18,7 @@ function hl = eegplot(varargin)
 %                   data number
 %           'numtop'    same, and put the first data top instead of bottom
 %
-% See also brick.gridplot
+% See also brick.gridplot, brick.framedisplay
 
 % Thomas Deneux
 % Copyright 2005-2017

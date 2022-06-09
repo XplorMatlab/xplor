@@ -25,7 +25,7 @@ function hl = gridplot(varargin)
 %           dimensions over which to average (i.e. will share the same mean
 %           value)
 %
-% See also brick.eegplot
+% See also brick.eegplot, brick.framedisplay
 
 % Thomas Deneux
 % Copyright 2015-2017

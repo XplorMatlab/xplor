@@ -221,18 +221,23 @@ classdef ViewControl < xplr.GraphNode
             end
             uimenu(m2, 'label', ['private 1D ', filter_str], ...
                 'callback', @(u,e)dim_action(C, 'add_filter', num2cell(dim_id), 0))
+            % (filter all others dimension)
+            uimenu(m, ...
+                'label', ['View ', dim_str, ', filter others'], ...
+                'callback', @(u,e)dim_action(C, 'view', dim_id, 1))
+
+            % new window
+            uimenu(m, 'label', ['View ', dim_str, ' in new window'], 'separator', 'on', ...
+                'callback', @(u,e)dim_action(C, 'new_window:view', dim_id, 1))
+            uimenu(m, 'label', ['View and ROI in new window'], ...
+                'callback', @(u,e)dim_action(C, 'new_window:view_and_ROI', dim_id, 1))
+            uimenu(m, 'label', 'Filter here & View and ROI in new window', ...
+                'callback', @(u,e)dim_action(C, 'add_filter&new_window:view_and_ROI', {dim_id}, 1))
             
             % remove filters in these dimensions
             uimenu(m, 'label', ['Remove ', filter_str], 'separator', 'on', ...
                 'callback', @(u,e)dim_action(C, 'rm_filter', dim_id))
-            
-            % filter all others dimension
-            uimenu(m, ...
-                'label', ['View ', dim_str, ', filter others'], 'separator', 'on', ...
-                'callback', @(u,e)dim_action(C, 'view', dim_id, 1))
-            uimenu(m, 'label', ['View ', dim_str, ' in a new window'], ...
-                'callback', @(u,e)dim_action(C, 'new_window_view', dim_id, 1))
-            
+
             % make menu visible
             p = get(C.hf, 'currentpoint');
             p = p(1, 1:2);
@@ -244,7 +249,7 @@ classdef ViewControl < xplr.GraphNode
             % function dim_action(C,'set_active',dim_id,value)
             % function dimaction(C,'view|ROI|view_and_ROI',dimID)
             % function dimaction(C,'new_window',dimID)
-            % function dimaction(C,'new_window_action',dimID,arg...)
+            % function dimaction(C,'new_window:action',dimID,arg...)
             %---
             % if flag is 'add_filter', dims can be a cell array, to defined
             % several filters at once for example
@@ -256,13 +261,22 @@ classdef ViewControl < xplr.GraphNode
             % dimension(s), but for commodity it can also be the dimension
             % number, or the dimension label
             
+            % multiple actions
+            if strfind(flag, '&') %#ok<STRIFCND>
+                flags = brick.strcut(flag, '&');
+                for i = 1:length(flags)
+                    C.dim_action(flags{i}, dim_id, varargin{:})
+                end
+                return
+            end
+
             % other window
             if strfind(flag, 'new_window') %#ok<STRIFCND>
                 % open data in a new window: flag can be either
                 % 'otherwindow' or 'otherwindow_action' where 'action' is
                 % to be executed in this window
                 V2 = xplor(C.slicer.data);
-                tokens = regexp(flag, 'new_window_(.*)', 'tokens');
+                tokens = regexp(flag, 'new_window:(.*)', 'tokens');
                 if ~isempty(tokens)
                     V2.C.dim_action(tokens{1}{1}, dim_id, varargin{:})
                 end
@@ -292,6 +306,8 @@ classdef ViewControl < xplr.GraphNode
                 if length(dim_id) < length([dim_ids{:}])
                     error 'some dimension is repeated in filter(s) definition'
                 end
+            elseif iscell(dim_id)
+                dim_id = [dim_id{:}];
             end
             
             % list of filters in the selected dimensions
@@ -612,6 +628,7 @@ classdef ViewControl < xplr.GraphNode
 
                 % move label
                 p = get(hf, 'currentpoint'); p = p(1, 1:2);
+                disp(p)
                 pos = pos0; pos(1:2) = pos0(1:2) + (p-p0);
                 set(label, 'pos', pos)
 

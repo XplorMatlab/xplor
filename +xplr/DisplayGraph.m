@@ -1532,7 +1532,7 @@ classdef DisplayGraph < xplr.GraphNode
             
             % dimension info
             dim = G.D.slice.dimension_number(dim);
-            use_map = any(dim == org.xy) && strcmp(org.xy_mode, 'map');
+            use_map = any(ismember(org.xy, dim)) && strcmp(org.xy_mode, 'map');
             
             % default polygon is empty (no display)
             polygon = nan(2, 1); 

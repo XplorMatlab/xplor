@@ -104,6 +104,9 @@ else
 end
 pos = [pos0 0 0] + [psiz psiz].*posrel + pospix;
 pos([3 4]) = max(pos([3 4]),2);
+if ishandle(hu) && ismember(get(hu,'type'), {'text'})
+    pos = pos(1:2);
+end
 set(hu,'units','pixel','position',pos)
 
 

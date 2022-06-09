@@ -6,6 +6,7 @@ function colors = colors(name, k)
 % Available maps are 'link_key'. Some maps are infinite: they start with a
 % set of specific pre-determined values, and continue with random values.
 
+
 % Thomas Deneux
 % Copyright 2008-2012
 

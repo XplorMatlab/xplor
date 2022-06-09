@@ -140,22 +140,21 @@ elseif ischar(outflag)
     else
         cm = feval(fname,256);
     end
-    n = size(cm,1);
-elseif ~isvector(outflag)
-    if size(outflag,2)~=3, error('colormap must have 3 columns'), end
-    docolor = true;
-    cm = outflag;
-    n = size(cm,1);
+    [n, nc] = size(cm);
 elseif isscalar(outflag)
     docolor = false;
     n = outflag;
     if mod(n,1) || n<=0, error('scalar for output format must be a positive integer'), end
-else
+elseif isvector(outflag) && length(outflag)==2
     docolor = false;
-    if length(outflag)~=2, error('vector for output format must have 2 elements'), end
     n = 0;
     a = outflag(1);
     b = outflag(2);
+else
+    nc = size(outflag,2);
+    docolor = true;
+    cm = outflag;
+    n = size(cm,1);
 end
 
 % Convert data to float if the data is integer (we avoided doing it before
@@ -195,7 +194,7 @@ if docolor
         x(xnan) = n+1;
         cm(n+1,:) = nanvalue;
     end
-    x = reshape(cm(x,:),[s 3]);
+    x = reshape(cm(x,:),[s nc]);
     if length(s)>2, x = permute(x,[1 2 length(s)+1 3:length(s)]); end
 else
     if ~isempty(nanvalue)

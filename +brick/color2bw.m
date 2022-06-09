@@ -2,6 +2,8 @@ function b = color2bw(a)
 %COLOR2BW GUI to let user choose the best conversion to convert color image to grayscale
 %---
 % function b = color2bw(a)
+%
+% See also brick.color2index
 
 % Thomas Deneux
 % Copyright 2005-2017

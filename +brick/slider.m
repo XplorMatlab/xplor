@@ -530,7 +530,8 @@ classdef slider < hgsetget
             end
             U.inc = double(step) / diff(U.minmax);
             if U.area
-                U.width = U.inc;
+                % do all the roundings
+                U.x = U.x;
             else
                 U.x(2) = 1/U.inc;
             end
