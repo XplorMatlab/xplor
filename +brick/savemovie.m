@@ -59,7 +59,7 @@ end
 
 % Other inputs
 i = 1;
-fname = []; clip = []; fps = 30; zoom = 1; map = []; dopermute = [];
+fname = []; clip = []; fps = 30; zoom = 1; map = []; dopermute = true;
 compression_quality = [];
 while i<=length(varargin)
     x = varargin{i}; i=i+1;

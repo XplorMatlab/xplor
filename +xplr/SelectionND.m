@@ -72,12 +72,14 @@ classdef SelectionND < xplr.Object
                 % corresponds to the internal encoding of type
                 sel.nd = data;
                 data = [];
-            elseif regexp(type, '^(empty|all|shape)\d+D$')
+            elseif regexpi(type, '^(empty|all|shape)\d+D$')
                 [type, nd] = brick.regexptokens(type, '^(empty|all|shape)(\d+)D$');
+                type = lower(type);
+                nd = upper(nd);
                 sel.nd = str2double(nd);
-            elseif strfind(type, '1D')
+            elseif strfind(upper(type), '1D')
                 sel.nd = 1;
-            elseif strfind(type, '2D')
+            elseif strfind(upper(type), '2D')
                 sel.nd = 2;
             elseif strcmp(type, 'indices')
                 % two syntaxes are accepted:

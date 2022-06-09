@@ -628,6 +628,7 @@ classdef ViewControl < xplr.GraphNode
 
                 % move label
                 p = get(hf, 'currentpoint'); p = p(1, 1:2);
+                disp(p)
                 pos = pos0; pos(1:2) = pos0(1:2) + (p-p0);
                 set(label, 'pos', pos)
 
