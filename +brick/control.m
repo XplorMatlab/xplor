@@ -93,11 +93,11 @@ classdef control < hgsetget
     %               in this case callback fun will be called with action
     %               string as an argument (instead of structure s)
     %
-    % Specification can be followed with a sequence '< name', indicating a
-    % dependency, i.e. that the control of interest should be enabled only
-    % if a preceding control with name 'name' has value true (logical
-    % control) or non-empty value (other controls). Use ~name if value need
-    % to be false instead.
+    % Specification can be followed with a sequence '< name1 name2 ...',
+    % indicating dependencies, i.e. that the control of interest should be
+    % enabled only if preceding controls with name 'name' has value true
+    % (logical control) or non-empty value (other controls). Use ~name if
+    % value need to be false instead.
     % 
     % One might want to display small sentences rather than simple names
     % when prompting user. For this, the following syntaxes are allowed:
@@ -337,7 +337,7 @@ classdef control < hgsetget
                     xk.style = 'struct';
                 else
                     % (string describing the control)
-                    [type args defval dep] = brick.regexptokens(opt,'^([^ ]+)([^\[<]*)(\[.*\])*( *<.*)*$');
+                    [type, args, defval, dep] = brick.regexptokens(opt,'^([^ ]+)([^\[<]*)(\[.*\])*( *<.*)*$');
                     opt = [type args];
                     % check box?
                     if type(1) == 'x'
@@ -408,16 +408,21 @@ classdef control < hgsetget
                     
                     % dependencie
                     if ~isempty(dep)
-                        name = brick.regexptokens(dep,'< *([^ ]*)');
-                        dep_neg = (name(1)=='~');
-                        if dep_neg
-                            name(1) = [];
+                        % dep follows regexp pattern ' *<( *[^ ]*)*'
+                        dep = brick.regexptokens(dep,' *< *(.*)');
+                        names = brick.strcut(dep, ' ');
+                        for kdep = 1:length(names)
+                            name = names{kdep};
+                            dep_neg = (name(1)=='~');
+                            if dep_neg
+                                name(1) = [];
+                            end
+                            idxdep = find(strcmp(name,X.names(1:k-1)));
+                            if isempty(idxdep)
+                                error 'wrong dependency name'
+                            end
+                            X.dependencies(idxdep,k) = (-1)^dep_neg;
                         end
-                        kdep = find(strcmp(name,X.names(1:k-1)));
-                        if isempty(kdep)
-                            error 'error in establishing dependency'
-                        end
-                        X.dependencies(kdep,k) = (-1)^dep_neg;
                     end
                 end
                 
@@ -1329,16 +1334,19 @@ classdef control < hgsetget
         end
         function checkEnabled(X,kdep,kk)
             if isempty(kdep)
-                kdep = find(X.dependencies(:,kk));
+                kdep = find(X.dependencies(:,kk))';
                 if isempty(kdep), return, end
             elseif nargin<3 || isempty(kk)
                 kk = find(X.dependencies(kdep,:));
             end
             xkdep = X.controls(kdep);
-            if strcmp(xkdep.type,'logical')
-                dep_value = xkdep.value;
-            else
-                dep_value = ~isempty(xkdep.value);
+            dep_value = true;
+            for i = 1:length(xkdep)
+                if strcmp(xkdep(i).type,'logical')
+                    dep_value = dep_value && xkdep(i).value;
+                else
+                    dep_value = dep_value && ~isempty(xkdep(i).value);
+                end
             end
             for k = brick.row(kk)
                 xk = X.controls(k);

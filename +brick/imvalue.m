@@ -23,6 +23,11 @@ function imvalue(varargin)
 % user can add additional callbacks to the same axes by using a listener
 % ('addlistener(ha,'UserData','PostSet',fun_handle)') - don't use the axes
 % 'ButtonDownFcn' property as it is already used by brick.imvalue.
+%
+% Command registration: register a character array command that will be
+% evaluated in base workspace each time cursor moves in axes ha. This
+% command can use variable names 'i' and 'j', which will be set to current
+% x- and y-values before evaluation.
 
 % Thomas Deneux
 % Copyright 2003-2017

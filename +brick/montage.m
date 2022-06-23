@@ -1,4 +1,4 @@
-classdef montage < interface
+classdef montage < brick.interface
     %MONTAGE           Manual alignment of a large set of images
     %---
     % function M = montage([fname]
@@ -23,6 +23,8 @@ classdef montage < interface
     properties (SetObservable = true)
         showinactive = true;
         scrollwheel = 'zoom'; % 'zoom' or 'alpha'
+        do_scale = true;
+        do_rotate = false;
     end
     
     % Init
@@ -68,7 +70,7 @@ classdef montage < interface
         function init_menus(M)
             init_menus@brick.interface(M)
             % content
-            m = M.menus.brick.interface;
+            m = M.menus.interface;
             uimenu(m,'label','add images from files','separator','on',...
                 'callback',@(u,e)loadimages(M,'file'))
             uimenu(m,'label','add images from base workspace',...
@@ -84,17 +86,19 @@ classdef montage < interface
             uimenu(m,'label','Reset display','separator','on', ...
                 'callback',@(u,e)show(M,'reset'))
             % undo/redo
-            uimenu(m,'label','undo last change','separator','on', ...
+            uimenu(m,'label','undo last change','separator','on','accelerator','Z', ...
                 'callback',@(u,e)undo(M))
-            uimenu(m,'label','re-do last change', ...
+            uimenu(m,'label','re-do last change','accelerator','Z', ...
                 'callback',@(u,e)redo(M))
             % show marks
-            uimenu(m,'label','Show marks','separator','on','Checked',brick.switch_case(M.showmarks), ...
+            uimenu(m,'label','Show marks','separator','on','Checked',brick.onoff(M.showmarks), ...
                 'callback',@(u,e)set(M,'showmarks',~M.showmarks))
             % Grid menu
             gridMenu(M)
             % Scroll wheel menu
             scrollMenu(M)
+            % Move menu
+            moveMenu(M)
         end
         function scrollMenu(M)
             M.menus.scroll = uimenu(M.hf,'label','Scroll Wheel');
@@ -102,6 +106,12 @@ classdef montage < interface
             brick.propcontrol(M,'scrollwheel', ...
                 {'menugroup' {'zoom' 'alpha'} {'Zoom' 'Transparency of selection'}}, ...
                 {'parent' m});
+        end
+        function moveMenu(M)
+            M.menus.move = uimenu(M.hf,'label','Transforms');
+            m = M.menus.scroll;
+            brick.propcontrol(M,'do_scale','menu',{'parent' m});
+            brick.propcontrol(M,'do_rotate','menu',{'parent' m});
         end
         function init_control(M)
             s = struct( ...
@@ -237,15 +247,15 @@ classdef montage < interface
                     nj = floor(nj/xbin);
                 end
                 if docoord
-                    ngrid = 2;
-                    [ii jj] = ndgrid(linspace(1,ni,ngrid),linspace(1,nj,ngrid));
-                    ij = [ones(1,ngrid*ngrid); brick.row(ii); brick.row(jj)];
-                    T1 = [1 0 0; [-(ni+1)/2; -(nj+1)/2] eye(2)]; % set central pixel to zero
+                    % image corners
+                    [ii, jj] = ndgrid([-ni/2 ni/2],[-nj/2 nj/2]);
+                    ij = [ones(1,2*2); brick.row(ii); brick.row(jj)];
                     TSR = [[s.xc; s.yc] s.scale*xbin*[cos(s.rot) -sin(s.rot); sin(s.rot) cos(s.rot)]];
-                    xy = (TSR*T1)*ij;
-                    xx = reshape(xy(1,:),ngrid,ngrid); yy = reshape(xy(2,:),ngrid,ngrid);
-                    zz = zeros(ngrid);
-                    xyh = TSR*[1 1; [0; 0] [(ni+1)/2; 0]]; % handles: center, right side
+                    xy = TSR*ij;
+                    xx = reshape(xy(1,:),2,2); yy = reshape(xy(2,:),2,2);
+                    zz = zeros(2);
+                    % handles
+                    xyh = TSR*[1 1 1; [0; 0] [ni/2; 0] [ni/2; -nj/2]]; % handles: center, right side, top-right corner
                 end
                 % update display
                 if doredraw
@@ -265,13 +275,18 @@ classdef montage < interface
                         'color','b','linestyle','none','marker','o', ...
                         'uiContextMenu',M.context,'userdata',i,'tag','montage', ...
                         'buttondownfcn',@(u,e)action(M,'select&rotate',i), ...
-                        'visible',brick.onoff(s.active && M.showmarks));
+                        'visible',brick.onoff(s.active && M.showmarks && M.do_rotate));
                     M.im(i).h(3) = text(xyh(1,1),xyh(2,1),s.name,'parent',M.grob.ha, ...
                         'color','b', ...
                         'buttondownfcn',@(u,e)action(M,'select&move',i), ...
                         'uiContextMenu',M.context,'userdata',i,'tag','montage', ...
                         'horizontalalignment','center','verticalalignment','middle','interpreter','none', ...
                         'visible',brick.onoff(s.active && M.showmarks));
+                    M.im(i).h(4) = line(xyh(1,3),xyh(2,3),'parent',M.grob.ha, ...
+                        'color','b','linestyle','none','marker','s', ...
+                        'uiContextMenu',M.context,'userdata',i,'tag','montage', ...
+                        'buttondownfcn',@(u,e)action(M,'select&scale',i), ...
+                        'visible',brick.onoff(s.active && M.showmarks && M.do_scale));
                     if s.isbackground
                         set(M.im(i).h,'HitTest','off')
                         uistack(fliplr(M.im(i).h),'bottom')
@@ -293,11 +308,14 @@ classdef montage < interface
                         % handles
                         set(M.im(i).h(2),'xdata',xyh(1,2),'ydata',xyh(2,2))
                         set(M.im(i).h(3),'pos',[xyh(1,1) xyh(2,1)])
+                        set(M.im(i).h(4),'xdata',xyh(1,3),'ydata',xyh(2,3))
                     end
                     if dorenum, set(M.im(i).h(1),'userdata',i), end
                     if doactive
                         set(M.im(i).h(1),'visible',brick.onoff(s.active))
-                        set(M.im(i).h(2:end),'visible',brick.onoff(s.active && M.showmarks))
+                        set(M.im(i).h(2),'visible',brick.onoff(s.active && M.showmarks && M.do_rotate))
+                        set(M.im(i).h(3),'visible',brick.onoff(s.active && M.showmarks))
+                        set(M.im(i).h(4),'visible',brick.onoff(s.active && M.showmarks && M.do_scale))
                     end
                     set(M.im(i).h,'hittest',brick.onoff(~s.isbackground))
                     if s.isbackground
@@ -436,9 +454,9 @@ classdef montage < interface
             % update colors in display
             if M.showmarks
                 h = cat(1,M.im.h);
-                if ~isempty(h), set(h(:,2:3),'color','b'), end
+                if ~isempty(h), set(h(:,2:4),'color','b'), end
                 h = cat(1,M.im(idx).h);
-                if ~isempty(h), set(h(:,2:3),'color','r'), end
+                if ~isempty(h), set(h(:,2:4),'color','r'), end
             end
             % update previously and newly selected images (in case
             % something special occurs with selected one such as
@@ -447,6 +465,14 @@ classdef montage < interface
         end
         function set.showmarks(M,x)
             M.showmarks = x;
+            M.show('active')
+        end
+        function set.do_scale(M,x)
+            M.do_scale = x;
+            M.show('active')
+        end
+        function set.do_rotate(M,x)
+            M.do_rotate = x;
             M.show('active')
         end
         function updatePar(M)
@@ -549,7 +575,7 @@ classdef montage < interface
         end
         function action(M,flag,i)
             % handle mouse actions according to which button is pressed
-            if ismember(flag,{'axes' 'select&move' 'select&rotate'}) 
+            if ismember(flag,{'axes' 'select&move' 'select&rotate' 'select&scale'}) 
                 seltype = get(M.hf,'selectionType');
                 switch seltype
                     case 'alt'
@@ -585,12 +611,13 @@ classdef montage < interface
             if strcmp(i,'context')
                 i = idxsel;
                 if isempty(i), return, end
-            elseif ismember(flag,{'select' 'select&move' 'select&rotate'}) && isempty(M.im(i).group) && any(i==idxsel)
+            elseif ismember(flag,{'select' 'select&move' 'select&rotate' 'select&scale'}) ...
+                    && isempty(M.im(i).group) && any(i==idxsel)
                 i = idxsel;                
             end
             % (extend to group?)
             selectimages(M,i)
-            if ismember(flag,{'ungroup' 'select&move' 'select&rotate' 'norotation' 'setscale'})
+            if ismember(flag,{'ungroup' 'select&move' 'select&rotate' 'select&scale' 'norotation' 'setscale'})
                 group = unique({M.im(i).group});
                 if strcmp(flag,'norotation') && (~isscalar(group) || (~strcmp(group,'') && ~isscalar(i)))
                     waitfor(errordlg('when applying ''norotation'', either all images should belong to no group, or a only one image should be selected'))
@@ -609,7 +636,7 @@ classdef montage < interface
             % (remember current state and prepare flag for whether to store
             % it)
             % (common to several actions: stack to top)
-            if ismember(flag,{'show' 'listselect' 'stacktop' 'select&move' 'select&rotate'})
+            if ismember(flag,{'show' 'listselect' 'stacktop' 'select&move' 'select&rotate' 'select&scale'})
                 M.stackImages([iorig setdiff(i,iorig)],'top')
             end
             % (list select + double-click -> toggle visibility)
@@ -622,21 +649,16 @@ classdef montage < interface
                     % no more action
                 case 'stackbottom'
                     M.stackImages(i,'bottom')
-                case {'select&move' 'select&rotate'}
+                case {'select&move' 'select&rotate' 'select&scale'}
                     curpointer = get(M.hf,'pointer');
                     set(M.hf,'pointer','hand')
                     ha = M.grob.ha;
                     p0 = get(ha,'currentpoint'); p0 = p0(1,1:2);
                     s = M.im(i);
-                    switch flag
-                        case 'select&move'
-                            [xc0 yc0] = deal([s.xc],[s.yc]);
-                        case 'select&rotate'
-                            sorig = M.im(iorig);
-                            [xcorig ycorig rotorig] = deal(sorig.xc,sorig.yc,sorig.rot);                            
-                            [xc0 yc0 rot0] = deal([s.xc],[s.yc],[s.rot]);
-                            u0 = [xc0-xcorig; yc0-ycorig];
-                    end
+                    sorig = M.im(iorig);
+                    [xcorig, ycorig, scorig, rotorig] = deal(sorig.xc,sorig.yc,sorig.scale,sorig.rot);                            
+                    [xc0, yc0, sc0, rot0] = deal([s.xc],[s.yc],[s.scale],[s.rot]);
+                    u0 = [xc0-xcorig; yc0-ycorig];
                     moved = brick.buttonmotion(@mov,M.hf);
                     if isempty(moved)
                         % select back single image
@@ -771,6 +793,16 @@ classdef montage < interface
                             M.im(ik).xc = xc0(ki)+d(1);
                             M.im(ik).yc = yc0(ki)+d(2);
                         end
+                    case 'select&scale'
+                        orig = [xcorig ycorig];
+                        scfactor = (p-orig) ./ (p0-orig);  % one scaling value for x and for y
+                        scfactor = max(scfactor); % choose the largest one
+                        for ki=1:length(i)
+                            ik = i(ki);
+                            M.im(ik).xc = xcorig + (xc0(ki) - xcorig) * scfactor;
+                            M.im(ik).yc = ycorig + (yc0(ki) - ycorig) * scfactor;
+                            M.im(ik).scale = sc0(ki) * scfactor;
+                        end
                     case 'select&rotate'
                         drot = atan2(p(2)-ycorig,p(1)-xcorig) - rotorig;
                         R = [cos(drot) -sin(drot); sin(drot) cos(drot)];
@@ -852,7 +884,7 @@ classdef montage < interface
             m = M.menus.grid;
             s = struct;
             %s.grid = uimenu(m,'label','display grid','callback',@(u,e)setGrid(M,'toggle'));
-            s.dispatch = uimenu(m,'label','dispatch mode','checked',brick.switch_case(~isempty([M.im.dispatch])), ...
+            s.dispatch = uimenu(m,'label','dispatch mode','checked',brick.onoff(~isempty([M.im.dispatch])), ...
                 'callback',@(u,e)dispatch(M,'toggle'));
             uimenu(m,'label','stack grid top','callback',@(u,e)uistack(findall(M.grob.ha,'tag','dispatch_lines'),'top'))
             M.menus.items.grid = s;
@@ -1020,9 +1052,9 @@ classdef montage < interface
         function load_example(M)
             v = load('clown');
             s(1) = struct('name','clown','data',brick.clip(v.X',v.map),'xc',200,'yc',100,'scale',1,'rot',0);
-            v = load('chess');
-            s(2) = struct('name','chess','data',brick.clip(v.X',v.map),'xc',0,'yc',0,'scale',1,'rot',pi/6);
-            s(3) = struct('name','random','data',rand(10),'xc',100,'yc',-50,'scale',10,'rot',0);
+%             v = load('chess');
+%             s(2) = struct('name','chess','data',brick.clip(v.X',v.map),'xc',0,'yc',0,'scale',1,'rot',pi/6);
+            s(2) = struct('name','random','data',rand(10),'xc',100,'yc',-50,'scale',10,'rot',0);
             M.im = brick.structmerge(immodel,s);
             show(M,'reset')
             storeCurrent(M,'reset')
