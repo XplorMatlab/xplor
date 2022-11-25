@@ -7,7 +7,8 @@ function im = printnumber(im,elems,varargin)
 %
 % Input:
 % - im      ND array where to print text
-% - num     vector of double - numbers to print in frames
+% - num     vector of double - numbers to print in frames (one number per
+%           frame)
 % - str     character array or cell array of character arrays - text to
 %           print in frames
 % - scale   a cell array with parameters for printing a scale bar: first
@@ -23,7 +24,10 @@ function im = printnumber(im,elems,varargin)
 % 
 % Available options:
 % - '3x5', '8x12' [default] or '8x16'   font size
-% - 'pos(ition)', posstr
+% - 'pos(ition)', posnum|posstr
+%           posnum is the position in pixel coordinates [but y starts from
+%           bottom] of the bottom-left pixel of the number (i.e. value [1
+%           1] will print at the very bottom-left) 
 %           posstr is any of 'topleft', 'topright', 'bottomleft',
 %           'bottomright', 'center'
 % - 'col(or)', col
@@ -134,7 +138,7 @@ switch fontsize
                 a = a(2:289,:); % remove left border
                 a = brick.reshapepermute(a,[8+1 32 16 8],[1 3 2 4],[8+1 16 256]);
         end
-        [ncol nrow npattern] = size(a);  %#ok<ASGLU>
+        [ncol, nrow, npattern] = size(a);  %#ok<ASGLU>
         patterns = squeeze(num2cell(a,1:2)); % convert to cell of length npattern
 end
 
@@ -145,8 +149,16 @@ if iscell(elems)
 elseif ischar(elems)
     str = {elems};
 elseif isnumeric(elems)
+    nummin = min(elems);
+    if nummin < 0
+        error 'negative numbers not handled yet'
+    end
     nummax = max(elems);
-    ndigit = floor(log10(nummax))+1;
+    if nummax == 0
+        ndigit = 1;
+    else
+        ndigit = floor(log10(nummax))+1;
+    end
     str = brick.num2str(elems,['%.' num2str(ndigit) 'i'],'cell');
 end
 N = length(str);
@@ -155,7 +167,7 @@ if isempty(im)
     if all(color==1), im = zeros(s); else im = ones(s); end
 else
     s = size(im);
-    if s(1)<ncol+1 || s(2)<nrow+1, error 'image size is too small to print a single character into it', end
+    if s(1)<ncol || s(2)<nrow, error 'image size is too small to print a single character into it', end
 end
 ncharavail = floor(s(1)/ncol);
 % (prepare masks and handle scale bar)
