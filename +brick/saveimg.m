@@ -2,7 +2,7 @@ function saveimg(a,fname,varargin)
 % function saveimg(a,fname|'auto',[clip[,zoom[,cmap]]][,'delaytime',dt]
 %                     [,'alpha',alpha])
 %---
-% a should be y-x-t 
+% a should be x-y[-col][-t] 
 % clip can be a 2-values vector, or 'fit' [default], or '?SD', or 'none'
 
 % Thomas Deneux
@@ -81,7 +81,7 @@ if nt>1 && ~brick.ismemberstr(ext,{'gif' 'tif' 'tiff'})
 end
 
 % color image(s)
-if ncol==3
+if ncol==3 && ~brick.ismemberstr(ext,{'tif' 'tiff'})
     if zoom~=1
         error('no zoom allowed for color images')
     end
@@ -108,19 +108,6 @@ if ncol==3
                 imwrite(A,map,fname,'gif','LoopCount',Inf,'DelayTime',delaytime);
             else
                 imwrite(A,map,fname,'gif','WriteMode','append','DelayTime',delaytime);
-            end
-        end
-    elseif brick.ismemberstr(ext,{'tif' 'tiff'})
-        disp('case nt>1 and ncol==3 has problems with tiff images')
-        brick.progress('saving image',nt)
-        for i=1:nt
-            brick.progress(i)
-            if i==1, writemode = 'overwrite'; else writemode = 'append'; end
-            try
-                imwrite(a(:,:,:,i),fname,'WriteMode',writemode)
-            catch
-                pause(.5)
-                imwrite(a(:,:,:,i),fname,'WriteMode',writemode)
             end
         end
     else
@@ -210,75 +197,85 @@ end
 
 % special: tiff
 if ismember(ext,{'tif' 'tiff'})
-    if ncol~=1, error 'programming: case ncol==3 should be handled above', end
-    brick.progress('saving image',nt)
-    for i=1:nt
-        brick.progress(i)
-        if i==1, writemode = 'overwrite'; else writemode = 'append'; end
-        try
-            imwrite(a(:,:,i),fname,'WriteMode',writemode)
-        catch
-            pause(.5)
-            imwrite(a(:,:,i),fname,'WriteMode',writemode)
+    do_big = numel(a)>2.5e6; % more than ten 500x500 images
+    try
+        if do_big
+            t = Tiff(fname,'w');
+        else
+            t = Tiff(fname,'w8');
         end
+    catch
+        % old Matlab version
+        if ncol>1, error 'not handled', end
+        brick.progress('saving image',nt)
+        for i=1:nt
+            brick.progress(i)
+            if i==1, writemode = 'overwrite'; else writemode = 'append'; end
+            try
+                imwrite(a(:,:,i)',fname,'WriteMode',writemode)
+            catch
+                pause(.5)
+                imwrite(a(:,:,i)',fname,'WriteMode',writemode)
+            end
+        end
+        return
     end
-    %     do_big = numel(a)>2.5e6; % more than ten 500x500 images
-    %     if do_big
-    %         t = Tiff(fname,'w');
-    %     else
-    %         t = Tiff(fname,'w8');
-    %     end
-    %     switch ncol
-    %         case 1
-    %             t.setTag('Photometric',Tiff.Photometric.MinIsBlack);
-    %         case 3
-    %             t.setTag('Photometric',Tiff.Photometric.RGB);
-    %     end
-    %     switch class(a)
-    %         case 'logical'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
-    %             t.setTag('BitsPerSample',1);
-    %         case 'uint8'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
-    %             t.setTag('BitsPerSample',8);
-    %         case 'uint16'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
-    %             t.setTag('BitsPerSample',16);
-    %         case 'uint32'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
-    %             t.setTag('BitsPerSample',32);
-    %         case 'int8'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.Int)
-    %             t.setTag('BitsPerSample',8);
-    %         case 'int16'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.Int)
-    %             t.setTag('BitsPerSample',16);
-    %         case 'int32'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.Int)
-    %             t.setTag('BitsPerSample',32);
-    %         case 'single'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.IEEEFP)
-    %             t.setTag('BitsPerSample',32);
-    %         case 'double'
-    %             t.setTag('SampleFormat',Tiff.SampleFormat.IEEEFP)
-    %             t.setTag('BitsPerSample',64);
-    %         otherwise
-    %             error('number type ''%s'' not handled for tiff saving',class(a))
-    %     end
-    %     t.setTag('Compression',Tiff.Compression.None);
-    %     t.setTag('ImageLength',nj*zoom); % not sure whether needed
-    %     t.setTag('ImageWidth',ni*zoom);
-    %     % note that ncol==3 and nt>1 together cause an error, but this case is
-    %     % handled above
-    %     t.setTag('SamplesPerPixel',ncol*nt);
-    %     a = permute(a,[2 1 4 3]);
-    %     if zoom~=1
-    %         if ~zf, error 'interpolated zooming not implemented for gif saving', end
-    %         a = a(jj,ii,:,:);
-    %     end
-    %     t.setTag('PlanarConfiguration',Tiff.PlanarConfiguration.Chunky) % not sure what this does
-    %     t.setTag('Software','MATLAB')
-    %     t.write(a)
+    switch ncol
+        case 1
+            t.setTag('Photometric',Tiff.Photometric.MinIsBlack);
+        case 3
+            t.setTag('Photometric',Tiff.Photometric.RGB);
+    end
+    switch class(a)
+        case 'logical'
+            t.setTag('BitsPerSample',1);
+            t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
+        case 'uint8'
+            t.setTag('BitsPerSample',8);
+            t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
+        case 'uint16'
+            t.setTag('BitsPerSample',16);
+            t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
+        case 'uint32'
+            t.setTag('BitsPerSample',32);
+            t.setTag('SampleFormat',Tiff.SampleFormat.UInt)
+        case 'int8'
+            t.setTag('BitsPerSample',8);
+            t.setTag('SampleFormat',Tiff.SampleFormat.Int)
+        case 'int16'
+            t.setTag('BitsPerSample',16);
+            t.setTag('SampleFormat',Tiff.SampleFormat.Int)
+        case 'int32'
+            t.setTag('BitsPerSample',32);
+            t.setTag('SampleFormat',Tiff.SampleFormat.Int)
+        case 'single'
+            t.setTag('BitsPerSample',32);
+            t.setTag('SampleFormat',Tiff.SampleFormat.IEEEFP)
+        case 'double'
+            t.setTag('BitsPerSample',64);
+            t.setTag('SampleFormat',Tiff.SampleFormat.IEEEFP)
+        otherwise
+            error('number type ''%s'' not handled for tiff saving',class(a))
+    end
+    t.setTag('Compression',Tiff.Compression.None);
+    t.setTag('ImageLength',nj*zoom); % not sure whether needed
+    t.setTag('ImageWidth',ni*zoom);
+    t.setTag('SamplesPerPixel',ncol);
+    a = permute(a,[2 1 4 3]);
+    if zoom~=1
+        if ~zf, error 'interpolated zooming not implemented for gif saving', end
+        a = a(jj,ii,:,:);
+    end
+    t.setTag('PlanarConfiguration',Tiff.PlanarConfiguration.Chunky) % not sure what this does
+    t.setTag('Software','MATLAB')
+    if nt>1
+        brick.progress('saving image',nt)
+    end
+    for i=1:nt
+        if nt>1, brick.progress(i), end
+        t.write(a(:,:,:,i))
+    end
+    t.close()
     return
 end
 

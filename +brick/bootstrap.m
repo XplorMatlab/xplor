@@ -105,17 +105,18 @@ while nperm<checkups(end)
         stat = fun(data1);
     end
     if doabove, nabove = nabove + (stat>=stat0); end
+    if nperm<5, disp(nabove), end
     if dobelow, nbelow = nbelow + (stat<=stat0); end
     if any(nperm==checkups)
         switch tail
             case 'right'
-                done = (nabove>20); % we can stop for these elements
+                done = (nabove>200); % we can stop for these elements
                 p(idxx(done)) = nabove(done)/nperm;
             case 'left'
-                done = (nbelow>20); % we can stop for these elements
+                done = (nbelow>200); % we can stop for these elements
                 p(idxx(done)) = nbelow(done)/nperm;
             case 'both'
-                done = (nabove>10) && (nbelow>10); % we can stop for these elements
+                done = (nabove>100) && (nbelow>100); % we can stop for these elements
                 p(idxx(done)) = 2*min(nabove(done),nbelow(done))/nperm;
         end
         fprintf('\b -> %.1f%% of p-values are below %g\n',sum(~done)/nx*100,20/nperm)
