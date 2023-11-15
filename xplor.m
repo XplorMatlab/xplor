@@ -132,7 +132,7 @@ end
 % check options
 option_names = fieldnames(options);
 valid_names =  {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
-    'filter', 'displaymode', 'display_mode'};
+    'filter', 'displaymode', 'display_mode', 'visible'};
 invalid_names = setdiff(option_names, valid_names);
 if ~isempty(invalid_names)
     error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])

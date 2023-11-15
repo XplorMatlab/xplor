@@ -41,7 +41,12 @@ classdef View < xplr.GraphNode
             
             % PANELS
             % open figure and create panels
-            init_panels(V, data.name)
+            if isfield(options, 'visible')
+                visible = brick.onoff(options.visible);
+            else
+                visible = 'on';
+            end
+            init_panels(V, data.name, visible)
             
             % CONTROLS AND SLICER
             assert(isa(data,'xplr.XData'), 'data argument must be a xplr.xdata object')
@@ -87,7 +92,7 @@ classdef View < xplr.GraphNode
     
     % Panels
     methods
-        function init_panels(V, data_name)
+        function init_panels(V, data_name, visible)
             % figure
             V.hf = figure('integerhandle', 'off', 'handlevisibility', 'off', 'visible', 'off', ...
                 'numbertitle', 'off', 'name', 'XPLOR', 'tag', 'XPLOR', ...
@@ -121,8 +126,8 @@ classdef View < xplr.GraphNode
             	'parent', V.panels.display, 'backgroundcolor', 'w', 'fontsize', 800/ppi);
             brick.controlpositions(control_on.hu, V.panels.display, [0, 1], [2, -17, 65, 15])
             
-            % now figure can be visible
-            set(V.hf, 'visible', 'on')
+            % now figure can be visible if requested
+            set(V.hf, 'visible', visible)
         end
         function set.control_visible(V, b)
             if strcmp(b, 'toggle')

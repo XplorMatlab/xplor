@@ -16,7 +16,7 @@ switch class(img)
         img = single(img) / 255;
     case 'uint16'
         img = single(img) / 65535;
-    case {'single' 'double'}
+    case {'single' 'double' 'logical'}
         % ok
     otherwise
         error 'type not handled'

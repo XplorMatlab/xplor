@@ -619,6 +619,10 @@ classdef ViewControl < xplr.GraphNode
             pos0 = get(label,'pos');
             controls_width = C.hp.Position(3);
             panel = [];
+            new_window = figure('integerhandle','off','numbertitle','off', ...
+                'visible','off','menubar','none');
+            new_window_pos = brick.pixelpos(new_window);
+            do_new_window = false;
             
             moved = brick.buttonmotion(@move_sub, hf, 'pointer', 'hand', 'moved?');
             function move_sub
@@ -628,9 +632,22 @@ classdef ViewControl < xplr.GraphNode
 
                 % move label
                 p = get(hf, 'currentpoint'); p = p(1, 1:2);
-                disp(p)
                 pos = pos0; pos(1:2) = pos0(1:2) + (p-p0);
                 set(label, 'pos', pos)
+                
+                % label out of window?
+                fig_pos = brick.pixelpos(hf);
+                fig_size = brick.pixelsize(hf);
+                do_new_window = any(p < 0) || any(p > fig_size);
+                if do_new_window
+                    center = fig_pos(1:2) + p;
+                    new_window_pos(1:2)= center - new_window_pos(3:4)/2;
+                    set(new_window, 'visible', 'on', ...
+                        'pos', new_window_pos)
+                    return
+                else
+                    set(new_window, 'visible', 'off')
+                end
 
                 % disable filter if we exited the panel by the right side,
                 % and immediately run displaylabel 'labelMove' method to
@@ -658,7 +675,7 @@ classdef ViewControl < xplr.GraphNode
                 end
             end
             
-            % Finishing actions
+            % Finishing actions            
             if ~moved
                 % label was not moved, then show filter
                 C.dim_action('show_filter', dim_id)
@@ -666,11 +683,26 @@ classdef ViewControl < xplr.GraphNode
                 % put back at original position when we release the mouse
                 % button!
                 set(label, 'pos', pos0)
+                % new window?
+                if do_new_window
+                    % new xplor window
+                    V2 = xplor(C.slicer.data, 'visible', 'off');
+                    % position window
+                    new_window_top_right = new_window_pos(1:2)+new_window_pos(3:4);
+                    s = brick.pixelsize(V2.hf);
+                    set(V2.hf, 'pos', [new_window_top_right-s s])
+                    % view selected dimension in this new window
+                    V2.C.dim_action('view_and_ROI', dim_id)
+                    % make window visible only at the end
+                    set(V2.hf, 'visible', 'on')
+                end
             else
                 % delete panel and label that had only been hidden so far
                 delete(label)
                 delete(panel)
             end
+            close(new_window)
+
         end
         % moving from the graph to the filters: the methods below will be
         % called by xplr.displaylabels.labelMove
