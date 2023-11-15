@@ -1,9 +1,10 @@
-function [p hl] = comparedistrib(x,y,varargin)
+function [p, hl] = comparedistrib(x,y,varargin)
 %COMPAREDISTRIB Perform a nonparametric test and display data points and results
 %---
 % function [pval hl] = comparedistrib(x,y[,test][,'tail','left|right|both']
 %       [,'showmean'][,'ylim',ylim][,'xlabels',xlabels][,'pdisplaymode','ns|p']
-%       [,'jitter'])
+%       [,'jitter|xjittrand|xdispatch'[,jittersize]],['xpos',[x1, x2]]
+%       [,'marker',marker][,'markersize',markersize])
 %---
 % Perform any of 'ranksum', 'signrank' or 'signtest' test and display the
 % data and p-value.
@@ -15,15 +16,17 @@ function [p hl] = comparedistrib(x,y,varargin)
 %           'signrank'
 %           'signtest' (=default if y is scalar)
 %           'bootstrap' (test on the mean)
+%           'bootstrapmedian' (test on the median)
+%           'bootstrapsign', 'bootstrapsignmedian'
 %           p - providing a p-value results in skipping the test and
-%           displaying thin p-value
+%           displaying this p-value
 %
 % See also brick.markpvalue
 
 % Thomas Deneux
 % Copyright 2015-2017
 
-% Input
+% Input: data
 if nargin<2
     if isvector(x)
         y = 0;
@@ -31,11 +34,18 @@ if nargin<2
         if size(x,2)~=2
             error 'single matrix input must have two columns'
         end
-        [x y] = deal(x(:,1),x(:,2));
+        [x, y] = deal(x(:,1),x(:,2));
     end
 end
+x = x(~isnan(x));
+y = y(~isnan(y));
+nx = length(x);
+ny = length(y);
+
+% Input: options
 i = 0; tail = 'both'; ylim = []; showmean = false; xlabels = {}; method = [];
-pdisplaymode = 'ns'; jitter = false;
+xpos = []; marker = 'o'; markersize = 'default';
+pdisplaymode = 'ns'; jittermode = ''; jittersize = [];
 while i<length(varargin)
     i = i+1;
     switch(varargin{i})
@@ -60,8 +70,21 @@ while i<length(varargin)
             method = varargin{i};
         case {'p' 'ns'}
             pdisplaymode = varargin{i};
-        case 'jitter'
-            jitter = true;
+        case {'jitter', 'xjittrand' 'xdispatch'}
+            jittermode = varargin{i};
+            if i<length(varargin) && isnumeric(varargin{i+1})
+                i = i+1;
+                jittersize = varargin{i};
+            end
+        case 'xpos'
+            i = i+1;
+            xpos = varargin{i};
+        case 'marker'
+            i = i+1;
+            marker = varargin{i};
+        case 'markersize'
+            i = i+1;
+            markersize = varargin{i};
         otherwise
             error('unknown flag ''%s''',varargin{i})
     end
@@ -80,58 +103,158 @@ else
         case {'ranksum' 'signrank' 'signtest'}
             p = feval(method,x,y,'tail',tail);
         case 'bootstrap'
-            p = brick.bootstrap(x,y,'mean','tail',tail);
+            p = brick.bootstrap(x,y,'mean','tail',tail,'npermmax',2e5);
         case 'bootstrapmedian'
-            p = brick.bootstrap(x,y,'median','tail',tail);
+            p = brick.bootstrap(x,y,'median','tail',tail,'npermmax',2e5);
         case 'bootstrapsign'
-            p = brick.bootstrap(x-y,[],'mean','tail',tail);
+            p = brick.bootstrap(x-y,[],'mean','tail',tail,'npermmax',2e5);
         case 'bootstrapsignmedian'
-            p = brick.bootstrap(x-y,[],'median','tail',tail);
+            p = brick.bootstrap(x-y,[],'median','tail',tail,'npermmax',2e5);
         otherwise
             error('unknown test ''%s''',method);
     end
 end
 
-% add a jitter to displayed data to help see the multiplicity of identical
-% points
-if jitter
-    m = min(min(x),min(y));
-    M = max(max(x),max(y));
-    jit = (M-m) / 100;
-    x = x + randn(size(x)) * jit;
-    y = y + randn(size(y)) * jit;
+
+% move points in x or y
+xjit = {zeros(1,nx), zeros(1,ny)};
+switch jittermode
+    case ''
+        % no jittering
+    case 'jitter'
+        % add a jitter in y to displayed data to help see the multiplicity
+        % of identical points
+        if isempty(jittersize)            
+            m = min(min(x),min(y));
+            M = max(max(x),max(y));
+            jittersize = (M-m) / 100;
+        end
+        x = x + randn(size(x)) * jittersize;
+        y = y + randn(size(y)) * jittersize;
+    case 'xjittrand'
+        % move points randomly in x so that they will reflect the
+        % distribution, which will appear as a vertical curve
+        if isempty(jittersize), jittersize = .3; end
+        X = {x, y};
+        for k = 1:2
+            xk = X{k};
+            [counts, edges] = histcounts(xk, 100);
+            if all(counts <= 1)
+                continue
+            end
+            curve = (counts-1) / max(counts-1);
+            curve = interp1( ...
+                [edges(1) (edges(1:end-1)+edges(2:end))/2 edges(end)], ...
+                curve([1 1:end end]), ...
+                xk);
+            xjit{k} = (2*rand(1, length(xk),1)-1) .* curve * jittersize;
+        end
+    case 'xdispatch'
+        % move points in x in a deterministic manner so that we will
+        % see each individual point, and the distribution will appear as a
+        % vertical curve
+        X = {x, y};
+        for k = 1:2
+            xk = X{k};
+            range = max(xk) - min(xk);
+            if range == 0
+                c = ones(1, length(xk));
+                nval = 1;
+            else
+                nbin = 35;
+                [u, ~, c] = unique(round(xk / (max(xk)-min(xk)) * nbin));
+                c = c(:)'; % row vector
+                nval = length(u);
+            end
+            if nval == length(xk)
+                % all values are unique
+                continue
+            end
+            counts = zeros(1, nval);
+            pos = zeros(1, nval);
+            for i = 1:length(c)
+                ci = c(i);
+                pos(i) = counts(ci);
+                counts(ci) = counts(ci)+1;
+            end
+            xjit{k} = pos - (counts(c)-1)/2;
+        end
+        if isempty(jittersize)
+            M = max(max(xjit{1}), max(xjit{2}));
+            jittersize = .3 / M;
+        end
+        for k = 1:2
+            xjit{k} = xjit{k} * jittersize;
+        end
+    otherwise        
+        error('invalid points mode ''%s''', jittermode)
 end
 
 % display
 dualdisplay = strcmp(method,'ranksum') || ~isscalar(y);
 if dualdisplay
-    xlim = [0 3];
+    if isempty(xpos), xpos = [1 2]; end
+    
+    % display individual points
     alldata = [brick.row(x) brick.row(y)];
     if strcmp(method,'ranksum')
-        % no connecting lines
-        a = plot(ones(1,length(x)),x,'o','color',[1 1 1]*.6);
+        % no connecting lines 
+        % group points according to whether they are below/above the median
+        [~, ord] = sort(x);
+        idx = ord(1:floor(nx/2));
+        a = plot(xpos(1)*ones(1,floor(nx/2))+xjit{1}(idx)*diff(xpos), ...
+            x(idx),marker,'color',[1 1 1]*.5,'markersize',markersize);
         hold on
-        b = plot(2*ones(1,length(y)),y,'o','color',[1 1 1]*.6);
+        idx = ord(floor(nx/2)+1:nx);
+        b = plot(xpos(1)*ones(1,ceil(nx/2))+xjit{1}(idx)*diff(xpos), ...
+            x(idx),marker,'color',[1 1 1]*.6,'markersize',markersize);
+        [~, ord] = sort(y);
+        idx = ord(1:floor(ny/2));
+        c = plot(xpos(2)*ones(1,floor(ny/2))+xjit{2}(idx)*diff(xpos), ...
+            y(idx),marker,'color',[1 1 1]*.5,'markersize',markersize);
+        idx = ord(floor(ny/2)+1:ny);
+        d = plot(xpos(2)*ones(1,ceil(ny/2))+xjit{2}(idx)*diff(xpos), ...
+            y(idx),marker,'color',[1 1 1]*.6,'markersize',markersize);
+        hold off
+        hl{1} = [a b c d];
+    elseif strcmp(method,'bootstrap')
+        % no connecting lines 
+        a = plot(xpos(1)*ones(1,nx)+xjit{1}*diff(xpos), ...
+            x,marker,'color',[1 1 1]*.6,'markersize',markersize);
+        hold on
+        b = plot(xpos(2)*ones(1,ny)+xjit{2}*diff(xpos), ...
+            y,marker,'color',[1 1 1]*.6,'markersize',markersize);
         hold off
         hl{1} = [a b];
     else
-        hl{1} = plot(1:2,[brick.row(x); brick.row(y)],'color',[1 1 1]*.6,'marker','o'); % connecting lines
+        hl{1} = plot(1:2,[brick.row(x); brick.row(y)],'color',[1 1 1]*.6, ...
+            'marker',marker,'markersize',markersize); % connecting lines
     end
+    
+    % display means and/or medians
     if showmean
-        line(1:2,[brick.nmean(x) brick.nmean(y)],'color','b')
+        line(xpos,[brick.nmean(x) brick.nmean(y)],'color','b')
     end
     switch method
-        case 'ranksum'
-            hl{2}(1) = line(1:2,[brick.nmedian(x) brick.nmedian(y)],'color','k','linestyle','none','marker','*');
-            hl{2}(2) = line(1:2,[brick.nmedian(x) brick.nmedian(y)],'color','k','linewidth',2);
+        case {'ranksum' 'bootstrapmedian'}
+            % show individual medians
+            hl{2}(1) = line(xpos,[brick.nmedian(x) brick.nmedian(y)],'color','k','linestyle','none','marker','*');
+            hl{2}(2) = line(xpos,[brick.nmedian(x) brick.nmedian(y)],'color','k','linewidth',2);
+        case 'bootstrap'
+            % show individual means
+            hl{2}(1) = line(xpos,[brick.nmean(x) brick.nmean(y)],'color','k','linestyle','none','marker','*');
+            hl{2}(2) = line(xpos,[brick.nmean(x) brick.nmean(y)],'color','k','linewidth',2);
         otherwise
             % show individual means (not medians), but also a slope indicating the
             % median difference (which is different from the difference
             % of the medians!)
-            hl{2}(1) = line(1:2,[brick.nmean(x) brick.nmean(y)],'color','k','marker','*','linestyle','none');
+            hl{2}(1) = line(xpos,[brick.nmean(x) brick.nmean(y)],'color','k','marker','*','linestyle','none');
             yl = mean([brick.nmedian(x) brick.nmedian(y)])+[-.5 .5]*brick.nmedian(y-x);
-            hl{2}(2) = line(1:2,yl,'color','k','linewidth',2);
+            hl{2}(2) = line(xpos,yl,'color','k','linewidth',2);
     end
+    
+    % limits
+    xlim = xpos + [-1 1]*diff(xpos);
     if isempty(ylim)
         if all(isnan(alldata))
             ylim = [0 1];
@@ -141,10 +264,17 @@ if dualdisplay
         end
     end
     set(gca,'xlim',xlim,'ylim',ylim)
-    brick.markpvalue(1.5,[],p,pdisplaymode)
+    
+    % p-value
+    if contains(method, 'bootstrap') && p < 1e-5
+        p = 'p<1e-5';
+    end
+    brick.markpvalue(mean(xpos),[],p,pdisplaymode)
 else
+    if ~isempty(xpos), error 'specifying x-position not handled yet for single set of points', end
     xlim = [0 2];
-    plot(ones(1,length(x)),x,'o','color',[1 1 1]*.6)
+    plot(ones(1,length(x)),x,marker,'markersize',markersize,...
+        'color',[1 1 1]*.6)
     line([.5 1.5],mean(x)*[1 1],'color','k','linewidth',2)
     uistack(line(xlim,[y y],'color','k','linestyle','--'),'bottom')
     if isempty(ylim)
@@ -156,6 +286,9 @@ else
         end
     end
     set(gca,'xlim',xlim,'ylim',ylim)
+    if contains(method, 'bootstrap') && p < 1e-5
+        p = 'p<1e-5';
+    end
     brick.markpvalue(1,[],p,pdisplaymode)
 end
 if ~isempty(xlabels)

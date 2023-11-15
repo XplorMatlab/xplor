@@ -133,7 +133,7 @@ classdef interface < hgsetget
             
             % create main menu
             m = uimenu('parent',I.hf,'label',I.figtitle);
-            I.menus.brick.interface = m;
+            I.menus.interface = m;
             items = struct;
             s = I.interfacepar;
             

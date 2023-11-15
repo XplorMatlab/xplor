@@ -38,10 +38,15 @@ while ~isempty(topt) && ischar(topt{1})
 end
 
 % build string to display
+fontweight = 'normal';
 if ischar(p)
     stars = p;
+    if contains(p, '<')
+        fontweight = 'bold'; 
+    end
 elseif strcmp(displaymode,'pvalue')
-    stars = num2str(p,'p=%.3g');
+    stars = num2str(p,'p=%.2g');
+    if p<=.05, fontweight = 'bold'; end
 else
     doNS = ismember(displaymode,{'ns' 'all'});
     nstar = floor(log10(1/p));
@@ -67,7 +72,8 @@ end
 % display
 if isempty(y), ylim = get(ha,'ylim'); y = ylim(1)*.1+ylim(2)*.9; end
 xs = mean(x); ys = y(end);
-h = text(xs,double(ys),stars,'horizontalalignment','center','verticalalignment','middle',popt{:});
+h = text(xs,double(ys),stars,'fontweight',fontweight, ...
+    'horizontalalignment','center','verticalalignment','middle',popt{:});
 if length(x)==2
     if length(y)==2
         h(2) = line(x,y(1)*[1 1],'color','k',popt{:});

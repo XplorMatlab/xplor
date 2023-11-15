@@ -39,30 +39,37 @@ if nargin==0, help brick.bin, return, end
 % Input
 karg=1;
 op = 'mean'; op3 = false;
-[dosame domask dosmart] = deal(false);
+[dosame, domask, dosmart] = deal(false);
 dological = islogical(data);
 while karg<=length(varargin)
     flag = varargin{karg}; karg = karg+1;
-    switch flag
-        case 'same'
-            dosame = true;
-        case {'sum' 'mode' 'nmean' 'nsum'}
-            op = flag;
-        case {'min' 'max'}
-            op = flag;
-            op3 = true;
-        case 'smart'
-            dosmart = true;
-        case 'mask'
-            domask = true;
-            kmask = karg;
-            mask = varargin{karg}; karg = karg+1; 
-        case 'and'
-            dological = 1;
-        case 'or'
-            dological = -1;
-        otherwise
-            error 'unknown flag'
+    if isa(flag, 'function_handle')
+        op = flag;
+    else
+        switch flag
+            case 'same'
+                dosame = true;
+            case {'sum' 'mode'}
+            case 'nmean'
+                op = @brick.nmean;
+            case 'nsum'
+                op = @brick.nsum;
+            case {'min' 'max'}
+                op = flag;
+                op3 = true;
+            case 'smart'
+                dosmart = true;
+            case 'mask'
+                domask = true;
+                kmask = karg;
+                mask = varargin{karg}; karg = karg+1; 
+            case 'and'
+                dological = 1;
+            case 'or'
+                dological = -1;
+            otherwise
+                error 'unknown flag'
+        end
     end
 end
 

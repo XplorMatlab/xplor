@@ -9,6 +9,8 @@ classdef white2alpha < brick.interface
     properties (SetAccess='private')
         controls
         filename
+        original_input
+        bg_color
         input
         lumspecial
         saturation
@@ -21,11 +23,13 @@ classdef white2alpha < brick.interface
         nc
     end
     properties (SetObservable)
-        dosubimage = false;
+        dosubimage = '';
     end
     properties (Access='private')
         menu_def_subpart
         im = struct;
+        borders
+        image_subpart_poly
         image_subpart_mark
     end
 
@@ -46,15 +50,16 @@ classdef white2alpha < brick.interface
 
             % Controls
             s = struct(...
-                'outside__max__luminance',  {.99    'slider .3 1 .01 %.2f'}, ...
-                'holes',                    {false  'logical'}, ...
-                'flat__colors',             {true   'logical'}, ...
-                'border__typical__width',   {0.5    'logslider 0 3 .01'}, ...
-                'flat__color__tolerance',   {.01    'slider 0 .1 .005 %.2f < flat__colors'}, ...
-                'border__max__luminance',   {.5     'slider 0 1 .005 %.2f < ~flat__colors'}, ...
-                'border__max__saturation',  {.5     'slider 0 1 .005 %.2f < ~flat__colors'}, ...
-                'final__alpha__smooth',            {false  'logical'}, ...
-                'true__color__smoothing',   {0      'slider 0 1 < ~final__alpha__smooth'});
+                'special__max__alpha__method', {false 'logical'}, ...
+                'outside__max__luminance',  {.99    'slider .3 1 .01 %.2f < ~special__max__alpha__method'}, ...
+                'holes',                    {false  'logical < ~special__max__alpha__method'}, ...
+                'flat__colors',             {true   'logical < ~special__max__alpha__method'}, ...
+                'border__typical__width',   {0.5    'logslider 0 3 .01 < ~special__max__alpha__method'}, ...
+                'flat__color__tolerance',   {.01    'slider 0 .1 .005 %.2f < flat__colors ~special__max__alpha__method'}, ...
+                'border__max__luminance',   {.5     'slider 0 1 .005 %.2f < ~flat__colors ~special__max__alpha__method'}, ...
+                'border__max__saturation',  {.5     'slider 0 1 .005 %.2f < ~flat__colors ~special__max__alpha__method'}, ...
+                'final__alpha__smooth',            {false  'logical < ~special__max__alpha__method ~special__max__alpha__method'}, ...
+                'true__color__smoothing',   {0      'slider 0 1 < ~final__alpha__smooth ~special__max__alpha__method'});
             X.controls = brick.control(s,@(s)X.action(s),X.grob.controls);
 
             % Load image and perform conversion
@@ -114,22 +119,19 @@ classdef white2alpha < brick.interface
                     end
                 end
             end
-
+            X.original_input = a;
+            X.bg_color = [1 1 1];
+            X.input = a;
+            
             % Select sub-region
             if do_sub_region
-                % select mask
-                mask = brick.maskselect(a, 'free');
-                % all pixels outside mask are white
-                [n_x, n_y, ~] = size(a);
-                a = brick.imvect(a, 'vector');
-                a(~mask, :) = 1;
-                a = brick.imvect(a, [n_x n_y]);
-                % crop image to mask sides
-                a = a(any(mask, 2), any(mask, 1), :);
+                select_sub_region(X)
             end
-            X.input = a;
-
+            
             % Some precomputations
+            precomputations(X)
+        end
+        function precomputations(X)
             [X.nx, X.ny, X.nc] = size(X.input);
             if X.nc == 3
                 [~, X.saturation, X.lumspecial] = rgb2hsv(X.input);
@@ -141,15 +143,21 @@ classdef white2alpha < brick.interface
             else
                 error 'input image must have 1 or 3 color channels'
             end
-            step = round(mean([X.nx X.ny])/15);
+            step = round(mean([X.nx X.ny])/10);
             xstripes = mod(floor((0:X.nx-1)'/step),2);
             ystripes = mod(floor((0:X.ny-1)/step),2);
             X.checker = bsxfun(@xor,xstripes,ystripes);
-            X.checker = .4 + .2*X.checker;
+            X.checker = 1 - (1 - X.checker)*1;
 
             % Show images
+            X.show_images()
+
+            % Perform conversion
+            X.performconversion()
+        end
+        function show_images(X)
             colormap(X.hf,gray(256))
-            imagesc(permute(X.input,[2 1 3]),'parent',X.grob.input,[0 1])
+            X.im.raw = imagesc(permute(X.input,[2 1 3]),'parent',X.grob.input,[0 1]);
             axis(X.grob.input,'image')
             set(X.grob.input,'xtick',[],'ytick',[],'box','on')
             title(X.grob.input,'Input')
@@ -170,55 +178,156 @@ classdef white2alpha < brick.interface
             set(X.grob.result,'xtick',[],'ytick',[],'box','on')
             title(X.grob.result,'Result')
             brick.imvalue('image')
-
-            % Perform conversion
-            X.performconversion()
+        end
+        function select_sub_region(X)
+            a = X.input;
+            % select mask
+            mask = brick.maskselect(a, 'free');
+            % all pixels outside mask are white
+            [n_x, n_y, ~] = size(a);
+            a = brick.imvect(a, 'vector');
+            a(~mask, :) = 1;
+            a = brick.imvect(a, [n_x n_y]);
+            % crop image to mask sides
+            a = a(any(mask, 2), any(mask, 1), :);
+            % store result
+            X.input = a;
+        end
+        function select_background_color(X)
+            
+            % select background color
+            a = X.original_input;
+            hf = brick.figure('Select background color', 'tag', 'no');
+            imshow(permute(a,[2 1 3]));
+            ok = false;
+            while ~ok
+                waitforbuttonpress()
+                p = get(gca, 'currentpoint');
+                p = round(p(1, 1:2));
+                ok = all(p >= 1 & p <= [size(a,1) size(a,2)]);
+            end
+            X.bg_color = brick.row(a(p(1),p(2),:));
+            close(hf)
+            
+            % adapt image for a white background 
+            % -> make a rough estimation of alpha and true color and
+            % reimprint these true colors on a white background
+            [xalpha, xtruecolor] = X.max_alpha_estimation();
+            X.input = brick.add(brick.mult(xalpha, xtruecolor), 1-xalpha);
+            
+            % perform precomputations and display
+            X.precomputations()
         end
         function init_menus(X)
             init_menus@brick.interface(X)
 
             % Load image
-            m = X.menus.brick.interface;
+            m = X.menus.interface;
             uimenu(m,'label','Load image...','separator','on', ...
                 'callback',@(u,e)X.load_image())
             uimenu(m,'label','Load image (sub-region)...'   , ...
                 'callback',@(u,e)X.load_image([], 'subregion'))
             uimenu(m,'label','Load image from clipboard', ...
                 'callback',@(u,e)X.load_image('clipboard'))
+            uimenu(m,'label','Select original background color', ...
+                'callback',@(u,e)X.select_background_color())
             uimenu(m,'label','Save result to file...','separator','on', ...
                 'callback',@(u,e)X.save())
 
             % Image sub-part
             m = uimenu(X.hf,'label','Sub-Image');
             X.menus.image_sub_part = m;
-            brick.propcontrol(X,'dosubimage','menu', ...
+            brick.propcontrol(X,'dosubimage', ...
+                {'menugroup' {'inside' 'outside' ''} {'inside selection' 'outside selection'}}, ...
                 'parent',m,'label','Apply to image sub-part');
             X.menu_def_subpart = uimenu(m, ...
-                'label','Define new image sub-part', ...
-                'enable', brick.onoff(X.dosubimage), ...
+                'label','Define new selection', ...
+                'enable', brick.onoff(~isempty(X.dosubimage)), ...
                 'callback',@(u,e)set_image_subpart(X));
+            uimenu(m,'label','Reset display','separator','on', ...
+                'callback',@(u,e)X.reset_display())
+
         end
-        function set.dosubimage(X,b)
-            X.dosubimage = b;
-            set(X.menu_def_subpart,'enable',brick.switch_case(b))
-            if X.dosubimage && isempty(X.image_subpart)
+        function set.dosubimage(X,val)
+            X.dosubimage = val;
+            b = ~isempty(val);
+            set(X.menu_def_subpart,'enable',brick.onoff(b))
+            if b && isempty(X.image_subpart)
                 set_image_subpart(X)
             end
-            set(X.image_subpart_mark,'visible',b)
+            set(X.image_subpart_mark,'visible',brick.onoff(b))
         end
         function set_image_subpart(X)
             brick.delete_valid(X.image_subpart_mark)
             poly = brick.mouse(X.grob.result,'poly','select image sub-part');
             poly = poly(:,[1:end 1]);
-            X.image_subpart_mark = brick.drawpoly(poly,'parent',X.grob.result,'color','w');
+            X.image_subpart_poly = poly;
+            X.show_image_subpart()
             X.image_subpart = brick.poly2mask(poly(1,:),poly(2,:),X.nx,X.ny);
+            % restore view limits if they were modified
+            axis(X.grob.result, axis(X.grob.input))
         end
-        function action(X, s)
+        function show_image_subpart(X)
+            brick.delete_valid(X.image_subpart_mark)
+            X.image_subpart_mark = brick.drawpoly(X.image_subpart_poly, ...
+                'parent',X.grob.result,'color','w', ...
+                'visible',brick.onoff(~isempty(X.dosubimage)));
+        end
+        function reset_display(X)
+            set(X.hf,'WindowButtonMotionFcn','')
+            X.show_images()
+            X.display_intermediary_result()
+            X.display_final_result()
+            X.show_image_subpart()
+        end
+        function action(X, ~)
             % parameter change
             X.performconversion()
         end
+        function [xalpha, xtruecolor] = max_alpha_estimation(X)
+            % -> we note that a = alpha x + (1-alpha) bg
+            % hence x = (a - (1-alpha) bg) / alpha
+            % we must have x >= 0 and x <= 1
+            % we obtain alpha >= (bg-a) / bg and alpha >= (a-bg) / (1-bg)
+            a = X.original_input;
+            a = brick.imvect(a);  % (nx*ny) x 3
+            bg = repmat(X.bg_color, [X.nx*X.ny, 1]);
+            alpha_min = zeros(X.nx*X.ny, 3);
+            a2 = brick.subtract(a, bg);
+            sub = (a2 < 0);
+            alpha_min(sub) = -a2(sub) ./ bg(sub);
+            sub = (a2 > 0);
+            alpha_min(sub) = a2(sub) ./ (1 - bg(sub));
+            xalpha = max(alpha_min, [], 2); % (nx*ny) vector
+            xalpha3 = repmat(xalpha, [1 3]);
+            xtruecolor = (a - (1-xalpha3).*bg) ./ xalpha3;
+            xtruecolor(xalpha3==0) = 0;
+            xalpha = brick.imvect(xalpha, [X.nx X.ny]);
+            xtruecolor = brick.imvect(xtruecolor, [X.nx X.ny]);
+        end
         function performconversion(X)
             c = brick.watch(X.hf);
+            
+            % Special: max alpha method
+            % maximal alpha possible depends on the darker channel for each
+            % pixel
+            if X.controls.special__max__alpha__method
+                [xalpha, xtruecolor] = X.max_alpha_estimation();
+                % save xalpha and xtruecolor, possible only for sub-part of
+                % image
+                X.save_result(xalpha, xtruecolor);
+                % in borders, mark pixels with zero alpha in yellow, and
+                % other pixels with non-ones alpha in black
+                a = brick.imvect(X.input,'vector');
+                a(xalpha<1, :) = 0;
+                a(xalpha==0, 1:2) = 1;
+                a = brick.imvect(a,[X.nx X.ny],'image');
+                X.borders = a;
+                % display result
+                X.display_intermediary_result('original')
+                X.display_final_result()
+                return
+            end
 
             % Inside and outside masks
             outside = (X.lumspecial > X.controls.outside__max__luminance);
@@ -257,7 +366,8 @@ classdef white2alpha < brick.interface
             a(outside(:),3) = 0;
             a(border,:) = 0;
             a = brick.imvect(a,[X.nx X.ny],'image');
-            set(X.im.masks,'cdata',permute(a,[2 1 3]))
+            X.borders = a;
+            X.display_intermediary_result()
 
             % Stop here if slider is being moved
             if X.controls.sliderscrolling
@@ -319,17 +429,40 @@ classdef white2alpha < brick.interface
             % true color
             xtruecolor = brick.imvect(xtruecolor,[X.nx X.ny],'image');
 
-            % Display result on top of a checkerboard
-            if X.dosubimage
+            % save result, possibly only for sub-part of image
+            X.save_result(xalpha, xtruecolor);
+            
+            % display result
+            X.display_final_result()
+        end
+        function save_result(X, xalpha, xtruecolor)
+            if ~isempty(X.dosubimage)
                 X.truecolor = brick.imvect(X.truecolor);
                 xtruecolor = brick.imvect(xtruecolor);
-                X.truecolor(X.image_subpart(:),:) = xtruecolor(X.image_subpart(:),:);
+                switch X.dosubimage
+                    case 'inside'
+                        mask = X.image_subpart(:);
+                    case 'outside'
+                        mask = ~X.image_subpart(:);
+                end
+                X.truecolor(mask,:) = xtruecolor(mask,:);
                 X.truecolor = brick.imvect(X.truecolor,[X.nx X.ny]);
                 X.alpha(X.image_subpart) = xalpha(X.image_subpart);
             else
                 X.truecolor = xtruecolor;
                 X.alpha = xalpha;
             end
+        end
+        function display_intermediary_result(X, flag)
+            if nargin>=2 && strcmp(flag, 'original')
+                raw = X.original_input;
+            else
+                raw = X.input;
+            end
+            set(X.im.raw,'cdata',permute(raw,[2 1 3]))
+            set(X.im.masks,'cdata',permute(X.borders,[2 1 3]))
+        end
+        function display_final_result(X)
             b = brick.add(brick.mult(X.truecolor,X.alpha), X.checker.*(1-X.alpha));
             set(X.im.truecolor,'cdata',permute(X.truecolor,[2 1 3]))
             set(X.im.alpha,'cdata',permute(X.alpha,[2 1 3]))
@@ -365,5 +498,7 @@ classdef white2alpha < brick.interface
             X.load_image(a)
         end
     end
+    
+    
 
 end
