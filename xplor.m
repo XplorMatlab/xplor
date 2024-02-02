@@ -101,6 +101,7 @@ if isa(data, 'xplr.XData')
     V = launch_view(data, options);
 else
     data = squeeze(data); % remove singleton dimensions
+    if isvector(data), data = data(:); end % change row vector to column vector
     % does user expect an output?
     if nargout > 0
         % wait for xplr.edith_header to finish
@@ -128,17 +129,19 @@ else
     data = x;
 end
 
-% create view
-V = xplr.View(data);
-
-% apply options
+% check options
 option_names = fieldnames(options);
-invalid_names = setdiff(option_names, ...
-    {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
-    'filter', 'displaymode', 'display_mode'});
+valid_names =  {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
+    'filter', 'displaymode', 'display_mode', 'visible'};
+invalid_names = setdiff(option_names, valid_names);
 if ~isempty(invalid_names)
     error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])
 end
+
+% create view
+V = xplr.View(data, options);
+
+% apply options
 if isfield(options, 'controls')
     V.control_visible = brick.boolean(options.controls);
 end

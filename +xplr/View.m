@@ -5,8 +5,7 @@ classdef View < xplr.GraphNode
     % Components 
     properties (SetAccess = 'private')
         hf              % figure
-        slicer          % operation to get 'slice' from 'data'
-        C               % control of data operation
+        C               % controls and slicer, i.e. operation definitions to get 'slice' from 'data'
         D               % main display
         panels          % panels for: display, control, lists, + some buttons
         menu
@@ -18,12 +17,13 @@ classdef View < xplr.GraphNode
     % Dependent properties
     properties (Dependent, SetAccess = 'private')
         data
+        slicer
         slice
     end
         
     % Constructor
     methods
-        function V = View(data, varargin)
+        function V = View(data, options)
             % function V = view(data[,optional slicer arguments...])
 
             % define headers if needed
@@ -31,25 +31,26 @@ classdef View < xplr.GraphNode
                 head = xplr.EditHeader(data);
                 if isempty(head)
                     % header editing was canceled
-                    % (make Dependent properties 'data' and 'slice' valid
-                    % to avoid errors when V will be displayed)
+                    % (make Dependent properties 'slicer', 'data' and 'slice'
+                    % valid to avoid errors when V will be displayed)
                     V.slicer = struct('data', [], 'slice', []);
                     return
                 end
                 data = xplr.XData(data, head);
             end
             
-            % SLICER
-            if ~isa(data,'xplr.XData'), error 'data argument must be a xplr.xdata object', end
-            V.slicer = V.add_component(xplr.Slicer(V, data, varargin{:}));
-            
-            % LINKS
-            % register view object to the bank
-            xplr.Bank.register_view(V)
-
             % PANELS
             % open figure and create panels
-            init_panels(V)
+            if isfield(options, 'visible')
+                visible = brick.onoff(options.visible);
+            else
+                visible = 'on';
+            end
+            init_panels(V, data.name, visible)
+            
+            % CONTROLS AND SLICER
+            assert(isa(data,'xplr.XData'), 'data argument must be a xplr.xdata object')
+            V.C = V.add_component(xplr.ViewControl(V, data));
             
             % MENU
             V.menu = uimenu('parent', V.hf, 'label', 'XPLOR', ...
@@ -61,15 +62,23 @@ classdef View < xplr.GraphNode
             % is simply its input)
             V.D = V.add_component(xplr.ViewDisplay(V));
             
-            % CONTROL
-            V.C = V.add_component(xplr.ViewControl(V));
+            % Filters have been created in the slicer, but may not be
+            % active. Activate them if the slice is not displayable.
+            for idx = length(V.slicer.filters):-1:1
+                if ~V.D.no_display, break, end
+                V.slicer.chg_filter_active(idx, true)
+            end
             
+            % LINKS
+            % register view object to the bank
+            xplr.Bank.register_view(V)
+
             % save object in base workspace
             assignin('base', 'V', V)
         end
         function delete(V)
             if ~isprop(V,'hf'), return, end
-            brick.delete_valid(V.hf, V.C, V.D)
+            brick.delete_valid(V.hf)
         end
     end
     
@@ -83,7 +92,7 @@ classdef View < xplr.GraphNode
     
     % Panels
     methods
-        function init_panels(V)
+        function init_panels(V, data_name, visible)
             % figure
             V.hf = figure('integerhandle', 'off', 'handlevisibility', 'off', 'visible', 'off', ...
                 'numbertitle', 'off', 'name', 'XPLOR', 'tag', 'XPLOR', ...
@@ -92,7 +101,7 @@ classdef View < xplr.GraphNode
             delete(findall(V.hf, 'parent', V.hf))
             set(V.hf, 'DeleteFcn', @(u,e)delete(V))
             set(V.hf, 'WindowButtonMotionFcn', @(u,e)do_nothing())
-            if ~isempty(V.data.name), set(V.hf, 'name', ['XPLOR: ', V.data.name]), end
+            if ~isempty(data_name), set(V.hf, 'name', ['XPLOR: ', data_name]), end
             
             % by defaults, callbacks should not be interruptible
             set(V.hf,'Interruptible', 'off', ...
@@ -117,8 +126,8 @@ classdef View < xplr.GraphNode
             	'parent', V.panels.display, 'backgroundcolor', 'w', 'fontsize', 800/ppi);
             brick.controlpositions(control_on.hu, V.panels.display, [0, 1], [2, -17, 65, 15])
             
-            % now figure can be visible
-            set(V.hf, 'visible', 'on')
+            % now figure can be visible if requested
+            set(V.hf, 'visible', visible)
         end
         function set.control_visible(V, b)
             if strcmp(b, 'toggle')
@@ -196,10 +205,13 @@ classdef View < xplr.GraphNode
     % Dependent properties
     methods
         function data = get.data(V)
-            data = V.slicer.data;
+            data = V.C.slicer.data;
+        end
+        function slicer = get.slicer(V)
+            slicer = V.C.slicer;
         end
         function slice = get.slice(V)
-            slice = V.slicer.slice;
+            slice = V.C.slicer.slice;
         end
     end
     

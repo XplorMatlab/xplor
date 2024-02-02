@@ -172,6 +172,7 @@ classdef Bank < handle
         % method by filter type.
         function F = get_existing_filter(filter_type, link_key, header, user)
             % function F = get_existing_filter(filter_type, link_key, header[, newuser])
+            if nargin<4, user = []; end
             B = xplr.Bank.get_bank();
             header = xplr.Header(header); % in case header is a xplr.dimheader
             h_id = get_id(header);
@@ -179,18 +180,27 @@ classdef Bank < handle
             % F was in fact deleted? -> unregister
             if ~isempty(F) && ~isvalid(F)
                 B.filters_registry.unregister({filter_type, link_key, h_id});
+                F = [];
             end
         end
         function [F, is_new] = get_filter(filter_type, link_key, header, user)
+            % function [F, is_new] = get_filter(filter_type, link_key, header[, user])
             if strcmp(filter_type,'FilterAndPoint')
                 error 'getting a FilterAndPoint filter necessitates a specialized method, so calling getFilter is not authorized'
             end
+            if nargin<4, user = []; end
             header = xplr.Header(header); % in case header is a xplr.dimheader
             F = xplr.Bank.get_existing_filter(filter_type, link_key, header, user);
             if isempty(F)
+                % create filter
                 is_new = true;
                 F = feval(['xplr.', filter_type], header);
-                xplr.Bank.register_filter(link_key, F, user);
+                % mark that it 'belongs' to link_key
+                F.link_key = link_key;
+                % register user
+                if ~isempty(user)
+                    xplr.Bank.register_filter(F, user, link_key);
+                end
                 % if input space is measurable, connect with a
                 % 'worldOperand' object that will synchronize several filters
                 % corresponding to different referentials in this space
@@ -229,10 +239,17 @@ classdef Bank < handle
                 keys = [sub_registry.content.key];
             end
         end
-        function register_filter(link_key, F, user)
-            % function register_filter(link_key, F, user)
+        function register_filter(F, user, link_key)
+            % function register_filter(F, user[, link_key])
             B = xplr.Bank.get_bank();
             for Fi = brick.row(F)
+                % link key
+                if nargin < 3
+                    link_key = Fi.link_key;
+                    if link_key == 0, continue, end
+                else
+                    assert(Fi.link_key==0 || Fi.link_key==link_key)
+                end
                 filter_type = strrep(class(Fi), 'xplr.', '');
                 h_id = get_id(Fi.header_in);
                 Fi.link_key = link_key;   % memorize linkkey inside filter
@@ -246,6 +263,7 @@ classdef Bank < handle
                 filter_type = strrep(class(Fi), 'xplr.', '');
                 if ~isvalid(Fi), continue, end
                 link_key = Fi.link_key;
+                if link_key == 0, continue, end
                 h_id = get_id(Fi.header_in);
                 B.filters_registry.unregister({filter_type, link_key, h_id}, user);
             end
@@ -259,6 +277,7 @@ classdef Bank < handle
         function F = get_filter_and_point(link_key, header, user, do_show)
             % function F = get_filter_and_point(link_key, header, newuser[, do_show])
             % function F = get_filter_and_point([link_key_filter linkkey_point], header[, do_show[, new_user]])
+            if nargin<3, user = []; end
             if nargin<4, do_show = false; end
             F = xplr.Bank.get_existing_filter('FilterAndPoint', link_key, header, user);
             if isempty(F)
@@ -270,11 +289,15 @@ classdef Bank < handle
                 FP = xplr.Bank.get_point_filter(link_key, header, []);
                 % (create FilterAndPoint object)
                 F = xplr.FilterAndPoint(FF,FP);
+                % (mark that it 'belongs' to link_key)
+                F.link_key = link_key;
                 % (now register F as user of FF and FP)
                 xplr.Bank.get_filter_filter(link_key, header, F);
                 xplr.Bank.get_point_filter(link_key, header, F);
                 % (and register user as a user of F)
-                xplr.Bank.register_filter(link_key, F, user);
+                if ~isempty(user)
+                    xplr.Bank.register_filter(F, user, link_key);
+                end
                 % show filter
                 if do_show
                     if F.nd_in > 1
@@ -287,17 +310,20 @@ classdef Bank < handle
         end
         function F = get_filter_filter(link_key, header, user)
             % function F = get_filter_filter(link_key, header[, new_user]])
+            if nargin<3, user = []; end
             F = xplr.Bank.get_filter('Filter', link_key, header, user);
         end
         function P = get_point_filter(link_key, header, user)
             % function F = get_point_filter(link_key, header[, new_user]])
+            if nargin<3, user = []; end
             for i = 1:length(header)
                 P(i) = xplr.Bank.get_filter('Point', link_key, header(i), user);
             end
         end
         function F = get_zoom_filter(link_key, header, user)
             % function F = get_zoom_filter(B, header, user)
-            F = xplr.Bank.get_filter('ZoomFilter', link_key, header, user);
+            if nargin<3, user = []; end
+            F = xplr.Bank.get_filter('ZoomFilter', link_key, header);
         end
         function show_list(F)
             if ~isa(F,'xplr.FilterAndPoint')

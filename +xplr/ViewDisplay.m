@@ -5,6 +5,7 @@ classdef ViewDisplay < xplr.GraphNode
     properties (SetAccess='private')
         % data
         V           % parent 'view' object
+        slice
         zoom_slicer
         previous_headers = xplr.Header.empty(1, 0);
         % graphics
@@ -54,7 +55,6 @@ classdef ViewDisplay < xplr.GraphNode
     % Shortcuts (dependent)
     properties (Dependent, SetAccess='private')
         nd
-        slice
         zslice
         zoom_filters
         active_dim
@@ -80,6 +80,9 @@ classdef ViewDisplay < xplr.GraphNode
             D.V = V;
             D.hp = V.panels.display;
             set(D.hp, 'deletefcn', @(u,e)delete(V))
+            
+            % shortcut
+            D.slice = V.slice;
             
             % zoom slicer zooms into "slice" to yield "zslice"
             D.zoom_slicer = xplr.ZoomSlicer(V.slicer.slice, D);
@@ -145,10 +148,7 @@ classdef ViewDisplay < xplr.GraphNode
     % Dependent properties
     methods
         function n = get.nd(D)
-            n = D.V.slicer.slice.nd;
-        end
-        function x = get.slice(D)
-            x = D.V.slicer.slice;
+            n = D.slice.nd;
         end
         function x = get.zslice(D)
             x = D.zoom_slicer.slice;

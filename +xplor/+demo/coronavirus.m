@@ -124,10 +124,13 @@ end
 
 %% Convert map shapes to SelectionND objects
 
+warning('off', 'MATLAB:polyshape:repairedBySimplify')
 shapes = xplr.SelectionND(nshape);
 for i = 1:nshape
-    poly = [S(i).x; S(i).y];
-    poly = brick.poly_simplify(poly, 2e-4);
+    poly = brick.poly_simplify([S(i).x; S(i).y], 2e-4);
+    if isempty(poly)
+        poly = brick.poly_simplify([S(i).x; S(i).y], 0);
+    end
     shapes(i) = xplr.SelectionND('poly2D', poly);
 end
 

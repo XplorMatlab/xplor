@@ -128,9 +128,10 @@ classdef DisplayNavigation < xplr.GraphNode
             brick.controlpositions(N.sliders.y, N.ha, [1, 0, 0, 1], [0, 0, 12, -48]);
         end
         function init_value_display(N)
-            N.cross_data_value = uicontrol('Parent', N.D.hp, 'style', 'text', 'enable', 'inactive', ...
-                'fontsize', 8, 'horizontalalignment', 'right');
-            brick.controlpositions(N.cross_data_value, N.D.hp, [1, 0], [-100, 10, 90, 15])
+            N.cross_data_value = text('Parent', N.ha, ...
+                'fontsize', 8, 'horizontalalignment', 'right', ...
+                'backgroundcolor', 'none');
+            brick.controlpositions(N.cross_data_value, N.ha, [1, 0], [0, -7])
         end
     end
     
@@ -587,13 +588,22 @@ classdef DisplayNavigation < xplr.GraphNode
             N.cross(3).Visible = brick.onoff(brick.boolean(N.cross(1).Visible) && brick.boolean(N.cross(2).Visible));
         end
         function update_value_display(N)
+            % build string
+            str = 'value(';
+            
+            labels = {N.D.slice.header.label};
+            ijk = get_point_index_position(N, 'round');
+            for i = 1:length(labels)
+                if i>1, str = [str ', ']; end
+                str = [str labels{i} '=' num2str(ijk(i))];
+            end
+            
             idx = get_point_index_position(N, 'global');
             value = N.D.slice.data(idx);
-
-            % Test to display the value as "val(d1,d2,d3,...)=value"
-            %set(N.cross_data_value,'String',['val(' num2str(ijk(1),'%.3g') ',' num2str(ijk(2),'%.3g') ')=' ...
-            %            num2str(value,'%.3g')])         
-            set(N.cross_data_value, 'String', ['Value: ', num2str(value, '%.3g')])
+            str = [str ') = ' num2str(value, '%.3g')];
+            
+            % display
+            set(N.cross_data_value, 'String', str)
         end
         % cross color, transparency, and global visibility
         function set.show_cross(N, value)

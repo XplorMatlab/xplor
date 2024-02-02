@@ -322,7 +322,7 @@ classdef DisplayLabels < xplr.GraphNode
             y_thr = [-Inf, brick.row(y_thr)];
                         
             % moving out of the graph to the "filter" area
-            view_control = L.D.V.C; % what a nice piece of code isn't it!?
+            C = L.D.V.C; % what a nice piece of code isn't it!?
             do_filter = false;
 
             % label object, make sure it will not be covered by data display
@@ -378,12 +378,12 @@ classdef DisplayLabels < xplr.GraphNode
                     % -> filter dimension, new layout has no more dimension dimID
                     if ~do_filter
                         do_filter = true;
-                        view_control.show_inoperant_filter(dim_id)
+                        C.show_inoperant_filter(dim_id)
                     end
                 else
                     if do_filter
                         do_filter = false;
-                        view_control.remove_inoperant_filter(dim_id)
+                        C.remove_inoperant_filter(dim_id)
                     end
                 end
                 % immediate display update
@@ -476,7 +476,7 @@ classdef DisplayLabels < xplr.GraphNode
             elseif do_filter
                 % apply the filter! -> this will cause a reslice and  a
                 % global change in dimensions
-                view_control.activate_inoperant_filter(dim_id)
+                C.activate_inoperant_filter(dim_id)
             elseif isequal(layout_id, prev_layout_id)
                 % do not put label back in its original place if it was only slightly moved: this allow
                 % user to slightly move labels that cover other information
