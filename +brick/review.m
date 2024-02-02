@@ -195,7 +195,7 @@ try
     else
         assignin('base','x',x)
         evalin('base',info.command)
-        axis(info.ha,'tight')
+        if ishandle(info.ha), axis(info.ha,'tight'), end
     end
     if ishandle(info.ha)
         title(info.ha,num2str(info.idx(info.show)))
