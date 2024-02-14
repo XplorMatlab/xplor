@@ -44,7 +44,7 @@ classdef Point < xplr.DataOperand
             head = P.header_in;
             switch head.type
                 case 'measure'
-                    x = head.start + head.scale*P.index_exact;
+                    x = head.start + head.scale*(P.index_exact-1);
                 case 'categorical'
                     x = head.values(P.index, :); % cell array
                     if isscalar(x), x = x{1}; end
@@ -54,9 +54,9 @@ classdef Point < xplr.DataOperand
             if ischar(x), P.value_str = x; return, end
             head = P.header_in;
             if head.is_measure
-                P.index = (x - head.start)/head.scale;
+                P.index_exact = 1 + (x - head.start)/head.scale;
             else
-                P.index = x;
+                P.index_exact = x;
             end
         end
         function str = get.value_str(P)

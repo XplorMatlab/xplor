@@ -75,8 +75,9 @@ classdef DimHeader < xplr.Header
                 n = length(d);
                 dim = zeros(1, n);
                 labels = {H.label};
+                labels_no_ROI = strrep(labels, ' ROI', '');
                 for i = 1:n
-                    dim_i = brick.find(d{i}, labels, 'first');
+                    dim_i = brick.find(d{i}, labels_no_ROI, 'first');
                     if ~isempty(dim_i)
                         dim(i) = dim_i;
                     end

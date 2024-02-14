@@ -374,10 +374,19 @@ classdef Filter < xplr.DataOperand
             if n_sel_slice == 1
                 slic = F.slice_fun(dat(:, F.indices{sel_sub_idx}, :), 2);
             else
-                data_type = brick.switch_case(class(dat), 'double', 'double', 'single');
-                slic = zeros([prod(s(dbef)), n_sel_slice prod(s(daft))], data_type);
+                if isa(dat, 'exch.ndSparse')
+                    slic = exch.ndSparse.build([], [], [prod(s(dbef)), n_sel_slice, prod(s(daft))]);
+                else
+                    data_type = brick.switch_case(class(dat), 'double', 'double', 'single');
+                    slic = zeros([prod(s(dbef)), n_sel_slice, prod(s(daft))], data_type);
+                end
                 for i=1:n_sel_slice
                     slic(:, i, :) = F.slice_fun(dat(:, F.indices{sel_sub_idx(i)}, :), 2);
+                end
+                if isa(slic, 'exch.ndSparse') && (nnz(slic) / numel(slic) > .2)
+                    % convert from sparse to full when density becomes more
+                    % than 20%
+                    slic = full(slic);
                 end
             end
             

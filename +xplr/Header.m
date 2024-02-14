@@ -294,13 +294,24 @@ classdef Header < xplr.Object
             H.scale = []; H.start = [];
             for i = 2:length(varargin)
                 a = varargin{i};
-                if ischar(a)
+                if ischar(a) && isempty(unit_)
                     unit_ = a;
-                elseif isempty(H.n)
+                    continue
+                end
+                if isempty(H.n)
+                    assert(isnumeric(a) && a >= 0 && mod(a, 1) == 0)
                     H.n = a;
                 elseif isempty(H.scale)
+                    assert(isnumeric(a) || isduration(a))
                     H.scale = a;
                 else
+                    if isnumeric(H.scale)
+                        assert(isnumeric(a))
+                    elseif isduration(H.scale)
+                        assert(isdatetime(a))
+                    else
+                        error 'invalid case'
+                    end
                     H.start = a;
                 end
             end
