@@ -14,6 +14,32 @@ function out = progress(varargin)
 %---
 % progress indicator
 %
+% Examples:
+%   - Simple call to brick.progress
+%
+%     n_item = 5
+%     brick.progress('item', n_item)
+%     for i=1:n_item
+%         brick.progress(i)
+%         pause(.25) % do some stuff
+%     end
+%
+%   - Nested calls to brick.progress
+%
+%     n_items = [3, 4, 2];
+%     n_batch = length(n_items);
+%     brick.progress('batch', n_batch)
+%     for i = 1:n_batch
+%         brick.progress(i)
+%         n_item_i = n_items(i);
+%         brick.progress('item', n_item_i)
+%         for j=1:n_item_i
+%             brick.progress(j)
+%             pause(.25) % do some stuff
+%         end
+%         brick.progress('end') % needed to signal that we finished
+%     end
+%
 % See also pg
 
 % Thomas Deneux
@@ -22,7 +48,8 @@ function out = progress(varargin)
 persistent x            % structure with persistent information
 persistent ht0          % default place for displaying progress (handle or '' for command prompt)
 
-% detect nested call to brick.progress
+% detect nested call to brick.progress (variable calllevel states the level
+% of nesting)
 stack = dbstack; 
 if isscalar(stack), caller = ''; else caller = stack(2).name; end
 if nargout==1
@@ -176,33 +203,32 @@ if ischar(varargin{1})
     if nargout==1
         out = x;
     end
-else
-    
+else   
     % STATE PROGRESS
     % input
     i = varargin{1};
-    % do not display if too few time past since last display
-    if calllevel && toc(x(1).lastdisp)<.1 && i~=x(1).max, return, end
-    % display
+    do_pause = (nargin>1 && strcmp(varargin{2},'pause'));
+    % did we lose track of the right parameters?
     if ~calllevel
-        % we lost track of the right parameters
         if isscalar(x), disp 'strange: unregistered caller', end 
         str = ['???? ' num2str(i) '/??'];
         updatedisplay(-1,str,'')
+        return
+    end
+    % do not display if too few time past since last display
+    if toc(x(1).lastdisp)<.1 && i~=x(1).max && ~do_pause, return, end
+    % display
+    if x(1).pflag, i = floor(i/x(1).max*100); end
+    if (i == x(1).curi), return, end
+    x(1).curi = i;
+    if x(1).doerase
+        nerase = x(1).isize+brick.switch_case(x(1).pflag,1,length(x(1).after));
+        updatedisplay(nerase,[sprintf(x(1).format,i) x(1).after],x(1).ht)
     else
-        if x(1).pflag, i = floor(i/x(1).max*100); end
-        if (i == x(1).curi), return, end
-        x(1).curi = i;
-        if x(1).doerase
-            nerase = x(1).isize+brick.switch_case(x(1).pflag,1,length(x(1).after));
-            updatedisplay(nerase,[sprintf(x(1).format,i) x(1).after],x(1).ht)
-        else
-            updatedisplay(-1,[x(1).prompt ' ' sprintf(x(1).format,i) x(1).after],x(1).ht)
-        end
+        updatedisplay(-1,[x(1).prompt ' ' sprintf(x(1).format,i) x(1).after],x(1).ht)
     end
-    if nargin>1 && strcmp(varargin{2},'pause')
-        pause
-    end
+    % pause after display
+    if do_pause, pause, end
     % reinit timer
     x(1).lastdisp = tic;
 end

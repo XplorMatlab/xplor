@@ -83,7 +83,10 @@ w = w(ord);
 ok = ([w.bytes]>=minsize);
 
 % (add also object which might be container of large variables through handles)
-matlabclasses = {'logical' 'char' 'single' 'double' 'uint8' 'uint16' 'uint32' 'uint64' 'int8' 'int16' 'int32' 'int64' 'struct' 'cell' 'table'};
+matlabclasses = {'logical' 'char' 'single' 'double' ...
+    'uint8' 'uint16' 'uint32' 'uint64' 'int8' 'int16' 'int32' 'int64' ...
+    'struct' 'cell' 'table' 'datetime' 'duration' ...
+    'exch.ndSparse'};
 okclasses = [matlabclasses 'alias'];
 for k = find(~ok & ~ismember({w.class},okclasses))
     % add variables who are small but which, because they are handle
@@ -95,7 +98,12 @@ for k = find(~ok & ~ismember({w.class},okclasses))
     else
         vark = var;
     end
-    ok(k) = any(~isgraphics(vark) & isvalid(vark)); % can be an object with multiple elements
+    try
+        % might fail because method isvalid is not defined
+        ok(k) = any(~isgraphics(vark) & isvalid(vark)); % can be an object with multiple elements
+    catch
+        ok(k) = any(~isgraphics(vark));
+    end
 end
 if ~any(ok)
     fprintf('no variable is big (total: %iKB)\n',round(sum([w.bytes])/2^10))

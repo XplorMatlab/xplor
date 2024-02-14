@@ -1,7 +1,7 @@
-function y = timevector(x,t,outputtype)
+function y = timevector(x,t,outputtype,numtype)
 %TIMEVECTOR Convert set of times to vector of counts and vice-versa
 %---
-% function times|count = timevector(times|count,dt|tidx[,outputtype])
+% function times|count = timevector(times|count,dt|tidx[,outputtype[,numtype]])
 %---
 % switch representation of a point process between the times of the events
 % and the number of events per time bin
@@ -19,6 +19,10 @@ function y = timevector(x,t,outputtype)
 %               are defined by the time points in tidx (which can be either
 %               a (nperiod+1) vector for contiguous periods, or a 2*nperiod
 %               array for disconnected periods)
+% - numtype     numeric type for output (possible values for 'count'
+%               output: 'uint16', 'int32', etc., 'single', 'double',
+%               'ndSparse'; otherwise only 'single' and 'double') [default:
+%               double]
 %
 % Output:
 % - count       column vector or array
@@ -55,6 +59,16 @@ elseif ~ismember(outputtype,{'times' 'count' 'rate' 'countperperiod' 'rateperper
 end
 doperiod = any(strfind(outputtype,'perperiod'));
 dorate   = any(strfind(outputtype,'rate'));
+if nargin < 4
+    numtype = 'double';
+elseif strcmp(outputtype, 'count')
+    assert(ismember(numtype, {'int8', 'int16', 'int32', 'int64', 'uint8', 'uint16', 'uint32', 'uint64', 'single', 'double', 'sparse', 'ndSparse', 'exch.ndSparse'}))
+    if ismember(numtype, {'sparse' 'ndSparse'})
+        numtype = 'exch.ndSparse';
+    end
+else
+    assert(ismember(numtype, {'single', 'double'}))
+end
 
 % Multiple data
 if iscell(x)
@@ -150,7 +164,11 @@ switch convtype
         y = x(:);
     case 't2c'
         times = x(:);
-        y = zeros(nper,1);
+        if strcmp(numtype, 'exch.ndSparse')
+            y = exch.ndSparse.build([], [], nper);
+        else
+            y = zeros(nper,1,numtype);
+        end
         if (~doperiod || isperiodsconnex) && (iseqspacing || length(times)<2*length(tidx))
             if iseqspacing
                 % take advantage of the fact that time instants are equally spaced

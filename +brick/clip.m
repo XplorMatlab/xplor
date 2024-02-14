@@ -120,6 +120,7 @@ else
         error('erroneous clipping option')
     end
 end
+clip = full(clip); % if x was sparse, clip was sparse so far
 if diff(clip)==0, clip = double(clip)+[-1 1]; end
 
 % Check output mode
