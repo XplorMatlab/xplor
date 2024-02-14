@@ -73,7 +73,7 @@ classdef slider < hgsetget
     end
     properties (Access='private')
         area = 0;
-        x = [50 100]; % relative values; [left right] in 'area' mode, [nstepcur nstepmax] in 'point' mode
+        x = [50 100];   % relative values; [left right] in 'area' mode, [nstepcur nstepmax] in 'point' mode
     end
     properties (Dependent, Access='private')
         sides
@@ -227,7 +227,7 @@ classdef slider < hgsetget
             if ~U.initialized, return, end
             
             % normalized position
-            [isvertical iscoordinv] = orientation(U);
+            [isvertical, iscoordinv] = orientation(U);
             sid = U.sides;
             if iscoordinv, sid = [1-sid(2) 1-sid(1)]; end
             xpos = [sid(1) diff(sid)];
@@ -533,7 +533,12 @@ classdef slider < hgsetget
                 % do all the roundings
                 U.x = U.x;
             else
-                U.x(2) = 1/U.inc;
+                val = U.value;
+                % set the number of steps: this modifies the relation
+                % between U.x(1) and U.x(2), and hence the value
+                U.x(2) = 1/U.inc;  
+                % so we need to re-set value
+                U.value = val;
             end
         end
         function x = get.sliderstep(U)
