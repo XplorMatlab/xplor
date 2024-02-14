@@ -156,8 +156,10 @@ classdef DisplayNavigation < xplr.GraphNode
                         return
                     end
                     e0 = diff(clip0);
-                    clip_center = N.D.clipping.center;
-                    if ~isempty(clip_center), clip0 = clip_center + [-.5, .5]*e0; end
+                    clip_baseline = N.D.clipping.baseline;
+                    if ~isempty(clip_baseline)
+                        clip0 = clip_baseline(1) + ([0, 1] - clip_baseline(2))*e0; 
+                    end
                     p0 = get(N.hf, 'currentpoint');
                     ht = uicontrol('style', 'text', 'position', [2, 2, 200, 17], 'parent', N.hf);
                     set(ht, 'string', sprintf('min: %.3f,  max: %.3f', clip0(1), clip0(2)))
@@ -171,12 +173,14 @@ classdef DisplayNavigation < xplr.GraphNode
                 % 'naive' new clip
                 p = get(N.hf, 'currentpoint');
                 dp = p - p0;
-                if ~isempty(clip_center), dp = [-1, 1]*(dp(2)-dp(1))/2; end
                 % (tolerance to detect motion)
                 tol = 2;
                 dp = dp - (sign(dp) .* min(tol, abs(dp)));
                 FACT = 1/100;
                 clip = clip0 + dp*(e0*FACT);
+                if ~isempty(clip_baseline)
+                    clip = clip_baseline(1) + ([0, 1] - clip_baseline(2))*diff(clip); 
+                end
                 % it might be that we have diff(clip)<=0 here! apply some
                 % transformation to solve that
                 e = diff(clip);
@@ -203,7 +207,6 @@ classdef DisplayNavigation < xplr.GraphNode
             else
                 clip = N.D.grid_clip; % ND array
             end
-            m = mean(clip);
             e = diff(clip);
 
             % round it to a nice value
@@ -215,7 +218,17 @@ classdef DisplayNavigation < xplr.GraphNode
             % update as specified
             f = f + brick.switch_case(flag, '+', -1, '-', 1);
             e = e10 .* reshape(vals(f), size(e));
-            clip = brick.add(m, brick.mult([-.5; .5], e));
+            clip_baseline = N.D.clipping.baseline;
+            if isempty(clip_baseline)
+                % make the curves go more up than down, because this is
+                % more natural!!
+                base_position = .2;
+                base_value = min(clip) + diff(clip)*base_position;
+            else
+                base_value = clip_baseline(1);
+                base_position = clip_baseline(2);
+            end
+            clip = base_value + [-base_position; 1-base_position].*e;
             
             % set clip
             if N.D.clipping.buttons_only_for_current_cells

@@ -9,10 +9,10 @@ classdef ClipTool < xplr.GraphNode
         auto_clip_mode = 'minmax'
     end
     properties (SetObservable=true, AbortSet)
-        auto_clip_mode_no_center = 'minmax'     %
-        center = []                         % [], 0 or 1
-        independent_dim_id_mem = []          % dimension ID of dimensions along which clipping is not uniform
-        align_signals = ''                  % '', 'mean', 'median'
+        auto_clip_mode_no_center = 'minmax'   %
+        baseline = []                         % [] or [value_to_align, align_position], e.g. [1, .5] for "1 in the middle", or [0, 0] for "0 on bottom"
+        independent_dim_id_mem = []           % dimension ID of dimensions along which clipping is not uniform
+        align_signals = ''                    % '', 'mean', 'median'
         adjust_to_view = true
         buttons_only_for_current_cells = false
     end
@@ -57,9 +57,11 @@ classdef ClipTool < xplr.GraphNode
             % (all possibilities through additional input dialogs)
             uimenu(m1, 'label', 'Use Mean and STD...', 'separator','on', 'callback', @(u,e)set_auto_clip_mode(C, 'setstd'))
             uimenu(m1, 'label', 'Use Percentiles...', 'callback', @(u,e)set_auto_clip_mode(C, 'setprc'))
-            % (fix the center)
-            brick.propcontrol(C, 'center', ...
-                {'menugroup', {0, 1, []}, {'center on 0', 'center on 1'}}, ...
+            % (fix the baseline)
+            brick.propcontrol(C, 'baseline', ...
+                {'menugroup', ...
+                 {[] [0 .5], [1 .5], [0 0], [1 0], [0 1], [1 1] 'custom'}, ...
+                 {'(no baseline)' 'center on 0', 'center on 1', '0 on bottom', '1 on bottom', '0 on top', '1 on top', 'custom...'}}, ...
                 m1);
             
             % auto-clip
@@ -99,8 +101,8 @@ classdef ClipTool < xplr.GraphNode
             if strcmp(C.D.display_mode, 'time courses')
                 brick.propcontrol(C, 'align_signals', ...
                     {'menuval', {'', 'median', 'mean'}, ...
-                    {'(do not center)', 'on their median', 'on their mean'}, {'(none)', 'median', 'mean'}}, ...
-                    {'parent', m, 'label', 'Align signals'});
+                    {'(do not realign)', 'on their median', 'on their mean'}, {'(none)', 'median', 'mean'}}, ...
+                    {'parent', m, 'label', 'Re-align signals'});
             end
             % manual clip
             if ~isempty(C.independent_dim)
@@ -170,16 +172,32 @@ classdef ClipTool < xplr.GraphNode
             C.auto_clip_mode_no_center = comp;
             % add the centering information to final autoclip mode
             C.auto_clip_mode = C.auto_clip_mode_no_center;
-            if ~isempty(C.center), C.auto_clip_mode = [C.auto_clip_mode, '[', num2str(C.center), ']']; end
+            if ~isempty(C.baseline), C.auto_clip_mode = [C.auto_clip_mode, '[', num2str(C.baseline(1)), '|', num2str(C.baseline(2)), ']']; end
             % update display
             C.D.auto_clip(true)
         end
-        function set.center(C, center)
+        function set.baseline(C, baseline)
+            % edit tool
+            if ischar(baseline) && strcmp(baseline, 'custom')
+                s = struct;
+                if isempty(C.baseline)
+                    s.value = 0;
+                    s.pos = .5;
+                else
+                    s.value = C.baseline(1);
+                    s.pos = C.baseline(2);
+                end
+                spec = struct(...
+                    'value', {'double' 'baseline value'}, ...
+                    'pos', {'slider 0 1 .05 %.2f', 'baseline position (0 = bottom, 1 = top)'});
+                s = brick.structedit(s, spec);
+                baseline = [s.value, s.pos];
+            end
             % set property
-            C.center = center;
+            C.baseline = baseline;
             % update autoclip mode
             C.auto_clip_mode = C.auto_clip_mode_no_center;
-            if ~isempty(C.center), C.auto_clip_mode = [C.auto_clip_mode, '[', num2str(C.center), ']']; end
+            if ~isempty(C.baseline), C.auto_clip_mode = [C.auto_clip_mode, '[', num2str(C.baseline(1)), '|', num2str(C.baseline(2)), ']']; end
             % update display
             C.D.auto_clip(true)
         end

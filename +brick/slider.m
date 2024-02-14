@@ -677,7 +677,7 @@ classdef slider < hgsetget
             switch flag
                 case 'scroll'
                     % scroll wheel
-                    [isvert isinv] = orientation(U);
+                    [isvert, isinv] = orientation(U);
                     if ~isinv, nscroll = -nscroll; end
                     if ~isvert, nscroll = -nscroll; end
                     if U.area
@@ -687,7 +687,7 @@ classdef slider < hgsetget
                     end
                 case 'frame'
                     % step the slider
-                    if ~strcmp(get(U.hf,'selectiontype'),'normal'), return, end
+                    if ~ismember(get(U.hf,'selectiontype'), {'normal', 'open'}), return, end
                     xf = mouseposframe(U);
                     dir = 2*(xf>U.center)-1;
                     if U.area

@@ -23,7 +23,6 @@ function V = xplor(data, varargin)
 %                       (this automatically set display mode to 'image')
 % - 'controls'          'on'/True (default) or 'off'/False - show/hide the control panel
 % ---
-% simply type 'xplor' to launch the data import wizard
 % type 'xplor demo' to select a range of demos
 % type 'xplor test' to launch the "XPLOR logo" demo
 %
@@ -45,7 +44,8 @@ end
 
 % Lauch a demo if no argument
 if nargin == 0
-    xplr.wizard;
+    % xplr.wizard;
+    help xplor
     return
 elseif nargin == 1 && ischar(data) 
     switch data

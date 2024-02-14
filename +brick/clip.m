@@ -15,7 +15,10 @@ function [x, clip] = clip(x,varargin)
 %               'prcA-B'                use percentiles (if B is omitted,
 %                                       use B = 100-A; if B<30, uses 100-B)
 %               add '[value]' at the end (e.g. 'fit[0]') to center the
-%               clipping range on the specified value
+%               clipping range on the specified value 
+%               add '[value|position]' at the end (e.g. 'fit[0|.1]') to fix
+%               a given value (here 0) at a given position (between 0 and
+%               1, here .1 -> 0 value will be kept at bottom)
 %               
 % - outflag     output format
 %               [a b]       define minimum and maximum value [default, with
@@ -46,6 +49,7 @@ function [x, clip] = clip(x,varargin)
 if nargin==0, help brick.clip, return, end
 
 % Input
+xc = x(:);  % column vector
 clipflag = []; outflag = []; nanvalue = [];
 for k=1:length(varargin)
     a = varargin{k};
@@ -75,12 +79,18 @@ if isnumeric(clipflag)
     if ~isvector(clipflag) || length(clipflag)~=2, error('clipping vector must have 2 elements'), end
     clip = brick.row(clipflag);
 else
-    icenterval = regexp(clipflag,'\[.*\]$');
-    if isempty(icenterval)
-        centerval=[];
+    ibaseline = regexp(clipflag,'\[.*\]$');
+    if isempty(ibaseline)
+        base_value=[];
     else
-        centerval = str2double(clipflag(icenterval+1:end-1));
-        clipflag(icenterval:end)=[];
+        [base_value, base_position] = brick.regexptokens(clipflag(ibaseline+1:end-1), '([^\|]*)\|?([^\|]*)');
+        base_value = str2double(base_value);
+        if isempty(base_position)
+            base_position = .5;
+        else
+            base_position = str2double(base_position);
+        end
+        clipflag = clipflag(1:ibaseline-1);
     end
     xstd = regexpi(clipflag,'^([\d.]*)(st|sd|std)$','tokens');
     if ~isempty(xstd)
@@ -91,30 +101,62 @@ else
     end
     xprc = regexpi(clipflag,'^prc([\d.]*)[-_]*([\d.]*)$','tokens');
     if brick.ismemberstr(clipflag,{'fit' 'mM' 'minmax'})
-        if isempty(centerval)
-            clip = [min(x(:)) max(x(:))];
+        if isempty(base_value)
+            clip = [min(xc) max(xc)];
         else
-            clip = centerval + [-1 1]*max(abs(x(:)-centerval));
+            M = max(xc) - base_value;
+            m = base_value - min(xc);
+            if base_position == 0
+                % ignore values below baseline
+                clip = base_value + [0 M];
+            elseif base_position == 1
+                % ignore values above baseline
+                clip = base_value + [-m 0];
+            else
+                e = max(M/(1-base_position), m/base_position);
+                clip = base_value + [-base_position 1-base_position]*e;
+            end
         end
     elseif ~isempty(xstd)
-        x = brick.float(x);
+        xc = brick.float(xc);
         if isempty(xstd), xstd=1; else xstd=str2double(xstd); end
-        if isempty(centerval), m = mean(x(~isnan(x) & ~isinf(x))); else m = centerval; end
-        st = std(x(~isnan(x) & ~isinf(x)));
-        clip = m + [-1 1]*xstd*st;
+        if isempty(base_value)
+            m = brick.nmean(xc); 
+            st = brick.nstd(xc);
+            base_position = .5;
+        else
+            % use baseline value instead of mean to compute "standard deviation"
+            m = base_value; 
+            st = sqrt(brick.nmean((xc-m).^2));
+        end
+        clip = m + 2*[-base_position 1-base_position]*xstd*st;
     elseif ~isempty(xprc)
         low = str2double(xprc{1}{1});
         high = str2double(xprc{1}{2});
-        if isempty(centerval)
+        if isempty(base_value)
             if isnan(high), high=100-low; elseif high<30, high=100-high; end
-            clip = [brick.prctil(x(:),low) brick.prctil(x(:),high)];
+            clip = [brick.prctil(xc,low) brick.prctil(xc,high)];
         else
-            if ~isnan(high)
-                warning 'cannot set independently the percentile of low and high out-of-range when center value is fixed'
-                if high<30, high=100-high; end
-                low = (low+high)/2;
+            if base_position == 0
+                % ignore values smaller than baseline
+                if isnan(high), high=100-low; elseif high<30, high=100-high; end
+                clip = [base_value brick.prctil(xc(xc>=base_value),high)];
+            elseif base_position == 1
+                % ignore values higher than baseline
+                clip = [brick.prctil(xc(xc<=base_value),low) base_value];
+            else
+                if ~isnan(high)
+                    warning 'cannot set independently the percentile of low and high out-of-range when center value is fixed'
+                    if high<30, high=100-high; end
+                    low = (low+high)/2;
+                end
+                above = (xc >= base_value);
+                dev = xc;
+                dev(above) = (xc(above)-base_value) / (1-base_position);
+                dev(~above) = (base_value-xc(~above)) / base_position;
+                max_dev = brick.prctil(dev, 100-low);
+                clip = base_value + [-base_position 1-base_position]*max_dev;
             end
-            clip = centerval + [-1 1]*brick.prctil(abs(x(:)-centerval),100-low);
         end
     else
         error('erroneous clipping option')

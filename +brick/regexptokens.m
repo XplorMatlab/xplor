@@ -24,7 +24,10 @@ if n==0
 end
 tokens = regexp(a,expr,'tokens');       % cell array (n) of cell arrays (#match) of cell arrays (#tokens) of strings
 if isempty(tokens) || isempty(tokens{1})
-    error 'no match'
+    % no match
+    varargout = cell(1, max(nargout,1));
+    [varargout{:}] = deal(cell(1,0));
+    return
 end
 ntoken = length(tokens{1}{1});
 if ntoken==0                

@@ -515,7 +515,10 @@ classdef ViewDisplay < xplr.GraphNode
                 bin = brick.input('Binning', D.zoom_filters(d).bin, 'stepper 1 1 Inf 1');
                 if isempty(bin), return, end
             end
-            D.zoom_filters(d).set_bin(bin)
+            d = D.slice.dimension_number(d);
+            for di = d
+                D.zoom_filters(di).set_bin(bin)
+            end
         end
         function set_layout_id(D, new_layout_id, do_immediate_display)
             % function set_layout_id(D,new_layout_id[,do_immediate_display])

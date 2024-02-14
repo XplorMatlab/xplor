@@ -40,6 +40,10 @@ classdef propcontrol < hgsetget
 %               whenever the property value is not in the list, and when
 %               this label is pressed, a small input window lets the user
 %               select the desired value
+%             * if 'labels' is the same length as 'values' and the last
+%               value is 'other', 'other...', 'custom' or 'custom...', this
+%               label is checked whenever the propery value is not in the
+%               list
 % - options options for the graphic object that will be created
 %           - If spec is 'menu', 'menuval' or 'menugroup', it is mandatory
 %           that options will contain the pair ('parent',parentmenu).
@@ -81,6 +85,7 @@ properties (SetAccess='private')
     dodefaultvalue = false
     defaultvalue
     doother = false
+    dofallbackchecklast = false
     docolor = false
     % property listener
     proplistener
@@ -272,7 +277,7 @@ methods
                     idx = brick.find(curval,M.valuelist);
                 end
                 set(M.hu(idx),'checked','on')
-                if isempty(idx) && M.doother
+                if isempty(idx) && (M.doother || M.dofallbackchecklast)
                     set(M.hu(end),'checked','on')
                 end
                 if M.doautolabel
@@ -372,7 +377,11 @@ methods
                 M.valuelist(end) = [];
             elseif length(M.labellist)==length(M.valuelist)+1
                 M.doother = true;
-            elseif length(M.labellist)~=length(M.valuelist)
+            elseif length(M.labellist)==length(M.valuelist)
+                if ischar(M.valuelist{end}) && ~isempty(regexp(M.valuelist{end}, 'other|custom', 'once'))
+                    M.dofallbackchecklast = true;
+                end
+            else
                 error 'number of labels must be equal to or one less than number of values'
             end
         else
