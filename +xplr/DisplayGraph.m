@@ -387,13 +387,8 @@ classdef DisplayGraph < xplr.GraphNode
             [~, idx] = find(log10(tests) >= mod(t10,1), 1, 'first');
             step = sign(min_step) * 10^floor(t10) * tests(idx);
         end
-        function [tick_values, tick_labels] = nice_values_datetime(G, value_start, value_stop, min_sub_step)
-            % there will be two sub-steps per step (i.e. one value label
-            % every two ticks)
-            n_sub_step = 2;
-            min_step = min_sub_step * n_sub_step;
+        function step = nice_time_step(G, min_step)
             % determine most appopriate display format and steps
-            format = xplr.auto_datetime_format(value_start, value_stop, min_step);
             if min_step > days(.5)
                 step = days(G.nice_step(days(min_step))); % duration
             elseif min_step > hours(.5)
@@ -405,12 +400,20 @@ classdef DisplayGraph < xplr.GraphNode
             end
             % work in seconds in any case by substracting day of
             % value_start
+            step = seconds(step); % double
+        end
+        function [tick_values, tick_labels] = nice_values_datetime(G, value_start, value_stop, min_step, target_sub_step)
+            % actual step that will be used: minimal "nice step" that is
+            % larger than minstep
+            step = G.nice_time_step(min_step);
+            % actual sub-step that will be used: minimal "nice sub-step"
+            % that is larger than target_sub_step/2
+            sub_step = G.nice_time_step(target_sub_step/2);
+            % update start and stop values
             day_start = dateshift(value_start, 'start', 'day');
             value_start = seconds(value_start - day_start); % double
             value_stop = seconds(value_stop - day_start);
-            step = seconds(step); % double
             % tick values for all substeps
-            sub_step = step / n_sub_step;
             tick_values = sub_step * (ceil(value_start/sub_step) : floor(value_stop/sub_step)); % data coordinates
             do_label = (mod(tick_values, step)==0);
             % convert back to datetime
@@ -418,26 +421,25 @@ classdef DisplayGraph < xplr.GraphNode
             % tick labels only for steps
             n_tick = length(tick_values);
             tick_labels = cell(1, n_tick);
+            format = xplr.auto_datetime_format(tick_values(1), tick_values(end), step);
             t = tick_values(do_label); t.Format = format;
             tick_labels(do_label) = cellstr(char(t));
         end
-        function [tick_values, tick_labels] = nice_values(G, value_start, value_stop, min_sub_step)
+        function [tick_values, tick_labels] = nice_values(G, value_start, value_stop, min_step, target_sub_step)
             % special: datetime
             if isdatetime(value_start)
-                [tick_values, tick_labels] = nice_values_datetime(G,value_start, value_stop, min_sub_step);
+                [tick_values, tick_labels] = nice_values_datetime(G,value_start, value_stop, min_step, target_sub_step);
                 return
             elseif isduration(value_start)
                 error 'not implemented yet'
             end
-            % there will be two sub-steps per step (i.e. one value label
-            % every two ticks)
-            n_sub_step = 2;
-            min_step = min_sub_step * n_sub_step;
             % actual step that will be used: minimal "nice step" that is
             % larger than minstep
             step = G.nice_step(min_step);
+            % actual sub-step that will be used: minimal "nice sub-step"
+            % that is larger than target_sub_step
+            sub_step = G.nice_step(target_sub_step);
             % tick values for all substeps
-            sub_step = step / n_sub_step;
             tick_values = sub_step * (ceil(value_start/sub_step) : floor(value_stop/sub_step)); % data coordinates
             % tick labels only for steps
             n_tick = length(tick_values);
@@ -480,6 +482,18 @@ classdef DisplayGraph < xplr.GraphNode
             
             % x and y ticks
             for k = 1:2
+                switch k
+                    case 1
+                        f = 'x';
+                        f_offsets = st.x_offset;
+                        f_steps = st.x_step;
+                        f_spans = st.x_span;
+                    case 2
+                        f = 'y';
+                        f_offsets = st.y_offset;
+                        f_steps = st.y_step;
+                        f_spans = st.y_span;
+                end
                 f = brick.cast(k, 'x', 'y');
                 d = G.D.active_dim.(f);
                 if isempty(d) || ~any(d == org.(f))
@@ -496,29 +510,48 @@ classdef DisplayGraph < xplr.GraphNode
                 % conversion between data coordinates and graph
                 do_measure = head.is_measure;
                 jf = find(d == G.layout.(f), 1);
+                % step between two successive values in dimension d
+                f_step = f_steps(jf);
+                % offset for dimension d
+                f_off = f_offsets(jf);
+                % offsets for all possible values in more external
+                % dimensions (x-layout indices jf+1:end)
+                for j = jf+1:length(G.layout.(f))
+                    dj = G.layout.(f)(j);
+                    nj = G.zslice_sz(dj);
+                    f_off = f_off + f_offsets(j) + (1:nj)*f_steps(j);
+                    f_off = f_off(:);
+                end
+                % offsets for xy external dimensions
                 switch f
                     case 'x'
-                        f_off = st.xy_offsets(k,1) + st.x_offset(jf) + sum(st.x_offset(jf+1:end) + st.x_step(jf+1:end));
-                        f_step = st.x_step(jf);
+                        f_off = f_off + unique(st.xy_offsets(k,:));
                     case 'y'
-                        f_off = st.xy_offsets(k,1) + st.y_offset(jf) + sum(st.y_offset(jf+1:end) + st.y_step(jf+1:end));
-                        f_step = st.y_step(jf);
+                        f_off = f_off + fliplr(unique(st.xy_offsets(k,:)));
                 end
+                f_off = f_off(:);
 
                 % target space between ticks
                 minimum_spacing = G.ticks_minimum_spacing(k);
-                f_span = brick.cast(k, st.x_span, st.y_span);
-                minimum_spacing = minimum_spacing / min(1/f_span(jf), 2); % let this target increase up to a factor of two when dimension occupies only a fraction of the space
-
+                % (let this target decrease by up to a factor of two when
+                % dimension occupies only a fraction of the space)
+                f_span = f_spans(jf);
+                minimum_spacing = minimum_spacing / min(1/f_span, 2); 
+                % (make sure that sub-ticks will be significantly closer
+                % than the gap with the next external dimension value,
+                % which is 10% of the span)
+                target_sub_spacing = min(minimum_spacing/2, f_span/20);
+                                
                 % target space in data coordinates
                 minimum_step = minimum_spacing / abs(f_step);
+                target_sub_step = target_sub_spacing / abs(f_step);
                 
                 % different display depending on whether header is measure
                 % or categorical
                 if do_measure
                     [start, scale] = deal(head.start, head.scale);
                     [start, stop] = deal(start, start+(n-1)*scale);
-                    [ticks_data, tick_labels] = G.nice_values(start, stop, minimum_step*scale);
+                    [ticks_data, tick_labels] = G.nice_values(start, stop, minimum_step*scale, target_sub_step*scale);
                     if isduration(scale)
                         ticks_idx = 1 + seconds(ticks_data-start) / seconds(scale); % data indices coordinates
                     else
@@ -546,7 +579,12 @@ classdef DisplayGraph < xplr.GraphNode
                         tick_labels = tick_labels(ticks_idx);
                     end
                 end
-                tick = f_off + ticks_idx*f_step;
+                
+                % repeat ticks for every possible offset (i.e. for every
+                % value of more external dimensions)
+                tick = brick.column(ticks_idx*f_step) + brick.row(f_off);
+                tick = brick.row(tick);
+                tick_labels = repmat(tick_labels, 1, length(f_off));
                 
                 % set ticks!
                 if strcmp(f, 'x')
@@ -620,16 +658,15 @@ classdef DisplayGraph < xplr.GraphNode
             sz = strict_size(G.D.grid_clip, 1+G.D.nd);
             sz(1) = [];
             
-            % enough space on y-axis to show values?
+            % spacing between values
             org = G.D.layout;
             st = G.steps;
             minimum_spacing = G.ticks_minimum_spacing(2);
-            if ~isempty([org.y st.xy_dim]), minimum_spacing = minimum_spacing/2; end
-%             if st.y_available < target_spacing
-%                 set(G.D.ha,'ytick',[])
-%                 ylabel(G.D.ha,'')
-%                 return
-%             end
+            if isempty([org.y st.xy_dim]), minimum_spacing = minimum_spacing*2; end
+            % (make sure that sub-ticks will be significantly closer than
+            % the gap with the next external dimension value, which is 10%
+            % of the span)
+            target_sub_spacing = min(minimum_spacing/2, st.y_available/20);
             
             % do clipping ranges and baselines differ along 'horizontal'
             % dimensions (i.e. dimensions at location x, mergeddata or
@@ -703,8 +740,9 @@ classdef DisplayGraph < xplr.GraphNode
                     clip_k = grid_clip(:, k_y, k_row);
                     if any(isnan(clip_k)), continue, end % happens when data itself consists only of NaNs
                     clip_extent = diff(clip_k);
-                    minimum_sub_step = minimum_spacing * clip_extent/st.y_available;
-                    [tick_values, tick_labels] = G.nice_values(clip_k(1), clip_k(2), minimum_sub_step);
+                    min_step = minimum_spacing * clip_extent/st.y_available;
+                    target_sub_step = target_sub_spacing * clip_extent/st.y_available;
+                    [tick_values, tick_labels] = G.nice_values(clip_k(1), clip_k(2), min_step, target_sub_step);
                     y_scale = st.y_available / clip_extent;
                     clip_center = mean(clip_k);
                     y_tick_values{k_y, k_row} = tick_values;
