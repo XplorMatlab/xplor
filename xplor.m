@@ -25,6 +25,7 @@ function V = xplor(data, varargin)
 % ---
 % type 'xplor demo' to select a range of demos
 % type 'xplor test' to launch the "XPLOR logo" demo
+% type 'xplor animation' to launch a small animation that illustrates the concept behind xplor
 %
 % See also xplr.XData
 
@@ -54,6 +55,9 @@ elseif nargin == 1 && ischar(data)
             return
         case 'test'
             xplor.demo.logo
+            return
+        case 'animation'
+            xplor.animation
             return
     end
 end
