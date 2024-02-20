@@ -308,7 +308,7 @@ classdef Header < xplr.Object
                     if isnumeric(H.scale)
                         assert(isnumeric(a))
                     elseif isduration(H.scale)
-                        assert(isdatetime(a))
+                        assert(isdatetime(a) || isduration(a))
                     else
                         error 'invalid case'
                     end

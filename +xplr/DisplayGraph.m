@@ -431,7 +431,22 @@ classdef DisplayGraph < xplr.GraphNode
                 [tick_values, tick_labels] = nice_values_datetime(G,value_start, value_stop, min_step, target_sub_step);
                 return
             elseif isduration(value_start)
-                error 'not implemented yet'
+                total_duration = value_stop - value_start;
+                if total_duration > days(5)
+                    units = 'days';
+                elseif total_duration > hours(5)
+                    units = 'hours';
+                elseif total_duration > minutes(5)
+                    units = 'minutes';
+                else
+                    units = 'minutes';
+                end
+                value_start = feval(units, value_start);
+                value_stop = feval(units, value_stop);
+                min_step = feval(units, min_step);
+                target_sub_step = feval(units, target_sub_step);
+            else
+                units = [];
             end
             % actual step that will be used: minimal "nice step" that is
             % larger than minstep
@@ -461,6 +476,9 @@ classdef DisplayGraph < xplr.GraphNode
                 tick_labels(do_label) = brick.num2str(tick_values(do_label), 'cell');
             else
                 tick_labels(do_label) = brick.num2str(tick_values(do_label) *mult, 'cell', ['%g' suffix]);
+            end
+            if ~isempty(units)
+                tick_values = feval(units, tick_values);
             end
         end
     end
