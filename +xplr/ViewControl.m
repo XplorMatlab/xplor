@@ -355,7 +355,10 @@ classdef ViewControl < xplr.GraphNode
                     % display mode and layout will be reset when display
                     % will be updated
                     any_change = n_add > 0 || ~isempty(current_filters_dim);
-                    C.D.forget_layout(~any_change);
+                    if ~isempty(C.D)
+                        % C.D can be empty at init
+                        C.D.forget_layout(~any_change);
+                    end
                 end
                 if n_add > 0
                     if n_add>1 && isscalar(key), key = repmat(key, 1, n_add); end
@@ -374,6 +377,10 @@ classdef ViewControl < xplr.GraphNode
                 end
                 
                 % adjust display mode and layout if it seems appropriate
+                if isempty(C.D)
+                    % can happen at init
+                    return
+                end
                 if ismember(flag, {'view', 'view_and_ROI'})
                     if isscalar(dim_id)
                         C.D.set_dim_location(dim_id, 'x', strcmp(C.D.display_mode, 'time courses'))

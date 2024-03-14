@@ -431,7 +431,8 @@ classdef Filter < xplr.DataOperand
     % Link with selection in real world coordinates
     methods
         function selection_world = operation_data_to_space(F)
-            aff = xplr.AffinityND([F.header_in.scale], [F.header_in.start] - [F.header_in.scale]);
+            header = F.header_in;
+            aff = xplr.AffinityND([header.scale], [header.start_num] - [header.scale_num]);
             selection_world = aff.move_selection(F.selection);
         end
         function update_operation_data_to_space(F, WO, e)

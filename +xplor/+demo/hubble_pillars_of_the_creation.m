@@ -52,7 +52,7 @@ Eagle_Nebula = xplr.XData(data, header, 'Eagle Nebula');
 %% Display
 
 V = xplor(Eagle_Nebula);
-V.D.clipping.auto_clip_mode_no_center = 'prc.1';
+V.D.clipping.auto_clip_mode = 'prc.1';
 V.D.clipping.adjust_to_view = true;
 
 %% Display some info

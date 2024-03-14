@@ -52,9 +52,12 @@ classdef Header < xplr.Object
         type
         is_measure
         is_datetime
+        is_duration
         is_enum
         is_categorical_with_values
         n_column
+        start_num  % convert duration and datetime to seconds
+        scale_num  % convert duration to seconds
     end
     % The properties below are computed on the fly and then stored
     properties (Access='private')
@@ -232,7 +235,7 @@ classdef Header < xplr.Object
                     lab = {};
                 else
                     table = table_or_n;
-                    if isnumeric(table) || isdatetime(table)
+                    if isnumeric(table) || isdatetime(table) || isduration(table)
                         table = num2cell(table); 
                     elseif isstring(table)
                         table = cellstr(table);
@@ -364,7 +367,7 @@ classdef Header < xplr.Object
             b = (H.n == 1);
         end
         function u = get.unit(H)
-            if H.categorical || H.is_datetime
+            if H.categorical || H.is_datetime || H.is_duration
                 u = '';
             else
                 u = H.sub_labels.unit;
@@ -380,8 +383,6 @@ classdef Header < xplr.Object
         function type = get.type(H)
             if H.categorical
                 type = 'categorical';
-            elseif H.is_datetime
-                type = 'datetime';
             else
                 type = 'measure';
             end
@@ -392,6 +393,9 @@ classdef Header < xplr.Object
         function b = get.is_datetime(H)
             b = H.is_measure() && isdatetime(H.start);
         end
+        function b = get.is_duration(H)
+            b = H.is_measure() && isduration(H.start);
+        end
         function b = get.is_enum(H)
             b = H.categorical && (H.n_column == 0);
         end
@@ -400,6 +404,20 @@ classdef Header < xplr.Object
         end
         function n = get.n_column(H)
             n = size(H.values, 2);
+        end
+        function start = get.start_num(H)
+            start = H.start;
+            if isduration(start)
+                start = seconds(start);
+            elseif isdatetime(start)
+                start = seconds(start - datetime(0,0,0));
+            end
+        end
+        function scale = get.scale_num(H)
+            scale = H.scale;
+            if isduration(scale)
+                scale = seconds(scale);
+            end
         end
     end
     
@@ -456,11 +474,19 @@ classdef Header < xplr.Object
                 end
                 return
             end
-            if H.is_measure && ~H.is_datetime
+            if H.is_measure
                 if isempty(H.measure_space_id)
-                    H.measure_space_id = brick.hash({H.label,H.unit}, 'num');
+                    if H.is_datetime
+                        id = brick.hash('datetime');
+                    elseif H.is_duration
+                        id = brick.hash('duration');
+                    else
+                        id = brick.hash({H.label,H.unit}, 'num');
+                    end
+                    H.measure_space_id = id;
+                else
+                    id = H.measure_space_id;
                 end
-                id = H.measure_space_id;
             else
                 id = [];
             end
@@ -546,7 +572,8 @@ classdef Header < xplr.Object
             if isempty(H.item_names)
                 % compute names
                 n_val = length(idx);
-                column_ok_for_name = H.categorical & brick.ismemberstr({H.sub_labels.type}, {'char', 'numeric'});
+                column_ok_for_name = H.categorical & ...
+                    brick.ismemberstr({H.sub_labels.type}, {'char', 'numeric', 'logical', 'datetime', 'duration'});
                 if any(column_ok_for_name)
                     % any column 'name' in the values table?
                     idx_name = get_column_index(H, 'Name', false);
@@ -574,7 +601,7 @@ classdef Header < xplr.Object
                     end
                 elseif H.categorical
                     names = brick.num2str(idx, 'cell')';
-                elseif H.is_datetime
+                elseif H.is_datetime || H.is_duration
                     % (datetime -> guess what is the best format based on start and end)
                     v = H.start + (0:H.n-1) * H.scale;
                     step = H.scale;

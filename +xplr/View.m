@@ -39,28 +39,60 @@ classdef View < xplr.GraphNode
                 data = xplr.XData(data, head);
             end
             
+            % check options
+            option_names = fieldnames(options);
+            valid_names =  {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
+                'filter', 'displaymode', 'display_mode', 'visible', 'organize', ...
+                'clipping'};
+            invalid_names = setdiff(option_names, valid_names);
+            if ~isempty(invalid_names)
+                error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])
+            end
+
             % PANELS
             % open figure and create panels
             if isfield(options, 'visible')
                 visible = brick.onoff(options.visible);
+                options = rmfield(options, 'visible');
             else
                 visible = 'on';
             end
-            init_panels(V, data.name, visible)
+            if isfield(options, 'controls')
+                control_visible = brick.onoff(options.controls);
+                options = rmfield(options, 'controls');
+            else
+                control_visible = 'on';
+            end
+            init_panels(V, data.name, visible, control_visible)
             
             % CONTROLS AND SLICER
             assert(isa(data,'xplr.XData'), 'data argument must be a xplr.xdata object')
             V.C = V.add_component(xplr.ViewControl(V, data));
             
+            % APPLY SLICER OPTIONS
+            actions = {'view', 'ROI', 'view_and_ROI', 'filter'};
+            for i = 1:length(actions)
+                name = actions{i};
+                if isfield(options, name)
+                    action_name = brick.switch_case(name, ...
+                        'filter', 'add_filter', ...
+                        name);
+                    value = options.(name);
+                    V.C.dim_action(action_name, value)
+                    options = rmfield(options, name);
+                end
+            end
+            
             % MENU
             V.menu = uimenu('parent', V.hf, 'label', 'XPLOR', ...
                 'callback', @(u,e)V.xplor_menu());
-            
+                                    
             % DISPLAY
             % (note: calling add_component will cause V.D to be deleted when
             % V will be deleted and vice-versa; the output of add_component
             % is simply its input)
-            V.D = V.add_component(xplr.ViewDisplay(V));
+            % (note: remaining options are only display options)
+            V.D = V.add_component(xplr.ViewDisplay(V, options));
             
             % Filters have been created in the slicer, but may not be
             % active. Activate them if the slice is not displayable.
@@ -92,7 +124,7 @@ classdef View < xplr.GraphNode
     
     % Panels
     methods
-        function init_panels(V, data_name, visible)
+        function init_panels(V, data_name, visible, control_visible)
             % figure
             V.hf = figure('integerhandle', 'off', 'handlevisibility', 'off', 'visible', 'off', ...
                 'numbertitle', 'off', 'name', 'XPLOR', 'tag', 'XPLOR', ...
@@ -118,7 +150,7 @@ classdef View < xplr.GraphNode
             V.panels.controls_width = 120;
             V.panels.control = V.panels.all_controls.setSubPanel(1);
             V.panels.list_combo = V.panels.all_controls.setSubOrg(2, 'H');
-            V.control_visible = true; % start with controls visible; it is necessary to explicitely set property to true (rather than having true as default value) to update display correctly
+            V.control_visible = control_visible; % start with controls visible; it is necessary to explicitely set property to true (rather than having true as default value) to update display correctly
             
             % switch of control visibility
             ppi = get(0, 'screenpixelsPerInch');

@@ -47,7 +47,7 @@ for i=1:numel(x)
         s{i} = num2str(xi, format{:});
     elseif isdatetime(xi) || isduration(xi)
         if ~isempty(format)
-            xi.Format = format;
+            xi.Format = format{1};
         end
         s{i} = char(xi);
     elseif doquotestrings
