@@ -278,7 +278,7 @@ classdef XData < xplr.GraphNode
                 writematrix(brick.column(x.data), f_name, 'Range', 'A2')
             elseif x.nd == 2
                 writecell({x.header(1).label}, f_name, 'Range', 'A1')
-                writecell(brick.column(x.header(1).get_item_names()), f_name, 'Range', 'A2', 'Sheet')
+                writecell(brick.column(x.header(1).get_item_names()), f_name, 'Range', 'A2')
                 writecell(brick.row(x.header(2).get_item_names()), f_name, 'Range', 'B1')
                 writematrix(x.data, f_name, 'Range', 'B2')
             elseif x.nd == 3
