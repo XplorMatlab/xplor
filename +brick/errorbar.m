@@ -12,7 +12,8 @@ function hl = errorbar(varargin)
 % cell array, to handle cases where the number of repetitions are not the
 % same for different conditions)
 %
-% flag can be 'lines' [default], 'bar', 'thinbar', 'patch', 'all', 'xerror'
+% flag can be 'lines' [default], 'bar', 'thinbar', 'patch', 'all',
+% 'xerror', 'errorbar'
 
 % Thomas Deneux
 % Copyright 2006-2017
@@ -29,7 +30,7 @@ while i<nargin
     a = varargin{i};
     if ischar(a)
         switch a
-            case {'lines' 'bar' 'thinbar' 'patch' 'xerror' 'all'}
+            case {'lines' 'bar' 'thinbar' 'patch' 'xerror' 'all' 'errorbar'}
                 flag = a;
             case 'colors'
                 i = i+1;
@@ -190,6 +191,9 @@ switch flag
         end
         % separate lines between 2 groups
         hl = {hl(1:n) reshape(hl(n+1:3*n),[n 2])};
+    case 'errorbar'
+        % use Matlab's errorbar function -> line + error bars
+        hl = errorbar(x, y, e, opt{:});
     case 'all'
         hl = plot(x,Y(:,:));
         sY = size(Y);

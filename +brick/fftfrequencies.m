@@ -16,6 +16,8 @@ function varargout = fftfrequencies(data,fs,flag)
 %           use these flag for getting the second half of the
 %           frequencies being negative frequencies rather than 'above-the-
 %           Niquist-limit' frequencies
+%
+% See also brick.filt
 
 % Thomas Deneux
 % Copyright 2007-2017

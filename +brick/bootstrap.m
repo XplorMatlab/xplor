@@ -104,9 +104,12 @@ while nperm<checkups(end)
         data1 = data; data1(sub,:) = -data(sub,:);
         stat = fun(data1);
     end
-    if doabove, nabove = nabove + (stat>=stat0); end
-    if nperm<5, disp(nabove), end
-    if dobelow, nbelow = nbelow + (stat<=stat0); end
+    if doabove
+        nabove = nabove + (stat>=stat0); 
+    end
+    if dobelow
+        nbelow = nbelow + (stat<=stat0); 
+    end
     if any(nperm==checkups)
         switch tail
             case 'right'
@@ -123,7 +126,7 @@ while nperm<checkups(end)
         if all(done), break, end
         idxx = idxx(~done);
         stat0 = stat0(~done);
-        nabove = nabove(~done);
+        if doabove, nabove = nabove(~done); end
         data = data(:,~done);
         if nperm<checkups(end)
             curcheck = checkups(find(nperm==checkups)+1);

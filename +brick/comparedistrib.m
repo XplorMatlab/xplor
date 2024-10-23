@@ -1,4 +1,4 @@
-function [p, hl] = comparedistrib(x,y,varargin)
+function [p, hl] = comparedistrib(x, y, varargin)
 %COMPAREDISTRIB Perform a nonparametric test and display data points and results
 %---
 % function [pval hl] = comparedistrib(x,y[,test][,'tail','left|right|both']
@@ -20,6 +20,10 @@ function [p, hl] = comparedistrib(x,y,varargin)
 %           'bootstrapsign', 'bootstrapsignmedian'
 %           p - providing a p-value results in skipping the test and
 %           displaying this p-value
+% - 'jitter', 'xjittrand', 'xdispatch'  different modes for slightly moving
+%           points either vertically ('jitter') or horizontally, randomly
+%           or not ('xdispatch'), so as to see their multiplicity;
+%           'xdispatch' will make appear a distribution vertically
 %
 % See also brick.markpvalue
 
@@ -37,14 +41,10 @@ if nargin<2
         [x, y] = deal(x(:,1),x(:,2));
     end
 end
-x = x(~isnan(x));
-y = y(~isnan(y));
-nx = length(x);
-ny = length(y);
 
 % Input: options
 i = 0; tail = 'both'; ylim = []; showmean = false; xlabels = {}; method = [];
-xpos = []; marker = 'o'; markersize = 'default';
+xpos = [1 2]; marker = 'o'; markersize = 'default';
 pdisplaymode = 'ns'; jittermode = ''; jittersize = [];
 while i<length(varargin)
     i = i+1;
@@ -66,7 +66,8 @@ while i<length(varargin)
         case 'showmean'
             showmean = true;
         case {'signtest' 'ranksum' 'signrank' ...
-                'bootstrap' 'bootstrapmedian' 'bootstrapsign' 'bootstrapsignmedian'}
+                'bootstrap' 'bootstrapmedian' 'bootstrapsign' 'bootstrapsignmedian' ...
+                'anova'}
             method = varargin{i};
         case {'p' 'ns'}
             pdisplaymode = varargin{i};
@@ -93,6 +94,21 @@ if isempty(method)
     method = brick.switch_case(isscalar(y),'signtest','ranksum');
 end
 
+% is population the same in x and y?
+same_population = any(strfind(method, 'sign')) && ~isscalar(y);
+if same_population
+    assert(length(x) == length(y))
+    ok = ~isnan(x) & ~isnan(y);
+    x = x(ok);
+    y = y(ok);
+else
+    x = x(~isnan(x));
+    y = y(~isnan(y));
+end
+nx = length(x);
+ny = length(y);
+
+
 % p-value
 if all(isnan(x)) || all(isnan(y))
     p = NaN;
@@ -100,6 +116,9 @@ elseif isnumeric(method)
     p = method;
 else
     switch method
+        case 'anova'
+            groups = [zeros(1, nx) ones(1, ny)];
+            p = anova1([brick.row(x) brick.row(y)], groups, 'off');
         case {'ranksum' 'signrank' 'signtest'}
             p = feval(method,x,y,'tail',tail);
         case 'bootstrap'
@@ -181,7 +200,11 @@ switch jittermode
         end
         if isempty(jittersize)
             M = max(max(xjit{1}), max(xjit{2}));
-            jittersize = .3 / M;
+            if M == 0
+                jittersize = 0;
+            else
+                jittersize = .3 / M;
+            end
         end
         for k = 1:2
             xjit{k} = xjit{k} * jittersize;
@@ -191,108 +214,120 @@ switch jittermode
 end
 
 % display
-dualdisplay = strcmp(method,'ranksum') || ~isscalar(y);
-if dualdisplay
-    if isempty(xpos), xpos = [1 2]; end
-    
-    % display individual points
-    alldata = [brick.row(x) brick.row(y)];
-    if strcmp(method,'ranksum')
-        % no connecting lines 
-        % group points according to whether they are below/above the median
-        [~, ord] = sort(x);
-        idx = ord(1:floor(nx/2));
-        a = plot(xpos(1)*ones(1,floor(nx/2))+xjit{1}(idx)*diff(xpos), ...
-            x(idx),marker,'color',[1 1 1]*.5,'markersize',markersize);
+singledistrib = isscalar(y) && ~strcmp(method,'ranksum');
+if singledistrib
+    xpos = xpos(1);
+end
+alldata = [brick.row(x) brick.row(y)];
+if strcmp(method,'ranksum')
+    % no connecting lines 
+    % group points according to whether they are below/above the median
+    [~, ord] = sort(x);
+    idx = ord(1:floor(nx/2));
+    a = plot(xpos(1)*ones(1,floor(nx/2))+xjit{1}(idx), ...
+        x(idx),marker,'color',[1 1 1]*.5,'markersize',markersize);
+    hold on
+    idx = ord(floor(nx/2)+1:nx);
+    b = plot(xpos(1)*ones(1,ceil(nx/2))+xjit{1}(idx), ...
+        x(idx),marker,'color',[1 1 1]*.6,'markersize',markersize);
+    [~, ord] = sort(y);
+    idx = ord(1:floor(ny/2));
+    c = plot(xpos(2)*ones(1,floor(ny/2))+xjit{2}(idx), ...
+        y(idx),marker,'color',[1 1 1]*.5,'markersize',markersize);
+    idx = ord(floor(ny/2)+1:ny);
+    d = plot(xpos(2)*ones(1,ceil(ny/2))+xjit{2}(idx), ...
+        y(idx),marker,'color',[1 1 1]*.6,'markersize',markersize);
+    hold off
+    hl{1} = [a b c d];
+elseif ~same_population
+    % no connecting lines 
+    a = plot(xpos(1)*ones(1,nx)+xjit{1}, ...
+        x,marker,'color',[1 1 1]*.6,'markersize',markersize);
+    if singledistrib
+        hl{1} = a;
+    else
         hold on
-        idx = ord(floor(nx/2)+1:nx);
-        b = plot(xpos(1)*ones(1,ceil(nx/2))+xjit{1}(idx)*diff(xpos), ...
-            x(idx),marker,'color',[1 1 1]*.6,'markersize',markersize);
-        [~, ord] = sort(y);
-        idx = ord(1:floor(ny/2));
-        c = plot(xpos(2)*ones(1,floor(ny/2))+xjit{2}(idx)*diff(xpos), ...
-            y(idx),marker,'color',[1 1 1]*.5,'markersize',markersize);
-        idx = ord(floor(ny/2)+1:ny);
-        d = plot(xpos(2)*ones(1,ceil(ny/2))+xjit{2}(idx)*diff(xpos), ...
-            y(idx),marker,'color',[1 1 1]*.6,'markersize',markersize);
-        hold off
-        hl{1} = [a b c d];
-    elseif strcmp(method,'bootstrap')
-        % no connecting lines 
-        a = plot(xpos(1)*ones(1,nx)+xjit{1}*diff(xpos), ...
-            x,marker,'color',[1 1 1]*.6,'markersize',markersize);
-        hold on
-        b = plot(xpos(2)*ones(1,ny)+xjit{2}*diff(xpos), ...
+        b = plot(xpos(2)*ones(1,ny)+xjit{2}, ...
             y,marker,'color',[1 1 1]*.6,'markersize',markersize);
         hold off
         hl{1} = [a b];
-    else
-        hl{1} = plot(1:2,[brick.row(x); brick.row(y)],'color',[1 1 1]*.6, ...
-            'marker',marker,'markersize',markersize); % connecting lines
     end
-    
-    % display means and/or medians
-    if showmean
+else
+    hl{1} = plot([xpos(1)+xjit{1}; xpos(2)+xjit{2}], ...
+        [brick.row(x); brick.row(y)], ...
+        'color',[1 1 1]*.6, ...
+        'marker',marker,'markersize',markersize); % connecting lines
+end
+
+% display means and/or medians
+if showmean
+    if singledistrib
+        line(xpos + [-.3 .3], brick.nmean(x) * [1 1], 'color','b')
+    else
         line(xpos,[brick.nmean(x) brick.nmean(y)],'color','b')
     end
-    switch method
-        case {'ranksum' 'bootstrapmedian'}
-            % show individual medians
+end
+switch method
+    case {'ranksum' 'bootstrapmedian'}
+        % show individual medians
+        if singledistrib
+            hl{2} = line(xpos,brick.nmedian(x),'color','k','linestyle','none','marker','*');
+        else
             hl{2}(1) = line(xpos,[brick.nmedian(x) brick.nmedian(y)],'color','k','linestyle','none','marker','*');
             hl{2}(2) = line(xpos,[brick.nmedian(x) brick.nmedian(y)],'color','k','linewidth',2);
-        case 'bootstrap'
-            % show individual means
+        end
+    case {'anova' 'bootstrap'}
+        % show individual means
+        if singledistrib
+            hl{2} = line(xpos,brick.nmean(x),'color','k','linestyle','none','marker','*');
+        else
             hl{2}(1) = line(xpos,[brick.nmean(x) brick.nmean(y)],'color','k','linestyle','none','marker','*');
             hl{2}(2) = line(xpos,[brick.nmean(x) brick.nmean(y)],'color','k','linewidth',2);
-        otherwise
-            % show individual means (not medians), but also a slope indicating the
-            % median difference (which is different from the difference
-            % of the medians!)
-            hl{2}(1) = line(xpos,[brick.nmean(x) brick.nmean(y)],'color','k','marker','*','linestyle','none');
+        end
+    otherwise
+        % show individual means (not medians), but also a slope indicating the
+        % median difference (which is different from the difference
+        % of the medians!)
+        if singledistrib
+            hl{2} = line(xpos,brick.nmean(x),'color','k','linestyle','none','marker','*');
+        else
+            hl{2}(1) = line(xpos,[brick.nmean(x) brick.nmean(y)],'color','k','linestyle','none','marker','*');
             yl = mean([brick.nmedian(x) brick.nmedian(y)])+[-.5 .5]*brick.nmedian(y-x);
             hl{2}(2) = line(xpos,yl,'color','k','linewidth',2);
-    end
-    
-    % limits
-    xlim = xpos + [-1 1]*diff(xpos);
-    if isempty(ylim)
-        if all(isnan(alldata))
-            ylim = [0 1];
-        else
-            m = min(alldata); M = max(alldata);
-            ylim = m+[-.1 1.3]*(M-m);
         end
-    end
-    set(gca,'xlim',xlim,'ylim',ylim)
-    
-    % p-value
-    if contains(method, 'bootstrap') && p < 1e-5
-        p = 'p<1e-5';
-    end
-    brick.markpvalue(mean(xpos),[],p,pdisplaymode)
-else
-    if ~isempty(xpos), error 'specifying x-position not handled yet for single set of points', end
-    xlim = [0 2];
-    plot(ones(1,length(x)),x,marker,'markersize',markersize,...
-        'color',[1 1 1]*.6)
-    line([.5 1.5],mean(x)*[1 1],'color','k','linewidth',2)
-    uistack(line(xlim,[y y],'color','k','linestyle','--'),'bottom')
-    if isempty(ylim)
-        if all(isnan(x))
-            ylim = [0 1];
-        else
-            m = min(x); M = max(x);
-            ylim = m+[-.1 1.3]*(M-m);
-        end
-    end
-    set(gca,'xlim',xlim,'ylim',ylim)
-    if contains(method, 'bootstrap') && p < 1e-5
-        p = 'p<1e-5';
-    end
-    brick.markpvalue(1,[],p,pdisplaymode)
 end
+
+% limits
+if singledistrib
+    xlim = xpos + [-1 1];
+else
+    xlim = xpos + [-1 1]*diff(xpos);
+end
+if isempty(ylim)
+    if all(isnan(alldata))
+        ylim = [0 1];
+    else
+        m = min(alldata); M = max(alldata);
+        ylim = m+[-.1 1.3]*(M-m);
+    end
+end
+set(gca,'xlim',xlim,'ylim',ylim)
+
+% p-value
+if contains(method, 'bootstrap') && p < 1e-5
+    p = 'p<1e-5';
+end
+brick.markpvalue(mean(xpos),[],p,pdisplaymode)
+
+% x ticks
 if ~isempty(xlabels)
     set(gca,'xtick',1:length(xlabels),'xticklabel',xlabels,'xTickLabelRotation',30)
+end
+
+% reference
+if singledistrib
+    h = line(xlim, [y y], 'linestyle', '--', 'color', 'k');
+    uistack(h, 'bottom')
 end
 
 % output?

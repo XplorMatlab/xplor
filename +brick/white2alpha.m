@@ -1,10 +1,13 @@
 classdef white2alpha < brick.interface
+    %WHITE2ALPHA Convert image white background to transparency
+    %---
     % function white2alpha(image)
     % function white2alpha([filename|'clipboard'])
     %---
     % Convert image white background to transparency
     % 
-    % See also brick.show_image, brick.combine_images
+    % See also brick.show_image, brick.combine_images, brick.montage,
+    % brick.image_anonymous
 
     properties (SetAccess='private')
         controls
