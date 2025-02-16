@@ -52,9 +52,9 @@ if nimages*nframes>1
     for i=2:nimages*nframes
         brick.progress(i)
         if nframes>1
-            [b beta] = readoneframe(fname{1},dopermute,false,firstchannelonly,i);
+            [b, beta] = readoneframe(fname{1},dopermute,false,firstchannelonly,i);
         else
-            [b beta] = readoneframe(fname{i},dopermute,false,firstchannelonly);
+            [b, beta] = readoneframe(fname{i},dopermute,false,firstchannelonly);
         end        
         if firstchannelonly
             a(:,:,i) = b(:,:,1);
@@ -72,7 +72,16 @@ end
 if dofloat || ismember(class(a), {'single', 'double'})
     switch class(a)
         case {'single' 'double'}
-            nbyte = ceil(log2(max(a(:)))/8);
+            m = max(a(:));
+            if ~isempty(alpha)
+                m = max(m, max(alpha(:)));
+            end
+            if m == 0
+                % stupid all-zero image
+                nbyte = 1;
+            else
+                nbyte = ceil(log2(m)/8);
+            end
         case 'uint8'
             nbyte = 1;
         case 'uint16'
