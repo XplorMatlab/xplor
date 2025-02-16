@@ -34,7 +34,7 @@ classdef ViewDisplay < xplr.GraphNode
     
     % Display properties
     properties (Access='private', SetObservable=true)
-        display_mode_ = 'image';  % 'time courses' or 'image'
+        display_mode_   % 'time courses' or 'image'
     end
     properties (Dependent, AbortSet=true)
         display_mode
@@ -75,7 +75,7 @@ classdef ViewDisplay < xplr.GraphNode
     
     % Constructor, destructor
     methods
-        function D = ViewDisplay(V)
+        function D = ViewDisplay(V, options)
             % parent 'view' object and panel
             D.V = V;
             D.hp = V.panels.display;
@@ -98,6 +98,10 @@ classdef ViewDisplay < xplr.GraphNode
             c = brick.disable_listener(D.listeners.ax_siz); % prevent display update following automatic change of axis position during all the following initializations
             
             % 'time courses'/'image' switch
+            if isfield(options, 'display_mode')
+                D.display_mode_ = options.display_mode;
+                options = rmfield(options, 'display_mode');
+            end
             p = brick.propcontrol(D, {'display_mode' 'display_mode_'}, ...
                 {'popupmenu', 'time courses', 'image'}, 'parent', D.hp);
             brick.controlpositions(p.hu, D.hp, [1, 1], [-90, -25, 90, 25])
@@ -113,15 +117,34 @@ classdef ViewDisplay < xplr.GraphNode
             
             % clipping tool
             D.clipping = D.add_component(xplr.ClipTool(D)); % creates a menu
+            if isfield(options, 'clipping')
+                if ischar(options.clipping)
+                    D.clipping.auto_clip_mode = options.clipping;
+                    options = rmfield(options, 'clipping');
+                elseif isnumeric(options.clipping)
+                    % will be set later, as we need display initialization
+                    % to be finished first
+                else
+                    error 'wrong format for clipping value'
+                end
+            end
             
             % color_map tool
             D.color_map = D.add_component(xplr.ColorMapTool(D)); % creates a menu
+            if isfield(options, 'colormap')
+                D.color_map.c_map_def = options.colormap;
+                options = rmfield(options, 'colormap');
+            end
             D.add_listener(D.color_map, 'changed_color_map', @(u,e)D.update_display('clip'));
             
             % navigation (sliders, mouse actions)
             D.navigation = D.add_component(xplr.DisplayNavigation(D)); % creates a menu
             
             % set organization, connect sliders, display data and labels
+            if isfield(options, 'organize')
+                D.set_organization(options.organize, false)
+                options = rmfield(options, 'organize');
+            end
             D.slice_change_event = struct('flag', 'global');
             zslice_change(D)
             
@@ -129,6 +152,17 @@ classdef ViewDisplay < xplr.GraphNode
             D.add_listener(D.slice, 'changed_data', @(u,e)set(D, 'slice_change_event', e)); % mark that slice has changed, but treat it only later
             D.add_listener(D.zoom_slicer, 'changed_zoom', @(u,e)zoom_change(D,e));
             D.add_listener(D.zslice, 'changed_data', @(u,e)zslice_change(D,e));
+            
+            % check that all options were set
+            if isfield(options, 'clipping') && isnumeric(options.clipping)
+                D.set_clip(options.clipping)
+                % do not perform autoclip
+                D.clipping.adjust_to_view = false;                
+                options = rmfield(options, 'clipping');
+            end
+            if ~isempty(fieldnames(options))
+                error 'some option(s) were not set!'
+            end
             
             % problem: c won't be deleted automatically (and ax_siz listener
             % might not be re-enabled) because the workspace continue to
@@ -571,7 +605,13 @@ classdef ViewDisplay < xplr.GraphNode
             % dimensions will automatically be adjusted
             % more details in the help of xplr.DisplayLayout.set_dim_location
             %
-            % See also xplr.DisplayLayout.set_dim_location
+            % See also xplr.DisplayLayout.set_dim_location,
+            % xplr.ViewDisplay.set_organization
+            
+            % first time a layout is set?
+            if isempty(D.layout_id_all)
+                D.layout_id_all = xplr.DisplayLayout(D);
+            end
             
             % new layout
             new_layout_id = D.layout_id_all.set_dim_location(dim_id, location);
@@ -579,6 +619,41 @@ classdef ViewDisplay < xplr.GraphNode
             % update display
             if nargin < 4, do_immediate_display = true; end
             D.set_layout_id(new_layout_id, do_immediate_display)
+        end
+        function set_organization(D, organization, do_immediate_display)
+            % function set_dim_location(D, organization, do_immediate_display)
+            %---
+            % set new location of specific dimensions; locations of other
+            % dimensions will automatically be adjusted
+            % more details in the help of xplr.DisplayLayout.set_dim_location
+            %
+            % 'organization argument should be a 1, 2 or 3-elements array
+            % or cell array
+            % for example:
+            % [1 2 4]     view dimensions 1 in x-axis, 2 in y-axis, and 4
+            %           in a x/y grid arrangement 
+            % {'time' 'wavelength'}   view dimension 'time' in x-axis and
+            %           'wavelength' in y-axis
+            % {{'x' 'condition'} 'y' 'day'}   view dimensions 'x' and
+            %           'condition' in x-axis, 'y' in y-axis and 'day'
+            %           in x/y grid arrangement
+            % 
+            % See also xplr.Display.set_dim_location,
+            % xplr.DisplayLayout.set_dim_location, 
+            if length(organization) > 3
+                error 'organization should have 1, 2 or 3 elements'
+            end
+            dimensions = organization;
+            locations = cell(1, length(dimensions));
+            for j = 1:length(dimensions)
+                d = dimensions{j};
+                if ~iscell(d), d = {d}; end
+                loc = brick.cast(j, 'x', 'y', 'xy');
+                dimensions{j} = d;
+                locations{j} = repmat({loc}, 1, length(d));
+            end
+            if nargin < 3, do_immediate_display = true; end
+            D.set_dim_location([dimensions{:}], [locations{:}], do_immediate_display)
         end
         function set.active_dim_id(D,value)
             D.active_dim_id = value;
@@ -857,6 +932,11 @@ classdef ViewDisplay < xplr.GraphNode
             % available flags are: 'clip' 'global' 'chgdata'
             % 'chgdata&blocksize' 'new' 'remove' 'chg' 'perm' 'pos' 'color'
             if nargin < 3, dim = []; end
+            
+            % Are some properties not set yet? (can happen at init)
+            if isempty(D.layout_id)
+                return
+            end
             
             % Is data too large for being displayed?
             if D.no_display
@@ -1389,6 +1469,9 @@ classdef ViewDisplay < xplr.GraphNode
                 % keep locations of dimensions already present in
                 % D.layout_id_all, use some heuristic to choose
                 % locations of new dimensions
+                if isempty(D.display_mode_)
+                    D.display_mode_ = xplr.DisplayLayout.suggest_display_mode(D);
+                end
                 [D.layout_id_all, D.layout_id] = D.layout_id_all.update_layout();
             end
 

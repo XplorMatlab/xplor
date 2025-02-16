@@ -15,16 +15,31 @@ function V = xplor(data, varargin)
 %               cell array description (see xplr.XData for the syntax)
 % - 'name'      name to give to the data
 % - 'view'      select which dimensions to view (others will be filtered)
+% - 'filter'    select which dimensions to filter (others will be viewed)
+% - 'organize'  specify where the dimensions will appear; should be a 1, 2
+%               or 3-elements array or cell array
+%               for example:
+%               [1 2 4]     view dimensions 1 in x-axis, 2 in y-axis, and 4
+%                           in a x/y grid arrangement 
+%               {'time' 'wavelength'}   view dimension 'time' in x-axis and
+%                           'wavelength' in y-axis
+%               {{'x' 'condition'} 'y' 'day'}   view dimensions 'x' and
+%                           'condition' in x-axis, 'y' in y-axis and 'day'
+%                           in x/y grid arrangement
 % - 'ROI'       select dimensions in which to select regions of interest
 % - 'view&ROI'  select dimensions to view and select ROIs in these
-%               dimensions
-% - 'display mode'      'time courses' or 'image'
-% - 'colormap'          n*3 array or the name of a recognized color map
-%                       (this automatically set display mode to 'image')
-% - 'controls'          'on'/True (default) or 'off'/False - show/hide the control panel
+%               dimensions; see 'view' for value format
+% - 'display mode'      'time courses' or 'image' (NB: it is possible to
+%               specify directly 'time courses' or 'image' without using
+%               the 'display mode' argument)
+% - 'colormap'  n*3 array or the name of a recognized color map
+%               (this automatically set display mode to 'image')
+% - 'clipping'  set auto-clipping mode, see 
+% - 'controls'  'on'/True (default) or 'off'/False - show/hide the control panel
 % ---
 % type 'xplor demo' to select a range of demos
 % type 'xplor test' to launch the "XPLOR logo" demo
+% type 'xplor animation' to launch a small animation that illustrates the concept behind xplor
 %
 % See also xplr.XData
 
@@ -55,6 +70,9 @@ elseif nargin == 1 && ischar(data)
         case 'test'
             xplor.demo.logo
             return
+        case 'animation'
+            xplor.animation
+            return
     end
 end
 
@@ -65,10 +83,24 @@ end
 % end
 
 % Gather options inside a structure
-for i = 2:2:length(varargin), varargin{i} = {varargin{i}}; end %#ok<CCAT1>
-options = reshape(varargin, 2, []);
-options(1, :) = brick.strrep(options(1, :), ' ', '_', '&', '_and_');
-options = struct(options{:});
+options = struct();
+idx = 0;
+while idx < length(varargin)
+    idx = idx + 1;
+    name = varargin{idx};
+    if ismember(name, {'time courses', 'image'})
+        value = name;
+        name = 'display mode';
+    else
+        if strcmp(name, 'displaymode')
+            name = 'display mode';
+        end
+        idx = idx + 1;
+        value = varargin{idx};
+    end
+    name = brick.strrep(name, ' ', '_', '&', '_and_');
+    options.(name) = value;
+end
 
 % Convert Matlab array to xplr.XData
 % create headers and launch view
@@ -129,41 +161,10 @@ else
     data = x;
 end
 
-% check options
-option_names = fieldnames(options);
-valid_names =  {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
-    'filter', 'displaymode', 'display_mode', 'visible'};
-invalid_names = setdiff(option_names, valid_names);
-if ~isempty(invalid_names)
-    error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])
-end
-
 % create view
 V = xplr.View(data, options);
 
-% apply options
-if isfield(options, 'controls')
-    V.control_visible = brick.boolean(options.controls);
-end
-if isfield(options, 'colormap')
-    V.D.color_map.c_map_def = options.colormap;
-end
-actions = {'view', 'ROI', 'view_and_ROI', 'filter'};
-for i = 1:length(actions)
-    name = actions{i};
-    if isfield(options, name)
-        action_name = brick.switch_case(name, ...
-            'filter', 'add_filter', ...
-            name);
-        V.C.dim_action(action_name, options.(name))
-    end
-end
-if isfield(options, 'display_mode')
-    V.D.display_mode = options.display_mode;
-elseif isfield(options, 'displaymode')
-    V.D.display_mode = options.displaymode;
-end
-
+ 
 %---
 function xplor_window
 

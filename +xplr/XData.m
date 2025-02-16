@@ -267,4 +267,35 @@ classdef XData < xplr.GraphNode
         end
     end
     
+    % Utility
+    methods
+        function savexls(x, f_name)
+            if nargin<2
+                f_name = brick.savefile('*.xls');
+            end
+            if x.nd == 1
+                writecell({x.header(1).label}, f_name, 'Range', 'A1')
+                writematrix(brick.column(x.data), f_name, 'Range', 'A2')
+            elseif x.nd == 2
+                writecell({x.header(1).label}, f_name, 'Range', 'A1')
+                writecell(brick.column(x.header(1).get_item_names()), f_name, 'Range', 'A2')
+                writecell(brick.row(x.header(2).get_item_names()), f_name, 'Range', 'B1')
+                writematrix(x.data, f_name, 'Range', 'B2')
+            elseif x.nd == 3
+                if x.sz(3) > 20
+                    error 'too many sheets (>20) to save'
+                end
+                for i = 1:x.sz(3)
+                    datai = x.data(:,:,i);
+                    sheet = x.header(3).get_item_name(i);
+                    writecell({x.header(1).label}, f_name, 'Range', 'A1', 'Sheet', sheet)
+                    writecell(brick.column(x.header(1).get_item_names()), f_name, 'Range', 'A2', 'Sheet', sheet)
+                    writecell(brick.row(x.header(2).get_item_names()), f_name, 'Range', 'B1', 'Sheet', sheet)
+                    writematrix(datai, f_name, 'Range', 'B2', 'Sheet', sheet)
+                end
+            else
+                error 'too many dimensions'
+            end
+        end
+    end
 end

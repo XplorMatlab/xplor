@@ -19,10 +19,12 @@ classdef Parameters < handle
     % Only static functions are public
     methods (Static)
         function P = get_all_par(force_reload)
-            persistent P_mem
+            persistent P_mem date_mem
             if nargin < 1, force_reload = false; end
-            if isempty(P_mem) || force_reload
-                f_name = fullfile(fileparts(which('xplor')), 'xplor parameters.xml');
+            f_name = fullfile(fileparts(which('xplor')), 'xplor parameters.xml');
+            info = dir(f_name);
+            if isempty(P_mem) || force_reload || ~strcmp(date_mem, info.date)
+                % load and memorize parameters
                 if exist(f_name, 'file')
                     s = brick.readxml(f_name);
                 else
@@ -30,6 +32,9 @@ classdef Parameters < handle
                 end
                 P_mem = xplr.Parameters;
                 P_mem.params = s;
+                % also memorize last modification date of the xml file, to
+                % detect external changes
+                date_mem = info.date;
             end
             P = P_mem.params;
         end

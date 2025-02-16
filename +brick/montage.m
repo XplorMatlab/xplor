@@ -4,6 +4,8 @@ classdef montage < brick.interface
     % function M = montage([fname]
     % function M = montage(images[,names or struct])
     % GUI program for manual alignment of a large set of images
+    %
+    % See also brick.white2alpha, brick.image_anonymous
     
     % Thomas Deneux
     % Copyright 2015-2017

@@ -193,7 +193,7 @@ data = xplr.XData(CORONAVIRUS, headers);
 V1 = xplor(data, ...
     'view', {'day' 'data' 'type'}, ...
     'display mode', 'time courses');
-V1.D.clipping.auto_clip_mode_no_center = 'prc1';
+V1.D.clipping.auto_clip_mode = 'prc1';
 V1.D.clipping.adjust_to_view = true;
 V1.D.set_dim_location({'day' 'data' 'type'}, {'x' 'y' 'merged_data'})
 V1.D.clipping.set_independent_dim({'data', 'type'})
@@ -202,7 +202,7 @@ V2 = xplor(data, ...
     'view', 'country', ...
     'colormap', 'white_red', ...
     'display mode', 'image');
-V2.D.clipping.auto_clip_mode_no_center = 'prc.1';
+V2.D.clipping.auto_clip_mode = 'prc.1';
 V2.D.clipping.adjust_to_view = false;
 V2.D.graph.show_grid_labels = false;
 V2.D.graph.show_separation = true;

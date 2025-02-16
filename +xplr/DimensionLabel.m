@@ -26,6 +26,7 @@ classdef DimensionLabel
             if ~ischar(label), error 'label must be a character array', end
             L.label = label;
             assert(ismember(type, {'numeric', 'logical', 'char', 'color', ...
+                'datetime', 'duration', ...
                 'Selection1D', 'Selection2D', 'mixed'}))
             L.type = type;
             if nargin<3
@@ -58,10 +59,8 @@ classdef DimensionLabel
         function [type, default_val] = infer_type(x)
             if isnumeric(x)
                 type = 'numeric';
-            elseif islogical(x)
-                type = 'logical';
-            elseif ischar(x)
-                type = 'char';
+            elseif ismember(class(x), {'logical', 'char', 'datetime', 'duration'})
+                type = class(x);
             elseif isa(x, 'xplr.SelectionND')
                 switch x.nd
                     case 1

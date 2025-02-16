@@ -5,12 +5,16 @@ classdef ClipTool < xplr.GraphNode
     properties (SetAccess='private')
         D
     end
-    properties (SetObservable=true, AbortSet, SetAccess='private')
-        auto_clip_mode = 'minmax'
+    properties (Access='private')
+        auto_clip_mode_no_center_ = 'minmax'   %
+        baseline_ = []                         % [] or [value_to_align, align_position], e.g. [1, .5] for "1 in the middle", or [0, 0] for "0 on bottom"        
+    end
+    properties (Dependent, SetObservable=true, AbortSet)
+        auto_clip_mode
+        auto_clip_mode_no_center
+        baseline
     end
     properties (SetObservable=true, AbortSet)
-        auto_clip_mode_no_center = 'minmax'   %
-        baseline = []                         % [] or [value_to_align, align_position], e.g. [1, .5] for "1 in the middle", or [0, 0] for "0 on bottom"
         independent_dim_id_mem = []           % dimension ID of dimensions along which clipping is not uniform
         align_signals = ''                    % '', 'mean', 'median'
         adjust_to_view = true
@@ -55,8 +59,8 @@ classdef ClipTool < xplr.GraphNode
                 {'Min to Max', '1 STD', '2 STD', '3 STD', '5 STD', '1/2 STD', '1/5 STD', '[.1% 99.9%]', '[1% 99%]', '[5% 95%]'}}, ...
                 m1);
             % (all possibilities through additional input dialogs)
-            uimenu(m1, 'label', 'Use Mean and STD...', 'separator','on', 'callback', @(u,e)set_auto_clip_mode(C, 'setstd'))
-            uimenu(m1, 'label', 'Use Percentiles...', 'callback', @(u,e)set_auto_clip_mode(C, 'setprc'))
+            uimenu(m1, 'label', 'Use Mean and STD...', 'separator','on', 'callback', @(u,e)user_control(C, 'setstd'))
+            uimenu(m1, 'label', 'Use Percentiles...', 'callback', @(u,e)user_control(C, 'setprc'))
             % (fix the baseline)
             brick.propcontrol(C, 'baseline', ...
                 {'menugroup', ...
@@ -145,7 +149,7 @@ classdef ClipTool < xplr.GraphNode
     
     % Setting autoclip mode
     methods
-        function set_auto_clip_mode(C, comp)
+        function user_control(C, comp)
             switch comp
                 case 'setstd'
                     nstd = brick.input('Mean +/- N*std', 1, 'stepper 1 0 Inf');
@@ -163,18 +167,20 @@ classdef ClipTool < xplr.GraphNode
                             % value not valid, do not set property
                     end
                 otherwise
-                    C.auto_clip_mode_no_center = comp;
-                    return
+                    error 'invalid case'
             end
+        end
+        function mode = get.auto_clip_mode_no_center(C)
+            mode = C.auto_clip_mode_no_center_;
         end
         function set.auto_clip_mode_no_center(C, comp)
             % set property
-            C.auto_clip_mode_no_center = comp;
-            % add the centering information to final autoclip mode
-            C.auto_clip_mode = C.auto_clip_mode_no_center;
-            if ~isempty(C.baseline), C.auto_clip_mode = [C.auto_clip_mode, '[', num2str(C.baseline(1)), '|', num2str(C.baseline(2)), ']']; end
+            C.auto_clip_mode_no_center_ = comp;
             % update display
             C.D.auto_clip(true)
+        end
+        function base = get.baseline(C)
+            base = C.baseline_;
         end
         function set.baseline(C, baseline)
             % edit tool
@@ -194,10 +200,32 @@ classdef ClipTool < xplr.GraphNode
                 baseline = [s.value, s.pos];
             end
             % set property
-            C.baseline = baseline;
-            % update autoclip mode
-            C.auto_clip_mode = C.auto_clip_mode_no_center;
-            if ~isempty(C.baseline), C.auto_clip_mode = [C.auto_clip_mode, '[', num2str(C.baseline(1)), '|', num2str(C.baseline(2)), ']']; end
+            C.baseline_ = baseline;
+            % update display
+            C.D.auto_clip(true)
+        end
+        function mode = get.auto_clip_mode(C)
+            mode = C.auto_clip_mode_no_center_;
+            if ~isempty(C.baseline)
+                mode = [mode, '[', num2str(C.baseline(1)), '|', num2str(C.baseline(2)), ']'];
+            end
+        end
+        function set.auto_clip_mode(C, mode)
+            ibaseline = regexp(mode,'\[.*\]$');
+            if ~isempty(ibaseline)
+                [base_value, base_position] = brick.regexptokens(mode(ibaseline+1:end-1), '([^\|]*)\|?([^\|]*)');
+                base_value = str2double(base_value);
+                if isempty(base_position)
+                    base_position = .5;
+                else
+                    base_position = str2double(base_position);
+                end
+                mode = mode(1:ibaseline-1);
+                C.baseline_ = [base_value base_position];
+            else
+                C.baseline_ = [];
+            end
+            C.auto_clip_mode_no_center_ = mode;
             % update display
             C.D.auto_clip(true)
         end
