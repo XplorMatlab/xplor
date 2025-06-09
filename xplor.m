@@ -1,12 +1,16 @@
-function V = xplor(data, varargin)
+function V = xplor(varargin)
 % XPLOR, dynamic multidimensional data viewer
 % ---
 % function V = xplor(data, options...)
+% function V = xplor(data1, data2, ..., options...)
 % ---
 %
 % Input:
 % - data        data to visualize: a Matlab ND array or an xplr.XData
 %               object
+% - data1, data2, ...   several data will be concatenated along a new
+%               dimensions if they are all of the same size, along the
+%               dimension where their sizes differe if there is one
 % - options     name-value pairs
 %
 % Available options:
@@ -15,12 +19,18 @@ function V = xplor(data, varargin)
 %               cell array description (see xplr.XData for the syntax)
 % - 'name'      name to give to the data
 % - 'view'      select which dimensions to view (others will be filtered)
+%               use a cell array of arrays or cell arrays to specify
+%               organization as for 'organize' option below; for example:
+%               - {'x' 'y' 'condition' 'day'} or [1 2 3 4] will let xplor
+%               determine automatically how to organize dimensions
+%               - but {{'x' 'condition'} 'y' 'day'} or {[1 3] 2 4} will
+%               specify both dimensions to view and their organization
 % - 'filter'    select which dimensions to filter (others will be viewed)
-% - 'organize'  specify where the dimensions will appear; should be a 1, 2
-%               or 3-elements array or cell array
+% - 'organize'  specify where the dimensions will appear; should be a 1 to
+%               4-elements array or cell array
 %               for example:
-%               [1 2 4]     view dimensions 1 in x-axis, 2 in y-axis, and 4
-%                           in a x/y grid arrangement 
+%               [1 2 3 4]   view dimensions 1 in x-axis, 2 in y-axis, 3 in
+%                           a x/y grid arrangement, 4 as superimposed data
 %               {'time' 'wavelength'}   view dimension 'time' in x-axis and
 %                           'wavelength' in y-axis
 %               {{'x' 'condition'} 'y' 'day'}   view dimensions 'x' and
@@ -38,8 +48,7 @@ function V = xplor(data, varargin)
 % - 'controls'  'on'/True (default) or 'off'/False - show/hide the control panel
 % ---
 % type 'xplor demo' to select a range of demos
-% type 'xplor test' to launch the "XPLOR logo" demo
-% type 'xplor animation' to launch a small animation that illustrates the concept behind xplor
+% type 'xplor animation' to launch a small animation that illustrates the concepts behind xplor
 %
 % See also xplr.XData
 
@@ -62,13 +71,11 @@ if nargin == 0
     % xplr.wizard;
     help xplor
     return
-elseif nargin == 1 && ischar(data) 
-    switch data
+elseif nargin == 1 && ischar(varargin{1}) 
+    flag = varargin{1};
+    switch flag
         case 'demo'
             xplor.demo
-            return
-        case 'test'
-            xplor.demo.logo
             return
         case 'animation'
             xplor.animation
@@ -83,11 +90,40 @@ end
 % end
 
 % Gather options inside a structure
+data = [];
 options = struct();
+done_with_data = false;
 idx = 0;
 while idx < length(varargin)
     idx = idx + 1;
-    name = varargin{idx};
+    argi = varargin{idx};
+
+    % Data
+    if done_with_data
+        % argument is not about data but about options
+    elseif ischar(argi) || isstring(argi)
+        % argument is now a string, i.e. an option name -> wrap-up data
+        done_with_data = true;
+    elseif isempty(data)
+        data = argi;
+        continue
+    elseif isnumeric(argi)
+        % several data arrays give - we will try to concatenate them, for
+        % the moment lets just gather them
+        if iscell(data)
+            data{end+1} = argi;
+        elseif isnumeric(data)
+            data = {data, argi};
+        else
+            error argument
+        end
+        continue
+    else
+        error argument
+    end
+    
+    % Options
+    name = argi;
     if ismember(name, {'time courses', 'image'})
         value = name;
         name = 'display mode';
@@ -102,8 +138,34 @@ while idx < length(varargin)
     options.(name) = value;
 end
 
-% Convert Matlab array to xplr.XData
-% create headers and launch view
+% Concatenate several arrays into a single one
+if iscell(data)
+    n_data = length(data);
+    data_sizes = zeros(n_data, 1);
+    for k = 1:n_data
+        s = size(data{k});
+        if length(s)==2 && s(2)==1, s = s(1); end
+        for i = 1:length(s)
+            data_sizes(k,i) = s(i);
+        end
+    end
+    same_size = ~any(diff(data_sizes));
+    if all(same_size)
+        % concatenate in a new dimension
+        nd = size(data_sizes,2);
+        data = cat(nd+1, data{:});
+    elseif sum(~same_size)==1
+        % concatenate in the dimension where sizes differ
+        d = find(~same_size);
+        data = cat(d, data{:});
+    else
+        % sizes differ in too many dimensions
+        error 'Multiple arrays cannot be concatenated because of size mismatch.'
+    end
+end
+
+
+% Convert Matlab array to xplr.XData, create headers and launch view
 % if a parameter data is present -> evaluate it (execute and get result)
 if isa(data, 'xplr.XData')
     name = data.name;

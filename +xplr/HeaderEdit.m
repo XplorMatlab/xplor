@@ -634,7 +634,10 @@ classdef HeaderEdit < hgsetget
             keys = brick.num2str((1:n)','x_%i','cell');
             spec = repmat({'color'}, n, 1);
             values = brick.structedit(cell2struct([values spec labels(:)], keys));
-            if ~isempty(values)
+            if isempty(values)
+                % user canceled -> no colors
+                values = [];
+            else
                 values = struct2cell(values);
             end
         end
@@ -683,15 +686,28 @@ if isempty(scale_value)
 end
 
 % scale + start?
-tokens = regexp(scale_value, '^(.*)\[ *(start){0,1}(.*)\]$', 'tokens');
+tokens = regexp(scale_value, '^(.*)\[(.*)\]$', 'tokens');
 if ~isempty(tokens)
     tok = tokens{1};
     try %#ok<TRYNC>
         scale = evalin('base', tok{1});
-        start = evalin('base', tok{3});
-        type = 'measure';
-        value = [scale, start];
-        return
+        assert(~isempty(scale))
+        try
+            start = evalin('base', tok{2});
+            assert(~isempty(start))
+            type = 'measure';
+            value = [scale, start];
+            return
+        catch
+            tok = brick.regexptokens(tok{2},' *start(.*)');
+            try
+                start = evalin('base', tok);
+                assert(~isempty(start))
+                type = 'measure';
+                value = [scale, start];
+                return                
+            end
+        end
     end
 end
 

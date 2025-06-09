@@ -23,7 +23,7 @@ classdef GraphNode < xplr.Object
     
     % Listeners
     methods
-        function add_listener(self, other, varargin)
+        function listener = add_listener(self, other, varargin)
             % function add_listener(self,other,add_listener arguments...)
             % function add_listener(self, other, listener)
             %---
@@ -39,6 +39,9 @@ classdef GraphNode < xplr.Object
                 listener = addlistener(other, varargin{:});
             end
             self.listening(end + 1) = struct('object', other, 'listener', listener);
+            if nargout == 0
+                clear listener
+            end
         end
         function add_listener_exclusive_pair(self, other, event1, callback1, event2, callback2)
             % function add_listener_exclusive_pair(self, other, event1, callback1, event2, callback2)

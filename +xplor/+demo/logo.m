@@ -1,8 +1,9 @@
-% load xplor logo
+%% Load xplor logo
 img = brick.readimg(fullfile(fileparts(which('xplor')),'demo data','XPLOR logo.png'));
 img = single(img)/255;
 logo_rgb = num2cell(img, [1 2]);
 
+%% Add a 3rd dimension with rotated versions of the logo
 % coordinates in original image: place white sides outside
 white = all(img == 1, 3);
 [white_x, white_y] = deal(all(white, 2), all(white, 1));
@@ -37,8 +38,32 @@ for k = 1:3
 end
 dat(isnan(dat)) = 1;
 
-% display
-V = xplor(dat, ...
-    'header', {{'x', 'px'}, {'y', 'px'}, {'color', {'r', 'g', 'b'}}, {'z', 'px'}}, ...
-    'name', 'LOGO');
-V.D.set_bin('z', 5)
+%% display
+xplor.close_all_windows
+
+header = {{'x', 'px'}, {'y', 'px'}, {'color', {'r', 'g', 'b'}}, {'z', 'px'}};
+name = 'LOGO';
+data = xplr.XData(dat, header, name);
+
+% by default, all dimensions will be shown, resulting in a grid display of
+% mini-images
+V1 = xplor(data);
+V1.D.set_bin('z', 5, 'private')
+
+% by specifying 'view' option, only dimensions 'x', 'y' and 'color' will
+% be displayed (i.e. dimension 'z' will be filtered); these dimensions will
+% be organized automatically (x/y dimensions will be shown as image,
+% 'color' dimension will be used as a color channel)
+V2 = xplor(data, 'view', {'x', 'y', 'color'});
+
+% by specifying 'view' option as a cell array of cell arrays, we also
+% specify how the displayed dimensions will be organized: 'z' dimension
+% will go on x-axis, 'y' on y-axis, and 'color' on "merged_data", i.e.
+% because it has 3 values it will be used as a color channel
+V3 = xplor(data, 'view', {{'z'}, {'y'}, {}, {'color'}});
+
+
+
+
+
+

@@ -48,6 +48,35 @@ classdef View < xplr.GraphNode
             if ~isempty(invalid_names)
                 error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])
             end
+            
+            % some work on options, e.g. handle complex syntax
+            if isfield(options, 'view')  && iscell(options.view) && ~isfield(options, 'organize')
+                % e.g. if view is {{'x' 'condition'}, 'y', 'day'}, convert
+                % 'view' to {'x', 'condition', 'y', 'day'}, and add option
+                % 'organize' being {{'x' 'condition'}, 'y', 'day'}
+                % or if view is {[1 3] 2 4}, convert 'view' to {1 3 2 4}
+                % and add option 'organize' being {[1 3] 2 4}
+                add_organize_option = false;
+                new_view = {};
+                for k = 1:length(options.view)
+                    vk = options.view{k};
+                    if (isnumeric(vk) && length(vk)>1)
+                        vk = mat2cell(vk);
+                    end
+                    if iscell(vk)
+                        add_organize_option = true;
+                        for i = 1:length(vk)
+                            new_view{end+1} = vk{i}; %#ok<AGROW>
+                        end
+                    else
+                        new_view{end+1} = vk; %#ok<AGROW>
+                    end
+                end
+                if add_organize_option
+                    options.organize = options.view;
+                    options.view = new_view;
+                end
+            end
 
             % PANELS
             % open figure and create panels

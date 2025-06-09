@@ -16,8 +16,8 @@ classdef ViewDisplay < xplr.GraphNode
         no_display = false   % data is too large, cancel display
         grid         % containers for line/images that will be translated/scaled
         h_display    % handles of line/images
-        grid_clip    % clipping for each grid element
-        signals_baseline    % subtracted baseline value for every signal if any
+        grid_clip    % clipping for each grid element; when adjusting by mean or median, the clipping range is centered on zero
+        signals_baseline    % subtracted baseline value for every signal when adjusting by mean or median
         h_legend     % handle of legend axes
         labels      % xplr.displaylabel object
         graph       % xplr.displaygraph object
@@ -505,7 +505,7 @@ classdef ViewDisplay < xplr.GraphNode
             % select ZoomFilter key (check the created menu item
             % that corresponds to the current key)
             m2 = uimenu(m, 'label', 'zoom filter', 'Separator', brick.onoff(do_color));
-            available_keys = xplr.Bank.available_filter_keys('zoomfilter');
+            available_keys = xplr.Bank.available_filter_keys('ZoomFilter');
             new_key = max(available_keys) + 1;
             key_values = [0, available_keys, new_key];
             brick.num2str(available_keys, 'shared zoom %i', 'cell');
@@ -544,13 +544,24 @@ classdef ViewDisplay < xplr.GraphNode
                 end
             end
         end
-        function set_bin(D,d,bin)
+        function set_bin(D,d,bin,flag)
             if strcmp(bin, 'set')
                 bin = brick.input('Binning', D.zoom_filters(d).bin, 'stepper 1 1 Inf 1');
                 if isempty(bin), return, end
             end
+            if exist('flag', 'var')
+                % use flag 'private' to apply the binning only to this
+                % display and not to other displays
+                assert(strcmp(flag, 'private'))
+                do_private = true;
+            else
+                do_private = false;
+            end
             d = D.slice.dimension_number(d);
             for di = d
+                if do_private                    
+                    D.zoom_slicer.change_key(di, 0)
+                end
                 D.zoom_filters(di).set_bin(bin)
             end
         end
@@ -640,15 +651,15 @@ classdef ViewDisplay < xplr.GraphNode
             % 
             % See also xplr.Display.set_dim_location,
             % xplr.DisplayLayout.set_dim_location, 
-            if length(organization) > 3
-                error 'organization should have 1, 2 or 3 elements'
+            if length(organization) > 4
+                error 'organization should have between 1 and 4 elements'
             end
             dimensions = organization;
             locations = cell(1, length(dimensions));
             for j = 1:length(dimensions)
                 d = dimensions{j};
                 if ~iscell(d), d = {d}; end
-                loc = brick.cast(j, 'x', 'y', 'xy');
+                loc = brick.cast(j, 'x', 'y', 'xy', 'merged_data');
                 dimensions{j} = d;
                 locations{j} = repmat({loc}, 1, length(d));
             end
@@ -812,12 +823,6 @@ classdef ViewDisplay < xplr.GraphNode
                 return
             end
             clip = subsref_dim(D.grid_clip, 1+clip_dim_, ijk(clip_dim_));
-            % center if 'adjust by the mean' mode
-            if strcmp(D.display_mode,'time courses') && ~isempty(D.clipping.align_signals)
-                fun = brick.switch_case(D.clipping.align_signals, ...
-                    'mean', @brick.nmean, 'median', @brick.nmedian);
-                clip = clip - fun(clip, 1);
-            end
         end
         function set_clip(D, clip, all_cells)
             % function set_clip(D, clip[, all_cells])
@@ -844,8 +849,7 @@ classdef ViewDisplay < xplr.GraphNode
                 D.grid_clip = subsasgn_dim(D.grid_clip, [1, 1+dim_indp],[1, zijk(dim_indp)], clip(1));
                 D.grid_clip = subsasgn_dim(D.grid_clip, [1, 1+dim_indp],[2, zijk(dim_indp)], clip(2));
             end
-            % update display; note that this might also modify D.gridclip
-            % if D.cliping.align_signals is not empty
+            % update display
             update_display(D,'clip')
         end
         function set_grid_clip(D, clip)
@@ -868,6 +872,16 @@ classdef ViewDisplay < xplr.GraphNode
         end
         function clip = get_clip_range(D,data)
             clip = brick.clip(data(:), D.clipping.auto_clip_mode, 'getrange');
+            % subtract mean if aligning signals on median or mean
+            align_signals = strcmp(D.display_mode, 'time courses') ...
+                && ~isempty(D.clipping.align_signals);
+            if align_signals
+                % translate clipping so that the zero will be at specified
+                % position
+                baseline_pos = D.clipping.baseline_position;
+                e = diff(clip);
+                clip = ([0 1]-baseline_pos) * e;
+            end
             if isinf(clip(1)), clip(1) = -1e6; end
             if isinf(clip(2)), clip(2) = 1e6; end
         end
@@ -1134,8 +1148,8 @@ classdef ViewDisplay < xplr.GraphNode
                             % need to recompute
                             clip = D.get_clip_range(dat_part);
                         else
-                            % use current clip value where it is not
-                            % defined
+                            % clip already defined at some position, use
+                            % this value where it is not defined
                             clip = clip_part(:, idx);
                         end
                         D.grid_clip = subsasgn_dim(D.grid_clip, [1 1+dim_indpc], [1 ijk_indpc], clip(1));
@@ -1173,7 +1187,7 @@ classdef ViewDisplay < xplr.GraphNode
                 end
             end
 
-            % Create or modify individual signals/images
+            % Main: Create or modify individual signals/images
             if do_data
                 % list of all signals/images indices
                 idx_h_display_list = reshape(1:prod(h_display_size), h_display_size);
@@ -1237,7 +1251,11 @@ classdef ViewDisplay < xplr.GraphNode
                         end
                         % display it
                         if do_time_courses
+                            % clip (NB: if align_signals, xi is already
+                            % zero-mean or zero-median, and clip is already
+                            % zero-mean)
                             xi = (xi - clipi(1)) / diff(clipi);
+                            % display
                             nt = size(xi,1);
                             line_style = '-';
                             marker = 'none';

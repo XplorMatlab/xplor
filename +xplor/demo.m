@@ -38,7 +38,7 @@ end
 function available_demos = list_available_demos
 
 available_demos = {
-    ...'XPLOR logo',           @xplor.demo.logo
+    'XPLOR logo',           @xplor.demo.logo
     'Flow',                 @xplor.demo.flow
     'Astronomy',            @xplor.demo.hubble_pillars_of_the_creation
     'Coronavirus evolution',    @xplor.demo.coronavirus

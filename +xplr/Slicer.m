@@ -243,7 +243,7 @@ classdef Slicer < xplr.GraphNode
             end
             
             % replace filters
-            S.replace_filters_by_index(S, idx, dim_ids, new_filt)
+            S.replace_filters_by_index(idx, dim_ids, new_filt)
         end
         function perm_filters(S, perm)
             % function perm_filters(S,perm)

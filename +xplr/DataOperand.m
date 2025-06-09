@@ -7,6 +7,7 @@ classdef DataOperand < xplr.GraphNode
         header_out
     end
     properties (Dependent, SetAccess='private', Transient)
+        in_label
         sz_in
         nd_in
         sz_out
@@ -51,6 +52,13 @@ classdef DataOperand < xplr.GraphNode
         end
         function nd = get.nd_out(O)
             nd = length(O.header_out);
+        end
+    end
+    
+    % Other dependent properties
+    methods
+        function label = get.in_label(O)
+            label = brick.strcat({O.header_in.label},',');
         end
     end
     
@@ -128,8 +136,7 @@ classdef DataOperand < xplr.GraphNode
             update_operation_(O, data, old_data_op, varargin{:});
         end
     end
-    
-    
+        
     % Additional information in output header
     methods
         function [head_value, affected_columns] = set_add_header_info(F, head_value, add_header_info)
@@ -223,6 +230,13 @@ classdef DataOperand < xplr.GraphNode
             % this function should be overwritten by sub-classes
             delete(get(m, 'children'))
             uimenu(m, 'enable', 'off', 'label', '(empty menu)')
+        end
+    end
+    
+    % Utility: add user in bank registry
+    methods
+        function add_user(F, user)
+            xplr.Bank.add_user(F, user)
         end
     end
     

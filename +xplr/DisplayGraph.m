@@ -718,7 +718,7 @@ classdef DisplayGraph < xplr.GraphNode
                 ylabel(G.D.ha, '')
                 return
             end
-            same_baseline = isempty(G.D.signals_baseline) || isempty (h_aligned_dims);
+            same_baseline = isempty(G.D.signals_baseline) || isempty(h_aligned_dims);
 
             % remove these dimensions and get back to original signals'
             % clipping range by adding baseline if possible

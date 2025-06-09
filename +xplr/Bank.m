@@ -325,6 +325,15 @@ classdef Bank < handle
             if nargin<3, user = []; end
             F = xplr.Bank.get_filter('ZoomFilter', link_key, header);
         end
+        function add_user(F, user)
+            % get filter type
+            filter_type = strrep(class(F), 'xplr.', '');
+            % cannot add user if filter is a private filter
+            assert(F.link_key ~= 0)
+            % get existing filter and add user
+            check = xplr.Bank.get_existing_filter(filter_type, F.link_key, F.header_in, user);
+            assert(check == F)
+        end
         function show_list(F)
             if ~isa(F,'xplr.FilterAndPoint')
                 error 'only FilterAndPoint object can be shown'

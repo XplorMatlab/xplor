@@ -395,5 +395,6 @@ if eval('false')
 end
 
 %% Save movie
-cd('G:\.shortcut-targets-by-id\17q2UWinYzrqTTrLISieZjykHY16apTm-\Learning Robots - Private\5 - Business\2021-10 Maturaction\Maturaction 2021 - Projet B - Logiciels data-IA\Groupe XPLOR')
-brick.savemovie(capture, 'animation XPLOR', 'fps', 15)
+
+% save_file = brick.savefile('Select file where to save this movie', '*.mp4')
+% brick.savemovie(capture, save_file, 'fps', 15)

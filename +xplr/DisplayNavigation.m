@@ -203,9 +203,9 @@ classdef DisplayNavigation < xplr.GraphNode
         function clip_change_range(N, flag)
             % current clip extent
             if N.D.clipping.buttons_only_for_current_cells
-                clip = N.D.current_clip;
+                clip = N.D.current_clip; % vector (2 values)
             else
-                clip = N.D.grid_clip; % ND array
+                clip = N.D.grid_clip; % ND array (2*... values)
             end
             e = diff(clip);
 
@@ -218,15 +218,10 @@ classdef DisplayNavigation < xplr.GraphNode
             % update as specified
             f = f + brick.switch_case(flag, '+', -1, '-', 1);
             e = e10 .* reshape(vals(f), size(e));
-            clip_baseline = N.D.clipping.baseline;
-            if isempty(clip_baseline)
-                % make the curves go more up than down, because this is
-                % more natural!!
-                base_position = .2;
+            base_value = N.D.clipping.baseline_value;
+            base_position = N.D.clipping.baseline_position;
+            if isempty(base_value)
                 base_value = min(clip) + diff(clip)*base_position;
-            else
-                base_value = clip_baseline(1);
-                base_position = clip_baseline(2);
             end
             clip = base_value + [-base_position; 1-base_position].*e;
             

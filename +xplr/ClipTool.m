@@ -4,19 +4,24 @@ classdef ClipTool < xplr.GraphNode
     % properties controlled by (and as seen from) the menu
     properties (SetAccess='private')
         D
+        baseline_value_ = []                    % used in auto_clip, can be empty
+        baseline_position_ = .5                 % used in auto_clip and when zooming in/out, can't be empty
     end
     properties (Access='private')
-        auto_clip_mode_no_center_ = 'minmax'   %
-        baseline_ = []                         % [] or [value_to_align, align_position], e.g. [1, .5] for "1 in the middle", or [0, 0] for "0 on bottom"        
+        auto_clip_mode_no_center_ = 'minmax'
     end
     properties (Dependent, SetObservable=true, AbortSet)
         auto_clip_mode
         auto_clip_mode_no_center
-        baseline
+        baseline_position                       % used in auto_clip and when zooming in/out
+        baseline                                % used in auto_clip
+    end
+    properties (Dependent, SetObservable=true, AbortSet, SetAccess='private')
+        baseline_value
     end
     properties (SetObservable=true, AbortSet)
-        independent_dim_id_mem = []           % dimension ID of dimensions along which clipping is not uniform
-        align_signals = ''                    % '', 'mean', 'median'
+        independent_dim_id_mem = []             % dimension ID of dimensions along which clipping is not uniform
+        align_signals = ''                      % '', 'mean', 'median'
         adjust_to_view = true
         buttons_only_for_current_cells = false
     end
@@ -26,8 +31,8 @@ classdef ClipTool < xplr.GraphNode
     end
 
     properties (SetAccess='private')
-        share_name = ''                      %
-        menu                                % 
+        share_name = ''
+        menu 
     end
     
     % Constructor, menu
@@ -47,11 +52,24 @@ classdef ClipTool < xplr.GraphNode
             m = C.menu;
             delete(get(m,'children'))
             
+            % auto-clip
+            if ~isempty(C.independent_dim)
+                uimenu(m, 'label', 'Do Auto-Clip (current cell(s) only)', ...
+                     'callback', @(u,e)C.D.auto_clip(false))
+                uimenu(m, 'label', 'Do Auto-Clip (all cells)', ...
+                    'callback', @(u,e)C.D.auto_clip(true))
+                brick.propcontrol(C, 'buttons_only_for_current_cells', 'menu', ...
+                    {'parent', m, 'label', 'Use clip buttons to control only current cell(s)'});
+            else
+                uimenu(m,'label', 'Do Auto-Clip', ...
+                    'callback', @(u,e)C.D.auto_clip(true))
+            end
+            
             % auto-clip specifications
             % (create a submenu whose label will update automatically)
             P = brick.propcontrol(C, 'auto_clip_mode', ...
                 {'menuval', {}}, ...
-                m, 'label', 'Auto-Clip Method');
+                m, 'label', 'Auto-Clip Method', 'Separator', 'on');
             m1 = P.hparent;
             % (some possible values)
             brick.propcontrol(C, 'auto_clip_mode_no_center', ...
@@ -64,19 +82,23 @@ classdef ClipTool < xplr.GraphNode
             % (fix the baseline)
             brick.propcontrol(C, 'baseline', ...
                 {'menugroup', ...
-                 {[] [0 .5], [1 .5], [0 0], [1 0], [0 1], [1 1] 'custom'}, ...
+                 {[] [0 .5], [1 .5], [0 .1], [1 .1], [0 .9], [1 .9] 'custom'}, ...
                  {'(no baseline)' 'center on 0', 'center on 1', '0 on bottom', '1 on bottom', '0 on top', '1 on top', 'custom...'}}, ...
-                m1);
-            
-            % auto-clip
-            if ~isempty(C.independent_dim)
-                uimenu(m, 'label', 'Do Auto-Clip (current cell(s) only)', 'callback', @(u,e)C.D.auto_clip(false))
-                uimenu(m, 'label', 'Do Auto-Clip (all cells)', 'callback', @(u,e)C.D.auto_clip(true))
-                brick.propcontrol(C, 'buttons_only_for_current_cells', 'menu', ...
-                    {'parent', m, 'label', 'Use clip buttons to control only current cell(s)'});
-            else
-                uimenu(m,'label', 'Do Auto-Clip', 'callback', @(u,e)C.D.auto_clip(true))
+                m1);            
+            % (signals alignment in addition to auto-clip)
+            if strcmp(C.D.display_mode, 'time courses')
+                brick.propcontrol(C, 'align_signals', ...
+                    {'menuval', {'', 'median', 'mean'}, ...
+                    {'(do not realign)', 'on their median', 'on their mean'}, {'(none)', 'median', 'mean'}}, ...
+                    {'parent', m, 'label', 'Additional signals re-align'});
             end
+            % (position of alignment)
+            if strcmp(C.D.display_mode, 'time courses')
+                brick.propcontrol(C, 'baseline_position', ...
+                    {'menuval', {.5, .1, .9, 'custom'}, ...
+                    {'center', 'bottom', 'top', 'custom...'}}, ...
+                    {'parent', m, 'label', 'Alignment position'});
+            end            
             
             % adjust options
             brick.propcontrol(C, 'adjust_to_view', 'menu', ...
@@ -101,12 +123,6 @@ classdef ClipTool < xplr.GraphNode
                     uimenu(m1, 'label', '(none)', ...
                         'callback', @(u,e)set_independent_dim(C, clip_dim, false))
                 end
-            end
-            if strcmp(C.D.display_mode, 'time courses')
-                brick.propcontrol(C, 'align_signals', ...
-                    {'menuval', {'', 'median', 'mean'}, ...
-                    {'(do not realign)', 'on their median', 'on their mean'}, {'(none)', 'median', 'mean'}}, ...
-                    {'parent', m, 'label', 'Re-align signals'});
             end
             % manual clip
             if ~isempty(C.independent_dim)
@@ -180,7 +196,11 @@ classdef ClipTool < xplr.GraphNode
             C.D.auto_clip(true)
         end
         function base = get.baseline(C)
-            base = C.baseline_;
+            if isempty(C.baseline_value)
+                base = [];
+            else
+                base = [C.baseline_value, C.baseline_position_];
+            end
         end
         function set.baseline(C, baseline)
             % edit tool
@@ -200,9 +220,36 @@ classdef ClipTool < xplr.GraphNode
                 baseline = [s.value, s.pos];
             end
             % set property
-            C.baseline_ = baseline;
+            if isempty(baseline)
+                C.baseline_value = [];
+            else
+                C.baseline_value = baseline(1);
+                C.baseline_position_ = baseline(2);
+            end
             % update display
             C.D.auto_clip(true)
+        end
+        function value = get.baseline_value(C)
+            value = C.baseline_value_;
+        end
+        function pos = get.baseline_position(C)
+            pos = C.baseline_position_;
+        end
+        function set.baseline_position(C, pos)
+            % edit tool
+            if ischar(pos) && strcmp(pos, 'custom')
+                s = struct('position', C.baseline_position);
+                spec = struct(...
+                    'position', {'slider 0 1 .05 %.2f', 'baseline position (0 = bottom, 1 = top)'});
+                s = brick.structedit(s, spec);
+                pos = s.position;
+            end
+            % set property
+            C.baseline_position_ = pos;
+            % update display
+            if ~isempty(C.baseline_value) || ~isempty(C.align_signals)
+                C.D.auto_clip(true)
+            end
         end
         function mode = get.auto_clip_mode(C)
             mode = C.auto_clip_mode_no_center_;
