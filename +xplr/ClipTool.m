@@ -268,9 +268,10 @@ classdef ClipTool < xplr.GraphNode
                     base_position = str2double(base_position);
                 end
                 mode = mode(1:ibaseline-1);
-                C.baseline_ = [base_value base_position];
+                C.baseline_value_ = base_value;
+                C.baseline_position_ = base_position;
             else
-                C.baseline_ = [];
+                C.baseline_value_ = [];
             end
             C.auto_clip_mode_no_center_ = mode;
             % update display

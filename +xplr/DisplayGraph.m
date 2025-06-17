@@ -1960,6 +1960,8 @@ classdef DisplayGraph < xplr.GraphNode
                 rect_grid_covered = rect_grid_pos + ...
                     [(rect_in_cell(:, 1) > cell_size/2), -(rect_in_cell(:, 2) < -cell_size/2)];
                 if any(diff(rect_grid_covered, 1, 2))
+                    % no valid zoom
+                    [zoom_dim, zslice_zoom] = deal([]);
                     return
                 end
                 

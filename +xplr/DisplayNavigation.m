@@ -264,6 +264,9 @@ classdef DisplayNavigation < xplr.GraphNode
                         % user intended to zoom, and which value he wanted
                         % to zoom in
                         [zoom_dim, zoom] = N.zoom_in_rect(rect);
+                        if isempty(zoom_dim)
+                            return
+                        end
                         N.D.zoom_slicer.set_zoom(zoom_dim, zoom)
                     else
                         N.manual_click_move_cross(point);
@@ -509,17 +512,17 @@ classdef DisplayNavigation < xplr.GraphNode
                 end
                 % move the cross
                 manual_click_move_cross(N, point)
-                % pan view if we are close to edge!
-                if do_drag_zoom
-                    if abs(p(1)) > .5 - drag_zone
-                        drag_speed = sign(p(1)) * ((abs(p(1)) - (.5-drag_zone))/drag_zone)/10;
-                        if ~brick.boolean(drag_timer.Running)
-                            start(drag_timer)
-                        end
-                    else
-                        stop(drag_timer)
-                    end
-                end
+%                 % pan view if we are close to edge!
+%                 if do_drag_zoom
+%                     if abs(p(1)) > .5 - drag_zone
+%                         drag_speed = sign(p(1)) * ((abs(p(1)) - (.5-drag_zone))/drag_zone)/10;
+%                         if ~brick.boolean(drag_timer.Running)
+%                             start(drag_timer)
+%                         end
+%                     else
+%                         stop(drag_timer)
+%                     end
+%                 end
             end
             
             function drag_zoom(~, ~)
@@ -1450,6 +1453,12 @@ classdef DisplayNavigation < xplr.GraphNode
                 clip = subsref_dim(N.D.grid_clip, 1+N.D.clip_dim, clip_zijk(N.D.clip_dim));
                 clip = clip(1) + clip_zoom(:) * diff(clip);
                 N.D.set_clip(clip, clip_zijk);
+            end
+            
+            % no valid zoom?
+            if isempty(zoom_dim)
+                zoom = [];
+                return
             end
             
             % convert from zslice to slice
