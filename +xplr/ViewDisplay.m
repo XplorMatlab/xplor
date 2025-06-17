@@ -153,12 +153,17 @@ classdef ViewDisplay < xplr.GraphNode
             D.add_listener(D.zoom_slicer, 'changed_zoom', @(u,e)zoom_change(D,e));
             D.add_listener(D.zslice, 'changed_data', @(u,e)zslice_change(D,e));
             
-            % check that all options were set
+            % set last options
             if isfield(options, 'clipping') && isnumeric(options.clipping)
                 D.set_clip(options.clipping)
                 % do not perform autoclip
                 D.clipping.adjust_to_view = false;                
                 options = rmfield(options, 'clipping');
+            end
+            if isfield(options, 'color')
+                D.set_color_dim(options.color)
+                D.show_color_legend = true;
+                options = rmfield(options, 'color');
             end
             if ~isempty(fieldnames(options))
                 error 'some option(s) were not set!'
@@ -593,7 +598,15 @@ classdef ViewDisplay < xplr.GraphNode
             % update labels
             if do_immediate_display, D.check_active_dim(false), end
             D.labels.update_labels()
-            drawnow
+            if ~isempty(D.display_mode)
+                % i am not sure why there is a drawnow here, probably to
+                % make some first changes appear onscreen. However it can
+                % happen during initialization that D.display_mode is not
+                % set yet, and the drawnow leads to "Warning: 'popupmenu'
+                % control requires a scalar Value.". Therefore in such case
+                % let's not do the drawnow.
+                drawnow
+            end
             % check whether color dim and active dim remain valid, set them
             % as most appropriate
             D.check_color_dim(false)
@@ -658,7 +671,15 @@ classdef ViewDisplay < xplr.GraphNode
             locations = cell(1, length(dimensions));
             for j = 1:length(dimensions)
                 d = dimensions{j};
-                if ~iscell(d), d = {d}; end
+                if ~iscell(d)
+                    if isempty(d)
+                        % no dimension in this location
+                        d = {};
+                    else
+                        % dimension(s) in this location
+                        d = {d}; 
+                    end
+                end
                 loc = brick.cast(j, 'x', 'y', 'xy', 'merged_data');
                 dimensions{j} = d;
                 locations{j} = repmat({loc}, 1, length(d));

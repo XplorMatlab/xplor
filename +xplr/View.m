@@ -43,13 +43,13 @@ classdef View < xplr.GraphNode
             option_names = fieldnames(options);
             valid_names =  {'controls', 'colormap', 'view', 'ROI', 'view_and_ROI', ...
                 'filter', 'displaymode', 'display_mode', 'visible', 'organize', ...
-                'clipping'};
+                'clipping', 'color'};
             invalid_names = setdiff(option_names, valid_names);
             if ~isempty(invalid_names)
                 error(['invalid XPLOR option(s): ' brick.strcat(invalid_names, ', ')])
             end
             
-            % some work on options, e.g. handle complex syntax
+            % Some work on options, e.g. handle complex syntax
             if isfield(options, 'view')  && iscell(options.view) && ~isfield(options, 'organize')
                 % e.g. if view is {{'x' 'condition'}, 'y', 'day'}, convert
                 % 'view' to {'x', 'condition', 'y', 'day'}, and add option
@@ -60,8 +60,8 @@ classdef View < xplr.GraphNode
                 new_view = {};
                 for k = 1:length(options.view)
                     vk = options.view{k};
-                    if (isnumeric(vk) && length(vk)>1)
-                        vk = mat2cell(vk);
+                    if isnumeric(vk) && ~isscalar(vk)
+                        vk = num2cell(vk);
                     end
                     if iscell(vk)
                         add_organize_option = true;
@@ -77,7 +77,7 @@ classdef View < xplr.GraphNode
                     options.view = new_view;
                 end
             end
-
+            
             % PANELS
             % open figure and create panels
             if isfield(options, 'visible')
@@ -89,6 +89,9 @@ classdef View < xplr.GraphNode
             if isfield(options, 'controls')
                 control_visible = brick.onoff(options.controls);
                 options = rmfield(options, 'controls');
+            elseif any(brick.ismemberstr(fieldnames(options), ...
+                    {'view' 'view_and_ROI' 'filter'}))
+                control_visible = 'off';
             else
                 control_visible = 'on';
             end
@@ -319,6 +322,18 @@ classdef View < xplr.GraphNode
                 set(h, 'Color', 'k')
                 set(h(2:3), 'visible', 'off')
             end
+        end
+    end
+    
+    % User utility functions (wrappers of methods of subcomponents)
+    methods
+        function chg_data(V, dat)
+            V.data.chg_data(dat)
+        end
+        function update_data(~, ~)
+            error(['To change the full displayed data, call V.chg_data or ' ...
+                'V.data.chg_data. To do a partial update, call V.update_data' ...
+                ' with appropriate details about the update.'])
         end
     end
     

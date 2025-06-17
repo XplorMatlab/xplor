@@ -42,6 +42,8 @@ function V = xplor(varargin)
 % - 'display mode'      'time courses' or 'image' (NB: it is possible to
 %               specify directly 'time courses' or 'image' without using
 %               the 'display mode' argument)
+% - 'color'     set dimension to use for coloring time courses and show
+%               color legend
 % - 'colormap'  n*3 array or the name of a recognized color map
 %               (this automatically set display mode to 'image')
 % - 'clipping'  set auto-clipping mode, see 
@@ -101,12 +103,12 @@ while idx < length(varargin)
     % Data
     if done_with_data
         % argument is not about data but about options
-    elseif ischar(argi) || isstring(argi)
-        % argument is now a string, i.e. an option name -> wrap-up data
-        done_with_data = true;
     elseif isempty(data)
         data = argi;
         continue
+    elseif ischar(argi) || isstring(argi)
+        % argument is now a string, i.e. an option name -> wrap-up data
+        done_with_data = true;
     elseif isnumeric(argi)
         % several data arrays give - we will try to concatenate them, for
         % the moment lets just gather them
