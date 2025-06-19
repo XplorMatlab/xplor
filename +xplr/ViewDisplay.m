@@ -677,12 +677,12 @@ classdef ViewDisplay < xplr.GraphNode
                         d = {};
                     else
                         % dimension(s) in this location
-                        d = {d}; 
+                        d = {d};
                     end
                 end
                 loc = brick.cast(j, 'x', 'y', 'xy', 'merged_data');
-                dimensions{j} = d;
-                locations{j} = repmat({loc}, 1, length(d));
+                dimensions{j} = d; % cell array of cell arrays
+                locations{j} = repmat({loc}, 1, length(d)); % same
             end
             if nargin < 3, do_immediate_display = true; end
             D.set_dim_location([dimensions{:}], [locations{:}], do_immediate_display)

@@ -48,13 +48,25 @@ methods
         L.callback = callback;
         msg = 'Try to execute callback once.';
         disp(msg)
-        L.callback(L.P.index)
+        try
+            L.callback(L.P.index)
+        catch
+            fprintf(repmat('\b', 1, length(msg)+1));
+            disp('Callback failed. Not creating listener.')
+            % repeat the error so that it can be debugged
+            L.callback(L.P.index)
+        end
             
         % Add listener
         L.add_listener(L.P, 'changed_operation', @(u,e)moved_point(L, e));
         fprintf(repmat('\b', 1, length(msg)+1));
         disp(['Listener created to changes in ''' L.P.header_in.label ...
             ''' dimension. Callback executed once.'])
+        
+        % No output
+        if nargout == 0
+            clear L
+        end
     end
     
     function moved_point(L, e)     
@@ -76,10 +88,17 @@ methods
                 delete(L)
                 disp([msg_start ' because an object became invalid. Removed listener.'])
             else
-                disp([msg_start ':'])
-                % Execute callback again for user to see the error, maybe
-                % debug it.
-                L.callback(L.P.index)
+                answer = questdlg( ...
+                    {'An error occured while executing point listener callback:' ...
+                    err.message ...
+                    'Do you want to delete the listnener?'});
+                if strcmp(answer, 'Yes')
+                    delete(L)
+                else
+                    % Execute callback again for user to see the error, maybe
+                    % debug it.
+                    L.callback(L.P.index)
+                end
             end
         end     
     end

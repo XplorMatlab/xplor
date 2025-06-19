@@ -48,7 +48,17 @@ function out = progress(varargin)
 persistent x            % structure with persistent information
 persistent ht0          % default place for displaying progress (handle or '' for command prompt)
 
-% detect nested call to brick.progress (variable calllevel states the level
+% First check fast whether too few time ellapsed since last display and we
+% should not loose time making another display
+if ~ischar(varargin{1})
+    i = varargin{1};
+    do_pause = (nargin>1 && strcmp(varargin{2},'pause'));
+    if toc(x(1).lastdisp)<.1 && i~=x(1).max && ~do_pause
+        return
+    end
+end
+
+% Detect nested call to brick.progress (variable calllevel states the level
 % of nesting)
 stack = dbstack; 
 if isscalar(stack), caller = ''; else caller = stack(2).name; end
@@ -215,8 +225,6 @@ else
         updatedisplay(-1,str,'')
         return
     end
-    % do not display if too few time past since last display
-    if toc(x(1).lastdisp)<.1 && i~=x(1).max && ~do_pause, return, end
     % display
     if x(1).pflag, i = floor(i/x(1).max*100); end
     if (i == x(1).curi), return, end

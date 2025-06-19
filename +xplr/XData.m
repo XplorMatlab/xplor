@@ -148,6 +148,12 @@ classdef XData < xplr.GraphNode
             % use flag 'chg_data' if only the data changed but not the
             % header
             
+            if nargin<3 && isnumeric(flag)
+                dat = flag;
+                x.chg_data(dat)
+                return
+            end
+            
             dim = x.dimension_number(d);
             if isempty(dim), error('dimension %g absent from data', d); end
             

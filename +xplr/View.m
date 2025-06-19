@@ -330,10 +330,11 @@ classdef View < xplr.GraphNode
         function chg_data(V, dat)
             V.data.chg_data(dat)
         end
-        function update_data(~, ~)
-            error(['To change the full displayed data, call V.chg_data or ' ...
-                'V.data.chg_data. To do a partial update, call V.update_data' ...
-                ' with appropriate details about the update.'])
+        function update_data(V, dat)
+            % NB: this will in fact call V.data.chg_data(dat); V.data_update_data
+            % is usually called with more arguments, in order to perform partial
+            % update only
+            V.data.update_data(dat)
         end
     end
     
